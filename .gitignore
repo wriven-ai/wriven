@@ -47,3 +47,33 @@ Thumbs.db
 .claude/settings.local.json
 .nx/polygraph
 .nx/self-healing
+test-output
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv
+venv/
+env/
+.uv/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Logs
+logs/
+*.log
+
+# Test coverage
+coverage/
+.nyc_output
+
+# pnpm
+.pnpm-debug.log
