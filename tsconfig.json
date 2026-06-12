@@ -26,6 +26,24 @@
     },
     {
       "path": "./apps/client"
+    },
+    {
+      "path": "./libs/shared/contracts"
+    },
+    {
+      "path": "./libs/shared/contracts"
+    },
+    {
+      "path": "./libs/shared/types"
+    },
+    {
+      "path": "./libs/shared/constants"
+    },
+    {
+      "path": "./libs/shared/common"
+    },
+    {
+      "path": "./libs/shared/database"
     }
   ]
 }

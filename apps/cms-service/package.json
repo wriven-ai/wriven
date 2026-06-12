@@ -1,5 +1,5 @@
 {
-  "name": "@org/cms-service",
+  "name": "@wriven/cms-service",
   "version": "0.0.1",
   "private": true,
   "nx": {
@@ -63,15 +63,15 @@
           "build"
         ],
         "options": {
-          "buildTarget": "@org/cms-service:build",
+          "buildTarget": "@wriven/cms-service:build",
           "runBuildTargetDependencies": false
         },
         "configurations": {
           "development": {
-            "buildTarget": "@org/cms-service:build:development"
+            "buildTarget": "@wriven/cms-service:build:development"
           },
           "production": {
-            "buildTarget": "@org/cms-service:build:production"
+            "buildTarget": "@wriven/cms-service:build:production"
           }
         }
       }

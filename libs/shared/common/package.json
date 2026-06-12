@@ -1,5 +1,5 @@
 {
-  "name": "@org/constants",
+  "name": "@wriven/common",
   "version": "0.0.1",
   "private": true,
   "main": "./src/index.ts",
@@ -11,6 +11,12 @@
       "default": "./src/index.ts"
     },
     "./package.json": "./package.json"
+  },
+  "nx": {
+    "tags": [
+      "scope:shared",
+      "type:common"
+    ]
   },
   "dependencies": {}
 }

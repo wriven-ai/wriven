@@ -67,8 +67,15 @@
   ],
   "analytics": false,
   "targetDefaults": {
+    "build": {
+      "cache": true
+    },
     "test": {
+      "cache": true,
       "dependsOn": ["^build"]
+    },
+    "lint": {
+      "cache": true
     }
   },
   "generators": {
