@@ -1,6 +1,7 @@
 packages:
   - 'apps/*'
   - 'libs/*'
+  - 'apps/libs/shared/*'
 allowBuilds:
   '@parcel/watcher': true
   less: true

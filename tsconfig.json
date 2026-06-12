@@ -11,6 +11,21 @@
     },
     {
       "path": "./apps/api-gateway"
+    },
+    {
+      "path": "./apps/libs/shared/contracts"
+    },
+    {
+      "path": "./apps/libs/shared/common"
+    },
+    {
+      "path": "./apps/libs/shared/types"
+    },
+    {
+      "path": "./apps/libs/shared/constants"
+    },
+    {
+      "path": "./apps/client"
     }
   ]
 }

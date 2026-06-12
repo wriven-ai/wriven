@@ -77,3 +77,9 @@ coverage/
 
 # pnpm
 .pnpm-debug.log
+
+# Next.js
+.next
+out
+next-env.d.ts
+.vercel
