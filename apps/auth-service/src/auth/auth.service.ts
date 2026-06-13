@@ -15,7 +15,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
 import * as bcrypt from 'bcrypt';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { durationToMs } from '../common/duration';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
@@ -40,6 +40,8 @@ type WorkspaceRow = typeof workspaces.$inferSelect;
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  // Used to equalise bcrypt timing when an email isn't found (anti-enumeration).
+  private readonly dummyHash = bcrypt.hashSync('wriven-dummy-password', 12);
 
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
@@ -65,43 +67,56 @@ export class AuthService {
     const refresh = this.tokens.newRefreshToken();
     const refreshExpiresAt = this.tokens.refreshExpiresAt(false);
 
-    const result = await this.db.transaction(async (tx) => {
-      const [user] = await tx
-        .insert(users)
-        .values({ email: dto.email, name: dto.name, passwordHash, provider: 'local' })
-        .returning();
+    let result: { user: UserRow; org: OrgRow; workspace: WorkspaceRow };
+    try {
+      result = await this.db.transaction(async (tx) => {
+        const [user] = await tx
+          .insert(users)
+          .values({ email: dto.email, name: dto.name, passwordHash, provider: 'local' })
+          .returning();
 
-      const [org] = await tx
-        .insert(orgs)
-        .values({
-          name: `${dto.name}'s Organization`,
-          slug: uniqueSlug(dto.name),
-          createdBy: user.id,
-        })
-        .returning();
+        const [org] = await tx
+          .insert(orgs)
+          .values({
+            name: `${dto.name}'s Organization`,
+            slug: uniqueSlug(dto.name),
+            createdBy: user.id,
+          })
+          .returning();
 
-      await tx
-        .insert(orgMembers)
-        .values({ orgId: org.id, userId: user.id, role: 'owner' });
+        await tx
+          .insert(orgMembers)
+          .values({ orgId: org.id, userId: user.id, role: 'owner' });
 
-      const [workspace] = await tx
-        .insert(workspaces)
-        .values({ orgId: org.id, name: 'Default Workspace', slug: 'default' })
-        .returning();
+        const [workspace] = await tx
+          .insert(workspaces)
+          .values({ orgId: org.id, name: 'Default Workspace', slug: 'default' })
+          .returning();
 
-      await tx
-        .insert(workspaceMembers)
-        .values({ workspaceId: workspace.id, userId: user.id, role: 'admin' });
+        await tx
+          .insert(workspaceMembers)
+          .values({ workspaceId: workspace.id, userId: user.id, role: 'admin' });
 
-      await tx.insert(refreshTokens).values({
-        tokenHash: refresh.hash,
-        userId: user.id,
-        expiresAt: refreshExpiresAt,
-        rememberMe: false,
+        await tx.insert(refreshTokens).values({
+          tokenHash: refresh.hash,
+          userId: user.id,
+          expiresAt: refreshExpiresAt,
+          rememberMe: false,
+        });
+
+        return { user, org, workspace };
       });
-
-      return { user, org, workspace };
-    });
+    } catch (err) {
+      // Race: another signup inserted the same email between the check and now.
+      const e = err as { code?: string; constraint_name?: string };
+      if (e?.code === '23505' && e.constraint_name?.includes('email')) {
+        throw rpcError(
+          'EMAIL_ALREADY_EXISTS',
+          'An account with this email already exists.',
+        );
+      }
+      throw err;
+    }
 
     return {
       accessToken: this.tokens.signAccessToken(result.user),
@@ -122,8 +137,10 @@ export class AuthService {
       .where(eq(users.email, dto.email))
       .limit(1);
 
-    // Generic error — never reveal whether the email exists.
+    // Generic error — never reveal whether the email exists. Run a dummy
+    // compare so response timing doesn't differ between missing/found emails.
     if (!user || !user.passwordHash) {
+      await bcrypt.compare(dto.password, this.dummyHash);
       throw rpcError('INVALID_CREDENTIALS', 'Email or password is incorrect.');
     }
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
@@ -236,6 +253,18 @@ export class AuthService {
     if (user) {
       const token = this.tokens.newOpaqueToken();
       const ttlMs = durationToMs(this.config.get<string>('RESET_TOKEN_TTL', '1h'));
+
+      // Invalidate any prior unused reset tokens — only the newest link works.
+      await this.db
+        .update(passwordResetTokens)
+        .set({ used: true })
+        .where(
+          and(
+            eq(passwordResetTokens.userId, user.id),
+            eq(passwordResetTokens.used, false),
+          ),
+        );
+
       await this.db.insert(passwordResetTokens).values({
         tokenHash: token.hash,
         userId: user.id,

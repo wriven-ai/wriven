@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   pgSchema,
   text,
@@ -13,18 +15,30 @@ export const authSchema = pgSchema('auth_svc');
 
 // ── Identity ──────────────────────────────────────────────────────────────
 
-export const users = authSchema.table('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  email: text('email').notNull().unique(),
-  name: text('name').notNull(),
-  avatar: text('avatar'),
-  provider: text('provider').notNull().default('local'), // 'local' | 'google'
-  providerId: text('provider_id'),
-  passwordHash: text('password_hash'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const users = authSchema.table(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull().unique(),
+    name: text('name').notNull(),
+    avatar: text('avatar'),
+    provider: text('provider').notNull().default('local'), // 'local' | 'google'
+    providerId: text('provider_id'),
+    passwordHash: text('password_hash'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    // One linked account per external identity (NULLs distinct → many locals ok).
+    uniqueIndex('users_provider_provider_id_uq').on(t.provider, t.providerId),
+    check('users_provider_check', sql`${t.provider} in ('local', 'google')`),
+  ],
+);
 
 export const refreshTokens = authSchema.table(
   'refresh_tokens',
@@ -99,6 +113,10 @@ export const orgMembers = authSchema.table(
   (t) => [
     uniqueIndex('org_members_org_user_uq').on(t.orgId, t.userId),
     index('org_members_user_id_idx').on(t.userId),
+    check(
+      'org_members_role_check',
+      sql`${t.role} in ('owner', 'admin', 'member')`,
+    ),
   ],
 );
 
@@ -136,5 +154,9 @@ export const workspaceMembers = authSchema.table(
   (t) => [
     uniqueIndex('workspace_members_ws_user_uq').on(t.workspaceId, t.userId),
     index('workspace_members_user_id_idx').on(t.userId),
+    check(
+      'workspace_members_role_check',
+      sql`${t.role} in ('admin', 'editor', 'viewer')`,
+    ),
   ],
 );

@@ -1,0 +1,34 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { lt } from 'drizzle-orm';
+import * as schema from '../db/schema';
+
+const { refreshTokens, passwordResetTokens } = schema;
+
+/** Prunes expired token rows so the auth tables don't grow unbounded. */
+@Injectable()
+export class CleanupService {
+  private readonly logger = new Logger(CleanupService.name);
+
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
+
+  // Daily. Only deletes *expired* rows — revoked-but-unexpired refresh tokens
+  // are kept so reuse can still be detected as theft within their TTL.
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async pruneExpiredTokens(): Promise<void> {
+    const now = new Date();
+    const refresh = await this.db
+      .delete(refreshTokens)
+      .where(lt(refreshTokens.expiresAt, now))
+      .returning({ id: refreshTokens.id });
+    const resets = await this.db
+      .delete(passwordResetTokens)
+      .where(lt(passwordResetTokens.expiresAt, now))
+      .returning({ id: passwordResetTokens.id });
+
+    this.logger.log(
+      `Pruned ${refresh.length} refresh + ${resets.length} reset token(s).`,
+    );
+  }
+}

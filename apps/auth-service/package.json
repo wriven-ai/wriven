@@ -84,6 +84,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/microservices": "^11.1.26",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/schedule": "^6.1.3",
     "@wriven/contracts": "workspace:*",
     "@wriven/database": "workspace:*",
     "bcrypt": "^6.0.0",
