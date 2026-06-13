@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes } from 'crypto';
+import { durationToMs } from '../common/duration';
 
 @Injectable()
 export class TokenService {
@@ -10,11 +11,11 @@ export class TokenService {
     private readonly config: ConfigService,
   ) {}
 
-  /** Short-lived JWT access token (HS256). */
+  /** Short-lived JWT access token (HS256). TTL like `15m`. */
   signAccessToken(user: { id: string; email: string }): string {
     return this.jwt.sign(
       { sub: user.id, email: user.email },
-      { expiresIn: Number(this.config.get('JWT_ACCESS_TTL', 900)) },
+      { expiresIn: this.config.get<string>('JWT_ACCESS_TTL', '15m') },
     );
   }
 
@@ -28,14 +29,16 @@ export class TokenService {
     return createHash('sha256').update(raw).digest('hex');
   }
 
-  /** Refresh TTL in seconds, longer when "remember me" is set. */
-  refreshTtlSeconds(rememberMe: boolean): number {
-    return rememberMe
-      ? Number(this.config.get('JWT_REFRESH_TTL_REMEMBER', 2592000))
-      : Number(this.config.get('JWT_REFRESH_TTL', 604800));
+  /** Refresh TTL in ms, longer when "remember me" is set. Values like `7d`/`30d`. */
+  refreshTtlMs(rememberMe: boolean): number {
+    return durationToMs(
+      rememberMe
+        ? this.config.get<string>('JWT_REFRESH_TTL_REMEMBER', '30d')
+        : this.config.get<string>('JWT_REFRESH_TTL', '7d'),
+    );
   }
 
   refreshExpiresAt(rememberMe: boolean): Date {
-    return new Date(Date.now() + this.refreshTtlSeconds(rememberMe) * 1000);
+    return new Date(Date.now() + this.refreshTtlMs(rememberMe));
   }
 }
