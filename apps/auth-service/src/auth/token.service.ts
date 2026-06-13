@@ -19,10 +19,15 @@ export class TokenService {
     );
   }
 
-  /** A new opaque refresh token: raw (sent to client) + sha256 hash (stored). */
-  newRefreshToken(): { raw: string; hash: string } {
+  /** A new opaque token: raw (sent out) + sha256 hash (stored). */
+  newOpaqueToken(): { raw: string; hash: string } {
     const raw = randomBytes(48).toString('hex');
     return { raw, hash: this.hash(raw) };
+  }
+
+  /** Refresh token — opaque, stored hashed. */
+  newRefreshToken(): { raw: string; hash: string } {
+    return this.newOpaqueToken();
   }
 
   hash(raw: string): string {

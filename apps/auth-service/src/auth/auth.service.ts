@@ -2,21 +2,25 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AuthResult,
+  ForgotPasswordDto,
   LoginDto,
   LogoutPayload,
   OrgView,
   RefreshPayload,
   RefreshResult,
   RegisterDto,
+  ResetPasswordDto,
   UserView,
   WorkspaceView,
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
 import * as bcrypt from 'bcrypt';
 import { eq } from 'drizzle-orm';
+import { durationToMs } from '../common/duration';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { MailService } from './mail.service';
 import { TokenService } from './token.service';
 
 const {
@@ -26,6 +30,7 @@ const {
   workspaces,
   workspaceMembers,
   refreshTokens,
+  passwordResetTokens,
 } = schema;
 
 type UserRow = typeof users.$inferSelect;
@@ -38,6 +43,7 @@ export class AuthService {
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly tokens: TokenService,
     private readonly config: ConfigService,
+    private readonly mail: MailService,
   ) {}
 
   // ── Register (single transaction) ─────────────────────────────────────────
@@ -213,6 +219,71 @@ export class AuthService {
       .update(refreshTokens)
       .set({ revoked: true })
       .where(eq(refreshTokens.tokenHash, tokenHash));
+    return { success: true };
+  }
+
+  // ── Forgot password (always 200 — never reveal if the email exists) ─────────
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ success: true }> {
+    const [user] = await this.db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.email, dto.email))
+      .limit(1);
+
+    if (user) {
+      const token = this.tokens.newOpaqueToken();
+      const ttlMs = durationToMs(this.config.get<string>('RESET_TOKEN_TTL', '1h'));
+      await this.db.insert(passwordResetTokens).values({
+        tokenHash: token.hash,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + ttlMs),
+      });
+
+      const base = this.config.get<string>('APP_URL', 'http://localhost:4200');
+      const link = `${base}/reset-password?token=${token.raw}`;
+      await this.mail.sendPasswordReset(user.email, link);
+    }
+
+    return { success: true };
+  }
+
+  // ── Reset password (revoke all sessions — mandatory) ────────────────────────
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ success: true }> {
+    const tokenHash = this.tokens.hash(dto.token);
+    const [row] = await this.db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.tokenHash, tokenHash))
+      .limit(1);
+
+    if (!row || row.used || row.expiresAt.getTime() <= Date.now()) {
+      throw rpcError(
+        'INVALID_RESET_TOKEN',
+        'The reset token is invalid, expired, or already used.',
+      );
+    }
+
+    const rounds = Number(this.config.get('BCRYPT_ROUNDS', 12));
+    const passwordHash = await bcrypt.hash(dto.newPassword, rounds);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ passwordHash })
+        .where(eq(users.id, row.userId));
+      await tx
+        .update(passwordResetTokens)
+        .set({ used: true })
+        .where(eq(passwordResetTokens.id, row.id));
+      // Force re-login everywhere.
+      await tx
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.userId, row.userId));
+    });
+
     return { success: true };
   }
 

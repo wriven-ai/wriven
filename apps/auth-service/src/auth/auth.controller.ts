@@ -2,10 +2,12 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   AUTH_PATTERNS,
+  ForgotPasswordDto,
   LoginDto,
   LogoutPayload,
   RefreshPayload,
   RegisterDto,
+  ResetPasswordDto,
 } from '@wriven/contracts';
 import { AuthService } from './auth.service';
 
@@ -31,5 +33,15 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.LOGOUT)
   logout(@Payload() payload: LogoutPayload) {
     return this.auth.logout(payload);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.FORGOT_PASSWORD)
+  forgotPassword(@Payload() dto: ForgotPasswordDto) {
+    return this.auth.forgotPassword(dto);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.RESET_PASSWORD)
+  resetPassword(@Payload() dto: ResetPasswordDto) {
+    return this.auth.resetPassword(dto);
   }
 }

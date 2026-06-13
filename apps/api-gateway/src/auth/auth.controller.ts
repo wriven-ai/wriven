@@ -4,9 +4,11 @@ import {
   AUTH_PATTERNS,
   AuthResult,
   ERROR_CODES,
+  ForgotPasswordDto,
   LoginDto,
   RefreshResult,
   RegisterDto,
+  ResetPasswordDto,
   SERVICE_TOKENS,
   ServiceError,
 } from '@wriven/contracts';
@@ -75,6 +77,18 @@ export class AuthController {
     }
     res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
     return { success: true };
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return firstValueFrom(
+      this.auth.send(AUTH_PATTERNS.FORGOT_PASSWORD, dto),
+    );
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return firstValueFrom(this.auth.send(AUTH_PATTERNS.RESET_PASSWORD, dto));
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

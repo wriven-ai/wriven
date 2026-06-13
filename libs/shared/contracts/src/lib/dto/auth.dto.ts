@@ -42,3 +42,22 @@ export class LoginDto {
   @IsBoolean()
   rememberMe?: boolean;
 }
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @MinLength(1)
+  token!: string;
+
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  newPassword!: string;
+}
