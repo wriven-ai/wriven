@@ -6,10 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import WrivenLogo from '../../components/WrivenLogo';
-import { ApiRequestError, authApi, googleAuthUrl } from '../../lib/api';
-import { loginSchema, type LoginValues } from '../../schemas/auth';
-import { useAuthStore } from '../../stores/auth';
+import { ApiRequestError, authApi, googleAuthUrl } from '@/lib/api';
+import { loginSchema, type LoginValues } from '@/schemas/auth';
+import { useAuthStore } from '@/stores/auth';
 
 export const LoginPage = () => {
   const router = useRouter();
@@ -40,10 +39,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div
-      className="min-h-screen bg-brand-bg flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative editorial-grid paper-grain"
-      id="wriven-login-page"
-    >
+    <>
       <div className="absolute top-6 left-6" id="login-back-to-site">
         <Link
           href="/"
@@ -52,12 +48,6 @@ export const LoginPage = () => {
         >
           <ArrowLeft className="w-4 h-4 text-brand-accent" />
           Back to landing
-        </Link>
-      </div>
-
-      <div className="absolute top-6 right-6" id="login-brand-logo">
-        <Link href="/" className="inline-block" id="login-logo-link">
-          <WrivenLogo className="justify-end scale-110" />
         </Link>
       </div>
 
@@ -226,7 +216,7 @@ export const LoginPage = () => {
           </p>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

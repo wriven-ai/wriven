@@ -5,12 +5,8 @@ import { ArrowLeft, MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import WrivenLogo from '../../components/WrivenLogo';
-import { ApiRequestError, authApi } from '../../lib/api';
-import {
-  forgotPasswordSchema,
-  type ForgotPasswordValues,
-} from '../../schemas/auth';
+import { ApiRequestError, authApi } from '@/lib/api';
+import { forgotPasswordSchema, type ForgotPasswordValues } from '@/schemas/auth';
 
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
@@ -41,10 +37,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-brand-bg flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative editorial-grid paper-grain"
-      id="wriven-forgot-page"
-    >
+    <>
       <div className="absolute top-6 left-6">
         <Link
           href="/login"
@@ -52,12 +45,6 @@ export default function ForgotPasswordPage() {
         >
           <ArrowLeft className="w-4 h-4 text-brand-accent" />
           Back to sign in
-        </Link>
-      </div>
-
-      <div className="absolute top-6 right-6">
-        <Link href="/" className="inline-block">
-          <WrivenLogo className="justify-end scale-110" />
         </Link>
       </div>
 
@@ -143,6 +130,6 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
       </div>
-    </div>
+    </>
   );
 }
