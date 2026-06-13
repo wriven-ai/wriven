@@ -85,3 +85,7 @@ next-env.d.ts
 .vercel
 BACKEND.md
 PROJECT.md
+.codex
+.opencode
+.gemini
+.cursor
