@@ -22,10 +22,13 @@ import {
   SERVICE_TOKENS,
   ServiceError,
 } from '@wriven/contracts';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from './current-user.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
+
+const MINUTE = 60000;
 
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_COOKIE_PATH = '/api/v1/auth';
@@ -36,6 +39,7 @@ export class AuthController {
     @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
   ) {}
 
+  @Throttle({ default: { limit: 5, ttl: MINUTE } })
   @Post('register')
   async register(
     @Body() dto: RegisterDto,
@@ -47,6 +51,7 @@ export class AuthController {
     return this.completeAuth(res, result);
   }
 
+  @Throttle({ default: { limit: 10, ttl: MINUTE } })
   @Post('login')
   async login(
     @Body() dto: LoginDto,
@@ -91,6 +96,7 @@ export class AuthController {
     return { success: true };
   }
 
+  @Throttle({ default: { limit: 3, ttl: MINUTE } })
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return firstValueFrom(
@@ -98,6 +104,7 @@ export class AuthController {
     );
   }
 
+  @Throttle({ default: { limit: 5, ttl: MINUTE } })
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return firstValueFrom(this.auth.send(AUTH_PATTERNS.RESET_PASSWORD, dto));

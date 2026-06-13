@@ -9,6 +9,7 @@ export const ERROR_CODES = {
   INVALID_REFRESH_TOKEN: { code: 'INVALID_REFRESH_TOKEN', statusCode: 401 },
   INVALID_RESET_TOKEN: { code: 'INVALID_RESET_TOKEN', statusCode: 400 },
   OAUTH_FAILED: { code: 'OAUTH_FAILED', statusCode: 400 },
+  RATE_LIMITED: { code: 'RATE_LIMITED', statusCode: 429 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;
 

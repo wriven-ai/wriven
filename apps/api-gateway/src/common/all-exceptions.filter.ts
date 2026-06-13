@@ -49,6 +49,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
           statusCode: ERROR_CODES.VALIDATION_ERROR.statusCode,
         };
       }
+      if (status === ERROR_CODES.RATE_LIMITED.statusCode) {
+        return {
+          code: ERROR_CODES.RATE_LIMITED.code,
+          message: 'Too many requests. Please slow down and try again shortly.',
+          statusCode: ERROR_CODES.RATE_LIMITED.statusCode,
+        };
+      }
       const mapped = Object.values(ERROR_CODES).find(
         (c) => c.statusCode === status,
       );
