@@ -66,6 +66,9 @@
     }
   ],
   "analytics": false,
+  "sync": {
+    "applyChanges": true
+  },
   "targetDefaults": {
     "build": {
       "cache": true

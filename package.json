@@ -14,7 +14,15 @@
     "test:affected": "pnpm nx affected -t test",
     "lint": "pnpm nx run-many -t lint",
     "lint:affected": "pnpm nx affected -t lint",
-    "graph": "pnpm nx graph"
+    "graph": "pnpm nx graph",
+    "db:auth:generate": "drizzle-kit generate --config apps/auth-service/drizzle.config.ts",
+    "db:auth:migrate": "drizzle-kit migrate --config apps/auth-service/drizzle.config.ts",
+    "db:auth:push": "drizzle-kit push --config apps/auth-service/drizzle.config.ts",
+    "db:auth:studio": "drizzle-kit studio --config apps/auth-service/drizzle.config.ts",
+    "db:core:generate": "drizzle-kit generate --config apps/core-service/drizzle.config.ts",
+    "db:core:migrate": "drizzle-kit migrate --config apps/core-service/drizzle.config.ts",
+    "db:core:push": "drizzle-kit push --config apps/core-service/drizzle.config.ts",
+    "db:core:studio": "drizzle-kit studio --config apps/core-service/drizzle.config.ts"
   },
   "private": true,
   "devDependencies": {
@@ -65,9 +73,12 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/microservices": "^11.1.26",
     "@nestjs/platform-express": "^11.0.0",
     "axios": "^1.6.0",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "next": "~16.1.6",
     "postgres": "^3.4.9",
