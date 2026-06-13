@@ -57,3 +57,9 @@ export interface ServiceError {
   message: string;
   statusCode: number;
 }
+
+/** Identity extracted from a validated access token (attached to the request). */
+export interface AuthUser {
+  userId: string;
+  email: string;
+}

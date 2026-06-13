@@ -44,4 +44,9 @@ export class AuthController {
   resetPassword(@Payload() dto: ResetPasswordDto) {
     return this.auth.resetPassword(dto);
   }
+
+  @MessagePattern(AUTH_PATTERNS.GET_USER_BY_ID)
+  getUserById(@Payload() payload: { userId: string }) {
+    return this.auth.getUserById(payload);
+  }
 }

@@ -327,6 +327,20 @@ export class AuthService {
     return { success: true };
   }
 
+  // ── Current user ────────────────────────────────────────────────────────────
+
+  async getUserById(payload: { userId: string }): Promise<UserView> {
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, payload.userId))
+      .limit(1);
+    if (!user) {
+      throw rpcError('NOT_FOUND', 'User not found.');
+    }
+    return this.toUserView(user);
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   private async primaryOrg(userId: string): Promise<{ org: OrgRow; orgRole: string }> {

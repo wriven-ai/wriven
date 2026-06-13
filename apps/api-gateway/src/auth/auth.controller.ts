@@ -1,8 +1,18 @@
-import { Body, Controller, Inject, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   AUTH_PATTERNS,
   AuthResult,
+  AuthUser,
   ERROR_CODES,
   ForgotPasswordDto,
   LoginDto,
@@ -14,6 +24,8 @@ import {
 } from '@wriven/contracts';
 import type { Request, Response } from 'express';
 import { firstValueFrom } from 'rxjs';
+import { CurrentUser } from './current-user.decorator';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_COOKIE_PATH = '/api/v1/auth';
@@ -89,6 +101,14 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return firstValueFrom(this.auth.send(AUTH_PATTERNS.RESET_PASSWORD, dto));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async me(@CurrentUser() user: AuthUser) {
+    return firstValueFrom(
+      this.auth.send(AUTH_PATTERNS.GET_USER_BY_ID, { userId: user.userId }),
+    );
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { SERVICE_TOKENS } from '@wriven/contracts';
 import { AuthController } from '../auth/auth.controller';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { AppController } from './app.controller';
@@ -14,6 +16,12 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: 'apps/api-gateway/.env',
+    }),
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({
+        secret: cfg.get<string>('JWT_SECRET'),
+      }),
     }),
     ClientsModule.registerAsync([
       {
@@ -43,6 +51,7 @@ import { AppService } from './app.service';
   controllers: [AppController, AuthController],
   providers: [
     AppService,
+    JwtAuthGuard,
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
