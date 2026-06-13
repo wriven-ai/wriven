@@ -62,7 +62,10 @@ export class AuthService {
       .where(eq(users.email, dto.email))
       .limit(1);
     if (existing.length > 0) {
-      throw rpcError('EMAIL_ALREADY_EXISTS', 'An account with this email already exists.');
+      throw rpcError(
+        'EMAIL_ALREADY_EXISTS',
+        'An account with this email already exists.',
+      );
     }
 
     const rounds = Number(this.config.get('BCRYPT_ROUNDS', 12));
@@ -75,7 +78,12 @@ export class AuthService {
       result = await this.db.transaction(async (tx) => {
         const [user] = await tx
           .insert(users)
-          .values({ email: dto.email, name: dto.name, passwordHash, provider: 'local' })
+          .values({
+            email: dto.email,
+            name: dto.name,
+            passwordHash,
+            provider: 'local',
+          })
           .returning();
 
         const [org] = await tx
@@ -98,7 +106,11 @@ export class AuthService {
 
         await tx
           .insert(workspaceMembers)
-          .values({ workspaceId: workspace.id, userId: user.id, role: 'admin' });
+          .values({
+            workspaceId: workspace.id,
+            userId: user.id,
+            role: 'admin',
+          });
 
         await tx.insert(refreshTokens).values({
           tokenHash: refresh.hash,
@@ -196,7 +208,10 @@ export class AuthService {
         .update(refreshTokens)
         .set({ revoked: true })
         .where(eq(refreshTokens.userId, row.userId));
-      throw rpcError('INVALID_REFRESH_TOKEN', 'The refresh token has been revoked.');
+      throw rpcError(
+        'INVALID_REFRESH_TOKEN',
+        'The refresh token has been revoked.',
+      );
     }
 
     if (row.expiresAt.getTime() <= Date.now()) {
@@ -257,7 +272,9 @@ export class AuthService {
 
     if (user) {
       const token = this.tokens.newOpaqueToken();
-      const ttlMs = durationToMs(this.config.get<string>('RESET_TOKEN_TTL', '1h'));
+      const ttlMs = durationToMs(
+        this.config.get<string>('RESET_TOKEN_TTL', '1h'),
+      );
 
       // Invalidate any prior unused reset tokens — only the newest link works.
       await this.db
@@ -388,7 +405,11 @@ export class AuthService {
             .values({ orgId: org.id, userId: u.id, role: 'owner' });
           const [ws] = await tx
             .insert(workspaces)
-            .values({ orgId: org.id, name: 'Default Workspace', slug: 'default' })
+            .values({
+              orgId: org.id,
+              name: 'Default Workspace',
+              slug: 'default',
+            })
             .returning();
           await tx
             .insert(workspaceMembers)
@@ -478,7 +499,9 @@ export class AuthService {
   }
 
   /** Resend verification for the authenticated user (idempotent if verified). */
-  async resendVerification(payload: { userId: string }): Promise<{ success: true }> {
+  async resendVerification(payload: {
+    userId: string;
+  }): Promise<{ success: true }> {
     const [user] = await this.db
       .select({
         id: users.id,
@@ -503,7 +526,9 @@ export class AuthService {
     email: string,
   ): Promise<void> {
     const token = this.tokens.newOpaqueToken();
-    const ttlMs = durationToMs(this.config.get<string>('EMAIL_VERIFY_TTL', '24h'));
+    const ttlMs = durationToMs(
+      this.config.get<string>('EMAIL_VERIFY_TTL', '24h'),
+    );
 
     await this.db
       .update(emailVerificationTokens)
@@ -526,7 +551,10 @@ export class AuthService {
     try {
       await this.mail.sendVerification(email, link);
     } catch (err) {
-      this.logger.error(`Failed to send verification email to ${email}`, err as Error);
+      this.logger.error(
+        `Failed to send verification email to ${email}`,
+        err as Error,
+      );
     }
   }
 
@@ -556,14 +584,14 @@ export class AuthService {
     };
   }
 
-  private async primaryOrg(userId: string): Promise<{ org: OrgRow; orgRole: string }> {
-    const [row] = await this.db
-      .select({ org: orgs, role: orgMembers.role })
-      .from(orgMembers)
-      .innerJoin(orgs, eq(orgs.id, orgMembers.orgId))
-      .where(eq(orgMembers.userId, userId))
-      .orderBy(orgs.createdAt)
-      .limit(1);
+  private async primaryOrg(
+    userId: string,
+  ): Promise<{ org: OrgRow; orgRole: string }> {
+    const row = await this.db.query.orgMembers.findFirst({
+      where: eq(orgMembers.userId, userId),
+      orderBy: orgMembers.createdAt,
+      with: { org: true },
+    });
     if (!row) {
       throw rpcError('INTERNAL_ERROR', 'User has no organization.');
     }
@@ -573,13 +601,11 @@ export class AuthService {
   private async primaryWorkspace(
     userId: string,
   ): Promise<{ workspace: WorkspaceRow; workspaceRole: string }> {
-    const [row] = await this.db
-      .select({ workspace: workspaces, role: workspaceMembers.role })
-      .from(workspaceMembers)
-      .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
-      .where(eq(workspaceMembers.userId, userId))
-      .orderBy(workspaces.createdAt)
-      .limit(1);
+    const row = await this.db.query.workspaceMembers.findFirst({
+      where: eq(workspaceMembers.userId, userId),
+      orderBy: workspaceMembers.createdAt,
+      with: { workspace: true },
+    });
     if (!row) {
       throw rpcError('INTERNAL_ERROR', 'User has no workspace.');
     }
