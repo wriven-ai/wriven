@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
@@ -180,4 +180,75 @@ export const workspaceMembers = authSchema.table(
       sql`${t.role} in ('admin', 'editor', 'viewer')`,
     ),
   ],
+);
+
+// ── Relations (Drizzle relational query API; no DB change) ──────────────────
+
+export const usersRelations = relations(users, ({ many }) => ({
+  refreshTokens: many(refreshTokens),
+  passwordResetTokens: many(passwordResetTokens),
+  emailVerificationTokens: many(emailVerificationTokens),
+  orgMemberships: many(orgMembers),
+  workspaceMemberships: many(workspaceMembers),
+  createdOrgs: many(orgs),
+}));
+
+export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [refreshTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [passwordResetTokens.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const emailVerificationTokensRelations = relations(
+  emailVerificationTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [emailVerificationTokens.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const orgsRelations = relations(orgs, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [orgs.createdBy],
+    references: [users.id],
+  }),
+  members: many(orgMembers),
+  workspaces: many(workspaces),
+}));
+
+export const orgMembersRelations = relations(orgMembers, ({ one }) => ({
+  org: one(orgs, { fields: [orgMembers.orgId], references: [orgs.id] }),
+  user: one(users, { fields: [orgMembers.userId], references: [users.id] }),
+}));
+
+export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
+  org: one(orgs, { fields: [workspaces.orgId], references: [orgs.id] }),
+  members: many(workspaceMembers),
+}));
+
+export const workspaceMembersRelations = relations(
+  workspaceMembers,
+  ({ one }) => ({
+    workspace: one(workspaces, {
+      fields: [workspaceMembers.workspaceId],
+      references: [workspaces.id],
+    }),
+    user: one(users, {
+      fields: [workspaceMembers.userId],
+      references: [users.id],
+    }),
+  }),
 );

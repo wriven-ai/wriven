@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   check,
   index,
@@ -147,4 +147,31 @@ export const mediaAssets = coreSchema.table(
       sql`${t.kind} in ('image', 'video', 'file')`,
     ),
   ],
+);
+
+// ── Relations (Drizzle relational query API; no DB change) ──────────────────
+
+export const contentTypesRelations = relations(contentTypes, ({ many }) => ({
+  entries: many(contentEntries),
+}));
+
+export const contentEntriesRelations = relations(
+  contentEntries,
+  ({ one, many }) => ({
+    type: one(contentTypes, {
+      fields: [contentEntries.contentTypeId],
+      references: [contentTypes.id],
+    }),
+    revisions: many(contentRevisions),
+  }),
+);
+
+export const contentRevisionsRelations = relations(
+  contentRevisions,
+  ({ one }) => ({
+    entry: one(contentEntries, {
+      fields: [contentRevisions.entryId],
+      references: [contentEntries.id],
+    }),
+  }),
 );
