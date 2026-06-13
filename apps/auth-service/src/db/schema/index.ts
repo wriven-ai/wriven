@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   pgSchema,
   text,
   timestamp,
@@ -25,32 +26,46 @@ export const users = authSchema.table('users', {
     .defaultNow(),
 });
 
-export const refreshTokens = authSchema.table('refresh_tokens', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tokenHash: text('token_hash').notNull(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  revoked: boolean('revoked').notNull().default(false),
-  rememberMe: boolean('remember_me').notNull().default(false),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const refreshTokens = authSchema.table(
+  'refresh_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revoked: boolean('revoked').notNull().default(false),
+    rememberMe: boolean('remember_me').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('refresh_tokens_token_hash_uq').on(t.tokenHash),
+    index('refresh_tokens_user_id_idx').on(t.userId),
+  ],
+);
 
-export const passwordResetTokens = authSchema.table('password_reset_tokens', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tokenHash: text('token_hash').notNull(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  used: boolean('used').notNull().default(false),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const passwordResetTokens = authSchema.table(
+  'password_reset_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    used: boolean('used').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('password_reset_tokens_token_hash_uq').on(t.tokenHash),
+    index('password_reset_tokens_user_id_idx').on(t.userId),
+  ],
+);
 
 // ── Tenancy ───────────────────────────────────────────────────────────────
 
@@ -81,20 +96,27 @@ export const orgMembers = authSchema.table(
       .notNull()
       .defaultNow(),
   },
-  (t) => [uniqueIndex('org_members_org_user_uq').on(t.orgId, t.userId)],
+  (t) => [
+    uniqueIndex('org_members_org_user_uq').on(t.orgId, t.userId),
+    index('org_members_user_id_idx').on(t.userId),
+  ],
 );
 
-export const workspaces = authSchema.table('workspaces', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  orgId: uuid('org_id')
-    .notNull()
-    .references(() => orgs.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  slug: text('slug').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const workspaces = authSchema.table(
+  'workspaces',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id')
+      .notNull()
+      .references(() => orgs.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex('workspaces_org_slug_uq').on(t.orgId, t.slug)],
+);
 
 export const workspaceMembers = authSchema.table(
   'workspace_members',
@@ -113,5 +135,6 @@ export const workspaceMembers = authSchema.table(
   },
   (t) => [
     uniqueIndex('workspace_members_ws_user_uq').on(t.workspaceId, t.userId),
+    index('workspace_members_user_id_idx').on(t.userId),
   ],
 );

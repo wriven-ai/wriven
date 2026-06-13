@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AuthResult,
@@ -39,6 +39,8 @@ type WorkspaceRow = typeof workspaces.$inferSelect;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly tokens: TokenService,
@@ -242,7 +244,16 @@ export class AuthService {
 
       const base = this.config.get<string>('APP_URL', 'http://localhost:4200');
       const link = `${base}/reset-password?token=${token.raw}`;
-      await this.mail.sendPasswordReset(user.email, link);
+      // Never let a mail failure change the response — that would leak whether
+      // the email exists. Log and still return success.
+      try {
+        await this.mail.sendPasswordReset(user.email, link);
+      } catch (err) {
+        this.logger.error(
+          `Failed to send password reset email to ${user.email}`,
+          err as Error,
+        );
+      }
     }
 
     return { success: true };
