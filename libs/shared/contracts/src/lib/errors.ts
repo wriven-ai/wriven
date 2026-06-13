@@ -3,6 +3,7 @@ export const ERROR_CODES = {
   UNAUTHORIZED: { code: 'UNAUTHORIZED', statusCode: 401 },
   FORBIDDEN: { code: 'FORBIDDEN', statusCode: 403 },
   NOT_FOUND: { code: 'NOT_FOUND', statusCode: 404 },
+  CONFLICT: { code: 'CONFLICT', statusCode: 409 },
   VALIDATION_ERROR: { code: 'VALIDATION_ERROR', statusCode: 422 },
   INVALID_CREDENTIALS: { code: 'INVALID_CREDENTIALS', statusCode: 401 },
   EMAIL_ALREADY_EXISTS: { code: 'EMAIL_ALREADY_EXISTS', statusCode: 409 },
