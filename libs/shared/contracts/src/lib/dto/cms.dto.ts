@@ -1,0 +1,147 @@
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { FIELD_TYPES } from '../types/cms.types';
+import type { FieldType } from '../types/cms.types';
+
+const API_ID = /^[a-z][a-z0-9_]*$/;
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const STATUSES = ['draft', 'published', 'archived'] as const;
+
+export class FieldDefDto {
+  @IsString()
+  @Matches(API_ID, { message: 'key must be snake_case (a-z, 0-9, _)' })
+  @MaxLength(60)
+  key!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  label!: string;
+
+  @IsIn(FIELD_TYPES)
+  type!: FieldType;
+
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  unique?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  multiple?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  options?: string[];
+
+  @IsOptional()
+  @IsString()
+  refTypeId?: string;
+}
+
+export class CreateContentTypeDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  name!: string;
+
+  @IsString()
+  @Matches(API_ID, { message: 'apiId must be snake_case (a-z, 0-9, _)' })
+  @MaxLength(60)
+  apiId!: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FieldDefDto)
+  fields!: FieldDefDto[];
+}
+
+export class UpdateContentTypeDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  name?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FieldDefDto)
+  fields?: FieldDefDto[];
+}
+
+export class CreateEntryDto {
+  @IsString()
+  contentTypeId!: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(SLUG, { message: 'slug must be kebab-case' })
+  @MaxLength(120)
+  slug?: string;
+
+  @IsOptional()
+  @IsIn(STATUSES)
+  status?: (typeof STATUSES)[number];
+
+  /** Field values keyed by FieldDef.key — validated against the type's fields. */
+  @IsObject()
+  data!: Record<string, unknown>;
+}
+
+export class UpdateEntryDto {
+  @IsOptional()
+  @IsString()
+  @Matches(SLUG, { message: 'slug must be kebab-case' })
+  @MaxLength(120)
+  slug?: string;
+
+  @IsOptional()
+  @IsIn(STATUSES)
+  status?: (typeof STATUSES)[number];
+
+  @IsOptional()
+  @IsObject()
+  data?: Record<string, unknown>;
+}
+
+export class ListEntriesQueryDto {
+  @IsOptional()
+  @IsString()
+  contentTypeId?: string;
+
+  @IsOptional()
+  @IsIn(STATUSES)
+  status?: (typeof STATUSES)[number];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}

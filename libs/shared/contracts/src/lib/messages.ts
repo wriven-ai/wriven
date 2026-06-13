@@ -34,9 +34,19 @@ export const WORKSPACE_PATTERNS = {
 
 export const CORE_PATTERNS = {
   PING: 'core.ping',
-  CREATE_POST: 'core.createPost',
-  GET_POST: 'core.getPost',
-  LIST_POSTS: 'core.listPosts',
+
+  CONTENT_TYPE_CREATE: 'core.contentType.create',
+  CONTENT_TYPE_LIST: 'core.contentType.list',
+  CONTENT_TYPE_GET: 'core.contentType.get',
+  CONTENT_TYPE_UPDATE: 'core.contentType.update',
+  CONTENT_TYPE_DELETE: 'core.contentType.delete',
+
+  ENTRY_CREATE: 'core.entry.create',
+  ENTRY_LIST: 'core.entry.list',
+  ENTRY_GET: 'core.entry.get',
+  ENTRY_UPDATE: 'core.entry.update',
+  ENTRY_DELETE: 'core.entry.delete',
+  ENTRY_PUBLISH: 'core.entry.publish',
 } as const;
 
 /** Injection tokens for the gateway's TCP ClientProxy instances. */
