@@ -64,3 +64,11 @@ export interface AuthUser {
   userId: string;
   email: string;
 }
+
+/** Verified Google profile the gateway forwards to auth-service after OAuth. */
+export interface GoogleProfile {
+  googleId: string;
+  email: string;
+  name: string;
+  avatar: string | null;
+}

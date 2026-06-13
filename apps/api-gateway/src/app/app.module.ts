@@ -3,9 +3,11 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { PassportModule } from '@nestjs/passport';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { SERVICE_TOKENS } from '@wriven/contracts';
 import { AuthController } from '../auth/auth.controller';
+import { GoogleStrategy } from '../auth/google.strategy';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
@@ -27,6 +29,7 @@ import { AppService } from './app.service';
     // Global default: 100 requests / minute / IP. Sensitive auth routes
     // tighten this further via @Throttle in the controller.
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    PassportModule,
     ClientsModule.registerAsync([
       {
         name: SERVICE_TOKENS.AUTH_SERVICE,
@@ -56,6 +59,7 @@ import { AppService } from './app.service';
   providers: [
     AppService,
     JwtAuthGuard,
+    GoogleStrategy,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

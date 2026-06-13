@@ -3,6 +3,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   AUTH_PATTERNS,
   ForgotPasswordDto,
+  GoogleProfile,
   LoginDto,
   LogoutPayload,
   RefreshPayload,
@@ -59,5 +60,10 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.RESEND_VERIFICATION)
   resendVerification(@Payload() payload: { userId: string }) {
     return this.auth.resendVerification(payload);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.GOOGLE_LOGIN)
+  googleLogin(@Payload() profile: GoogleProfile) {
+    return this.auth.googleLogin(profile);
   }
 }

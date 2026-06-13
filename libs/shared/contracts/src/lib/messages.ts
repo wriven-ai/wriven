@@ -13,6 +13,7 @@ export const AUTH_PATTERNS = {
   RESET_PASSWORD: 'auth.resetPassword',
   VERIFY_EMAIL: 'auth.verifyEmail',
   RESEND_VERIFICATION: 'auth.resendVerification',
+  GOOGLE_LOGIN: 'auth.googleLogin',
   VALIDATE_USER: 'auth.validateUser',
   GET_USER_BY_ID: 'auth.getUserById',
 } as const;

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   AuthResult,
   ForgotPasswordDto,
+  GoogleProfile,
   LoginDto,
   LogoutPayload,
   OrgView,
@@ -331,6 +332,84 @@ export class AuthService {
     return { success: true };
   }
 
+  // ── Google OAuth (profile already verified by the gateway) ──────────────────
+
+  async googleLogin(profile: GoogleProfile): Promise<AuthResult> {
+    // 1. Existing Google-linked account.
+    let [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.providerId, profile.googleId))
+      .limit(1);
+
+    if (!user) {
+      // 2. Same email as a local account → link Google to it.
+      const [byEmail] = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.email, profile.email))
+        .limit(1);
+
+      if (byEmail) {
+        const [linked] = await this.db
+          .update(users)
+          .set({
+            providerId: profile.googleId,
+            emailVerified: true,
+            avatar: byEmail.avatar ?? profile.avatar,
+          })
+          .where(eq(users.id, byEmail.id))
+          .returning();
+        user = linked;
+      } else {
+        // 3. Brand-new Google user → full signup transaction.
+        user = await this.db.transaction(async (tx) => {
+          const [u] = await tx
+            .insert(users)
+            .values({
+              email: profile.email,
+              name: profile.name,
+              avatar: profile.avatar,
+              provider: 'google',
+              providerId: profile.googleId,
+              emailVerified: true,
+            })
+            .returning();
+          const [org] = await tx
+            .insert(orgs)
+            .values({
+              name: `${profile.name}'s Organization`,
+              slug: uniqueSlug(profile.name),
+              createdBy: u.id,
+            })
+            .returning();
+          await tx
+            .insert(orgMembers)
+            .values({ orgId: org.id, userId: u.id, role: 'owner' });
+          const [ws] = await tx
+            .insert(workspaces)
+            .values({ orgId: org.id, name: 'Default Workspace', slug: 'default' })
+            .returning();
+          await tx
+            .insert(workspaceMembers)
+            .values({ workspaceId: ws.id, userId: u.id, role: 'admin' });
+          return u;
+        });
+      }
+    }
+
+    const session = await this.startSession(user);
+    const { org, orgRole } = await this.primaryOrg(user.id);
+    const { workspace, workspaceRole } = await this.primaryWorkspace(user.id);
+
+    return {
+      ...session,
+      user: this.toUserView(user),
+      org: this.toOrgView(org, orgRole),
+      workspace: this.toWorkspaceView(workspace, workspaceRole),
+    };
+  }
+
   // ── Current user ────────────────────────────────────────────────────────────
 
   async getUserById(payload: { userId: string }): Promise<UserView> {
@@ -430,6 +509,30 @@ export class AuthService {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /** Issue a refresh token row + access token for a user. */
+  private async startSession(
+    user: UserRow,
+    rememberMe = false,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    refreshExpiresAt: string;
+  }> {
+    const refresh = this.tokens.newRefreshToken();
+    const refreshExpiresAt = this.tokens.refreshExpiresAt(rememberMe);
+    await this.db.insert(refreshTokens).values({
+      tokenHash: refresh.hash,
+      userId: user.id,
+      expiresAt: refreshExpiresAt,
+      rememberMe,
+    });
+    return {
+      accessToken: this.tokens.signAccessToken(user),
+      refreshToken: refresh.raw,
+      refreshExpiresAt: refreshExpiresAt.toISOString(),
+    };
+  }
 
   private async primaryOrg(userId: string): Promise<{ org: OrgRow; orgRole: string }> {
     const [row] = await this.db

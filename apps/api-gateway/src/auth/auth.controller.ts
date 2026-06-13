@@ -9,12 +9,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { AuthGuard } from '@nestjs/passport';
 import {
   AUTH_PATTERNS,
   AuthResult,
   AuthUser,
   ERROR_CODES,
   ForgotPasswordDto,
+  GoogleProfile,
   LoginDto,
   RefreshResult,
   RegisterDto,
@@ -134,6 +136,29 @@ export class AuthController {
     return firstValueFrom(
       this.auth.send(AUTH_PATTERNS.GET_USER_BY_ID, { userId: user.userId }),
     );
+  }
+
+  // ── Google OAuth ────────────────────────────────────────────────────────────
+
+  /** Kicks off the Google consent redirect (handled by the passport guard). */
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  googleAuth() {
+    // Intentionally empty — AuthGuard issues the redirect to Google.
+  }
+
+  /** Google redirects here; exchange profile for a session, then bounce to the SPA. */
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
+    const profile = req.user as GoogleProfile;
+    const result = await firstValueFrom(
+      this.auth.send<AuthResult>(AUTH_PATTERNS.GOOGLE_LOGIN, profile),
+    );
+    this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
+    const origin = process.env.CLIENT_ORIGIN ?? 'http://localhost:3000';
+    // Access token in the URL fragment — not sent to servers or logged.
+    res.redirect(`${origin}/auth/callback#access_token=${result.accessToken}`);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
