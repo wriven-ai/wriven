@@ -18,12 +18,14 @@ import {
   ForgotPasswordDto,
   GoogleProfile,
   LoginDto,
+  ORG_PATTERNS,
   RefreshResult,
   RegisterDto,
   ResetPasswordDto,
   SERVICE_TOKENS,
   ServiceError,
   VerifyEmailDto,
+  WORKSPACE_PATTERNS,
 } from '@wriven/contracts';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
@@ -134,7 +136,25 @@ export class AuthController {
   @Get('me')
   async me(@CurrentUser() user: AuthUser) {
     return firstValueFrom(
-      this.auth.send(AUTH_PATTERNS.GET_USER_BY_ID, { userId: user.userId }),
+      this.auth.send(AUTH_PATTERNS.GET_SESSION, { userId: user.userId }),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('orgs')
+  async orgs(@CurrentUser() user: AuthUser) {
+    return firstValueFrom(
+      this.auth.send(ORG_PATTERNS.LIST_ORGS, { userId: user.userId }),
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('workspaces')
+  async workspaces(@CurrentUser() user: AuthUser) {
+    return firstValueFrom(
+      this.auth.send(WORKSPACE_PATTERNS.LIST_WORKSPACES, {
+        userId: user.userId,
+      }),
     );
   }
 

@@ -71,6 +71,13 @@ export interface WorkspaceMembership {
   role: string;
 }
 
+/** Full session context — used to restore state after a page reload. */
+export interface SessionView {
+  user: UserView;
+  orgs: OrgView[];
+  workspaces: WorkspaceView[];
+}
+
 /** Verified Google profile the gateway forwards to auth-service after OAuth. */
 export interface GoogleProfile {
   googleId: string;

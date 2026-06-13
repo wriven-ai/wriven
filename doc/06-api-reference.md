@@ -14,7 +14,7 @@ Base URL: `http://localhost:5000/api/v1` (gateway). All responses use the standa
 ## Auth
 
 ### POST `/auth/register`
-Public. Body: `{ name, email, password }` (password ≥ 8). Creates user + org + workspace, sends verification email, sets refresh cookie.
+Public. Body: `{ name, email, password, orgName? }` (password ≥ 8). Creates user + org + workspace, sends verification email, sets refresh cookie. `orgName` names the created org (defaults to `"<name>'s Organization"`).
 → `{ accessToken, user, org, workspace }`. Errors: `VALIDATION_ERROR` 422, `EMAIL_ALREADY_EXISTS` 409. Rate limit 5/min.
 
 ### POST `/auth/login`
@@ -42,7 +42,13 @@ Public. Body: `{ token }`. → `{ success: true }`. Error: `INVALID_VERIFICATION
 **Protected** (JWT). Re-sends verification for the current user (idempotent). → `{ success: true }`. Rate limit 3/min.
 
 ### GET `/auth/me`
-**Protected** (JWT). → `{ id, email, name, avatar, provider, emailVerified, createdAt }`. Error: `UNAUTHORIZED` 401.
+**Protected** (JWT). Full session for restoring client state. → `{ user, orgs[], workspaces[] }` where `user = { id, email, name, avatar, provider, emailVerified, createdAt }`, each org `{ id, name, slug, role }`, each workspace `{ id, orgId, name, slug, role }`. Error: `UNAUTHORIZED` 401.
+
+### GET `/auth/orgs`
+**Protected** (JWT). The current user's organizations. → `OrgView[]`.
+
+### GET `/auth/workspaces`
+**Protected** (JWT). The current user's workspaces. → `WorkspaceView[]`.
 
 ### GET `/auth/google`
 Public. Redirects (302) to Google consent.

@@ -7,6 +7,7 @@ import {
   LoginDto,
   LogoutPayload,
   RefreshPayload,
+  ORG_PATTERNS,
   RegisterDto,
   ResetPasswordDto,
   VerifyEmailDto,
@@ -51,6 +52,21 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.GET_USER_BY_ID)
   getUserById(@Payload() payload: { userId: string }) {
     return this.auth.getUserById(payload);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.GET_SESSION)
+  getSession(@Payload() payload: { userId: string }) {
+    return this.auth.getSession(payload);
+  }
+
+  @MessagePattern(ORG_PATTERNS.LIST_ORGS)
+  listOrgs(@Payload() payload: { userId: string }) {
+    return this.auth.listOrgs(payload);
+  }
+
+  @MessagePattern(WORKSPACE_PATTERNS.LIST_WORKSPACES)
+  listWorkspaces(@Payload() payload: { userId: string }) {
+    return this.auth.listWorkspaces(payload);
   }
 
   @MessagePattern(AUTH_PATTERNS.VERIFY_EMAIL)

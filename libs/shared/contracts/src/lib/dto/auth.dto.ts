@@ -25,6 +25,13 @@ export class RegisterDto {
   @MinLength(8)
   @MaxLength(128)
   password!: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  orgName?: string;
 }
 
 export class LoginDto {

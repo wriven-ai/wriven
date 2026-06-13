@@ -16,11 +16,13 @@ export const AUTH_PATTERNS = {
   GOOGLE_LOGIN: 'auth.googleLogin',
   VALIDATE_USER: 'auth.validateUser',
   GET_USER_BY_ID: 'auth.getUserById',
+  GET_SESSION: 'auth.getSession',
 } as const;
 
 export const ORG_PATTERNS = {
   CREATE_ORG: 'auth.createOrg',
   GET_ORG: 'auth.getOrg',
+  LIST_ORGS: 'auth.listOrgs',
   ADD_ORG_MEMBER: 'auth.addOrgMember',
   REMOVE_ORG_MEMBER: 'auth.removeOrgMember',
 } as const;
@@ -28,6 +30,7 @@ export const ORG_PATTERNS = {
 export const WORKSPACE_PATTERNS = {
   CREATE_WORKSPACE: 'auth.createWorkspace',
   GET_WORKSPACE: 'auth.getWorkspace',
+  LIST_WORKSPACES: 'auth.listWorkspaces',
   VALIDATE_WORKSPACE_MEMBER: 'auth.validateWorkspaceMember',
   ADD_WORKSPACE_MEMBER: 'auth.addWorkspaceMember',
 } as const;

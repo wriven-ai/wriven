@@ -11,6 +11,7 @@ import {
   RefreshResult,
   RegisterDto,
   ResetPasswordDto,
+  SessionView,
   UserView,
   VerifyEmailDto,
   WorkspaceView,
@@ -85,11 +86,12 @@ export class AuthService {
           })
           .returning();
 
+        const orgName = dto.orgName ?? `${dto.name}'s Organization`;
         const [org] = await tx
           .insert(orgs)
           .values({
-            name: `${dto.name}'s Organization`,
-            slug: uniqueSlug(dto.name),
+            name: orgName,
+            slug: uniqueSlug(orgName),
             createdBy: user.id,
           })
           .returning();
@@ -446,6 +448,34 @@ export class AuthService {
       throw rpcError('NOT_FOUND', 'User not found.');
     }
     return this.toUserView(user);
+  }
+
+  /** Full session context for restoring client state after a reload. */
+  async getSession(payload: { userId: string }): Promise<SessionView> {
+    const [user, orgs, workspaces] = await Promise.all([
+      this.getUserById(payload),
+      this.listOrgs(payload),
+      this.listWorkspaces(payload),
+    ]);
+    return { user, orgs, workspaces };
+  }
+
+  async listOrgs(payload: { userId: string }): Promise<OrgView[]> {
+    const rows = await this.db.query.orgMembers.findMany({
+      where: eq(orgMembers.userId, payload.userId),
+      orderBy: orgMembers.createdAt,
+      with: { org: true },
+    });
+    return rows.map((r) => this.toOrgView(r.org, r.role));
+  }
+
+  async listWorkspaces(payload: { userId: string }): Promise<WorkspaceView[]> {
+    const rows = await this.db.query.workspaceMembers.findMany({
+      where: eq(workspaceMembers.userId, payload.userId),
+      orderBy: workspaceMembers.createdAt,
+      with: { workspace: true },
+    });
+    return rows.map((r) => this.toWorkspaceView(r.workspace, r.role));
   }
 
   // ── Email verification ──────────────────────────────────────────────────────

@@ -49,7 +49,7 @@ User ──< org_members >── Org ──< workspaces ── workspace_members
 `POST /auth/register { name, email, password }` →
 1. Reject if email exists (`EMAIL_ALREADY_EXISTS`; also caught on the unique constraint for races).
 2. bcrypt hash (rounds `BCRYPT_ROUNDS`, default 12).
-3. **One transaction:** insert user → org (`"<name>'s Organization"`, random-suffixed slug) → org_member `owner` → workspace (`Default Workspace`, slug `default`) → workspace_member `admin` → refresh token row.
+3. **One transaction:** insert user → org (name from optional `orgName`, else `"<name>'s Organization"`; random-suffixed slug) → org_member `owner` → workspace (`Default Workspace`, slug `default`) → workspace_member `admin` → refresh token row.
 4. Issue access + refresh tokens; send verification email (failure logged, never blocks).
 5. Return `{ accessToken, user, org, workspace }` + refresh cookie.
 
@@ -87,6 +87,11 @@ User ──< org_members >── Org ──< workspaces ── workspace_members
 - No email enumeration (login + forgot).
 - Rate limits at the gateway (see [07](./07-conventions.md)).
 - Daily cron (`@nestjs/schedule`) prunes **expired** token rows (revoked-but-unexpired kept so reuse is still detectable within TTL).
+
+## Session & listing
+
+- `auth.getSession({ userId })` → `{ user, orgs[], workspaces[] }` — backs `GET /auth/me`; lets the client restore full context after a page reload + silent refresh.
+- `auth.listOrgs` / `auth.listWorkspaces` → the user's orgs/workspaces with role — back `GET /auth/orgs` and `GET /auth/workspaces`.
 
 ## Cross-service handler
 
