@@ -8,6 +8,7 @@ import {
   RefreshPayload,
   RegisterDto,
   ResetPasswordDto,
+  VerifyEmailDto,
 } from '@wriven/contracts';
 import { AuthService } from './auth.service';
 
@@ -48,5 +49,15 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.GET_USER_BY_ID)
   getUserById(@Payload() payload: { userId: string }) {
     return this.auth.getUserById(payload);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.VERIFY_EMAIL)
+  verifyEmail(@Payload() dto: VerifyEmailDto) {
+    return this.auth.verifyEmail(dto);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.RESEND_VERIFICATION)
+  resendVerification(@Payload() payload: { userId: string }) {
+    return this.auth.resendVerification(payload);
   }
 }

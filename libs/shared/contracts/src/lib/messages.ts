@@ -11,6 +11,8 @@ export const AUTH_PATTERNS = {
   LOGOUT: 'auth.logout',
   FORGOT_PASSWORD: 'auth.forgotPassword',
   RESET_PASSWORD: 'auth.resetPassword',
+  VERIFY_EMAIL: 'auth.verifyEmail',
+  RESEND_VERIFICATION: 'auth.resendVerification',
   VALIDATE_USER: 'auth.validateUser',
   GET_USER_BY_ID: 'auth.getUserById',
 } as const;

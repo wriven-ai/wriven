@@ -4,7 +4,7 @@ import { DRIZZLE, DrizzleDB } from '@wriven/database';
 import { lt } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
-const { refreshTokens, passwordResetTokens } = schema;
+const { refreshTokens, passwordResetTokens, emailVerificationTokens } = schema;
 
 /** Prunes expired token rows so the auth tables don't grow unbounded. */
 @Injectable()
@@ -26,9 +26,13 @@ export class CleanupService {
       .delete(passwordResetTokens)
       .where(lt(passwordResetTokens.expiresAt, now))
       .returning({ id: passwordResetTokens.id });
+    const verifications = await this.db
+      .delete(emailVerificationTokens)
+      .where(lt(emailVerificationTokens.expiresAt, now))
+      .returning({ id: emailVerificationTokens.id });
 
     this.logger.log(
-      `Pruned ${refresh.length} refresh + ${resets.length} reset token(s).`,
+      `Pruned ${refresh.length} refresh + ${resets.length} reset + ${verifications.length} verification token(s).`,
     );
   }
 }

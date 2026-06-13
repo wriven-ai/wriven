@@ -22,6 +22,13 @@
       "when": 1781329892839,
       "tag": "0002_rainy_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781332603317,
+      "tag": "0003_jittery_queen_noir",
+      "breakpoints": true
     }
   ]
 }

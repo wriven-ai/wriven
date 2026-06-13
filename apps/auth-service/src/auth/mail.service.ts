@@ -35,4 +35,18 @@ export class MailService {
     });
     this.logger.log(`Password reset email sent to ${to} (id: ${info.messageId})`);
   }
+
+  async sendVerification(to: string, link: string): Promise<void> {
+    const info = await this.transporter.sendMail({
+      from: this.from,
+      to,
+      subject: 'Verify your Wriven email',
+      text: `Welcome to Wriven! Verify your email using the link below:\n\n${link}\n\nThis link expires soon.`,
+      html: `
+        <p>Welcome to Wriven! Verify your email using the link below:</p>
+        <p><a href="${link}">${link}</a></p>
+        <p>This link expires soon.</p>`,
+    });
+    this.logger.log(`Verification email sent to ${to} (id: ${info.messageId})`);
+  }
 }

@@ -11,6 +11,7 @@ import {
   RegisterDto,
   ResetPasswordDto,
   UserView,
+  VerifyEmailDto,
   WorkspaceView,
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
@@ -31,6 +32,7 @@ const {
   workspaceMembers,
   refreshTokens,
   passwordResetTokens,
+  emailVerificationTokens,
 } = schema;
 
 type UserRow = typeof users.$inferSelect;
@@ -117,6 +119,8 @@ export class AuthService {
       }
       throw err;
     }
+
+    await this.issueVerificationEmail(result.user.id, result.user.email);
 
     return {
       accessToken: this.tokens.signAccessToken(result.user),
@@ -341,6 +345,90 @@ export class AuthService {
     return this.toUserView(user);
   }
 
+  // ── Email verification ──────────────────────────────────────────────────────
+
+  async verifyEmail(dto: VerifyEmailDto): Promise<{ success: true }> {
+    const tokenHash = this.tokens.hash(dto.token);
+    const [row] = await this.db
+      .select()
+      .from(emailVerificationTokens)
+      .where(eq(emailVerificationTokens.tokenHash, tokenHash))
+      .limit(1);
+
+    if (!row || row.used || row.expiresAt.getTime() <= Date.now()) {
+      throw rpcError(
+        'INVALID_VERIFICATION_TOKEN',
+        'The verification token is invalid, expired, or already used.',
+      );
+    }
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ emailVerified: true })
+        .where(eq(users.id, row.userId));
+      await tx
+        .update(emailVerificationTokens)
+        .set({ used: true })
+        .where(eq(emailVerificationTokens.id, row.id));
+    });
+
+    return { success: true };
+  }
+
+  /** Resend verification for the authenticated user (idempotent if verified). */
+  async resendVerification(payload: { userId: string }): Promise<{ success: true }> {
+    const [user] = await this.db
+      .select({
+        id: users.id,
+        email: users.email,
+        emailVerified: users.emailVerified,
+      })
+      .from(users)
+      .where(eq(users.id, payload.userId))
+      .limit(1);
+    if (!user) {
+      throw rpcError('NOT_FOUND', 'User not found.');
+    }
+    if (!user.emailVerified) {
+      await this.issueVerificationEmail(user.id, user.email);
+    }
+    return { success: true };
+  }
+
+  /** Invalidate prior unused verification tokens, issue a fresh one, send mail. */
+  private async issueVerificationEmail(
+    userId: string,
+    email: string,
+  ): Promise<void> {
+    const token = this.tokens.newOpaqueToken();
+    const ttlMs = durationToMs(this.config.get<string>('EMAIL_VERIFY_TTL', '24h'));
+
+    await this.db
+      .update(emailVerificationTokens)
+      .set({ used: true })
+      .where(
+        and(
+          eq(emailVerificationTokens.userId, userId),
+          eq(emailVerificationTokens.used, false),
+        ),
+      );
+    await this.db.insert(emailVerificationTokens).values({
+      tokenHash: token.hash,
+      userId,
+      expiresAt: new Date(Date.now() + ttlMs),
+    });
+
+    const base = this.config.get<string>('APP_URL', 'http://localhost:4200');
+    const link = `${base}/verify-email?token=${token.raw}`;
+    // Don't let a mail failure break registration/resend.
+    try {
+      await this.mail.sendVerification(email, link);
+    } catch (err) {
+      this.logger.error(`Failed to send verification email to ${email}`, err as Error);
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   private async primaryOrg(userId: string): Promise<{ org: OrgRow; orgRole: string }> {
@@ -380,6 +468,7 @@ export class AuthService {
       name: u.name,
       avatar: u.avatar,
       provider: u.provider,
+      emailVerified: u.emailVerified,
       createdAt: u.createdAt.toISOString(),
     };
   }

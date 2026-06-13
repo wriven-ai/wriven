@@ -21,6 +21,7 @@ import {
   ResetPasswordDto,
   SERVICE_TOKENS,
   ServiceError,
+  VerifyEmailDto,
 } from '@wriven/contracts';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
@@ -108,6 +109,23 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return firstValueFrom(this.auth.send(AUTH_PATTERNS.RESET_PASSWORD, dto));
+  }
+
+  @Throttle({ default: { limit: 10, ttl: MINUTE } })
+  @Post('verify-email')
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return firstValueFrom(this.auth.send(AUTH_PATTERNS.VERIFY_EMAIL, dto));
+  }
+
+  @Throttle({ default: { limit: 3, ttl: MINUTE } })
+  @UseGuards(JwtAuthGuard)
+  @Post('resend-verification')
+  async resendVerification(@CurrentUser() user: AuthUser) {
+    return firstValueFrom(
+      this.auth.send(AUTH_PATTERNS.RESEND_VERIFICATION, {
+        userId: user.userId,
+      }),
+    );
   }
 
   @UseGuards(JwtAuthGuard)

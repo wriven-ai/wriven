@@ -6,6 +6,7 @@ export interface UserView {
   name: string;
   avatar: string | null;
   provider: string;
+  emailVerified: boolean;
   createdAt: string;
 }
 

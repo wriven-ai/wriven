@@ -25,6 +25,7 @@ export const users = authSchema.table(
     provider: text('provider').notNull().default('local'), // 'local' | 'google'
     providerId: text('provider_id'),
     passwordHash: text('password_hash'),
+    emailVerified: boolean('email_verified').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -78,6 +79,26 @@ export const passwordResetTokens = authSchema.table(
   (t) => [
     uniqueIndex('password_reset_tokens_token_hash_uq').on(t.tokenHash),
     index('password_reset_tokens_user_id_idx').on(t.userId),
+  ],
+);
+
+export const emailVerificationTokens = authSchema.table(
+  'email_verification_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    used: boolean('used').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('email_verification_tokens_token_hash_uq').on(t.tokenHash),
+    index('email_verification_tokens_user_id_idx').on(t.userId),
   ],
 );
 
