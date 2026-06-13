@@ -51,7 +51,7 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/auth-service-e2e/**/*", "apps/cms-service-e2e/**/*"]
+      "exclude": ["apps/auth-service-e2e/**/*", "apps/core-service-e2e/**/*"]
     },
     {
       "plugin": "@nx/next/plugin",

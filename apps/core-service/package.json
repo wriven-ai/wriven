@@ -1,5 +1,5 @@
 {
-  "name": "@wriven/cms-service",
+  "name": "@wriven/core-service",
   "version": "0.0.1",
   "private": true,
   "nx": {
@@ -11,7 +11,7 @@
           "args": [
             "--node-env=production"
           ],
-          "cwd": "apps/cms-service"
+          "cwd": "apps/core-service"
         },
         "configurations": {
           "development": {
@@ -28,8 +28,8 @@
         "cache": true,
         "executor": "@nx/js:prune-lockfile",
         "outputs": [
-          "{workspaceRoot}/apps/cms-service/dist/package.json",
-          "{workspaceRoot}/apps/cms-service/dist/pnpm-lock.yaml"
+          "{workspaceRoot}/apps/core-service/dist/package.json",
+          "{workspaceRoot}/apps/core-service/dist/pnpm-lock.yaml"
         ],
         "options": {
           "buildTarget": "build"
@@ -41,7 +41,7 @@
         ],
         "cache": true,
         "outputs": [
-          "{workspaceRoot}/apps/cms-service/dist/workspace_modules"
+          "{workspaceRoot}/apps/core-service/dist/workspace_modules"
         ],
         "executor": "@nx/js:copy-workspace-modules",
         "options": {
@@ -63,19 +63,20 @@
           "build"
         ],
         "options": {
-          "buildTarget": "@wriven/cms-service:build",
+          "buildTarget": "@wriven/core-service:build",
           "runBuildTargetDependencies": false
         },
         "configurations": {
           "development": {
-            "buildTarget": "@wriven/cms-service:build:development"
+            "buildTarget": "@wriven/core-service:build:development"
           },
           "production": {
-            "buildTarget": "@wriven/cms-service:build:production"
+            "buildTarget": "@wriven/core-service:build:production"
           }
         }
       }
-    }
+    },
+    "name": "@wriven/core-service"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

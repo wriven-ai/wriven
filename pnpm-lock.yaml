@@ -237,7 +237,7 @@ importers:
         specifier: ^19.0.0
         version: 19.2.7(react@19.2.7)
 
-  apps/cms-service:
+  apps/core-service:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0

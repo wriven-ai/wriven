@@ -4,7 +4,7 @@
   "files": [],
   "references": [
     {
-      "path": "./apps/cms-service"
+      "path": "./apps/core-service"
     },
     {
       "path": "./apps/auth-service"
