@@ -23,8 +23,10 @@ export const ORG_PATTERNS = {
   CREATE_ORG: 'auth.createOrg',
   GET_ORG: 'auth.getOrg',
   LIST_ORGS: 'auth.listOrgs',
-  ADD_ORG_MEMBER: 'auth.addOrgMember',
-  REMOVE_ORG_MEMBER: 'auth.removeOrgMember',
+  LIST_MEMBERS: 'auth.org.listMembers',
+  ADD_MEMBER: 'auth.org.addMember',
+  UPDATE_MEMBER: 'auth.org.updateMember',
+  REMOVE_MEMBER: 'auth.org.removeMember',
 } as const;
 
 export const WORKSPACE_PATTERNS = {
@@ -32,7 +34,10 @@ export const WORKSPACE_PATTERNS = {
   GET_WORKSPACE: 'auth.getWorkspace',
   LIST_WORKSPACES: 'auth.listWorkspaces',
   VALIDATE_WORKSPACE_MEMBER: 'auth.validateWorkspaceMember',
-  ADD_WORKSPACE_MEMBER: 'auth.addWorkspaceMember',
+  LIST_MEMBERS: 'auth.workspace.listMembers',
+  ADD_MEMBER: 'auth.workspace.addMember',
+  UPDATE_MEMBER: 'auth.workspace.updateMember',
+  REMOVE_MEMBER: 'auth.workspace.removeMember',
 } as const;
 
 export const CORE_PATTERNS = {

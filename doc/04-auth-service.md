@@ -93,6 +93,14 @@ User ──< org_members >── Org ──< workspaces ── workspace_members
 - `auth.getSession({ userId })` → `{ user, orgs[], workspaces[] }` — backs `GET /auth/me`; lets the client restore full context after a page reload + silent refresh.
 - `auth.listOrgs` / `auth.listWorkspaces` → the user's orgs/workspaces with role — back `GET /auth/orgs` and `GET /auth/workspaces`.
 
+## Member management
+
+`MembersService` handles org & workspace membership CRUD (patterns `auth.org.*` / `auth.workspace.*`), exposed by the gateway under `/orgs/:orgId/members` and `/workspaces/:workspaceId/members` (see [06](./06-api-reference.md)). Authorization is enforced here from the caller's role:
+
+- **Org:** list = any member; add/update/remove = owner/admin. Only an owner manages the `owner` role; the org must keep ≥1 owner.
+- **Workspace:** list = any member; add/update/remove = admin. The workspace must keep ≥1 admin.
+- Members are added by **email** and must be an existing user (no invitation flow yet).
+
 ## Cross-service handler
 
 `auth.validateWorkspaceMember({ userId, workspaceId })` → `{ workspaceId, role }` or `FORBIDDEN`. Called by the gateway's WorkspaceGuard before forwarding workspace-scoped requests to core-service.

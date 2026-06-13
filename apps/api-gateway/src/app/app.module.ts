@@ -13,6 +13,8 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { ContentController } from '../content/content.controller';
+import { OrgsController } from '../members/orgs.controller';
+import { WorkspacesController } from '../members/workspaces.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -57,7 +59,13 @@ import { AppService } from './app.service';
       },
     ]),
   ],
-  controllers: [AppController, AuthController, ContentController],
+  controllers: [
+    AppController,
+    AuthController,
+    ContentController,
+    OrgsController,
+    WorkspacesController,
+  ],
   providers: [
     AppService,
     JwtAuthGuard,

@@ -50,6 +50,36 @@ Public. Body: `{ token }`. → `{ success: true }`. Error: `INVALID_VERIFICATION
 ### GET `/auth/workspaces`
 **Protected** (JWT). The current user's workspaces. → `WorkspaceView[]`.
 
+---
+
+## Members
+
+All member routes are **protected** (JWT). Authorization is enforced in auth-service by the caller's role in the org/workspace.
+
+### Org members — `/orgs/:orgId/members`
+Caller must be an org member to list; **owner/admin** to mutate.
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| GET | `/orgs/:orgId/members` | — | `OrgMemberView[]` |
+| POST | `/orgs/:orgId/members` | `{ email, role }` role ∈ `admin\|member` | added member (adds an **existing** user by email) |
+| PATCH | `/orgs/:orgId/members/:userId` | `{ role }` role ∈ `owner\|admin\|member` | updated member |
+| DELETE | `/orgs/:orgId/members/:userId` | — | `{ success: true }` |
+
+Rules: only an **owner** may grant/change/remove the `owner` role; the org must keep ≥1 owner (`CONFLICT` 409 otherwise). Errors: `FORBIDDEN` 403, `NOT_FOUND` 404 (no such user/member), `CONFLICT` 409 (already a member / last owner).
+
+### Workspace members — `/workspaces/:workspaceId/members`
+Caller must be a workspace member to list; **admin** to mutate.
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| GET | `/workspaces/:workspaceId/members` | — | `WorkspaceMemberView[]` |
+| POST | `/workspaces/:workspaceId/members` | `{ email, role }` role ∈ `admin\|editor\|viewer` | added member |
+| PATCH | `/workspaces/:workspaceId/members/:userId` | `{ role }` | updated member |
+| DELETE | `/workspaces/:workspaceId/members/:userId` | — | `{ success: true }` |
+
+Rules: the workspace must keep ≥1 admin (`CONFLICT` 409). `OrgMemberView`/`WorkspaceMemberView` embed `user: { id, email, name, avatar }`.
+
 ### GET `/auth/google`
 Public. Redirects (302) to Google consent.
 

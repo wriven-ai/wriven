@@ -6,6 +6,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CleanupService } from './cleanup.service';
 import { MailService } from './mail.service';
+import { MembersController } from './members.controller';
+import { MembersService } from './members.service';
 import { TokenService } from './token.service';
 
 @Module({
@@ -19,7 +21,13 @@ import { TokenService } from './token.service';
       }),
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, TokenService, MailService, CleanupService],
+  controllers: [AuthController, MembersController],
+  providers: [
+    AuthService,
+    TokenService,
+    MailService,
+    CleanupService,
+    MembersService,
+  ],
 })
 export class AuthModule {}
