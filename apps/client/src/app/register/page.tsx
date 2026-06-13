@@ -1,22 +1,24 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import WrivenLogo from '../../components/WrivenLogo';
+import { ApiRequestError, authApi, googleAuthUrl } from '../../lib/api';
 import { registerSchema, type RegisterValues } from '../../schemas/auth';
+import { useAuthStore } from '../../stores/auth';
 
 const RegisterPage = () => {
-  const [success, setSuccess] = useState(false);
+  const router = useRouter();
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -28,10 +30,24 @@ const RegisterPage = () => {
     },
   });
 
-  const orgName = watch('orgName');
-
-  const onSubmit = () => {
-    setSuccess(true);
+  const onSubmit = async (values: RegisterValues) => {
+    setServerError(null);
+    try {
+      const result = await authApi.register({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+        orgName: values.orgName,
+      });
+      useAuthStore.getState().setAuthResult(result);
+      router.push('/dashboard');
+    } catch (err) {
+      setServerError(
+        err instanceof ApiRequestError
+          ? err.message
+          : 'Something went wrong. Please try again.',
+      );
+    }
   };
 
   return (
@@ -39,7 +55,6 @@ const RegisterPage = () => {
       className="min-h-screen bg-brand-bg flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative editorial-grid paper-grain"
       id="wriven-register-page"
     >
-      {/* Absolute top link to return to main site */}
       <div className="absolute top-6 left-6" id="register-back-to-site">
         <Link
           href="/"
@@ -74,148 +89,135 @@ const RegisterPage = () => {
         id="register-card-container"
       >
         <div className="bg-brand-surface py-8 px-6 border border-brand-border-button rounded-xl shadow-2xl neo-shadow-lg sm:px-10 space-y-6">
-          {success ? (
-            <div className="p-5 rounded-lg bg-emerald-500/5 border border-status-success text-xs font-mono text-text-primary text-center space-y-4">
-              <CheckCircle className="w-8 h-8 mx-auto text-status-success" />
-              <strong className="block font-bold">
-                Workspace Created Successfully
-              </strong>
-              <p className="text-text-secondary font-light leading-relaxed">
-                We have registered the tenant space for{' '}
-                <strong>{orgName}</strong>. You are ready to configure content
-                models and fetch secure JSON blocks.
-              </p>
-              <div className="pt-2">
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-bold text-white bg-brand-accent hover:bg-brand-accent-hover border border-brand-border-button px-4 py-3 rounded-lg neo-shadow cursor-pointer"
-                >
-                  Go to Dashboard
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="space-y-4 text-left"
-              id="register-credentials-form"
-              noValidate
+          {serverError && (
+            <div
+              className="p-3 rounded-lg bg-status-error/5 border border-status-error text-[11px] font-mono text-status-error text-center"
+              role="alert"
             >
-              <div>
-                <label
-                  className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                  htmlFor="register-name"
-                >
-                  Full Name *
-                </label>
-                <input
-                  id="register-name"
-                  type="text"
-                  placeholder="Sophia Wright"
-                  {...register('name')}
-                  className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-                />
-                {errors.name && (
-                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
-                    {errors.name.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                  htmlFor="register-email"
-                >
-                  Work Email *
-                </label>
-                <input
-                  id="register-email"
-                  type="email"
-                  placeholder="sophia@wriven.io"
-                  {...register('email')}
-                  className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-                />
-                {errors.email && (
-                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                  htmlFor="register-org"
-                >
-                  Organization Name *
-                </label>
-                <input
-                  id="register-org"
-                  type="text"
-                  placeholder="Acme, Inc."
-                  {...register('orgName')}
-                  className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-                />
-                {errors.orgName && (
-                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
-                    {errors.orgName.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                  htmlFor="register-password"
-                >
-                  Password (min 8 characters) *
-                </label>
-                <input
-                  id="register-password"
-                  type="password"
-                  placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                  {...register('password')}
-                  className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-                />
-                {errors.password && (
-                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
-                    {errors.password.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1.5 text-[11px] font-mono text-text-secondary">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    {...register('agreeTerms')}
-                    className="rounded border-brand-border bg-brand-surface-soft text-brand-accent focus:ring-brand-accent w-4 h-4 cursor-pointer mt-0.5"
-                  />
-                  <span>
-                    I agree with representation and Wriven Terms of Service.
-                    Check to grant workspace consent.
-                  </span>
-                </label>
-                {errors.agreeTerms && (
-                  <p className="text-[10px] font-mono text-status-error">
-                    {errors.agreeTerms.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer"
-                  id="register-submit-btn"
-                >
-                  Create workspace free
-                </button>
-              </div>
-            </form>
+              {serverError}
+            </div>
           )}
+
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4 text-left"
+            id="register-credentials-form"
+            noValidate
+          >
+            <div>
+              <label
+                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                htmlFor="register-name"
+              >
+                Full Name *
+              </label>
+              <input
+                id="register-name"
+                type="text"
+                placeholder="Sophia Wright"
+                {...register('name')}
+                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+              />
+              {errors.name && (
+                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                htmlFor="register-email"
+              >
+                Work Email *
+              </label>
+              <input
+                id="register-email"
+                type="email"
+                placeholder="sophia@wriven.io"
+                {...register('email')}
+                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+              />
+              {errors.email && (
+                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                htmlFor="register-org"
+              >
+                Organization Name *
+              </label>
+              <input
+                id="register-org"
+                type="text"
+                placeholder="Acme, Inc."
+                {...register('orgName')}
+                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+              />
+              {errors.orgName && (
+                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                  {errors.orgName.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                htmlFor="register-password"
+              >
+                Password (min 8 characters) *
+              </label>
+              <input
+                id="register-password"
+                type="password"
+                placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                {...register('password')}
+                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+              />
+              {errors.password && (
+                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5 text-[11px] font-mono text-text-secondary">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('agreeTerms')}
+                  className="rounded border-brand-border bg-brand-surface-soft text-brand-accent focus:ring-brand-accent w-4 h-4 cursor-pointer mt-0.5"
+                />
+                <span>
+                  I agree with representation and Wriven Terms of Service. Check
+                  to grant workspace consent.
+                </span>
+              </label>
+              {errors.agreeTerms && (
+                <p className="text-[10px] font-mono text-status-error">
+                  {errors.agreeTerms.message}
+                </p>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                id="register-submit-btn"
+              >
+                {isSubmitting ? 'Creating workspace…' : 'Create workspace free'}
+              </button>
+            </div>
+          </form>
 
           <div className="relative my-6" id="register-divider">
             <div
@@ -232,11 +234,8 @@ const RegisterPage = () => {
           </div>
 
           <div id="register-sso-options">
-            <button
-              onClick={() => {
-                setValue('orgName', 'My Team Workspace');
-                setSuccess(true);
-              }}
+            <a
+              href={googleAuthUrl}
               className="w-full inline-flex items-center justify-center gap-2 bg-brand-surface-soft hover:bg-brand-border border border-brand-border-button text-text-primary text-xs font-mono font-bold uppercase tracking-wider py-3.5 px-4 rounded-lg transition-all cursor-pointer"
               id="register-google-sso"
             >
@@ -263,8 +262,8 @@ const RegisterPage = () => {
                   fill="#EA4335"
                 />
               </svg>
-              <span>Google Signup</span>
-            </button>
+              <span>Continue with Google</span>
+            </a>
           </div>
 
           <p

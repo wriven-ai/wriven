@@ -148,3 +148,6 @@ export const authApi = {
 };
 
 export const api = { request };
+
+/** Full URL to start the Google OAuth redirect flow (browser navigation). */
+export const googleAuthUrl = `${BASE_URL}/auth/google`;

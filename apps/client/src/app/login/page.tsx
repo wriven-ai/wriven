@@ -1,27 +1,42 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import WrivenLogo from '../../components/WrivenLogo';
+import { ApiRequestError, authApi, googleAuthUrl } from '../../lib/api';
 import { loginSchema, type LoginValues } from '../../schemas/auth';
+import { useAuthStore } from '../../stores/auth';
 
 export const LoginPage = () => {
-  const [success, setSuccess] = useState(false);
+  const router = useRouter();
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', rememberMe: false },
   });
 
-  const onSubmit = () => {
-    setSuccess(true);
+  const onSubmit = async (values: LoginValues) => {
+    setServerError(null);
+    try {
+      const result = await authApi.login(values);
+      useAuthStore.getState().setAuthResult(result);
+      router.push('/dashboard');
+    } catch (err) {
+      setServerError(
+        err instanceof ApiRequestError
+          ? err.message
+          : 'Something went wrong. Please try again.',
+      );
+    }
   };
 
   return (
@@ -29,7 +44,6 @@ export const LoginPage = () => {
       className="min-h-screen bg-brand-bg flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative editorial-grid paper-grain"
       id="wriven-login-page"
     >
-      {/* Absolute top link to return to main site */}
       <div className="absolute top-6 left-6" id="login-back-to-site">
         <Link
           href="/"
@@ -64,100 +78,92 @@ export const LoginPage = () => {
         id="login-card-container"
       >
         <div className="bg-brand-surface py-8 px-6 border border-brand-border-button rounded-xl shadow-2xl neo-shadow-lg sm:px-10 space-y-6">
-          {success ? (
-            <div className="p-5 rounded-lg bg-emerald-500/5 border border-status-success text-xs font-mono text-text-primary text-center space-y-4">
-              <strong className="block font-bold">Login Successful</strong>
-              <p className="text-text-secondary font-light leading-relaxed">
-                Piping content models & pipeline matrices to active client
-                viewport dashboard...
-              </p>
-              <div className="pt-2">
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-bold text-white bg-brand-accent border border-brand-border-button hover:bg-brand-accent-hover px-4 py-3 rounded-lg neo-shadow cursor-pointer"
-                >
-                  Go to Dashboard
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="space-y-4 text-left"
-              id="login-credentials-form"
-              noValidate
+          {serverError && (
+            <div
+              className="p-3 rounded-lg bg-status-error/5 border border-status-error text-[11px] font-mono text-status-error text-center"
+              role="alert"
             >
-              <div>
-                <label
-                  className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                  htmlFor="login-email"
-                >
-                  Workspace Email
-                </label>
-                <input
-                  id="login-email"
-                  type="email"
-                  placeholder="name@company.com"
-                  {...register('email')}
-                  className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-                />
-                {errors.email && (
-                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                  htmlFor="login-password"
-                >
-                  Password
-                </label>
-                <input
-                  id="login-password"
-                  type="password"
-                  placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                  {...register('password')}
-                  className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-                />
-                {errors.password && (
-                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
-                    {errors.password.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] font-mono">
-                <label className="flex items-center gap-2 text-text-secondary cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    className="rounded border-brand-border bg-brand-surface-soft text-brand-accent focus:ring-brand-accent w-4 h-4 cursor-pointer"
-                  />
-                  <span>Remember me</span>
-                </label>
-
-                <a
-                  href="#"
-                  className="text-brand-accent hover:underline font-semibold"
-                >
-                  Forgot password?
-                </a>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer"
-                  id="login-submit-btn"
-                >
-                  Authenticate
-                </button>
-              </div>
-            </form>
+              {serverError}
+            </div>
           )}
+
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4 text-left"
+            id="login-credentials-form"
+            noValidate
+          >
+            <div>
+              <label
+                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                htmlFor="login-email"
+              >
+                Workspace Email
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                placeholder="name@company.com"
+                {...register('email')}
+                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+              />
+              {errors.email && (
+                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                htmlFor="login-password"
+              >
+                Password
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                {...register('password')}
+                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+              />
+              {errors.password && (
+                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] font-mono">
+              <label className="flex items-center gap-2 text-text-secondary cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  {...register('rememberMe')}
+                  className="rounded border-brand-border bg-brand-surface-soft text-brand-accent focus:ring-brand-accent w-4 h-4 cursor-pointer"
+                />
+                <span>Remember me</span>
+              </label>
+
+              <Link
+                href="/forgot-password"
+                className="text-brand-accent hover:underline font-semibold"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                id="login-submit-btn"
+              >
+                {isSubmitting ? 'Authenticating…' : 'Authenticate'}
+              </button>
+            </div>
+          </form>
 
           <div className="relative my-6" id="login-divider">
             <div
@@ -174,8 +180,8 @@ export const LoginPage = () => {
           </div>
 
           <div id="login-sso-options">
-            <button
-              onClick={() => setSuccess(true)}
+            <a
+              href={googleAuthUrl}
               className="w-full inline-flex items-center justify-center gap-2 bg-brand-surface-soft hover:bg-brand-border border border-brand-border-button text-text-primary text-xs font-mono font-bold uppercase tracking-wider py-3.5 px-4 rounded-lg transition-all cursor-pointer"
               id="login-google-sso"
             >
@@ -202,8 +208,8 @@ export const LoginPage = () => {
                   fill="#EA4335"
                 />
               </svg>
-              <span>Google Verification</span>
-            </button>
+              <span>Continue with Google</span>
+            </a>
           </div>
 
           <p
@@ -223,6 +229,5 @@ export const LoginPage = () => {
     </div>
   );
 };
-
 
 export default LoginPage;
