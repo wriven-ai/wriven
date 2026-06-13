@@ -56,12 +56,11 @@ export class AuthService {
   // ── Register (single transaction) ─────────────────────────────────────────
 
   async register(dto: RegisterDto): Promise<AuthResult> {
-    const existing = await this.db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, dto.email))
-      .limit(1);
-    if (existing.length > 0) {
+    const existing = await this.db.query.users.findFirst({
+      where: eq(users.email, dto.email),
+      columns: { id: true },
+    });
+    if (existing) {
       throw rpcError(
         'EMAIL_ALREADY_EXISTS',
         'An account with this email already exists.',
@@ -148,11 +147,9 @@ export class AuthService {
   // ── Login ─────────────────────────────────────────────────────────────────
 
   async login(dto: LoginDto): Promise<AuthResult> {
-    const [user] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.email, dto.email))
-      .limit(1);
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.email, dto.email),
+    });
 
     // Generic error — never reveal whether the email exists. Run a dummy
     // compare so response timing doesn't differ between missing/found emails.
@@ -192,11 +189,9 @@ export class AuthService {
 
   async refresh(payload: RefreshPayload): Promise<RefreshResult> {
     const tokenHash = this.tokens.hash(payload.refreshToken);
-    const [row] = await this.db
-      .select()
-      .from(refreshTokens)
-      .where(eq(refreshTokens.tokenHash, tokenHash))
-      .limit(1);
+    const row = await this.db.query.refreshTokens.findFirst({
+      where: eq(refreshTokens.tokenHash, tokenHash),
+    });
 
     if (!row) {
       throw rpcError('INVALID_REFRESH_TOKEN', 'The refresh token is invalid.');
@@ -218,11 +213,9 @@ export class AuthService {
       throw rpcError('INVALID_REFRESH_TOKEN', 'The refresh token is expired.');
     }
 
-    const [user] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.id, row.userId))
-      .limit(1);
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, row.userId),
+    });
     if (!user) {
       throw rpcError('INVALID_REFRESH_TOKEN', 'The refresh token is invalid.');
     }
@@ -264,11 +257,10 @@ export class AuthService {
   // ── Forgot password (always 200 — never reveal if the email exists) ─────────
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<{ success: true }> {
-    const [user] = await this.db
-      .select({ id: users.id, email: users.email })
-      .from(users)
-      .where(eq(users.email, dto.email))
-      .limit(1);
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.email, dto.email),
+      columns: { id: true, email: true },
+    });
 
     if (user) {
       const token = this.tokens.newOpaqueToken();
@@ -314,11 +306,9 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ success: true }> {
     const tokenHash = this.tokens.hash(dto.token);
-    const [row] = await this.db
-      .select()
-      .from(passwordResetTokens)
-      .where(eq(passwordResetTokens.tokenHash, tokenHash))
-      .limit(1);
+    const row = await this.db.query.passwordResetTokens.findFirst({
+      where: eq(passwordResetTokens.tokenHash, tokenHash),
+    });
 
     if (!row || row.used || row.expiresAt.getTime() <= Date.now()) {
       throw rpcError(
@@ -353,19 +343,15 @@ export class AuthService {
 
   async googleLogin(profile: GoogleProfile): Promise<AuthResult> {
     // 1. Existing Google-linked account.
-    let [user] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.providerId, profile.googleId))
-      .limit(1);
+    let user = await this.db.query.users.findFirst({
+      where: eq(users.providerId, profile.googleId),
+    });
 
     if (!user) {
       // 2. Same email as a local account → link Google to it.
-      const [byEmail] = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.email, profile.email))
-        .limit(1);
+      const byEmail = await this.db.query.users.findFirst({
+        where: eq(users.email, profile.email),
+      });
 
       if (byEmail) {
         const [linked] = await this.db
@@ -437,16 +423,13 @@ export class AuthService {
     userId: string;
     workspaceId: string;
   }): Promise<{ workspaceId: string; role: string }> {
-    const [row] = await this.db
-      .select({ role: workspaceMembers.role })
-      .from(workspaceMembers)
-      .where(
-        and(
-          eq(workspaceMembers.workspaceId, p.workspaceId),
-          eq(workspaceMembers.userId, p.userId),
-        ),
-      )
-      .limit(1);
+    const row = await this.db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, p.workspaceId),
+        eq(workspaceMembers.userId, p.userId),
+      ),
+      columns: { role: true },
+    });
     if (!row) {
       throw rpcError('FORBIDDEN', 'You are not a member of this workspace.');
     }
@@ -456,11 +439,9 @@ export class AuthService {
   // ── Current user ────────────────────────────────────────────────────────────
 
   async getUserById(payload: { userId: string }): Promise<UserView> {
-    const [user] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.id, payload.userId))
-      .limit(1);
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, payload.userId),
+    });
     if (!user) {
       throw rpcError('NOT_FOUND', 'User not found.');
     }
@@ -471,11 +452,9 @@ export class AuthService {
 
   async verifyEmail(dto: VerifyEmailDto): Promise<{ success: true }> {
     const tokenHash = this.tokens.hash(dto.token);
-    const [row] = await this.db
-      .select()
-      .from(emailVerificationTokens)
-      .where(eq(emailVerificationTokens.tokenHash, tokenHash))
-      .limit(1);
+    const row = await this.db.query.emailVerificationTokens.findFirst({
+      where: eq(emailVerificationTokens.tokenHash, tokenHash),
+    });
 
     if (!row || row.used || row.expiresAt.getTime() <= Date.now()) {
       throw rpcError(
@@ -502,15 +481,10 @@ export class AuthService {
   async resendVerification(payload: {
     userId: string;
   }): Promise<{ success: true }> {
-    const [user] = await this.db
-      .select({
-        id: users.id,
-        email: users.email,
-        emailVerified: users.emailVerified,
-      })
-      .from(users)
-      .where(eq(users.id, payload.userId))
-      .limit(1);
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, payload.userId),
+      columns: { id: true, email: true, emailVerified: true },
+    });
     if (!user) {
       throw rpcError('NOT_FOUND', 'User not found.');
     }

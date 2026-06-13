@@ -10,7 +10,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, count, desc, eq, isNull, max } from 'drizzle-orm';
+import { and, desc, eq, isNull, max } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
@@ -99,17 +99,13 @@ export class EntriesService {
     }
     const where = and(...filters);
 
-    const [{ total }] = await this.db
-      .select({ total: count() })
-      .from(contentEntries)
-      .where(where);
-    const rows = await this.db
-      .select()
-      .from(contentEntries)
-      .where(where)
-      .orderBy(desc(contentEntries.updatedAt))
-      .limit(limit)
-      .offset((page - 1) * limit);
+    const total = await this.db.$count(contentEntries, where);
+    const rows = await this.db.query.contentEntries.findMany({
+      where,
+      orderBy: desc(contentEntries.updatedAt),
+      limit,
+      offset: (page - 1) * limit,
+    });
 
     return { items: rows.map((r) => this.toView(r)), page, limit, total };
   }
@@ -206,17 +202,13 @@ export class EntriesService {
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   private async requireRow(workspaceId: string, id: string): Promise<EntryRow> {
-    const [row] = await this.db
-      .select()
-      .from(contentEntries)
-      .where(
-        and(
-          eq(contentEntries.id, id),
-          eq(contentEntries.workspaceId, workspaceId),
-          isNull(contentEntries.deletedAt),
-        ),
-      )
-      .limit(1);
+    const row = await this.db.query.contentEntries.findFirst({
+      where: and(
+        eq(contentEntries.id, id),
+        eq(contentEntries.workspaceId, workspaceId),
+        isNull(contentEntries.deletedAt),
+      ),
+    });
     if (!row) throw rpcError('NOT_FOUND', 'Content entry not found.');
     return row;
   }

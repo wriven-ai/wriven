@@ -45,16 +45,13 @@ export class ContentTypesService {
   }
 
   async list(p: { workspaceId: string }): Promise<ContentTypeView[]> {
-    const rows = await this.db
-      .select()
-      .from(contentTypes)
-      .where(
-        and(
-          eq(contentTypes.workspaceId, p.workspaceId),
-          isNull(contentTypes.deletedAt),
-        ),
-      )
-      .orderBy(contentTypes.createdAt);
+    const rows = await this.db.query.contentTypes.findMany({
+      where: and(
+        eq(contentTypes.workspaceId, p.workspaceId),
+        isNull(contentTypes.deletedAt),
+      ),
+      orderBy: contentTypes.createdAt,
+    });
     return rows.map((r) => this.toView(r));
   }
 
@@ -93,17 +90,13 @@ export class ContentTypesService {
 
   /** Load a non-deleted type scoped to the workspace, or 404. */
   async requireRow(workspaceId: string, id: string): Promise<ContentTypeRow> {
-    const [row] = await this.db
-      .select()
-      .from(contentTypes)
-      .where(
-        and(
-          eq(contentTypes.id, id),
-          eq(contentTypes.workspaceId, workspaceId),
-          isNull(contentTypes.deletedAt),
-        ),
-      )
-      .limit(1);
+    const row = await this.db.query.contentTypes.findFirst({
+      where: and(
+        eq(contentTypes.id, id),
+        eq(contentTypes.workspaceId, workspaceId),
+        isNull(contentTypes.deletedAt),
+      ),
+    });
     if (!row) throw rpcError('NOT_FOUND', 'Content type not found.');
     return row;
   }
