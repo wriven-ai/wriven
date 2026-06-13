@@ -9,8 +9,10 @@ import { SERVICE_TOKENS } from '@wriven/contracts';
 import { AuthController } from '../auth/auth.controller';
 import { GoogleStrategy } from '../auth/google.strategy';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { WorkspaceGuard } from '../auth/workspace.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
+import { ContentController } from '../content/content.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -55,10 +57,11 @@ import { AppService } from './app.service';
       },
     ]),
   ],
-  controllers: [AppController, AuthController],
+  controllers: [AppController, AuthController, ContentController],
   providers: [
     AppService,
     JwtAuthGuard,
+    WorkspaceGuard,
     GoogleStrategy,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },

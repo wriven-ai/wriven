@@ -10,6 +10,7 @@ import {
   RegisterDto,
   ResetPasswordDto,
   VerifyEmailDto,
+  WORKSPACE_PATTERNS,
 } from '@wriven/contracts';
 import { AuthService } from './auth.service';
 
@@ -65,5 +66,12 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.GOOGLE_LOGIN)
   googleLogin(@Payload() profile: GoogleProfile) {
     return this.auth.googleLogin(profile);
+  }
+
+  @MessagePattern(WORKSPACE_PATTERNS.VALIDATE_WORKSPACE_MEMBER)
+  validateWorkspaceMember(
+    @Payload() p: { userId: string; workspaceId: string },
+  ) {
+    return this.auth.validateWorkspaceMember(p);
   }
 }

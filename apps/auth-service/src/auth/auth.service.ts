@@ -410,6 +410,28 @@ export class AuthService {
     };
   }
 
+  // ── Workspace membership (called by the gateway's WorkspaceGuard) ───────────
+
+  async validateWorkspaceMember(p: {
+    userId: string;
+    workspaceId: string;
+  }): Promise<{ workspaceId: string; role: string }> {
+    const [row] = await this.db
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, p.workspaceId),
+          eq(workspaceMembers.userId, p.userId),
+        ),
+      )
+      .limit(1);
+    if (!row) {
+      throw rpcError('FORBIDDEN', 'You are not a member of this workspace.');
+    }
+    return { workspaceId: p.workspaceId, role: row.role };
+  }
+
   // ── Current user ────────────────────────────────────────────────────────────
 
   async getUserById(payload: { userId: string }): Promise<UserView> {

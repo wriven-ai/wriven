@@ -65,6 +65,12 @@ export interface AuthUser {
   email: string;
 }
 
+/** Result of a workspace-membership check. */
+export interface WorkspaceMembership {
+  workspaceId: string;
+  role: string;
+}
+
 /** Verified Google profile the gateway forwards to auth-service after OAuth. */
 export interface GoogleProfile {
   googleId: string;
