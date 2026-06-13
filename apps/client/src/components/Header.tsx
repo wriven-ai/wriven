@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import WrivenLogo from './WrivenLogo';
-import { Menu, X, ArrowRight, Sparkles, Sun, Moon } from 'lucide-react';
+import { Menu, X, ArrowRight, Sun, Moon } from 'lucide-react';
 
 export default function Header() {
   const pathname = usePathname();

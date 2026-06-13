@@ -1,31 +1,36 @@
 'use client';
 
-import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import WrivenLogo from '../../components/WrivenLogo';
+import { registerSchema, type RegisterValues } from '../../schemas/auth';
 
 const RegisterPage = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [orgName, setOrgName] = useState('');
-  const [password, setPassword] = useState('');
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !email || !orgName || !password) {
-      setErrorMessage('Please fill in all required setup parameters.');
-      return;
-    }
-    if (!agreeTerms) {
-      setErrorMessage('You must agree to Wriven’s privacy policy and terms.');
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<RegisterValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      orgName: '',
+      password: '',
+      agreeTerms: false,
+    },
+  });
 
-    setErrorMessage('');
+  const orgName = watch('orgName');
+
+  const onSubmit = () => {
     setSuccess(true);
   };
 
@@ -46,23 +51,22 @@ const RegisterPage = () => {
         </Link>
       </div>
 
+      <div className="absolute top-6 right-6" id="register-brand-logo">
+        <Link href="/" className="inline-block" id="register-logo-link">
+          <WrivenLogo className="justify-end scale-110" />
+        </Link>
+      </div>
+
       <div
         className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10"
         id="register-header"
       >
-        <Link href="/" className="inline-block" id="register-logo-link">
-          <WrivenLogo className="justify-center scale-110" />
-        </Link>
         <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
           Create Workspace
         </span>
         <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight">
           Create your free workspace
         </h2>
-        <p className="text-xs text-text-secondary font-light max-w-xs mx-auto">
-          Configure content models, weave copy blocks, and fetch secure JSON
-          instantly.
-        </p>
       </div>
 
       <div
@@ -93,17 +97,11 @@ const RegisterPage = () => {
             </div>
           ) : (
             <form
-              onSubmit={handleRegister}
+              onSubmit={handleSubmit(onSubmit)}
               className="space-y-4 text-left"
               id="register-credentials-form"
+              noValidate
             >
-              {errorMessage && (
-                <div className="p-3.5 rounded-lg bg-red-500/5 border border-status-error flex items-start gap-2.5 text-xs font-mono text-status-error">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-status-error" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
-
               <div>
                 <label
                   className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
@@ -114,12 +112,15 @@ const RegisterPage = () => {
                 <input
                   id="register-name"
                   type="text"
-                  required
                   placeholder="Sophia Wright"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  {...register('name')}
                   className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                 />
+                {errors.name && (
+                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                    {errors.name.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -132,12 +133,15 @@ const RegisterPage = () => {
                 <input
                   id="register-email"
                   type="email"
-                  required
                   placeholder="sophia@wriven.io"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  {...register('email')}
                   className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                 />
+                {errors.email && (
+                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -150,12 +154,15 @@ const RegisterPage = () => {
                 <input
                   id="register-org"
                   type="text"
-                  required
                   placeholder="Acme, Inc."
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
+                  {...register('orgName')}
                   className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                 />
+                {errors.orgName && (
+                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                    {errors.orgName.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -168,20 +175,22 @@ const RegisterPage = () => {
                 <input
                   id="register-password"
                   type="password"
-                  required
                   placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register('password')}
                   className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                 />
+                {errors.password && (
+                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
-              <div className="flex items-start text-[11px] font-mono text-text-secondary">
+              <div className="flex flex-col gap-1.5 text-[11px] font-mono text-text-secondary">
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={agreeTerms}
-                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    {...register('agreeTerms')}
                     className="rounded border-brand-border bg-brand-surface-soft text-brand-accent focus:ring-brand-accent w-4 h-4 cursor-pointer mt-0.5"
                   />
                   <span>
@@ -189,6 +198,11 @@ const RegisterPage = () => {
                     Check to grant workspace consent.
                   </span>
                 </label>
+                {errors.agreeTerms && (
+                  <p className="text-[10px] font-mono text-status-error">
+                    {errors.agreeTerms.message}
+                  </p>
+                )}
               </div>
 
               <div className="pt-2">
@@ -220,7 +234,7 @@ const RegisterPage = () => {
           <div id="register-sso-options">
             <button
               onClick={() => {
-                setOrgName('My Team Workspace');
+                setValue('orgName', 'My Team Workspace');
                 setSuccess(true);
               }}
               className="w-full inline-flex items-center justify-center gap-2 bg-brand-surface-soft hover:bg-brand-border border border-brand-border-button text-text-primary text-xs font-mono font-bold uppercase tracking-wider py-3.5 px-4 rounded-lg transition-all cursor-pointer"

@@ -1,24 +1,26 @@
 'use client';
 
-import { AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import WrivenLogo from '../../components/WrivenLogo';
+import { loginSchema, type LoginValues } from '../../schemas/auth';
 
 export const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setErrorMessage('Please provide both your email and password.');
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
-    setErrorMessage('');
+  const onSubmit = () => {
     setSuccess(true);
   };
 
@@ -39,23 +41,22 @@ export const LoginPage = () => {
         </Link>
       </div>
 
+      <div className="absolute top-6 right-6" id="login-brand-logo">
+        <Link href="/" className="inline-block" id="login-logo-link">
+          <WrivenLogo className="justify-end scale-110" />
+        </Link>
+      </div>
+
       <div
         className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10 animate-fade-in"
         id="login-header"
       >
-        <Link href="/" className="inline-block" id="login-logo-link">
-          <WrivenLogo className="justify-center scale-110" />
-        </Link>
         <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 id-tag rounded inline-block">
           Secure Login
         </span>
         <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight">
           Sign in to your account
         </h2>
-        <p className="text-xs text-text-secondary font-light max-w-xs mx-auto">
-          Enter active credentials to configure, map, and synchronize content
-          schemas.
-        </p>
       </div>
 
       <div
@@ -82,17 +83,11 @@ export const LoginPage = () => {
             </div>
           ) : (
             <form
-              onSubmit={handleLogin}
+              onSubmit={handleSubmit(onSubmit)}
               className="space-y-4 text-left"
               id="login-credentials-form"
+              noValidate
             >
-              {errorMessage && (
-                <div className="p-3.5 rounded-lg bg-red-500/5 border border-status-error flex items-start gap-2.5 text-xs font-mono text-status-error">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-status-error" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
-
               <div>
                 <label
                   className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
@@ -103,12 +98,15 @@ export const LoginPage = () => {
                 <input
                   id="login-email"
                   type="email"
-                  required
                   placeholder="name@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  {...register('email')}
                   className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                 />
+                {errors.email && (
+                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -121,12 +119,15 @@ export const LoginPage = () => {
                 <input
                   id="login-password"
                   type="password"
-                  required
                   placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register('password')}
                   className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                 />
+                {errors.password && (
+                  <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between text-[11px] font-mono">
