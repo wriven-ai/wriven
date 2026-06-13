@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Manrope } from 'next/font/google';
 import './global.css';
+import { Providers } from './providers';
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 
@@ -16,7 +17,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={cn('font-sans', manrope.variable)}>
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
