@@ -4,6 +4,7 @@ packages:
   - 'libs/shared/*'
 allowBuilds:
   '@parcel/watcher': true
+  bcrypt: true
   esbuild: true
   less: true
   sharp: true
