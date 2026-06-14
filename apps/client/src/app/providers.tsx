@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { authApi, configureApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -41,5 +42,9 @@ export function Providers({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>{children}</TooltipProvider>
+    </QueryClientProvider>
+  );
 }
