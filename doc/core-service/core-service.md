@@ -1,6 +1,6 @@
-# 05 — Core Service (CMS)
+# Core Service (CMS)
 
-NestJS TCP microservice (`:5002`) owning content. Schema: `core_svc`. Handlers are `@MessagePattern`; HTTP routes are exposed by the gateway under `/api/v1/content/*` (see [06](./06-api-reference.md)).
+NestJS TCP microservice (`:5002`) owning content. Schema: `core_svc`. Handlers are `@MessagePattern`; HTTP routes are exposed by the gateway under `/api/v1/content/*` (see [API Reference](../06-api-reference.md)).
 
 ## Content model: flexible / headless
 
@@ -13,7 +13,7 @@ This means adding a user-chosen field needs **no migration**, scales without per
 
 ## Schema (`core_svc`)
 
-> All `workspace_id` / `author_id` / `created_by` are plain `uuid` — no FK to `auth_svc` (validated by the gateway). See [03](./03-database.md).
+> All `workspace_id` / `author_id` / `created_by` are plain `uuid` — no FK to `auth_svc` (validated by the gateway). See [Database](../03-database.md).
 
 **content_types**
 | column | type | notes |

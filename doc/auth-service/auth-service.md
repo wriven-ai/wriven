@@ -1,6 +1,6 @@
-# 04 — Auth Service
+# Auth Service
 
-NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema: `auth_svc`. All handlers are `@MessagePattern` (no HTTP) — the gateway exposes the HTTP routes (see [06](./06-api-reference.md)).
+NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema: `auth_svc`. All handlers are `@MessagePattern` (no HTTP) — the gateway exposes the HTTP routes (see [API Reference](../06-api-reference.md)). Detailed member endpoints: [members-api.md](./members-api.md).
 
 ## Schema (`auth_svc`)
 
@@ -85,7 +85,7 @@ User ──< org_members >── Org ──< workspaces ── workspace_members
 - Refresh rotation + revoked-reuse theft detection (revoke-all).
 - Reset revokes all sessions; tokens stored hashed; raw tokens only in cookie/email.
 - No email enumeration (login + forgot).
-- Rate limits at the gateway (see [07](./07-conventions.md)).
+- Rate limits at the gateway (see [Conventions](../07-conventions.md)).
 - Daily cron (`@nestjs/schedule`) prunes **expired** token rows (revoked-but-unexpired kept so reuse is still detectable within TTL).
 
 ## Session & listing
@@ -95,7 +95,7 @@ User ──< org_members >── Org ──< workspaces ── workspace_members
 
 ## Member management
 
-`MembersService` handles org & workspace membership CRUD (patterns `auth.org.*` / `auth.workspace.*`), exposed by the gateway under `/orgs/:orgId/members` and `/workspaces/:workspaceId/members` (see [06](./06-api-reference.md)). Authorization is enforced here from the caller's role:
+`MembersService` handles org & workspace membership CRUD (patterns `auth.org.*` / `auth.workspace.*`), exposed by the gateway under `/orgs/:orgId/members` and `/workspaces/:workspaceId/members` (full detail: [members-api.md](./members-api.md)). Authorization is enforced here from the caller's role:
 
 - **Org:** list = any member; add/update/remove = owner/admin. Only an owner manages the `owner` role; the org must keep ≥1 owner.
 - **Workspace:** list = any member; add/update/remove = admin. The workspace must keep ≥1 admin.
