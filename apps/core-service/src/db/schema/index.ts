@@ -15,15 +15,17 @@ import {
 export const coreSchema = pgSchema('core_svc');
 
 /**
- * NOTE: workspace_id / author_id / created_by are auth-service identifiers.
- * They are plain uuid columns with NO foreign key — auth_svc is a separate
- * service boundary. The gateway validates them before requests reach here.
+ * NOTE: workspace_id / project_id / author_id / created_by are auth-service
+ * identifiers. They are plain uuid columns with NO foreign key — auth_svc is a
+ * separate service boundary. The gateway validates them before requests reach
+ * here. project_id is the primary scoping key; workspace_id is denormalized for
+ * workspace-level queries and is always consistent with the project's workspace.
  */
 
 // ── Content types (user-defined structure) ──────────────────────────────────
 
 /**
- * A workspace-defined content type. `fields` holds the field definitions
+ * A project-defined content type. `fields` holds the field definitions
  * (see FieldDef in @wriven/contracts) the user chose; entries of this type
  * store values keyed by those field keys.
  */
@@ -32,6 +34,7 @@ export const contentTypes = coreSchema.table(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
     name: text('name').notNull(),
     apiId: text('api_id').notNull(), // machine name, e.g. "blog_post"
     fields: jsonb('fields').notNull().default(sql`'[]'::jsonb`),
@@ -46,7 +49,8 @@ export const contentTypes = coreSchema.table(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex('content_types_ws_api_id_uq').on(t.workspaceId, t.apiId),
+    uniqueIndex('content_types_project_api_id_uq').on(t.projectId, t.apiId),
+    index('content_types_project_id_idx').on(t.projectId),
     index('content_types_workspace_id_idx').on(t.workspaceId),
   ],
 );
@@ -58,6 +62,7 @@ export const contentEntries = coreSchema.table(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
     contentTypeId: uuid('content_type_id')
       .notNull()
       .references(() => contentTypes.id, { onDelete: 'cascade' }),
@@ -78,11 +83,12 @@ export const contentEntries = coreSchema.table(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex('content_entries_ws_type_slug_uq').on(
-      t.workspaceId,
+    uniqueIndex('content_entries_project_type_slug_uq').on(
+      t.projectId,
       t.contentTypeId,
       t.slug,
     ),
+    index('content_entries_project_id_idx').on(t.projectId),
     index('content_entries_workspace_id_idx').on(t.workspaceId),
     index('content_entries_type_idx').on(t.contentTypeId),
     index('content_entries_status_idx').on(t.status),
@@ -125,6 +131,7 @@ export const mediaAssets = coreSchema.table(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
     r2Key: text('r2_key').notNull(),
     kind: text('kind').notNull().default('image'), // image|video|file
     mime: text('mime'),
@@ -140,8 +147,9 @@ export const mediaAssets = coreSchema.table(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (t) => [
+    index('media_assets_project_id_idx').on(t.projectId),
     index('media_assets_workspace_id_idx').on(t.workspaceId),
-    uniqueIndex('media_assets_ws_r2_key_uq').on(t.workspaceId, t.r2Key),
+    uniqueIndex('media_assets_project_r2_key_uq').on(t.projectId, t.r2Key),
     check(
       'media_assets_kind_check',
       sql`${t.kind} in ('image', 'video', 'file')`,

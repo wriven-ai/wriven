@@ -19,25 +19,38 @@ export const AUTH_PATTERNS = {
   GET_SESSION: 'auth.getSession',
 } as const;
 
-export const ORG_PATTERNS = {
-  CREATE_ORG: 'auth.createOrg',
-  GET_ORG: 'auth.getOrg',
-  LIST_ORGS: 'auth.listOrgs',
-  LIST_MEMBERS: 'auth.org.listMembers',
-  ADD_MEMBER: 'auth.org.addMember',
-  UPDATE_MEMBER: 'auth.org.updateMember',
-  REMOVE_MEMBER: 'auth.org.removeMember',
-} as const;
-
+/**
+ * Top-level tenancy. A workspace is owned directly by a user and contains
+ * projects. Workspace members form the team that can access the workspace.
+ */
 export const WORKSPACE_PATTERNS = {
   CREATE_WORKSPACE: 'auth.createWorkspace',
   GET_WORKSPACE: 'auth.getWorkspace',
   LIST_WORKSPACES: 'auth.listWorkspaces',
+  UPDATE_WORKSPACE: 'auth.updateWorkspace',
+  DELETE_WORKSPACE: 'auth.deleteWorkspace',
   VALIDATE_WORKSPACE_MEMBER: 'auth.validateWorkspaceMember',
   LIST_MEMBERS: 'auth.workspace.listMembers',
   ADD_MEMBER: 'auth.workspace.addMember',
   UPDATE_MEMBER: 'auth.workspace.updateMember',
   REMOVE_MEMBER: 'auth.workspace.removeMember',
+} as const;
+
+/**
+ * Projects live under a workspace and own all CMS content (content types,
+ * entries, media). Project members are independent of workspace members.
+ */
+export const PROJECT_PATTERNS = {
+  CREATE_PROJECT: 'auth.createProject',
+  GET_PROJECT: 'auth.getProject',
+  LIST_PROJECTS: 'auth.listProjects',
+  UPDATE_PROJECT: 'auth.updateProject',
+  DELETE_PROJECT: 'auth.deleteProject',
+  VALIDATE_PROJECT_MEMBER: 'auth.validateProjectMember',
+  LIST_MEMBERS: 'auth.project.listMembers',
+  ADD_MEMBER: 'auth.project.addMember',
+  UPDATE_MEMBER: 'auth.project.updateMember',
+  REMOVE_MEMBER: 'auth.project.removeMember',
 } as const;
 
 export const CORE_PATTERNS = {

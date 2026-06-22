@@ -22,13 +22,15 @@ import {
   UpdateEntryDto,
 } from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
+import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ProjectGuard } from '../auth/project.guard';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 
 @Controller('content')
-@UseGuards(JwtAuthGuard, WorkspaceGuard)
+@UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard)
 export class ContentController {
   constructor(
     @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
@@ -40,11 +42,13 @@ export class ContentController {
   createType(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
     @Body() dto: CreateContentTypeDto,
   ) {
     return firstValueFrom(
       this.core.send(CORE_PATTERNS.CONTENT_TYPE_CREATE, {
         workspaceId,
+        projectId,
         userId: user.userId,
         dto,
       }),
@@ -52,34 +56,51 @@ export class ContentController {
   }
 
   @Get('types')
-  listTypes(@CurrentWorkspace() workspaceId: string) {
+  listTypes(
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+  ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_LIST, { workspaceId }),
+      this.core.send(CORE_PATTERNS.CONTENT_TYPE_LIST, { workspaceId, projectId }),
     );
   }
 
   @Get('types/:id')
-  getType(@CurrentWorkspace() workspaceId: string, @Param('id') id: string) {
+  getType(
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+    @Param('id') id: string,
+  ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_GET, { workspaceId, id }),
+      this.core.send(CORE_PATTERNS.CONTENT_TYPE_GET, { workspaceId, projectId, id }),
     );
   }
 
   @Patch('types/:id')
   updateType(
     @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Body() dto: UpdateContentTypeDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_UPDATE, { workspaceId, id, dto }),
+      this.core.send(CORE_PATTERNS.CONTENT_TYPE_UPDATE, {
+        workspaceId,
+        projectId,
+        id,
+        dto,
+      }),
     );
   }
 
   @Delete('types/:id')
-  deleteType(@CurrentWorkspace() workspaceId: string, @Param('id') id: string) {
+  deleteType(
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+    @Param('id') id: string,
+  ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_DELETE, { workspaceId, id }),
+      this.core.send(CORE_PATTERNS.CONTENT_TYPE_DELETE, { workspaceId, projectId, id }),
     );
   }
 
@@ -89,11 +110,13 @@ export class ContentController {
   createEntry(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
     @Body() dto: CreateEntryDto,
   ) {
     return firstValueFrom(
       this.core.send(CORE_PATTERNS.ENTRY_CREATE, {
         workspaceId,
+        projectId,
         userId: user.userId,
         dto,
       }),
@@ -103,17 +126,22 @@ export class ContentController {
   @Get('entries')
   listEntries(
     @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
     @Query() query: ListEntriesQueryDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_LIST, { workspaceId, query }),
+      this.core.send(CORE_PATTERNS.ENTRY_LIST, { workspaceId, projectId, query }),
     );
   }
 
   @Get('entries/:id')
-  getEntry(@CurrentWorkspace() workspaceId: string, @Param('id') id: string) {
+  getEntry(
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+    @Param('id') id: string,
+  ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_GET, { workspaceId, id }),
+      this.core.send(CORE_PATTERNS.ENTRY_GET, { workspaceId, projectId, id }),
     );
   }
 
@@ -121,12 +149,14 @@ export class ContentController {
   updateEntry(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Body() dto: UpdateEntryDto,
   ) {
     return firstValueFrom(
       this.core.send(CORE_PATTERNS.ENTRY_UPDATE, {
         workspaceId,
+        projectId,
         userId: user.userId,
         id,
         dto,
@@ -138,11 +168,13 @@ export class ContentController {
   publishEntry(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
       this.core.send(CORE_PATTERNS.ENTRY_PUBLISH, {
         workspaceId,
+        projectId,
         userId: user.userId,
         id,
       }),
@@ -150,9 +182,13 @@ export class ContentController {
   }
 
   @Delete('entries/:id')
-  deleteEntry(@CurrentWorkspace() workspaceId: string, @Param('id') id: string) {
+  deleteEntry(
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+    @Param('id') id: string,
+  ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_DELETE, { workspaceId, id }),
+      this.core.send(CORE_PATTERNS.ENTRY_DELETE, { workspaceId, projectId, id }),
     );
   }
 }

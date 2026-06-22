@@ -3,21 +3,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { 
-  Sparkles, 
-  Database, 
-  FileText, 
-  Image as ImageIcon, 
-  Key, 
-  Settings, 
-  ArrowUpRight, 
-  TrendingUp, 
-  Zap, 
-  Terminal, 
-  Activity, 
-  Layers, 
+import {
+  Sparkles,
+  Database,
+  FileText,
+  Image as ImageIcon,
+  ArrowUpRight,
+  Zap,
+  Terminal,
+  Activity,
   Clock,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 
 export default function DashboardHome() {

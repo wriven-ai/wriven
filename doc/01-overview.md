@@ -2,7 +2,7 @@
 
 ## What Wriven is
 
-Wriven is an **AI-native content management and generation SaaS platform**. AI is positioned as the core product (text + image generation, AI-assisted CMS), not a bolt-on. The CMS is **headless and flexible**: users define their own content types and fields; the platform is multi-tenant via organizations and workspaces.
+Wriven is an **AI-native content management and generation SaaS platform**. AI is positioned as the core product (text + image generation, AI-assisted CMS), not a bolt-on. The CMS is **headless and flexible**: users define their own content types and fields; the platform is multi-tenant via workspaces and projects (User → Workspace → Project → Content).
 
 - GitHub org: `wriven-ai` · npm scope: `@wriven-ai` (publishable packages)
 - Internal workspace package scope: `@wriven/*`

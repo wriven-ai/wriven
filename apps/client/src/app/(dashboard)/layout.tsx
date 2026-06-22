@@ -19,11 +19,12 @@ import {
   Sun,
   Moon,
   ChevronDown,
-  Building2,
   Layers,
+  FolderKanban,
   CreditCard,
 } from 'lucide-react';
 import WrivenLogo from '../../components/WrivenLogo';
+import { useAuth } from '../../hooks/useAuth';
 import {
   Sidebar,
   SidebarContent,
@@ -52,7 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   { name: 'Content Types', href: '/dashboard/content-types', icon: Database, section: 'engine' },
   { name: 'Content Editor', href: '/dashboard/content', icon: FileText, section: 'engine' },
   { name: 'Media Library', href: '/dashboard/media', icon: Image, section: 'engine' },
-  { name: 'Organization', href: '/dashboard/organization', icon: Building2, section: 'admin' },
+  { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban, section: 'admin' },
   { name: 'Workspaces', href: '/dashboard/workspaces', icon: Layers, section: 'admin' },
   { name: 'API Keys', href: '/dashboard/api-keys', icon: Key, section: 'admin' },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings, section: 'admin' },
@@ -70,6 +71,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const {
+    user,
+    workspaces,
+    currentWorkspaceProjects,
+    currentWorkspaceId,
+    currentProjectId,
+    setWorkspace,
+    setProject,
+  } = useAuth();
 
   React.useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -158,13 +168,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 eu-west
               </span>
             </div>
+
+            {/* Workspace switcher */}
+            <select
+              value={currentWorkspaceId ?? undefined}
+              onChange={(e) => setWorkspace(e.target.value)}
+              className="w-full bg-sidebar-accent border border-sidebar-border rounded-lg px-2 py-1.5 text-2xs font-mono text-sidebar-foreground focus:outline-none focus:border-brand-accent cursor-pointer"
+              aria-label="Switch workspace"
+            >
+              {workspaces.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Project switcher */}
+            <select
+              value={currentProjectId ?? undefined}
+              onChange={(e) => setProject(e.target.value)}
+              className="w-full bg-sidebar-accent border border-sidebar-border rounded-lg px-2 py-1.5 text-2xs font-mono text-sidebar-foreground focus:outline-none focus:border-brand-accent cursor-pointer"
+              aria-label="Switch project"
+            >
+              {currentWorkspaceProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+
             <div className="flex items-center gap-2 bg-sidebar-accent border border-sidebar-border p-2 rounded-lg">
               <div className="w-7 h-7 rounded-full bg-brand-accent/15 flex items-center justify-center font-bold text-xs text-brand-accent shrink-0 border border-sidebar-border">
-                AH
+                {(user?.name ?? '?').slice(0, 2).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="text-2xs font-mono font-bold text-sidebar-foreground truncate leading-tight">Anowar Hosen</p>
-                <p className="text-[9px] font-mono text-text-muted truncate leading-snug">anowarhosen444@gmail...</p>
+                <p className="text-2xs font-mono font-bold text-sidebar-foreground truncate leading-tight">
+                  {user?.name ?? 'Loading…'}
+                </p>
+                <p className="text-[9px] font-mono text-text-muted truncate leading-snug">
+                  {user?.email ?? ''}
+                </p>
               </div>
             </div>
           </div>
@@ -172,7 +215,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Collapsed state — icon only */}
           <div className="hidden group-data-[collapsible=icon]:flex justify-center py-1">
             <div className="w-7 h-7 rounded-full bg-brand-accent/15 flex items-center justify-center font-bold text-xs text-brand-accent border border-sidebar-border">
-              AH
+              {(user?.name ?? '?').slice(0, 2).toUpperCase()}
             </div>
           </div>
         </SidebarFooter>
@@ -228,7 +271,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className="flex items-center gap-1.5 hover:bg-brand-surface-soft p-1.5 rounded-lg border border-transparent hover:border-brand-border transition-all cursor-pointer"
               >
                 <div className="w-7 h-7 rounded-md bg-brand-accent text-white font-mono font-bold text-xs flex items-center justify-center">
-                  AH
+                  {(user?.name ?? '?').slice(0, 2).toUpperCase()}
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-text-secondary" />
               </button>
@@ -244,8 +287,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className="absolute right-0 mt-2 w-48 bg-brand-surface border border-brand-border rounded-xl shadow-lg z-50 p-2 text-left"
                     >
                       <div className="px-3 py-2 border-b border-brand-border mb-1.5">
-                        <div className="text-2xs font-mono font-bold text-text-primary">Anowar Hosen</div>
-                        <div className="text-[10px] font-mono text-text-muted truncate">anowarhosen444@gmail.com</div>
+                        <div className="text-2xs font-mono font-bold text-text-primary">
+                          {user?.name ?? 'Loading…'}
+                        </div>
+                        <div className="text-[10px] font-mono text-text-muted truncate">
+                          {user?.email ?? ''}
+                        </div>
                       </div>
                       <Link
                         href="/"

@@ -18,7 +18,6 @@ import {
   ForgotPasswordDto,
   GoogleProfile,
   LoginDto,
-  ORG_PATTERNS,
   RefreshResult,
   RegisterDto,
   ResetPasswordDto,
@@ -141,14 +140,6 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('orgs')
-  async orgs(@CurrentUser() user: AuthUser) {
-    return firstValueFrom(
-      this.auth.send(ORG_PATTERNS.LIST_ORGS, { userId: user.userId }),
-    );
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Get('workspaces')
   async workspaces(@CurrentUser() user: AuthUser) {
     return firstValueFrom(
@@ -189,8 +180,8 @@ export class AuthController {
     return {
       accessToken: result.accessToken,
       user: result.user,
-      org: result.org,
       workspace: result.workspace,
+      project: result.project,
     };
   }
 

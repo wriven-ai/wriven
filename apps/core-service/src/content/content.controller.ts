@@ -22,30 +22,48 @@ export class ContentController {
 
   @MessagePattern(CORE_PATTERNS.CONTENT_TYPE_CREATE)
   createType(
-    @Payload() p: { workspaceId: string; userId: string; dto: CreateContentTypeDto },
+    @Payload()
+    p: {
+      workspaceId: string;
+      projectId: string;
+      userId: string;
+      dto: CreateContentTypeDto;
+    },
   ) {
     return this.types.create(p);
   }
 
   @MessagePattern(CORE_PATTERNS.CONTENT_TYPE_LIST)
-  listTypes(@Payload() p: { workspaceId: string }) {
+  listTypes(
+    @Payload() p: { workspaceId: string; projectId: string },
+  ) {
     return this.types.list(p);
   }
 
   @MessagePattern(CORE_PATTERNS.CONTENT_TYPE_GET)
-  getType(@Payload() p: { workspaceId: string; id: string }) {
+  getType(
+    @Payload() p: { workspaceId: string; projectId: string; id: string },
+  ) {
     return this.types.get(p);
   }
 
   @MessagePattern(CORE_PATTERNS.CONTENT_TYPE_UPDATE)
   updateType(
-    @Payload() p: { workspaceId: string; id: string; dto: UpdateContentTypeDto },
+    @Payload()
+    p: {
+      workspaceId: string;
+      projectId: string;
+      id: string;
+      dto: UpdateContentTypeDto;
+    },
   ) {
     return this.types.update(p);
   }
 
   @MessagePattern(CORE_PATTERNS.CONTENT_TYPE_DELETE)
-  deleteType(@Payload() p: { workspaceId: string; id: string }) {
+  deleteType(
+    @Payload() p: { workspaceId: string; projectId: string; id: string },
+  ) {
     return this.types.remove(p);
   }
 
@@ -53,40 +71,67 @@ export class ContentController {
 
   @MessagePattern(CORE_PATTERNS.ENTRY_CREATE)
   createEntry(
-    @Payload() p: { workspaceId: string; userId: string; dto: CreateEntryDto },
+    @Payload()
+    p: {
+      workspaceId: string;
+      projectId: string;
+      userId: string;
+      dto: CreateEntryDto;
+    },
   ) {
     return this.entries.create(p);
   }
 
   @MessagePattern(CORE_PATTERNS.ENTRY_LIST)
   listEntries(
-    @Payload() p: { workspaceId: string; query: ListEntriesQueryDto },
+    @Payload()
+    p: {
+      workspaceId: string;
+      projectId: string;
+      query: ListEntriesQueryDto;
+    },
   ) {
     return this.entries.list(p);
   }
 
   @MessagePattern(CORE_PATTERNS.ENTRY_GET)
-  getEntry(@Payload() p: { workspaceId: string; id: string }) {
+  getEntry(
+    @Payload() p: { workspaceId: string; projectId: string; id: string },
+  ) {
     return this.entries.get(p);
   }
 
   @MessagePattern(CORE_PATTERNS.ENTRY_UPDATE)
   updateEntry(
     @Payload()
-    p: { workspaceId: string; userId: string; id: string; dto: UpdateEntryDto },
+    p: {
+      workspaceId: string;
+      projectId: string;
+      userId: string;
+      id: string;
+      dto: UpdateEntryDto;
+    },
   ) {
     return this.entries.update(p);
   }
 
   @MessagePattern(CORE_PATTERNS.ENTRY_PUBLISH)
   publishEntry(
-    @Payload() p: { workspaceId: string; userId: string; id: string },
+    @Payload()
+    p: {
+      workspaceId: string;
+      projectId: string;
+      userId: string;
+      id: string;
+    },
   ) {
     return this.entries.publish(p);
   }
 
   @MessagePattern(CORE_PATTERNS.ENTRY_DELETE)
-  deleteEntry(@Payload() p: { workspaceId: string; id: string }) {
+  deleteEntry(
+    @Payload() p: { workspaceId: string; projectId: string; id: string },
+  ) {
     return this.entries.remove(p);
   }
 }

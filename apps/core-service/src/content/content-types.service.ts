@@ -20,6 +20,7 @@ export class ContentTypesService {
 
   async create(p: {
     workspaceId: string;
+    projectId: string;
     userId: string;
     dto: CreateContentTypeDto;
   }): Promise<ContentTypeView> {
@@ -29,6 +30,7 @@ export class ContentTypesService {
         .insert(contentTypes)
         .values({
           workspaceId: p.workspaceId,
+          projectId: p.projectId,
           name: p.dto.name,
           apiId: p.dto.apiId,
           fields: p.dto.fields,
@@ -44,10 +46,13 @@ export class ContentTypesService {
     }
   }
 
-  async list(p: { workspaceId: string }): Promise<ContentTypeView[]> {
+  async list(p: {
+    workspaceId: string;
+    projectId: string;
+  }): Promise<ContentTypeView[]> {
     const rows = await this.db.query.contentTypes.findMany({
       where: and(
-        eq(contentTypes.workspaceId, p.workspaceId),
+        eq(contentTypes.projectId, p.projectId),
         isNull(contentTypes.deletedAt),
       ),
       orderBy: contentTypes.createdAt,
@@ -55,16 +60,21 @@ export class ContentTypesService {
     return rows.map((r) => this.toView(r));
   }
 
-  async get(p: { workspaceId: string; id: string }): Promise<ContentTypeView> {
-    return this.toView(await this.requireRow(p.workspaceId, p.id));
+  async get(p: {
+    workspaceId: string;
+    projectId: string;
+    id: string;
+  }): Promise<ContentTypeView> {
+    return this.toView(await this.requireRow(p.projectId, p.id));
   }
 
   async update(p: {
     workspaceId: string;
+    projectId: string;
     id: string;
     dto: UpdateContentTypeDto;
   }): Promise<ContentTypeView> {
-    await this.requireRow(p.workspaceId, p.id);
+    await this.requireRow(p.projectId, p.id);
     if (p.dto.fields) this.assertUniqueKeys(p.dto.fields);
     const [row] = await this.db
       .update(contentTypes)
@@ -77,8 +87,12 @@ export class ContentTypesService {
     return this.toView(row);
   }
 
-  async remove(p: { workspaceId: string; id: string }): Promise<{ success: true }> {
-    await this.requireRow(p.workspaceId, p.id);
+  async remove(p: {
+    workspaceId: string;
+    projectId: string;
+    id: string;
+  }): Promise<{ success: true }> {
+    await this.requireRow(p.projectId, p.id);
     await this.db
       .update(contentTypes)
       .set({ deletedAt: new Date() })
@@ -88,12 +102,12 @@ export class ContentTypesService {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /** Load a non-deleted type scoped to the workspace, or 404. */
-  async requireRow(workspaceId: string, id: string): Promise<ContentTypeRow> {
+  /** Load a non-deleted type scoped to the project, or 404. */
+  async requireRow(projectId: string, id: string): Promise<ContentTypeRow> {
     const row = await this.db.query.contentTypes.findFirst({
       where: and(
         eq(contentTypes.id, id),
-        eq(contentTypes.workspaceId, workspaceId),
+        eq(contentTypes.projectId, projectId),
         isNull(contentTypes.deletedAt),
       ),
     });
@@ -115,6 +129,7 @@ export class ContentTypesService {
     return {
       id: r.id,
       workspaceId: r.workspaceId,
+      projectId: r.projectId,
       name: r.name,
       apiId: r.apiId,
       fields: r.fields as FieldDef[],

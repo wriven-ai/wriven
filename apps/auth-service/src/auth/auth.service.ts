@@ -6,7 +6,7 @@ import {
   GoogleProfile,
   LoginDto,
   LogoutPayload,
-  OrgView,
+  ProjectView,
   RefreshPayload,
   RefreshResult,
   RegisterDto,
@@ -28,18 +28,18 @@ import { TokenService } from './token.service';
 
 const {
   users,
-  orgs,
-  orgMembers,
   workspaces,
   workspaceMembers,
+  projects,
+  projectMembers,
   refreshTokens,
   passwordResetTokens,
   emailVerificationTokens,
 } = schema;
 
 type UserRow = typeof users.$inferSelect;
-type OrgRow = typeof orgs.$inferSelect;
 type WorkspaceRow = typeof workspaces.$inferSelect;
+type ProjectRow = typeof projects.$inferSelect;
 
 @Injectable()
 export class AuthService {
@@ -73,7 +73,11 @@ export class AuthService {
     const refresh = this.tokens.newRefreshToken();
     const refreshExpiresAt = this.tokens.refreshExpiresAt(false);
 
-    let result: { user: UserRow; org: OrgRow; workspace: WorkspaceRow };
+    let result: {
+      user: UserRow;
+      workspace: WorkspaceRow;
+      project: ProjectRow;
+    };
     try {
       result = await this.db.transaction(async (tx) => {
         const [user] = await tx
@@ -86,29 +90,38 @@ export class AuthService {
           })
           .returning();
 
-        const orgName = dto.orgName ?? `${dto.name}'s Organization`;
-        const [org] = await tx
-          .insert(orgs)
-          .values({
-            name: orgName,
-            slug: uniqueSlug(orgName),
-            createdBy: user.id,
-          })
-          .returning();
-
-        await tx
-          .insert(orgMembers)
-          .values({ orgId: org.id, userId: user.id, role: 'owner' });
-
+        const workspaceName = dto.workspaceName ?? `${dto.name}'s Workspace`;
         const [workspace] = await tx
           .insert(workspaces)
-          .values({ orgId: org.id, name: 'Default Workspace', slug: 'default' })
+          .values({
+            name: workspaceName,
+            slug: uniqueSlug(workspaceName),
+            createdBy: user.id,
+          })
           .returning();
 
         await tx
           .insert(workspaceMembers)
           .values({
             workspaceId: workspace.id,
+            userId: user.id,
+            role: 'owner',
+          });
+
+        const [project] = await tx
+          .insert(projects)
+          .values({
+            workspaceId: workspace.id,
+            name: 'Default Project',
+            slug: 'default',
+            createdBy: user.id,
+          })
+          .returning();
+
+        await tx
+          .insert(projectMembers)
+          .values({
+            projectId: project.id,
             userId: user.id,
             role: 'admin',
           });
@@ -120,7 +133,7 @@ export class AuthService {
           rememberMe: false,
         });
 
-        return { user, org, workspace };
+        return { user, workspace, project };
       });
     } catch (err) {
       // Race: another signup inserted the same email between the check and now.
@@ -141,8 +154,8 @@ export class AuthService {
       refreshToken: refresh.raw,
       refreshExpiresAt: refreshExpiresAt.toISOString(),
       user: this.toUserView(result.user),
-      org: this.toOrgView(result.org, 'owner'),
-      workspace: this.toWorkspaceView(result.workspace, 'admin'),
+      workspace: this.toWorkspaceView(result.workspace, 'owner'),
+      project: this.toProjectView(result.project, 'admin'),
     };
   }
 
@@ -174,16 +187,16 @@ export class AuthService {
       rememberMe,
     });
 
-    const { org, orgRole } = await this.primaryOrg(user.id);
     const { workspace, workspaceRole } = await this.primaryWorkspace(user.id);
+    const { project, projectRole } = await this.primaryProject(user.id);
 
     return {
       accessToken: this.tokens.signAccessToken(user),
       refreshToken: refresh.raw,
       refreshExpiresAt: refreshExpiresAt.toISOString(),
       user: this.toUserView(user),
-      org: this.toOrgView(org, orgRole),
       workspace: this.toWorkspaceView(workspace, workspaceRole),
+      project: this.toProjectView(project, projectRole),
     };
   }
 
@@ -380,42 +393,44 @@ export class AuthService {
               emailVerified: true,
             })
             .returning();
-          const [org] = await tx
-            .insert(orgs)
+          const workspaceName = `${profile.name}'s Workspace`;
+          const [ws] = await tx
+            .insert(workspaces)
             .values({
-              name: `${profile.name}'s Organization`,
-              slug: uniqueSlug(profile.name),
+              name: workspaceName,
+              slug: uniqueSlug(workspaceName),
               createdBy: u.id,
             })
             .returning();
           await tx
-            .insert(orgMembers)
-            .values({ orgId: org.id, userId: u.id, role: 'owner' });
-          const [ws] = await tx
-            .insert(workspaces)
+            .insert(workspaceMembers)
+            .values({ workspaceId: ws.id, userId: u.id, role: 'owner' });
+          const [project] = await tx
+            .insert(projects)
             .values({
-              orgId: org.id,
-              name: 'Default Workspace',
+              workspaceId: ws.id,
+              name: 'Default Project',
               slug: 'default',
+              createdBy: u.id,
             })
             .returning();
           await tx
-            .insert(workspaceMembers)
-            .values({ workspaceId: ws.id, userId: u.id, role: 'admin' });
+            .insert(projectMembers)
+            .values({ projectId: project.id, userId: u.id, role: 'admin' });
           return u;
         });
       }
     }
 
     const session = await this.startSession(user);
-    const { org, orgRole } = await this.primaryOrg(user.id);
     const { workspace, workspaceRole } = await this.primaryWorkspace(user.id);
+    const { project, projectRole } = await this.primaryProject(user.id);
 
     return {
       ...session,
       user: this.toUserView(user),
-      org: this.toOrgView(org, orgRole),
       workspace: this.toWorkspaceView(workspace, workspaceRole),
+      project: this.toProjectView(project, projectRole),
     };
   }
 
@@ -438,6 +453,24 @@ export class AuthService {
     return { workspaceId: p.workspaceId, role: row.role };
   }
 
+  /** Project membership check (called by the gateway's ProjectGuard). */
+  async validateProjectMember(p: {
+    userId: string;
+    projectId: string;
+  }): Promise<{ projectId: string; role: string }> {
+    const row = await this.db.query.projectMembers.findFirst({
+      where: and(
+        eq(projectMembers.projectId, p.projectId),
+        eq(projectMembers.userId, p.userId),
+      ),
+      columns: { role: true },
+    });
+    if (!row) {
+      throw rpcError('FORBIDDEN', 'You are not a member of this project.');
+    }
+    return { projectId: p.projectId, role: row.role };
+  }
+
   // ── Current user ────────────────────────────────────────────────────────────
 
   async getUserById(payload: { userId: string }): Promise<UserView> {
@@ -452,21 +485,12 @@ export class AuthService {
 
   /** Full session context for restoring client state after a reload. */
   async getSession(payload: { userId: string }): Promise<SessionView> {
-    const [user, orgs, workspaces] = await Promise.all([
+    const [user, workspaces, projects] = await Promise.all([
       this.getUserById(payload),
-      this.listOrgs(payload),
       this.listWorkspaces(payload),
+      this.listProjects(payload),
     ]);
-    return { user, orgs, workspaces };
-  }
-
-  async listOrgs(payload: { userId: string }): Promise<OrgView[]> {
-    const rows = await this.db.query.orgMembers.findMany({
-      where: eq(orgMembers.userId, payload.userId),
-      orderBy: orgMembers.createdAt,
-      with: { org: true },
-    });
-    return rows.map((r) => this.toOrgView(r.org, r.role));
+    return { user, workspaces, projects };
   }
 
   async listWorkspaces(payload: { userId: string }): Promise<WorkspaceView[]> {
@@ -476,6 +500,15 @@ export class AuthService {
       with: { workspace: true },
     });
     return rows.map((r) => this.toWorkspaceView(r.workspace, r.role));
+  }
+
+  async listProjects(payload: { userId: string }): Promise<ProjectView[]> {
+    const rows = await this.db.query.projectMembers.findMany({
+      where: eq(projectMembers.userId, payload.userId),
+      orderBy: projectMembers.createdAt,
+      with: { project: true },
+    });
+    return rows.map((r) => this.toProjectView(r.project, r.role));
   }
 
   // ── Email verification ──────────────────────────────────────────────────────
@@ -588,20 +621,6 @@ export class AuthService {
     };
   }
 
-  private async primaryOrg(
-    userId: string,
-  ): Promise<{ org: OrgRow; orgRole: string }> {
-    const row = await this.db.query.orgMembers.findFirst({
-      where: eq(orgMembers.userId, userId),
-      orderBy: orgMembers.createdAt,
-      with: { org: true },
-    });
-    if (!row) {
-      throw rpcError('INTERNAL_ERROR', 'User has no organization.');
-    }
-    return { org: row.org, orgRole: row.role };
-  }
-
   private async primaryWorkspace(
     userId: string,
   ): Promise<{ workspace: WorkspaceRow; workspaceRole: string }> {
@@ -616,6 +635,20 @@ export class AuthService {
     return { workspace: row.workspace, workspaceRole: row.role };
   }
 
+  private async primaryProject(
+    userId: string,
+  ): Promise<{ project: ProjectRow; projectRole: string }> {
+    const row = await this.db.query.projectMembers.findFirst({
+      where: eq(projectMembers.userId, userId),
+      orderBy: projectMembers.createdAt,
+      with: { project: true },
+    });
+    if (!row) {
+      throw rpcError('INTERNAL_ERROR', 'User has no project.');
+    }
+    return { project: row.project, projectRole: row.role };
+  }
+
   private toUserView(u: UserRow): UserView {
     return {
       id: u.id,
@@ -628,11 +661,26 @@ export class AuthService {
     };
   }
 
-  private toOrgView(o: OrgRow, role: string): OrgView {
-    return { id: o.id, name: o.name, slug: o.slug, role };
+  private toWorkspaceView(w: WorkspaceRow, role: string): WorkspaceView {
+    return {
+      id: w.id,
+      name: w.name,
+      slug: w.slug,
+      createdBy: w.createdBy,
+      role,
+    };
   }
 
-  private toWorkspaceView(w: WorkspaceRow, role: string): WorkspaceView {
-    return { id: w.id, orgId: w.orgId, name: w.name, slug: w.slug, role };
+  private toProjectView(p: ProjectRow, role: string): ProjectView {
+    return {
+      id: p.id,
+      workspaceId: p.workspaceId,
+      name: p.name,
+      slug: p.slug,
+      createdBy: p.createdBy,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+      role,
+    };
   }
 }

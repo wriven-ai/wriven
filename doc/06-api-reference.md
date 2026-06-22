@@ -6,7 +6,8 @@ Base URL: `http://localhost:5000/api/v1` (gateway). All responses use the standa
 - Error: `{ "success": false, "error": { "code", "message", "statusCode" } }`
 
 **Auth header:** `Authorization: Bearer <accessToken>` for protected routes.
-**Workspace header:** `X-Workspace-Id: <workspaceId>` for `/content/*` routes.
+**Workspace header:** `X-Workspace-Id: <workspaceId>` for workspace-scoped routes.
+**Project header:** `X-Project-Id: <projectId>` for `/content/*` routes.
 **Refresh cookie:** `refresh_token` (HttpOnly), set by register/login/refresh, scoped to `/api/v1/auth`.
 
 ---
@@ -14,12 +15,12 @@ Base URL: `http://localhost:5000/api/v1` (gateway). All responses use the standa
 ## Auth
 
 ### POST `/auth/register`
-Public. Body: `{ name, email, password, orgName? }` (password ≥ 8). Creates user + org + workspace, sends verification email, sets refresh cookie. `orgName` names the created org (defaults to `"<name>'s Organization"`).
-→ `{ accessToken, user, org, workspace }`. Errors: `VALIDATION_ERROR` 422, `EMAIL_ALREADY_EXISTS` 409. Rate limit 5/min.
+Public. Body: `{ name, email, password, workspaceName? }` (password ≥ 8). Creates user + workspace + a "Default Project", sends verification email, sets refresh cookie. `workspaceName` names the created workspace (defaults to `"<name>'s Workspace"`).
+→ `{ accessToken, user, workspace, project }`. Errors: `VALIDATION_ERROR` 422, `EMAIL_ALREADY_EXISTS` 409. Rate limit 5/min.
 
 ### POST `/auth/login`
 Public. Body: `{ email, password, rememberMe? }`. Sets refresh cookie.
-→ `{ accessToken, user, org, workspace }`. Error: `INVALID_CREDENTIALS` 401 (generic). Rate limit 10/min.
+→ `{ accessToken, user, workspace, project }`. Error: `INVALID_CREDENTIALS` 401 (generic). Rate limit 10/min.
 
 ### POST `/auth/refresh`
 Public (uses refresh cookie). Rotates the refresh token.
@@ -42,43 +43,66 @@ Public. Body: `{ token }`. → `{ success: true }`. Error: `INVALID_VERIFICATION
 **Protected** (JWT). Re-sends verification for the current user (idempotent). → `{ success: true }`. Rate limit 3/min.
 
 ### GET `/auth/me`
-**Protected** (JWT). Full session for restoring client state. → `{ user, orgs[], workspaces[] }` where `user = { id, email, name, avatar, provider, emailVerified, createdAt }`, each org `{ id, name, slug, role }`, each workspace `{ id, orgId, name, slug, role }`. Error: `UNAUTHORIZED` 401.
-
-### GET `/auth/orgs`
-**Protected** (JWT). The current user's organizations. → `OrgView[]`.
+**Protected** (JWT). Full session for restoring client state. → `{ user, workspaces[], projects[] }` where `user = { id, email, name, avatar, provider, emailVerified, createdAt }`, each workspace `{ id, name, slug, createdBy, role }`, each project `{ id, workspaceId, name, slug, createdBy, createdAt, updatedAt, role }`. Error: `UNAUTHORIZED` 401.
 
 ### GET `/auth/workspaces`
 **Protected** (JWT). The current user's workspaces. → `WorkspaceView[]`.
 
 ---
 
-## Members
+## Workspaces
 
-All member routes are **protected** (JWT). Authorization is enforced in auth-service by the caller's role in the org/workspace.
+All `/workspaces/*` routes are **protected** (JWT). Authorization is enforced in auth-service by the caller's role in the workspace.
 
-### Org members — `/orgs/:orgId/members`
-Caller must be an org member to list; **owner/admin** to mutate.
+### Workspace CRUD — `/workspaces`
 
 | Method | Path | Body | → |
 |--------|------|------|---|
-| GET | `/orgs/:orgId/members` | — | `OrgMemberView[]` |
-| POST | `/orgs/:orgId/members` | `{ email, role }` role ∈ `admin\|member` | added member (adds an **existing** user by email) |
-| PATCH | `/orgs/:orgId/members/:userId` | `{ role }` role ∈ `owner\|admin\|member` | updated member |
-| DELETE | `/orgs/:orgId/members/:userId` | — | `{ success: true }` |
-
-Rules: only an **owner** may grant/change/remove the `owner` role; the org must keep ≥1 owner (`CONFLICT` 409 otherwise). Errors: `FORBIDDEN` 403, `NOT_FOUND` 404 (no such user/member), `CONFLICT` 409 (already a member / last owner).
+| POST | `/workspaces` | `{ name, slug? }` | `{ workspace, project: { id } }` (creator becomes owner; seeds a Default Project) |
+| GET | `/workspaces` | — | `WorkspaceView[]` |
+| GET | `/workspaces/:workspaceId` | — | `WorkspaceView` |
+| PATCH | `/workspaces/:workspaceId` | `{ name?, slug? }` | updated workspace (**owner/admin**) |
+| DELETE | `/workspaces/:workspaceId` | — | `{ success: true }` (**owner** only; cascades to projects + members) |
 
 ### Workspace members — `/workspaces/:workspaceId/members`
-Caller must be a workspace member to list; **admin** to mutate.
+Caller must be a workspace member to list; **owner/admin** to mutate.
 
 | Method | Path | Body | → |
 |--------|------|------|---|
 | GET | `/workspaces/:workspaceId/members` | — | `WorkspaceMemberView[]` |
-| POST | `/workspaces/:workspaceId/members` | `{ email, role }` role ∈ `admin\|editor\|viewer` | added member |
-| PATCH | `/workspaces/:workspaceId/members/:userId` | `{ role }` | updated member |
+| POST | `/workspaces/:workspaceId/members` | `{ email, role }` role ∈ `admin\|member` | added member (adds an **existing** user by email) |
+| PATCH | `/workspaces/:workspaceId/members/:userId` | `{ role }` role ∈ `owner\|admin\|member` | updated member |
 | DELETE | `/workspaces/:workspaceId/members/:userId` | — | `{ success: true }` |
 
-Rules: the workspace must keep ≥1 admin (`CONFLICT` 409). `OrgMemberView`/`WorkspaceMemberView` embed `user: { id, email, name, avatar }`.
+Rules: only an **owner** may grant/change/remove the `owner` role; the workspace must keep ≥1 owner (`CONFLICT` 409). Errors: `FORBIDDEN` 403, `NOT_FOUND` 404, `CONFLICT` 409.
+
+---
+
+## Projects
+
+All project routes are **protected** (JWT).
+
+### Project CRUD
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| POST | `/workspaces/:workspaceId/projects` | `{ name, slug? }` | `ProjectView` (workspace **owner/admin**; creator becomes project admin) |
+| GET | `/workspaces/:workspaceId/projects` | — | `ProjectView[]` (any workspace member) |
+| GET | `/projects/:projectId` | — | `ProjectView` |
+| PATCH | `/projects/:projectId` | `{ name?, slug? }` | updated project (project **admin**) |
+| DELETE | `/projects/:projectId` | — | `{ success: true }` (soft; project **admin**) |
+
+### Project members — `/projects/:projectId/members`
+Caller must be a project member to list; **admin** to mutate. (Workspace owners/admins implicitly access all projects — enforced by the gateway `ProjectGuard`.)
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| GET | `/projects/:projectId/members` | — | `ProjectMemberView[]` |
+| POST | `/projects/:projectId/members` | `{ email, role }` role ∈ `admin\|editor\|viewer` | added member |
+| PATCH | `/projects/:projectId/members/:userId` | `{ role }` | updated member |
+| DELETE | `/projects/:projectId/members/:userId` | — | `{ success: true }` |
+
+Rules: the project must keep ≥1 admin (`CONFLICT` 409). `WorkspaceMemberView`/`ProjectMemberView` embed `user: { id, email, name, avatar }`.
 
 ### GET `/auth/google`
 Public. Redirects (302) to Google consent.
@@ -90,7 +114,7 @@ Public (Google redirect). Exchanges code, sets refresh cookie, redirects to `${C
 
 ## Content (CMS)
 
-All `/content/*` routes are **protected** (JWT) **and** require `X-Workspace-Id`. Missing header → `VALIDATION_ERROR` 422; non-member → `FORBIDDEN` 403.
+All `/content/*` routes are **protected** (JWT), require `X-Workspace-Id`, **and** require `X-Project-Id`. Missing header → `VALIDATION_ERROR` 422; non-member → `FORBIDDEN` 403.
 
 ### Content types
 
@@ -102,7 +126,7 @@ All `/content/*` routes are **protected** (JWT) **and** require `X-Workspace-Id`
 | PATCH | `/content/types/:id` | `{ name?, fields? }` | updated type |
 | DELETE | `/content/types/:id` | — | `{ success: true }` (soft) |
 
-Errors: `CONFLICT` 409 (duplicate `apiId`), `NOT_FOUND` 404, `VALIDATION_ERROR` 422.
+Errors: `CONFLICT` 409 (duplicate `apiId` within the project), `NOT_FOUND` 404, `VALIDATION_ERROR` 422.
 
 `FieldDef`: `{ key, label, type, required?, unique?, multiple?, options?, refTypeId? }` where `type ∈ text|richtext|number|boolean|date|media|select|reference`.
 
@@ -117,9 +141,9 @@ Errors: `CONFLICT` 409 (duplicate `apiId`), `NOT_FOUND` 404, `VALIDATION_ERROR` 
 | POST | `/content/entries/:id/publish` | — | published entry |
 | DELETE | `/content/entries/:id` | — | `{ success: true }` (soft) |
 
-`data` is validated against the content type's `fields` → `VALIDATION_ERROR` 422 on mismatch. Slug clash → `CONFLICT` 409. `NOT_FOUND` 404 if entry/type missing in the workspace. Pagination: `limit` default 20, max 100.
+`data` is validated against the content type's `fields` → `VALIDATION_ERROR` 422 on mismatch. Slug clash → `CONFLICT` 409 (project-scoped). `NOT_FOUND` 404 if entry/type missing in the project. Pagination: `limit` default 20, max 100.
 
-`ContentEntryView`: `{ id, workspaceId, contentTypeId, slug, status, data, authorId, publishedAt, createdAt, updatedAt }`.
+`ContentEntryView`: `{ id, workspaceId, projectId, contentTypeId, slug, status, data, authorId, publishedAt, createdAt, updatedAt }`.
 
 ---
 
@@ -137,11 +161,11 @@ Public. Pings auth + core over TCP. → `{ gateway, auth, core }`.
 curl -X POST http://localhost:5000/api/v1/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"name":"Ana","email":"ana@x.dev","password":"secret123"}'
-# → { success:true, data:{ accessToken, user, org, workspace } }  (+ refresh cookie)
+# → { success:true, data:{ accessToken, user, workspace, project } }  (+ refresh cookie)
 
 # Create a content type
 curl -X POST http://localhost:5000/api/v1/content/types \
-  -H "Authorization: Bearer $AT" -H "X-Workspace-Id: $WS" \
+  -H "Authorization: Bearer $AT" -H "X-Workspace-Id: $WS" -H "X-Project-Id: $PID" \
   -H 'Content-Type: application/json' \
   -d '{"name":"Blog Post","apiId":"blog_post","fields":[
         {"key":"title","label":"Title","type":"text","required":true},
@@ -149,7 +173,7 @@ curl -X POST http://localhost:5000/api/v1/content/types \
 
 # Create an entry
 curl -X POST http://localhost:5000/api/v1/content/entries \
-  -H "Authorization: Bearer $AT" -H "X-Workspace-Id: $WS" \
+  -H "Authorization: Bearer $AT" -H "X-Workspace-Id: $WS" -H "X-Project-Id: $PID" \
   -H 'Content-Type: application/json' \
   -d '{"contentTypeId":"'$TID'","data":{"title":"Hello","body":"<p>hi</p>"}}'
 ```

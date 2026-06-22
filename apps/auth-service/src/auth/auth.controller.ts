@@ -6,8 +6,8 @@ import {
   GoogleProfile,
   LoginDto,
   LogoutPayload,
+  PROJECT_PATTERNS,
   RefreshPayload,
-  ORG_PATTERNS,
   RegisterDto,
   ResetPasswordDto,
   VerifyEmailDto,
@@ -59,14 +59,16 @@ export class AuthController {
     return this.auth.getSession(payload);
   }
 
-  @MessagePattern(ORG_PATTERNS.LIST_ORGS)
-  listOrgs(@Payload() payload: { userId: string }) {
-    return this.auth.listOrgs(payload);
+  @MessagePattern(WORKSPACE_PATTERNS.VALIDATE_WORKSPACE_MEMBER)
+  validateWorkspaceMember(
+    @Payload() p: { userId: string; workspaceId: string },
+  ) {
+    return this.auth.validateWorkspaceMember(p);
   }
 
-  @MessagePattern(WORKSPACE_PATTERNS.LIST_WORKSPACES)
-  listWorkspaces(@Payload() payload: { userId: string }) {
-    return this.auth.listWorkspaces(payload);
+  @MessagePattern(PROJECT_PATTERNS.VALIDATE_PROJECT_MEMBER)
+  validateProjectMember(@Payload() p: { userId: string; projectId: string }) {
+    return this.auth.validateProjectMember(p);
   }
 
   @MessagePattern(AUTH_PATTERNS.VERIFY_EMAIL)
@@ -82,12 +84,5 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.GOOGLE_LOGIN)
   googleLogin(@Payload() profile: GoogleProfile) {
     return this.auth.googleLogin(profile);
-  }
-
-  @MessagePattern(WORKSPACE_PATTERNS.VALIDATE_WORKSPACE_MEMBER)
-  validateWorkspaceMember(
-    @Payload() p: { userId: string; workspaceId: string },
-  ) {
-    return this.auth.validateWorkspaceMember(p);
   }
 }

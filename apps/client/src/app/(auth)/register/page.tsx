@@ -24,7 +24,7 @@ const RegisterPage = () => {
     defaultValues: {
       name: '',
       email: '',
-      orgName: '',
+      workspaceName: '',
       password: '',
       agreeTerms: false,
     },
@@ -37,7 +37,7 @@ const RegisterPage = () => {
         name: values.name,
         email: values.email,
         password: values.password,
-        orgName: values.orgName,
+        workspaceName: values.workspaceName,
       });
       useAuthStore.getState().setAuthResult(result);
       router.push('/dashboard');
@@ -140,20 +140,20 @@ const RegisterPage = () => {
             <div>
               <label
                 className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                htmlFor="register-org"
+                htmlFor="register-workspace"
               >
-                Organization Name *
+                Workspace Name *
               </label>
               <input
-                id="register-org"
+                id="register-workspace"
                 type="text"
                 placeholder="Acme, Inc."
-                {...register('orgName')}
+                {...register('workspaceName')}
                 className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
               />
-              {errors.orgName && (
+              {errors.workspaceName && (
                 <p className="mt-1.5 text-[10px] font-mono text-status-error">
-                  {errors.orgName.message}
+                  {errors.workspaceName.message}
                 </p>
               )}
             </div>

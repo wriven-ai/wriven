@@ -9,18 +9,32 @@ import { useAuthStore } from '../stores/auth';
 export function useAuth() {
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
-  const orgs = useAuthStore((s) => s.orgs);
   const workspaces = useAuthStore((s) => s.workspaces);
+  const projects = useAuthStore((s) => s.projects);
   const currentWorkspaceId = useAuthStore((s) => s.currentWorkspaceId);
+  const currentProjectId = useAuthStore((s) => s.currentProjectId);
+  const setWorkspace = useAuthStore((s) => s.setWorkspace);
+  const setProject = useAuthStore((s) => s.setProject);
   const currentWorkspace =
     workspaces.find((w) => w.id === currentWorkspaceId) ?? null;
+  // Projects scoped to the active workspace.
+  const currentWorkspaceProjects = projects.filter(
+    (p) => p.workspaceId === currentWorkspaceId,
+  );
+  const currentProject =
+    projects.find((p) => p.id === currentProjectId) ?? null;
   return {
     status,
     user,
-    orgs,
     workspaces,
+    projects,
     currentWorkspaceId,
+    currentProjectId,
     currentWorkspace,
+    currentWorkspaceProjects,
+    currentProject,
+    setWorkspace,
+    setProject,
     isAuthenticated: status === 'authenticated',
   };
 }

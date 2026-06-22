@@ -10,18 +10,28 @@ export interface UserView {
   createdAt: string;
 }
 
-export interface OrgView {
+/** Top-level tenancy unit. Owned directly by a user (`createdBy`). */
+export interface WorkspaceView {
   id: string;
   name: string;
   slug: string;
+  /** User id of the workspace creator. */
+  createdBy: string;
+  /** Caller's role in this workspace (`owner` | `admin` | `member`). */
   role: string;
 }
 
-export interface WorkspaceView {
+/** A project owns CMS content and lives under a workspace. */
+export interface ProjectView {
   id: string;
-  orgId: string;
+  workspaceId: string;
   name: string;
   slug: string;
+  /** User id of the project creator. */
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Caller's role in this project (`admin` | `editor` | `viewer`). */
   role: string;
 }
 
@@ -32,8 +42,8 @@ export interface AuthResult {
   /** ISO timestamp — gateway uses it to set the refresh cookie maxAge. */
   refreshExpiresAt: string;
   user: UserView;
-  org: OrgView;
   workspace: WorkspaceView;
+  project: ProjectView;
 }
 
 /** Result of a token refresh: a new access token and a rotated refresh token. */
@@ -71,11 +81,17 @@ export interface WorkspaceMembership {
   role: string;
 }
 
+/** Result of a project-membership check. */
+export interface ProjectMembership {
+  projectId: string;
+  role: string;
+}
+
 /** Full session context — used to restore state after a page reload. */
 export interface SessionView {
   user: UserView;
-  orgs: OrgView[];
   workspaces: WorkspaceView[];
+  projects: ProjectView[];
 }
 
 /** Verified Google profile the gateway forwards to auth-service after OAuth. */

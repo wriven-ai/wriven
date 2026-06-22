@@ -4,6 +4,13 @@ import type {
   LoginInput,
   RegisterInput,
   SessionView,
+  ContentTypeView,
+  ContentEntryView,
+  EntryStatus,
+  FieldDef,
+  Paginated,
+  ProjectView,
+  WorkspaceView,
 } from './types';
 
 const BASE_URL =
@@ -17,6 +24,7 @@ interface AuthAccessors {
   getAccessToken: () => string | null;
   setAccessToken: (token: string | null) => void;
   getWorkspaceId: () => string | null;
+  getProjectId: () => string | null;
   onAuthFailure: () => void;
 }
 
@@ -24,6 +32,7 @@ let accessors: AuthAccessors = {
   getAccessToken: () => null,
   setAccessToken: () => undefined,
   getWorkspaceId: () => null,
+  getProjectId: () => null,
   onAuthFailure: () => undefined,
 };
 
@@ -45,6 +54,8 @@ interface RequestOptions {
   auth?: boolean;
   /** Attach the X-Workspace-Id header. */
   workspace?: boolean;
+  /** Attach the X-Project-Id header. */
+  project?: boolean;
 }
 
 // De-dupe concurrent refreshes so a burst of 401s triggers one refresh call.
@@ -80,8 +91,16 @@ async function request<T>(
   opts: RequestOptions = {},
   retried = false,
 ): Promise<T> {
-  const { method = 'GET', body, auth = true, workspace = false } = opts;
+  const {
+    method = 'GET',
+    body,
+    auth = true,
+    workspace = false,
+    project = false,
+  } = opts;
   const headers: Record<string, string> = {};
+  if (process.env.NEXT_PUBLIC_USE_NGROK === 'true')
+    headers['ngrok-skip-browser-warning'] = 'true';
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
   const token = accessors.getAccessToken();
@@ -89,6 +108,10 @@ async function request<T>(
   if (workspace) {
     const ws = accessors.getWorkspaceId();
     if (ws) headers['X-Workspace-Id'] = ws;
+  }
+  if (project) {
+    const pid = accessors.getProjectId();
+    if (pid) headers['X-Project-Id'] = pid;
   }
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -145,6 +168,70 @@ export const authApi = {
     }),
   resendVerification: () =>
     request<{ success: true }>('/auth/resend-verification', { method: 'POST' }),
+};
+
+export const contentApi = {
+  listTypes: () =>
+    request<ContentTypeView[]>('/content/types', { workspace: true, project: true }),
+  createType: (dto: { name: string; apiId: string; fields: FieldDef[] }) =>
+    request<ContentTypeView>('/content/types', { method: 'POST', body: dto, workspace: true, project: true }),
+  getType: (id: string) =>
+    request<ContentTypeView>(`/content/types/${id}`, { workspace: true, project: true }),
+  updateType: (id: string, dto: { name?: string; fields?: FieldDef[] }) =>
+    request<ContentTypeView>(`/content/types/${id}`, { method: 'PATCH', body: dto, workspace: true, project: true }),
+  deleteType: (id: string) =>
+    request<unknown>(`/content/types/${id}`, { method: 'DELETE', workspace: true, project: true }),
+
+  listEntries: (params?: { contentTypeId?: string; status?: EntryStatus; page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.contentTypeId) qs.set('contentTypeId', params.contentTypeId);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const q = qs.toString();
+    return request<Paginated<ContentEntryView>>(`/content/entries${q ? `?${q}` : ''}`, { workspace: true, project: true });
+  },
+  createEntry: (dto: { contentTypeId: string; slug?: string; status?: string; data: Record<string, unknown> }) =>
+    request<ContentEntryView>('/content/entries', { method: 'POST', body: dto, workspace: true, project: true }),
+  getEntry: (id: string) =>
+    request<ContentEntryView>(`/content/entries/${id}`, { workspace: true, project: true }),
+  updateEntry: (id: string, dto: { slug?: string; status?: string; data?: Record<string, unknown> }) =>
+    request<ContentEntryView>(`/content/entries/${id}`, { method: 'PATCH', body: dto, workspace: true, project: true }),
+  publishEntry: (id: string) =>
+    request<ContentEntryView>(`/content/entries/${id}/publish`, { method: 'POST', workspace: true, project: true }),
+  deleteEntry: (id: string) =>
+    request<unknown>(`/content/entries/${id}`, { method: 'DELETE', workspace: true, project: true }),
+};
+
+export const workspaceApi = {
+  list: () => request<WorkspaceView[]>('/workspaces'),
+  create: (dto: { name: string; slug?: string }) =>
+    request<{ workspace: WorkspaceView; project: { id: string } }>('/workspaces', {
+      method: 'POST',
+      body: dto,
+    }),
+  get: (id: string) => request<WorkspaceView>(`/workspaces/${id}`),
+  update: (id: string, dto: { name?: string; slug?: string }) =>
+    request<WorkspaceView>(`/workspaces/${id}`, { method: 'PATCH', body: dto }),
+  remove: (id: string) =>
+    request<{ success: true }>(`/workspaces/${id}`, { method: 'DELETE' }),
+};
+
+export const projectApi = {
+  list: (workspaceId: string) =>
+    request<ProjectView[]>(`/workspaces/${workspaceId}/projects`, { workspace: true }),
+  create: (workspaceId: string, dto: { name: string; slug?: string }) =>
+    request<ProjectView>(`/workspaces/${workspaceId}/projects`, {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+    }),
+  get: (id: string) =>
+    request<ProjectView>(`/projects/${id}`, { workspace: true }),
+  update: (id: string, dto: { name?: string; slug?: string }) =>
+    request<ProjectView>(`/projects/${id}`, { method: 'PATCH', body: dto, workspace: true }),
+  remove: (id: string) =>
+    request<{ success: true }>(`/projects/${id}`, { method: 'DELETE', workspace: true }),
 };
 
 export const api = { request };

@@ -1,22 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Key, 
-  Plus, 
-  Trash2, 
-  Copy, 
-  Check, 
-  Eye, 
-  EyeOff, 
-  Lock, 
-  ShieldAlert, 
-  RefreshCw, 
-  Download,
+import {
+  Key,
+  Plus,
+  Trash2,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  ShieldAlert,
+  RefreshCw,
   Terminal,
   Activity,
-  Sparkles
 } from 'lucide-react';
 
 interface ApiKey {
