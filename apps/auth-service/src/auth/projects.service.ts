@@ -1,0 +1,347 @@
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  AddProjectMemberDto,
+  CreateProjectDto,
+  ProjectMemberView,
+  ProjectView,
+  UpdateProjectDto,
+  UpdateProjectMemberDto,
+} from '@wriven/contracts';
+import { DRIZZLE } from '@wriven/database';
+import type { DrizzleDB } from '@wriven/database';
+import { and, eq, isNull } from 'drizzle-orm';
+import { rpcError } from '../common/rpc-error';
+import { slugify, uniqueSlug } from '../common/slug';
+import * as schema from '../db/schema';
+import { MembersService } from './members.service';
+
+const { projects, projectMembers, users } = schema;
+
+type ProjectRow = typeof projects.$inferSelect;
+type ProjectMemberRow = typeof projectMembers.$inferSelect & {
+  user: typeof users.$inferSelect;
+};
+
+@Injectable()
+export class ProjectsService {
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly members: MembersService,
+  ) {}
+
+  // ── Project CRUD ────────────────────────────────────────────────────────────
+
+  async create(p: {
+    callerUserId: string;
+    workspaceId: string;
+    dto: CreateProjectDto;
+  }): Promise<ProjectView> {
+    // Only workspace owner/admin can create projects.
+    await this.members.requireWorkspaceRole(
+      p.callerUserId,
+      p.workspaceId,
+      ['owner', 'admin'],
+    );
+    const slug = p.dto.slug ?? uniqueSlug(p.dto.name);
+    try {
+      const result = await this.db.transaction(async (tx) => {
+        const [project] = await tx
+          .insert(projects)
+          .values({
+            workspaceId: p.workspaceId,
+            name: p.dto.name,
+            slug,
+            createdBy: p.callerUserId,
+          })
+          .returning();
+        // Creator becomes project admin.
+        await tx.insert(projectMembers).values({
+          projectId: project.id,
+          userId: p.callerUserId,
+          role: 'admin',
+        });
+        return project;
+      });
+      return this.toView(result, 'admin');
+    } catch (err) {
+      const e = err as { code?: string; constraint_name?: string };
+      if (e?.code === '23505' && e.constraint_name?.includes('slug')) {
+        throw rpcError('CONFLICT', 'A project with that slug already exists.');
+      }
+      throw err;
+    }
+  }
+
+  async get(p: {
+    callerUserId: string;
+    projectId: string;
+  }): Promise<ProjectView> {
+    const role = await this.requireProjectRole(p.callerUserId, p.projectId, [
+      'admin',
+      'editor',
+      'viewer',
+    ]);
+    return this.toView(await this.requireRow(p.projectId), role);
+  }
+
+  async list(p: {
+    callerUserId: string;
+    workspaceId: string;
+  }): Promise<ProjectView[]> {
+    // Any workspace member can list projects in the workspace.
+    await this.members.requireWorkspaceRole(
+      p.callerUserId,
+      p.workspaceId,
+      ['owner', 'admin', 'member'],
+    );
+    const rows = await this.db.query.projects.findMany({
+      where: and(
+        eq(projects.workspaceId, p.workspaceId),
+        isNull(projects.deletedAt),
+      ),
+      orderBy: projects.createdAt,
+    });
+    // Resolve caller's role per project (members see role, non-members see none).
+    const withRoles = await Promise.all(
+      rows.map(async (r) => {
+        const membership = await this.db.query.projectMembers.findFirst({
+          where: and(
+            eq(projectMembers.projectId, r.id),
+            eq(projectMembers.userId, p.callerUserId),
+          ),
+          columns: { role: true },
+        });
+        return this.toView(r, membership?.role ?? 'viewer');
+      }),
+    );
+    return withRoles;
+  }
+
+  async update(p: {
+    callerUserId: string;
+    projectId: string;
+    dto: UpdateProjectDto;
+  }): Promise<ProjectView> {
+    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    const set: Partial<ProjectRow> = {};
+    if (p.dto.name !== undefined) set.name = p.dto.name;
+    if (p.dto.slug !== undefined) set.slug = slugify(p.dto.slug);
+    try {
+      const [row] = await this.db
+        .update(projects)
+        .set(set)
+        .where(eq(projects.id, p.projectId))
+        .returning();
+      return this.toView(row, await this.roleFor(p.projectId, p.callerUserId));
+    } catch (err) {
+      const e = err as { code?: string; constraint_name?: string };
+      if (e?.code === '23505' && e.constraint_name?.includes('slug')) {
+        throw rpcError('CONFLICT', 'A project with that slug already exists.');
+      }
+      throw err;
+    }
+  }
+
+  async remove(p: {
+    callerUserId: string;
+    projectId: string;
+  }): Promise<{ success: true }> {
+    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    await this.db
+      .update(projects)
+      .set({ deletedAt: new Date() })
+      .where(eq(projects.id, p.projectId));
+    return { success: true };
+  }
+
+  // ── Project members ─────────────────────────────────────────────────────────
+
+  async listMembers(p: {
+    callerUserId: string;
+    projectId: string;
+  }): Promise<ProjectMemberView[]> {
+    await this.requireProjectRole(p.callerUserId, p.projectId, [
+      'admin',
+      'editor',
+      'viewer',
+    ]);
+    const rows = await this.db.query.projectMembers.findMany({
+      where: eq(projectMembers.projectId, p.projectId),
+      orderBy: projectMembers.createdAt,
+      with: { user: true },
+    });
+    return rows.map((r) => this.toMemberView(r as ProjectMemberRow));
+  }
+
+  async addMember(p: {
+    callerUserId: string;
+    projectId: string;
+    dto: AddProjectMemberDto;
+  }): Promise<ProjectMemberView> {
+    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    const user = await this.members.findUserByEmail(p.dto.email);
+    await this.ensureNotMember(p.projectId, user.id);
+    const [row] = await this.db
+      .insert(projectMembers)
+      .values({ projectId: p.projectId, userId: user.id, role: p.dto.role })
+      .returning();
+    return this.toMemberView({ ...row, user });
+  }
+
+  async updateMember(p: {
+    callerUserId: string;
+    projectId: string;
+    targetUserId: string;
+    dto: UpdateProjectMemberDto;
+  }): Promise<ProjectMemberView> {
+    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    const target = await this.requireMembership(p.projectId, p.targetUserId);
+    if (target.role === 'admin' && p.dto.role !== 'admin') {
+      await this.assertNotLastAdmin(p.projectId);
+    }
+    const [row] = await this.db
+      .update(projectMembers)
+      .set({ role: p.dto.role })
+      .where(
+        and(
+          eq(projectMembers.projectId, p.projectId),
+          eq(projectMembers.userId, p.targetUserId),
+        ),
+      )
+      .returning();
+    const fetched = await this.db.query.users.findFirst({
+      where: eq(users.id, p.targetUserId),
+    });
+    if (!fetched) throw rpcError('NOT_FOUND', 'User not found.');
+    return this.toMemberView({ ...row, user: fetched });
+  }
+
+  async removeMember(p: {
+    callerUserId: string;
+    projectId: string;
+    targetUserId: string;
+  }): Promise<{ success: true }> {
+    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    const target = await this.requireMembership(p.projectId, p.targetUserId);
+    if (target.role === 'admin') {
+      await this.assertNotLastAdmin(p.projectId);
+    }
+    await this.db
+      .delete(projectMembers)
+      .where(
+        and(
+          eq(projectMembers.projectId, p.projectId),
+          eq(projectMembers.userId, p.targetUserId),
+        ),
+      );
+    return { success: true };
+  }
+
+  // ── Authorization helpers ─────────────────────────────────────────────────────
+
+  async requireProjectRole(
+    userId: string,
+    projectId: string,
+    allowed: string[],
+  ): Promise<string> {
+    const row = await this.db.query.projectMembers.findFirst({
+      where: and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, userId),
+      ),
+      columns: { role: true },
+    });
+    if (!row || !allowed.includes(row.role)) {
+      throw rpcError('FORBIDDEN', 'You do not have access to this project.');
+    }
+    return row.role;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private async requireRow(id: string): Promise<ProjectRow> {
+    const row = await this.db.query.projects.findFirst({
+      where: and(eq(projects.id, id), isNull(projects.deletedAt)),
+    });
+    if (!row) throw rpcError('NOT_FOUND', 'Project not found.');
+    return row;
+  }
+
+  private async requireMembership(projectId: string, userId: string) {
+    const row = await this.db.query.projectMembers.findFirst({
+      where: and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, userId),
+      ),
+    });
+    if (!row)
+      throw rpcError('NOT_FOUND', 'This user is not a member of the project.');
+    return row;
+  }
+
+  private async ensureNotMember(projectId: string, userId: string) {
+    const existing = await this.db.query.projectMembers.findFirst({
+      where: and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, userId),
+      ),
+      columns: { id: true },
+    });
+    if (existing) {
+      throw rpcError('CONFLICT', 'User is already a member of this project.');
+    }
+  }
+
+  private async assertNotLastAdmin(projectId: string) {
+    const admins = await this.db.$count(
+      projectMembers,
+      and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.role, 'admin'),
+      ),
+    );
+    if (admins <= 1) {
+      throw rpcError('CONFLICT', 'The project must keep at least one admin.');
+    }
+  }
+
+  private async roleFor(projectId: string, userId: string): Promise<string> {
+    const row = await this.db.query.projectMembers.findFirst({
+      where: and(
+        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.userId, userId),
+      ),
+      columns: { role: true },
+    });
+    return row?.role ?? 'viewer';
+  }
+
+  private toView(p: ProjectRow, role: string): ProjectView {
+    return {
+      id: p.id,
+      workspaceId: p.workspaceId,
+      name: p.name,
+      slug: p.slug,
+      createdBy: p.createdBy,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+      role,
+    };
+  }
+
+  private toMemberView(r: ProjectMemberRow): ProjectMemberView {
+    return {
+      id: r.id,
+      projectId: r.projectId,
+      userId: r.userId,
+      role: r.role,
+      createdAt: r.createdAt.toISOString(),
+      user: {
+        id: r.user.id,
+        email: r.user.email,
+        name: r.user.name,
+        avatar: r.user.avatar,
+      },
+    };
+  }
+}

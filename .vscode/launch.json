@@ -4,9 +4,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug @org/auth-service with Nx",
+      "name": "Debug @wriven/auth-service with Nx",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "nx", "serve", "@org/auth-service"],
+      "runtimeArgs": ["exec", "nx", "serve", "@wriven/auth-service"],
       "env": {
         "NODE_OPTIONS": "--inspect=9229"
       },
@@ -22,9 +22,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug @org/cms-service with Nx",
+      "name": "Debug @wriven/core-service with Nx",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "nx", "serve", "@org/cms-service"],
+      "runtimeArgs": ["exec", "nx", "serve", "@wriven/core-service"],
       "env": {
         "NODE_OPTIONS": "--inspect=9230"
       },
@@ -33,16 +33,16 @@
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/apps/cms-service/dist/**/*.(m|c|)js",
+        "${workspaceFolder}/apps/core-service/dist/**/*.(m|c|)js",
         "!**/node_modules/**"
       ]
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug @org/auth-service with Nx",
+      "name": "Debug @wriven/auth-service with Nx",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "nx", "serve", "@org/auth-service"],
+      "runtimeArgs": ["exec", "nx", "serve", "@wriven/auth-service"],
       "env": {
         "NODE_OPTIONS": "--inspect=9231"
       },
@@ -58,9 +58,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug @org/api-gateway with Nx",
+      "name": "Debug @wriven/api-gateway with Nx",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "nx", "serve", "@org/api-gateway"],
+      "runtimeArgs": ["exec", "nx", "serve", "@wriven/api-gateway"],
       "env": {
         "NODE_OPTIONS": "--inspect=9232"
       },

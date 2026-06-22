@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1781324409731,
+      "tag": "0000_amused_mockingbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781329736254,
+      "tag": "0001_numerous_magik",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781329892839,
+      "tag": "0002_rainy_redwing",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781332603317,
+      "tag": "0003_jittery_queen_noir",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781400000000,
+      "tag": "0004_workspace_project_hierarchy",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,242 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+@theme {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-secondary-hover: var(--brand-secondary-hover);
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-surface-soft: var(--brand-surface-soft);
+  --color-brand-border: var(--brand-border);
+  --color-brand-border-button: var(--brand-border-button);
+
+  /* shadcn base aliases, mapped onto the brand palette */
+  --color-background: var(--brand-bg);
+  --color-foreground: var(--text-primary);
+  --color-border: var(--brand-border);
+  --color-ring: var(--brand-accent);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-error: var(--status-error);
+
+  /* shadcn sidebar tokens mapped onto brand palette */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+
+  --font-plus-jakarta: var(--font-manrope), sans-serif;
+  --font-display: var(--font-manrope), sans-serif;
+  --font-sans: var(--font-manrope), sans-serif;
+  --font-serif: var(--font-manrope), sans-serif;
+  --font-mono: var(--font-manrope), sans-serif;
+  --text-2xs: 0.65rem;
+  --text-3xs: 0.55rem;
+}
+
+:root {
+  --brand-primary: #faf8f5; /* Warm oatmeal eggshell */
+  --brand-accent: #0b6e4f; /* Sovereign Emerald - Deep, confident editorial green */
+  --brand-accent-hover: #075039; /* Deep Forest/Spruce Emerald */
+  --brand-secondary: #d97706; /* Refined deep amber */
+  --brand-secondary-hover: #b45309; /* Saturated deep amber/brown */
+  --brand-bg: #faf8f5; /* Cozy Ivory/Clay paper */
+  --brand-surface: #ffffff; /* Pure white paper */
+  --brand-surface-soft: #eef4f0; /* Soft sage-tinted paper wash */
+  --brand-border: #dbe5df; /* Elegant ice-sage hairline line */
+  --brand-border-button: #bac6bf; /* Subtle soft moss-grey hairline line */
+
+  --text-primary: #080d0a; /* Saturated ink charcoal */
+  --text-secondary: #424c46; /* Slate pine forest */
+  --text-muted: #79857e; /* Faint spruce lead */
+
+  --status-success: #1e6b4b; /* Deep pine emerald */
+  --status-warning: #b37d28; /* Polished brass ochre */
+  --status-error: #a32e2e; /* Dried lacquer red */
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #080d0a;
+  --sidebar-accent: #eef4f0;
+  --sidebar-accent-foreground: #0b6e4f;
+  --sidebar-border: #dbe5df;
+  --sidebar-ring: #0b6e4f;
+  --sidebar-primary: #0b6e4f;
+  --sidebar-primary-foreground: #ffffff;
+
+  --shadow-sm:
+    0 4px 12px -2px rgba(8, 13, 10, 0.05), 0 2px 6px -1px rgba(8, 13, 10, 0.03);
+  --shadow-lg:
+    0 16px 32px -4px rgba(8, 13, 10, 0.06),
+    0 8px 16px -2px rgba(8, 13, 10, 0.03);
+  --shadow-lg-hover:
+    0 16px 32px -4px rgba(8, 13, 10, 0.12),
+    0 6px 14px -2px rgba(8, 13, 10, 0.06);
+}
+
+.dark {
+  --brand-primary: #050a08; /* Extremely deep, silent pine forest night */
+  --brand-accent: #0faf7b; /* Electric Chromium Emerald - high prominence on dark background */
+  --brand-accent-hover: #15d296; /* Vivid mint neon */
+  --brand-secondary: #f59e0b; /* Luminous Sun Amber */
+  --brand-secondary-hover: #fbbf24; /* Brilliant amber highlights */
+  --brand-bg: #050a08; /* Quiet obsidian pine */
+  --brand-surface: #0c1210; /* Soft rainforest carbon */
+  --brand-surface-soft: #141d19; /* Mid-tone slate moss */
+  --brand-border: #1d2a23; /* Deep spruce twilight line */
+  --brand-border-button: #2b3d34; /* Subtle forest charcoal accent line */
+
+  --text-primary: #faf8f5; /* Warm cozy eggshell */
+  --text-secondary: #99a6a0; /* Brightened soft sage silver */
+  --text-muted: #64736c; /* Shadowed pine pencil */
+
+  --status-success: #35a375;
+  --status-warning: #dca245;
+  --status-error: #d94646;
+
+  --sidebar: #0c1210;
+  --sidebar-foreground: #faf8f5;
+  --sidebar-accent: #141d19;
+  --sidebar-accent-foreground: #0faf7b;
+  --sidebar-border: #1d2a23;
+  --sidebar-ring: #0faf7b;
+  --sidebar-primary: #0faf7b;
+  --sidebar-primary-foreground: #050a08;
+
+  --shadow-sm:
+    0 4px 12px -2px rgba(0, 0, 0, 0.35), 0 2px 6px -1px rgba(0, 0, 0, 0.25);
+  --shadow-lg:
+    0 16px 32px -4px rgba(0, 0, 0, 0.5), 0 8px 16px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg-hover:
+    0 20px 40px -4px rgba(0, 0, 0, 0.6), 0 8px 16px -2px rgba(0, 0, 0, 0.45);
+}
+
+/* Strip all italic styles globally and enforce the unified premium Manrope font */
+*,
+*::before,
+*::after {
+  font-style: normal !important;
+}
+
+body {
+  background-color: var(--color-brand-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans) !important;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* Elegant, bespoke engineering grid inspired by antique blueprints and print newspapers */
+.editorial-grid {
+  background-image:
+    linear-gradient(rgba(26, 26, 24, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 26, 24, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .editorial-grid {
+  background-image:
+    linear-gradient(rgba(250, 248, 245, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(250, 248, 245, 0.02) 1px, transparent 1px);
+}
+
+/* Sleek, premium modern organic shadows with subtle depth */
+.neo-shadow {
+  box-shadow: var(--shadow-sm);
+}
+
+.neo-shadow-lg {
+  box-shadow: var(--shadow-lg);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.neo-shadow-lg:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg-hover);
+}
+
+.clay-plate {
+  background-color: var(--color-brand-surface-soft);
+  border: 1px solid var(--color-brand-border);
+}
+
+/* Subtle texture layer for organic paper grain */
+.paper-grain {
+  position: relative;
+}
+
+.paper-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.015;
+  pointer-events: none;
+  background-image:
+    radial-gradient(#1a1a18 20%, transparent 20%),
+    radial-gradient(#1a1a18 20%, transparent 20%);
+  background-size: 3px 3px;
+  background-position:
+    0 0,
+    1.5px 1.5px;
+  z-index: 50;
+}
+
+.dark .paper-grain::before {
+  opacity: 0.012;
+  background-image:
+    radial-gradient(#faf8f5 20%, transparent 20%),
+    radial-gradient(#faf8f5 20%, transparent 20%);
+}
+
+/* Soft entrance animation used across the marketing site and auth pages */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Notched "identity tag" badge used for the small uppercase eyebrow labels */
+.id-tag {
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}

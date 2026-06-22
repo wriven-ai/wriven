@@ -4,7 +4,6 @@
     "**/.gemini": true,
     "**/.codex": true,
     "**/.opencode": true,
-    "**/.agents": true,
     "**/.nx": true
   }
 }

@@ -4,13 +4,31 @@
   "files": [],
   "references": [
     {
-      "path": "./apps/cms-service"
+      "path": "./apps/core-service"
     },
     {
       "path": "./apps/auth-service"
     },
     {
       "path": "./apps/api-gateway"
+    },
+    {
+      "path": "./apps/client"
+    },
+    {
+      "path": "./libs/shared/contracts"
+    },
+    {
+      "path": "./libs/shared/types"
+    },
+    {
+      "path": "./libs/shared/constants"
+    },
+    {
+      "path": "./libs/shared/common"
+    },
+    {
+      "path": "./libs/shared/database"
     }
   ]
 }
