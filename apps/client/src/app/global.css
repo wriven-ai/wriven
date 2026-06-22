@@ -1,505 +1,242 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
-html {
-  -webkit-text-size-adjust: 100%;
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    Segoe UI,
-    Roboto,
-    Helvetica Neue,
-    Arial,
-    Noto Sans,
-    sans-serif,
-    Apple Color Emoji,
-    Segoe UI Emoji,
-    Segoe UI Symbol,
-    Noto Color Emoji;
-  line-height: 1.5;
-  tab-size: 4;
-  scroll-behavior: smooth;
+@custom-variant dark (&:is(.dark *));
+@theme {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-secondary-hover: var(--brand-secondary-hover);
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-surface-soft: var(--brand-surface-soft);
+  --color-brand-border: var(--brand-border);
+  --color-brand-border-button: var(--brand-border-button);
+
+  /* shadcn base aliases, mapped onto the brand palette */
+  --color-background: var(--brand-bg);
+  --color-foreground: var(--text-primary);
+  --color-border: var(--brand-border);
+  --color-ring: var(--brand-accent);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-error: var(--status-error);
+
+  /* shadcn sidebar tokens mapped onto brand palette */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+
+  --font-plus-jakarta: var(--font-manrope), sans-serif;
+  --font-display: var(--font-manrope), sans-serif;
+  --font-sans: var(--font-manrope), sans-serif;
+  --font-serif: var(--font-manrope), sans-serif;
+  --font-mono: var(--font-manrope), sans-serif;
+  --text-2xs: 0.65rem;
+  --text-3xs: 0.55rem;
 }
-body {
-  font-family: inherit;
-  line-height: inherit;
-  margin: 0;
+
+:root {
+  --brand-primary: #faf8f5; /* Warm oatmeal eggshell */
+  --brand-accent: #0b6e4f; /* Sovereign Emerald - Deep, confident editorial green */
+  --brand-accent-hover: #075039; /* Deep Forest/Spruce Emerald */
+  --brand-secondary: #d97706; /* Refined deep amber */
+  --brand-secondary-hover: #b45309; /* Saturated deep amber/brown */
+  --brand-bg: #faf8f5; /* Cozy Ivory/Clay paper */
+  --brand-surface: #ffffff; /* Pure white paper */
+  --brand-surface-soft: #eef4f0; /* Soft sage-tinted paper wash */
+  --brand-border: #dbe5df; /* Elegant ice-sage hairline line */
+  --brand-border-button: #bac6bf; /* Subtle soft moss-grey hairline line */
+
+  --text-primary: #080d0a; /* Saturated ink charcoal */
+  --text-secondary: #424c46; /* Slate pine forest */
+  --text-muted: #79857e; /* Faint spruce lead */
+
+  --status-success: #1e6b4b; /* Deep pine emerald */
+  --status-warning: #b37d28; /* Polished brass ochre */
+  --status-error: #a32e2e; /* Dried lacquer red */
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #080d0a;
+  --sidebar-accent: #eef4f0;
+  --sidebar-accent-foreground: #0b6e4f;
+  --sidebar-border: #dbe5df;
+  --sidebar-ring: #0b6e4f;
+  --sidebar-primary: #0b6e4f;
+  --sidebar-primary-foreground: #ffffff;
+
+  --shadow-sm:
+    0 4px 12px -2px rgba(8, 13, 10, 0.05), 0 2px 6px -1px rgba(8, 13, 10, 0.03);
+  --shadow-lg:
+    0 16px 32px -4px rgba(8, 13, 10, 0.06),
+    0 8px 16px -2px rgba(8, 13, 10, 0.03);
+  --shadow-lg-hover:
+    0 16px 32px -4px rgba(8, 13, 10, 0.12),
+    0 6px 14px -2px rgba(8, 13, 10, 0.06);
 }
-h1,
-h2,
-p,
-pre {
-  margin: 0;
+
+.dark {
+  --brand-primary: #050a08; /* Extremely deep, silent pine forest night */
+  --brand-accent: #0faf7b; /* Electric Chromium Emerald - high prominence on dark background */
+  --brand-accent-hover: #15d296; /* Vivid mint neon */
+  --brand-secondary: #f59e0b; /* Luminous Sun Amber */
+  --brand-secondary-hover: #fbbf24; /* Brilliant amber highlights */
+  --brand-bg: #050a08; /* Quiet obsidian pine */
+  --brand-surface: #0c1210; /* Soft rainforest carbon */
+  --brand-surface-soft: #141d19; /* Mid-tone slate moss */
+  --brand-border: #1d2a23; /* Deep spruce twilight line */
+  --brand-border-button: #2b3d34; /* Subtle forest charcoal accent line */
+
+  --text-primary: #faf8f5; /* Warm cozy eggshell */
+  --text-secondary: #99a6a0; /* Brightened soft sage silver */
+  --text-muted: #64736c; /* Shadowed pine pencil */
+
+  --status-success: #35a375;
+  --status-warning: #dca245;
+  --status-error: #d94646;
+
+  --sidebar: #0c1210;
+  --sidebar-foreground: #faf8f5;
+  --sidebar-accent: #141d19;
+  --sidebar-accent-foreground: #0faf7b;
+  --sidebar-border: #1d2a23;
+  --sidebar-ring: #0faf7b;
+  --sidebar-primary: #0faf7b;
+  --sidebar-primary-foreground: #050a08;
+
+  --shadow-sm:
+    0 4px 12px -2px rgba(0, 0, 0, 0.35), 0 2px 6px -1px rgba(0, 0, 0, 0.25);
+  --shadow-lg:
+    0 16px 32px -4px rgba(0, 0, 0, 0.5), 0 8px 16px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg-hover:
+    0 20px 40px -4px rgba(0, 0, 0, 0.6), 0 8px 16px -2px rgba(0, 0, 0, 0.45);
 }
+
+/* Strip all italic styles globally and enforce the unified premium Manrope font */
 *,
-::before,
-::after {
-  box-sizing: border-box;
-  border-width: 0;
-  border-style: solid;
-  border-color: currentColor;
-}
-h1,
-h2 {
-  font-size: inherit;
-  font-weight: inherit;
-}
-a {
-  color: inherit;
-  text-decoration: inherit;
-}
-pre {
-  font-family:
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    Liberation Mono,
-    Courier New,
-    monospace;
-}
-svg {
-  display: block;
-  vertical-align: middle;
-  shape-rendering: auto;
-  text-rendering: optimizeLegibility;
-}
-pre {
-  background-color: rgba(55, 65, 81, 1);
-  border-radius: 0.25rem;
-  color: rgba(229, 231, 235, 1);
-  font-family:
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    Liberation Mono,
-    Courier New,
-    monospace;
-  overflow: scroll;
-  padding: 0.5rem 0.75rem;
+*::before,
+*::after {
+  font-style: normal !important;
 }
 
-.shadow {
-  box-shadow:
-    0 0 #0000,
-    0 0 #0000,
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+body {
+  background-color: var(--color-brand-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans) !important;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
-.rounded {
-  border-radius: 1.5rem;
+
+/* Elegant, bespoke engineering grid inspired by antique blueprints and print newspapers */
+.editorial-grid {
+  background-image:
+    linear-gradient(rgba(26, 26, 24, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 26, 24, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
-.wrapper {
-  width: 100%;
+
+.dark .editorial-grid {
+  background-image:
+    linear-gradient(rgba(250, 248, 245, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(250, 248, 245, 0.02) 1px, transparent 1px);
 }
-.container {
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 768px;
-  padding-bottom: 3rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  color: rgba(55, 65, 81, 1);
-  width: 100%;
+
+/* Sleek, premium modern organic shadows with subtle depth */
+.neo-shadow {
+  box-shadow: var(--shadow-sm);
 }
-#welcome {
-  margin-top: 2.5rem;
+
+.neo-shadow-lg {
+  box-shadow: var(--shadow-lg);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-#welcome h1 {
-  font-size: 3rem;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  line-height: 1;
+
+.neo-shadow-lg:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg-hover);
 }
-#welcome span {
-  display: block;
-  font-size: 1.875rem;
-  font-weight: 300;
-  line-height: 2.25rem;
-  margin-bottom: 0.5rem;
+
+.clay-plate {
+  background-color: var(--color-brand-surface-soft);
+  border: 1px solid var(--color-brand-border);
 }
-#hero {
-  align-items: center;
-  background-color: hsla(214, 62%, 21%, 1);
-  border: none;
-  box-sizing: border-box;
-  color: rgba(55, 65, 81, 1);
-  display: grid;
-  grid-template-columns: 1fr;
-  margin-top: 3.5rem;
-}
-#hero .text-container {
-  color: rgba(255, 255, 255, 1);
-  padding: 3rem 2rem;
-}
-#hero .text-container h2 {
-  font-size: 1.5rem;
-  line-height: 2rem;
+
+/* Subtle texture layer for organic paper grain */
+.paper-grain {
   position: relative;
 }
-#hero .text-container h2 svg {
-  color: hsla(162, 47%, 50%, 1);
-  height: 2rem;
-  left: -0.25rem;
+
+.paper-grain::before {
+  content: '';
   position: absolute;
-  top: 0;
-  width: 2rem;
-}
-#hero .text-container h2 span {
-  margin-left: 2.5rem;
-}
-#hero .text-container a {
-  background-color: rgba(255, 255, 255, 1);
-  border-radius: 0.75rem;
-  color: rgba(55, 65, 81, 1);
-  display: inline-block;
-  margin-top: 1.5rem;
-  padding: 1rem 2rem;
-  text-decoration: inherit;
-}
-#hero .logo-container {
-  display: none;
-  justify-content: center;
-  padding-left: 2rem;
-  padding-right: 2rem;
-}
-#hero .logo-container svg {
-  color: rgba(255, 255, 255, 1);
-  width: 66.666667%;
-}
-#middle-content {
-  align-items: flex-start;
-  display: grid;
-  gap: 4rem;
-  grid-template-columns: 1fr;
-  margin-top: 3.5rem;
-}
-#learning-materials {
-  padding: 2.5rem 2rem;
-}
-#learning-materials h2 {
-  font-weight: 500;
-  font-size: 1.25rem;
-  letter-spacing: -0.025em;
-  line-height: 1.75rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-.list-item-link {
-  align-items: center;
-  border-radius: 0.75rem;
-  display: flex;
-  margin-top: 1rem;
-  padding: 1rem;
-  transition-property:
-    background-color,
-    border-color,
-    color,
-    fill,
-    stroke,
-    opacity,
-    box-shadow,
-    transform,
-    filter,
-    backdrop-filter,
-    -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  inset: 0;
   width: 100%;
+  height: 100%;
+  opacity: 0.015;
+  pointer-events: none;
+  background-image:
+    radial-gradient(#1a1a18 20%, transparent 20%),
+    radial-gradient(#1a1a18 20%, transparent 20%);
+  background-size: 3px 3px;
+  background-position:
+    0 0,
+    1.5px 1.5px;
+  z-index: 50;
 }
-.list-item-link svg:first-child {
-  margin-right: 1rem;
-  height: 1.5rem;
-  transition-property:
-    background-color,
-    border-color,
-    color,
-    fill,
-    stroke,
-    opacity,
-    box-shadow,
-    transform,
-    filter,
-    backdrop-filter,
-    -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-  width: 1.5rem;
+
+.dark .paper-grain::before {
+  opacity: 0.012;
+  background-image:
+    radial-gradient(#faf8f5 20%, transparent 20%),
+    radial-gradient(#faf8f5 20%, transparent 20%);
 }
-.list-item-link > span {
-  flex-grow: 1;
-  font-weight: 400;
-  transition-property:
-    background-color,
-    border-color,
-    color,
-    fill,
-    stroke,
-    opacity,
-    box-shadow,
-    transform,
-    filter,
-    backdrop-filter,
-    -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.list-item-link > span > span {
-  color: rgba(107, 114, 128, 1);
-  display: block;
-  flex-grow: 1;
-  font-size: 0.75rem;
-  font-weight: 300;
-  line-height: 1rem;
-  transition-property:
-    background-color,
-    border-color,
-    color,
-    fill,
-    stroke,
-    opacity,
-    box-shadow,
-    transform,
-    filter,
-    backdrop-filter,
-    -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.list-item-link svg:last-child {
-  height: 1rem;
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-  width: 1rem;
-}
-.list-item-link:hover {
-  color: rgba(255, 255, 255, 1);
-  background-color: hsla(162, 47%, 50%, 1);
-}
-.list-item-link:hover > span {
-}
-.list-item-link:hover > span > span {
-  color: rgba(243, 244, 246, 1);
-}
-.list-item-link:hover svg:last-child {
-  transform: translateX(0.25rem);
-}
-#other-links {
-}
-.button-pill {
-  padding: 1.5rem 2rem;
-  transition-duration: 300ms;
-  transition-property:
-    background-color,
-    border-color,
-    color,
-    fill,
-    stroke,
-    opacity,
-    box-shadow,
-    transform,
-    filter,
-    backdrop-filter,
-    -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  align-items: center;
-  display: flex;
-}
-.button-pill svg {
-  transition-property:
-    background-color,
-    border-color,
-    color,
-    fill,
-    stroke,
-    opacity,
-    box-shadow,
-    transform,
-    filter,
-    backdrop-filter,
-    -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-  flex-shrink: 0;
-  width: 3rem;
-}
-.button-pill > span {
-  letter-spacing: -0.025em;
-  font-weight: 400;
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-.button-pill span span {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 300;
-  line-height: 1.25rem;
-}
-.button-pill:hover svg,
-.button-pill:hover {
-  color: rgba(255, 255, 255, 1) !important;
-}
-#nx-console:hover {
-  background-color: rgba(0, 122, 204, 1);
-}
-#nx-console svg {
-  color: rgba(0, 122, 204, 1);
-}
-#nx-console-jetbrains {
-  margin-top: 2rem;
-}
-#nx-console-jetbrains:hover {
-  background-color: rgba(255, 49, 140, 1);
-}
-#nx-console-jetbrains svg {
-  color: rgba(255, 49, 140, 1);
-}
-#nx-repo:hover {
-  background-color: rgba(24, 23, 23, 1);
-}
-#nx-repo svg {
-  color: rgba(24, 23, 23, 1);
-}
-#nx-cloud {
-  margin-bottom: 2rem;
-  margin-top: 2rem;
-  padding: 2.5rem 2rem;
-}
-#nx-cloud > div {
-  align-items: center;
-  display: flex;
-}
-#nx-cloud > div svg {
-  border-radius: 0.375rem;
-  flex-shrink: 0;
-  width: 3rem;
-}
-#nx-cloud > div h2 {
-  font-size: 1.125rem;
-  font-weight: 400;
-  letter-spacing: -0.025em;
-  line-height: 1.75rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-#nx-cloud > div h2 span {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 300;
-  line-height: 1.25rem;
-}
-#nx-cloud p {
-  font-size: 1rem;
-  line-height: 1.5rem;
-  margin-top: 1rem;
-}
-#nx-cloud pre {
-  margin-top: 1rem;
-}
-#nx-cloud a {
-  color: rgba(107, 114, 128, 1);
-  display: block;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  margin-top: 1.5rem;
-  text-align: right;
-}
-#nx-cloud a:hover {
-  text-decoration: underline;
-}
-#commands {
-  padding: 2.5rem 2rem;
-  margin-top: 3.5rem;
-}
-#commands h2 {
-  font-size: 1.25rem;
-  font-weight: 400;
-  letter-spacing: -0.025em;
-  line-height: 1.75rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-#commands p {
-  font-size: 1rem;
-  font-weight: 300;
-  line-height: 1.5rem;
-  margin-top: 1rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-details {
-  align-items: center;
-  display: flex;
-  margin-top: 1rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  width: 100%;
-}
-details pre > span {
-  color: rgba(181, 181, 181, 1);
-  display: block;
-}
-summary {
-  border-radius: 0.5rem;
-  display: flex;
-  font-weight: 400;
-  padding: 0.5rem;
-  cursor: pointer;
-  transition-property:
-    background-color,
-    border-color,
-    color,
-    fill,
-    stroke,
-    opacity,
-    box-shadow,
-    transform,
-    filter,
-    backdrop-filter,
-    -webkit-backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-summary:hover {
-  background-color: rgba(243, 244, 246, 1);
-}
-summary svg {
-  height: 1.5rem;
-  margin-right: 1rem;
-  width: 1.5rem;
-}
-#love {
-  color: rgba(107, 114, 128, 1);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  margin-top: 3.5rem;
-  opacity: 0.6;
-  text-align: center;
-}
-#love svg {
-  color: rgba(252, 165, 165, 1);
-  width: 1.25rem;
-  height: 1.25rem;
-  display: inline;
-  margin-top: -0.25rem;
-}
-@media screen and (min-width: 768px) {
-  #hero {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+/* Soft entrance animation used across the marketing site and auth pages */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
-  #hero .logo-container {
-    display: flex;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  #middle-content {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Notched "identity tag" badge used for the small uppercase eyebrow labels */
+.id-tag {
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
   }
 }
