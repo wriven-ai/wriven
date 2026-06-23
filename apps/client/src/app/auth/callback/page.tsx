@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { authApi } from '../../../lib/api';
+import { scopePathFromSession } from '../../../lib/nav';
 import { useAuthStore } from '../../../stores/auth';
 
 /**
@@ -34,7 +35,7 @@ export default function AuthCallbackPage() {
       try {
         const session = await authApi.me();
         useAuthStore.getState().setSession(session);
-        router.replace('/dashboard');
+        router.replace(scopePathFromSession(session));
       } catch {
         useAuthStore.getState().setUnauthenticated();
         router.replace('/login');

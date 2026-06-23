@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Sparkles,
@@ -113,6 +114,8 @@ function FieldInput({
 
 export default function ContentEditorPage() {
   const qc = useQueryClient();
+  const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
+  const contentTypesHref = `/w/${wsSlug}/p/${projSlug}/content-types`;
 
   const [selectedTypeId, setSelectedTypeId] = useState('');
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
@@ -280,7 +283,7 @@ export default function ContentEditorPage() {
         ) : types.length === 0 ? (
           <span className="text-2xs font-mono text-text-muted">
             No types yet —{' '}
-            <a href="/dashboard/content-types" className="text-brand-accent underline">create one</a>
+            <a href={contentTypesHref} className="text-brand-accent underline">create one</a>
           </span>
         ) : (
           <select
@@ -335,7 +338,7 @@ export default function ContentEditorPage() {
               {selectedType && selectedType.fields.length === 0 && (
                 <p className="text-xs font-mono text-text-muted">
                   This content type has no fields.{' '}
-                  <a href="/dashboard/content-types" className="text-brand-accent underline">Add fields</a>.
+                  <a href={contentTypesHref} className="text-brand-accent underline">Add fields</a>.
                 </p>
               )}
 

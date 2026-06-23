@@ -2,12 +2,16 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderKanban, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ApiRequestError, projectApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function ProjectsPage() {
-  const { currentWorkspace, currentWorkspaceId, setProject } = useAuth();
+  const { currentWorkspace, currentWorkspaceId } = useAuth();
+  const { wsSlug } = useParams<{ wsSlug: string }>();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
@@ -24,10 +28,11 @@ export default function ProjectsPage() {
       projectApi.create(currentWorkspaceId!, dto),
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['projects', currentWorkspaceId] });
-      setProject(project.id);
       setName('');
       setShowCreate(false);
       setError(null);
+      // URL is the source of truth — open the new project by navigating to it.
+      router.push(`/w/${wsSlug}/p/${project.slug}`);
     },
     onError: (err) =>
       setError(
@@ -114,19 +119,22 @@ export default function ProjectsPage() {
               key={p.id}
               className="bg-brand-surface border border-brand-border rounded-xl p-4 flex items-start justify-between"
             >
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-brand-accent/10 flex items-center justify-center">
+              <Link
+                href={`/w/${wsSlug}/p/${p.slug}`}
+                className="flex items-start gap-3 min-w-0 group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-brand-accent/10 flex items-center justify-center shrink-0">
                   <FolderKanban className="w-4 h-4 text-brand-accent" />
                 </div>
-                <div>
-                  <p className="text-xs font-mono font-bold text-text-primary">
+                <div className="min-w-0">
+                  <p className="text-xs font-mono font-bold text-text-primary group-hover:text-brand-accent truncate">
                     {p.name}
                   </p>
-                  <p className="text-[10px] font-mono text-text-muted">
+                  <p className="text-[10px] font-mono text-text-muted truncate">
                     {p.slug} · {p.role}
                   </p>
                 </div>
-              </div>
+              </Link>
               <button
                 onClick={() => removeMutation.mutate(p.id)}
                 className="text-text-muted hover:text-status-error transition-colors p-1"

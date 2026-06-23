@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiRequestError, authApi, googleAuthUrl } from '@/lib/api';
+import { scopePathFromAuthResult } from '@/lib/nav';
 import { loginSchema, type LoginValues } from '@/schemas/auth';
 import { useAuthStore } from '@/stores/auth';
 
@@ -29,7 +30,7 @@ export const LoginPage = () => {
     try {
       const result = await authApi.login(values);
       useAuthStore.getState().setAuthResult(result);
-      router.push('/dashboard');
+      router.push(scopePathFromAuthResult(result));
     } catch (err) {
       setServerError(
         err instanceof ApiRequestError

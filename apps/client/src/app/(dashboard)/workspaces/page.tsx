@@ -270,7 +270,7 @@ export default function WorkspacesPage() {
             <div className="pt-2 border-t border-brand-border">
               <p className="text-[10px] font-mono text-text-muted leading-relaxed">
                 Only org members can be added. Invite new members via{' '}
-                <a href="/dashboard/organization" className="text-brand-accent hover:underline">Organization</a>.
+                <a href="/workspaces" className="text-brand-accent hover:underline">Organization</a>.
               </p>
             </div>
           </div>

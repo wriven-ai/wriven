@@ -35,7 +35,6 @@ export interface AuthResult {
   accessToken: string;
   user: UserView;
   workspace: WorkspaceView;
-  project: ProjectView;
 }
 
 /** Returned by GET /auth/me — full session for reload restore. */

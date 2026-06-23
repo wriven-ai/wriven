@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
+import { useNavContext } from '@/components/sidebar/use-nav-context';
 import {
   Sparkles,
   Database,
@@ -17,6 +18,13 @@ import {
 } from 'lucide-react';
 
 export default function DashboardHome() {
+  const { data } = useNavContext();
+  const wsBase = data.workspace ? `/w/${data.workspace.slug}` : '';
+  const pBase =
+    data.workspace && data.project
+      ? `/w/${data.workspace.slug}/p/${data.project.slug}`
+      : '';
+
   const stats = [
     { name: 'Total Entries', value: '141', change: '+12% this week', icon: FileText, color: 'text-brand-accent bg-brand-accent/10' },
     { name: 'Content Types', value: '5 Schema', change: '2 drafted', icon: Database, color: 'text-brand-secondary bg-brand-secondary/10' },
@@ -100,7 +108,7 @@ export default function DashboardHome() {
                 <Activity className="w-4 h-4 text-brand-accent animate-pulse" />
                 Monthly Quota Meters
               </h2>
-              <Link href="/dashboard/usage" className="text-[10px] font-mono text-brand-secondary hover:underline flex items-center gap-1 font-bold">
+              <Link href={`${wsBase}/usage`} className="text-[10px] font-mono text-brand-secondary hover:underline flex items-center gap-1 font-bold">
                 Detail Logs <ArrowUpRight className="w-3 h-3" />
               </Link>
             </div>
@@ -137,7 +145,7 @@ export default function DashboardHome() {
               💡 Edge CDN caching prevents <strong>89.2%</strong> of calls from hitting the origin server, preserving your token balance.
             </p>
             <Link 
-              href="/dashboard/usage" 
+              href={`${wsBase}/usage`} 
               className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white text-[10px] font-mono font-bold tracking-wider py-2 px-3.5 rounded-lg border border-brand-border-button neo-shadow"
             >
               Examine Consumption <ArrowRight className="w-3.5 h-3.5" />
@@ -177,7 +185,7 @@ export default function DashboardHome() {
 
           <div className="mt-5 pt-3 border-t border-brand-border flex flex-wrap items-center justify-between gap-3 text-3xs font-mono text-text-muted">
             <span>Total Ledger Size: 1,489 records</span>
-            <Link href="/dashboard/settings" className="hover:text-brand-accent underline">Manage auditing logs</Link>
+            <Link href={`${wsBase}/settings`} className="hover:text-brand-accent underline">Manage auditing logs</Link>
           </div>
         </div>
 
@@ -188,9 +196,9 @@ export default function DashboardHome() {
         <h2 className="text-xs font-mono font-bold text-text-muted tracking-wider px-1">Quick Engine Shortcuts</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" id="shortcuts-grid">
           {[
-            { title: 'Create Schema Model', desc: 'Declare fields, types, relationships', link: '/dashboard/content-types', label: 'Launch Modeler' },
-            { title: 'Weave Creative Copy', desc: 'AI-assisted structured content writer', link: '/dashboard/content', label: 'Open Editor' },
-            { title: 'Compile Graphic Assets', desc: 'AI graphic generation & search', link: '/dashboard/media', label: 'Open Library' },
+            { title: 'Create Schema Model', desc: 'Declare fields, types, relationships', link: `${pBase}/content-types`, label: 'Launch Modeler' },
+            { title: 'Weave Creative Copy', desc: 'AI-assisted structured content writer', link: `${pBase}/content`, label: 'Open Editor' },
+            { title: 'Compile Graphic Assets', desc: 'AI graphic generation & search', link: `${pBase}/media`, label: 'Open Library' },
           ].map((item, i) => (
             <Link 
               key={i} 
