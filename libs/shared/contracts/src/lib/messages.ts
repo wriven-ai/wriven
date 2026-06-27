@@ -74,6 +74,10 @@ export const CORE_PATTERNS = {
   API_KEY_LIST: 'core.apiKey.list',
   API_KEY_REVOKE: 'core.apiKey.revoke',
   API_KEY_RESOLVE: 'core.apiKey.resolve',
+
+  // Public Content Delivery API — published-only reads by content type.
+  DELIVERY_LIST: 'core.delivery.list',
+  DELIVERY_GET: 'core.delivery.get',
 } as const;
 
 /** Injection tokens for the gateway's TCP ClientProxy instances. */

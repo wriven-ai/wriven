@@ -15,6 +15,7 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { ContentController } from '../content/content.controller';
+import { DeliveryController } from '../delivery/delivery.controller';
 import { ProjectsController } from '../members/projects.controller';
 import { WorkspacesController } from '../members/workspaces.controller';
 import { AppController } from './app.controller';
@@ -65,6 +66,7 @@ import { AppService } from './app.service';
     AppController,
     AuthController,
     ContentController,
+    DeliveryController,
     WorkspacesController,
     ProjectsController,
   ],

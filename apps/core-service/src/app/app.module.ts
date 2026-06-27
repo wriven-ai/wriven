@@ -4,6 +4,7 @@ import { DatabaseModule } from '@wriven/database';
 import * as schema from '../db/schema';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { ContentModule } from '../content/content.module';
+import { DeliveryModule } from '../delivery/delivery.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -16,6 +17,7 @@ import { AppService } from './app.service';
     DatabaseModule.forRoot({ schema }),
     ContentModule,
     ApiKeysModule,
+    DeliveryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

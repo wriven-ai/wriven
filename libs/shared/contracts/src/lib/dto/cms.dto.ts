@@ -123,6 +123,45 @@ export class UpdateEntryDto {
   data?: Record<string, unknown>;
 }
 
+/** Query params for the public Content Delivery API. */
+export class DeliveryQueryDto {
+  /** Comma-separated field keys to return, e.g. "title,body". */
+  @IsOptional()
+  @IsString()
+  select?: string;
+
+  /** Sort by a system field, prefix `-` for descending, e.g. "-publishedAt". */
+  @IsOptional()
+  @IsString()
+  sort?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
+  /** Depth to expand `reference` fields (0–3). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(3)
+  include?: number;
+
+  /** Equality filters on data keys: `filter[title]=Hello`. */
+  @IsOptional()
+  @IsObject()
+  filter?: Record<string, string>;
+}
+
 export class ListEntriesQueryDto {
   @IsOptional()
   @IsString()

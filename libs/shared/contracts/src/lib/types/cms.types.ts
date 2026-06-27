@@ -86,3 +86,19 @@ export interface Paginated<T> {
   limit: number;
   total: number;
 }
+
+/**
+ * Public, published-only shape returned by the Content Delivery API. Trimmed of
+ * internal author/workspace ids. `reference` field values may be expanded inline
+ * to nested `DeliveryEntry` objects when `include` is requested; otherwise they
+ * remain the referenced entry id.
+ */
+export interface DeliveryEntry {
+  id: string;
+  /** The content type's `apiId`, e.g. "blog_post". */
+  type: string;
+  slug: string;
+  data: Record<string, unknown>;
+  publishedAt: string | null;
+  updatedAt: string;
+}
