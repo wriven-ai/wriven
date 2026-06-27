@@ -1,204 +1,164 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Users,
-  Plus,
-  Trash2,
-  Mail,
-  Radio,
-  Check,
-  RefreshCw,
-} from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Users, Trash2, Mail, RefreshCw } from 'lucide-react';
+import { ApiRequestError, memberApi } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import type {
+  AssignableWorkspaceRole,
+  WorkspaceMemberView,
+  WorkspaceRole,
+} from '@/lib/types';
 
-interface Teammate {
-  id: string;
-  name: string;
-  email: string;
-  role: 'Instance Owner' | 'Content Architect' | 'Draft Contributor';
-  status: 'Active' | 'Pending';
-}
+const ROLE_BADGE: Record<string, string> = {
+  owner: 'bg-brand-accent/15 text-brand-accent border-brand-accent/30',
+  admin: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  member: 'bg-brand-surface text-text-secondary border-brand-border',
+};
 
-interface Webhook {
-  id: string;
-  name: string;
-  url: string;
-  events: string[];
-  status: 'Active' | 'Paused';
-}
+export default function MembersPage() {
+  const { user, currentWorkspace, currentWorkspaceId } = useAuth();
+  const queryClient = useQueryClient();
+  const queryKey = ['workspace-members', currentWorkspaceId];
 
-export default function TeamWebhooksPage() {
-  const [teammates, setTeammates] = useState<Teammate[]>([
-    {
-      id: "t1",
-      name: "Anowar Hosen",
-      email: "anowarhosen444@gmail.com",
-      role: "Instance Owner",
-      status: "Active"
-    },
-    {
-      id: "t2",
-      name: "Sohail Rahaman",
-      email: "sohail@wriven-partner.com",
-      role: "Content Architect",
-      status: "Active"
-    }
-  ]);
-
-  const [webhooks, setWebhooks] = useState<Webhook[]>([
-    {
-      id: "wh1",
-      name: "Vercel Deploy Webhook",
-      url: "https://api.vercel.com/v1/integrations/deploy/prj_wriven/prod",
-      events: ["entry.publish", "entry.unpublish"],
-      status: "Active"
-    },
-    {
-      id: "wh2",
-      name: "Netlify Static Builder Rebuild",
-      url: "https://api.netlify.com/build_hooks/6f89b...",
-      events: ["media.create", "schema.update"],
-      status: "Paused"
-    }
-  ]);
-
-  // Inviting states
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteName, setInviteName] = useState('');
-  const [inviteRole, setInviteRole] = useState<Teammate['role']>('Draft Contributor');
-  const [isInviting, setIsInviting] = useState(false);
+  const [inviteRole, setInviteRole] = useState<AssignableWorkspaceRole>('member');
+  const [error, setError] = useState<string | null>(null);
 
-  // Webhook states
-  const [whName, setWhName] = useState('');
-  const [whUrl, setWhUrl] = useState('');
-  const [selectedEvents, setSelectedEvents] = useState<string[]>(["entry.publish"]);
-  const [isCreatingWh, setIsCreatingWh] = useState(false);
+  const { data: members, isLoading } = useQuery({
+    queryKey,
+    queryFn: () => memberApi.list(currentWorkspaceId!),
+    enabled: !!currentWorkspaceId,
+  });
 
-  const inviteTeammate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail.trim() || !inviteName.trim()) return;
+  const callerRole = members?.find((m) => m.userId === user?.id)?.role;
+  const canManage = callerRole === 'owner' || callerRole === 'admin';
 
-    setIsInviting(true);
-    setTimeout(() => {
-      const newTeammate: Teammate = {
-        id: "t_" + Math.floor(Math.random() * 1000).toString(),
-        name: inviteName,
-        email: inviteEmail,
-        role: inviteRole,
-        status: "Pending"
-      };
+  const invalidate = () => queryClient.invalidateQueries({ queryKey });
+  const onError = (err: unknown, fallback: string) =>
+    setError(err instanceof ApiRequestError ? err.message : fallback);
 
-      setTeammates([...teammates, newTeammate]);
+  const addMutation = useMutation({
+    mutationFn: (dto: { email: string; role: AssignableWorkspaceRole }) =>
+      memberApi.add(currentWorkspaceId!, dto),
+    onSuccess: () => {
+      invalidate();
       setInviteEmail('');
-      setInviteName('');
-      setIsInviting(false);
-    }, 1000);
-  };
+      setInviteRole('member');
+      setError(null);
+    },
+    onError: (err) => onError(err, 'Failed to add member.'),
+  });
 
-  const removeTeammate = (id: string) => {
-    setTeammates(teammates.filter(t => t.id !== id));
-  };
+  const roleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: WorkspaceRole }) =>
+      memberApi.updateRole(currentWorkspaceId!, userId, role),
+    onSuccess: invalidate,
+    onError: (err) => onError(err, 'Failed to update role.'),
+  });
 
-  const toggleWebhookStatus = (id: string) => {
-    setWebhooks(webhooks.map(wh => {
-      if (wh.id === id) {
-        return { ...wh, status: wh.status === 'Active' ? 'Paused' : 'Active' };
-      }
-      return wh;
-    }));
-  };
+  const removeMutation = useMutation({
+    mutationFn: (userId: string) => memberApi.remove(currentWorkspaceId!, userId),
+    onSuccess: invalidate,
+    onError: (err) => onError(err, 'Failed to remove member.'),
+  });
 
-  const removeWebhook = (id: string) => {
-    setWebhooks(webhooks.filter(wh => wh.id !== id));
-  };
-
-  const createWebhook = (e: React.FormEvent) => {
+  const submitInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!whName.trim() || !whUrl.trim()) return;
-
-    setIsCreatingWh(true);
-    setTimeout(() => {
-      const newWh: Webhook = {
-        id: "wh_" + Math.floor(Math.random() * 1000).toString(),
-        name: whName,
-        url: whUrl,
-        events: selectedEvents,
-        status: "Active"
-      };
-
-      setWebhooks([...webhooks, newWh]);
-      setWhName('');
-      setWhUrl('');
-      setIsCreatingWh(false);
-    }, 1000);
+    if (!inviteEmail.trim()) return;
+    addMutation.mutate({ email: inviteEmail.trim(), role: inviteRole });
   };
 
-  const toggleEventSelect = (event: string) => {
-    if (selectedEvents.includes(event)) {
-      setSelectedEvents(selectedEvents.filter(e => e !== event));
-    } else {
-      setSelectedEvents([...selectedEvents, event]);
-    }
-  };
+  const initials = (name: string) =>
+    name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="space-y-8 text-left" id="team-webhooks-workspace">
-      
+    <div className="space-y-8 text-left" id="members-workspace">
+
       {/* Page Header */}
-      <div className="border-b border-brand-border pb-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
-            Collaboration & <span className="font-normal italic text-brand-secondary">Webhooks Control</span>
-          </h1>
-          <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
-            {"// Define deployment triggers and invite fellow co-creators to your node tenant"}
-          </p>
-        </div>
+      <div className="border-b border-brand-border pb-5">
+        <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
+          Workspace <span className="font-normal italic text-brand-secondary">Members</span>
+        </h1>
+        <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+          {`// Manage who can access ${currentWorkspace?.name ?? 'this workspace'}`}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Side: Collaborators pane */}
-        <div className="lg:col-span-6 space-y-6">
-          
-          {/* Teammates List */}
-          <div className="bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-            <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2 mb-1.5 font-bold flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-brand-secondary" />
-              Committed Console Owners
-            </span>
+      {error && (
+        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-2xs font-mono rounded-lg px-4 py-3">
+          {error}
+        </div>
+      )}
 
-            <div className="space-y-3.5" id="teammates-rows">
-              {teammates.map((teammate) => {
-                const initials = teammate.name.split(' ').map(n => n[0]).join('');
+      <div className="max-w-2xl space-y-6">
+
+        {/* Members List */}
+        <div className="bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
+          <span className="text-[11px] font-mono tracking-wider text-text-secondary border-b border-brand-border pb-2 mb-1.5 font-bold flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-brand-secondary" />
+            Members{members ? ` (${members.length})` : ''}
+          </span>
+
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-text-muted font-mono text-2xs py-6 justify-center">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading members…
+            </div>
+          ) : !members || members.length === 0 ? (
+            <p className="text-text-muted font-mono text-2xs py-6 text-center">
+              No members yet.
+            </p>
+          ) : (
+            <div className="space-y-3.5" id="members-rows">
+              {members.map((member: WorkspaceMemberView) => {
+                const isSelf = member.userId === user?.id;
+                const isOwner = member.role === 'owner';
+                const editable = canManage && !isOwner && !isSelf;
                 return (
-                  <div key={teammate.id} className="flex items-center justify-between gap-3 p-3 border border-brand-border bg-brand-surface-soft/40 rounded-xl">
-                    <div className="flex items-center gap-3">
+                  <div key={member.id} className="flex items-center justify-between gap-3 p-3 border border-brand-border bg-brand-surface-soft/40 rounded-xl">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-brand-accent/15 border border-brand-border text-brand-accent font-mono font-bold text-xs flex items-center justify-center shrink-0">
-                        {initials}
+                        {initials(member.user.name)}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-2xs font-mono font-bold text-text-primary truncate">{teammate.name}</p>
-                          <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded uppercase ${
-                            teammate.status === 'Active' 
-                              ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
-                              : 'bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse'
-                          }`}>
-                            {teammate.status}
-                          </span>
+                          <p className="text-2xs font-mono font-bold text-text-primary truncate">{member.user.name}</p>
+                          {isSelf && (
+                            <span className="text-[8px] font-bold px-1.5 py-0.2 rounded uppercase bg-brand-surface text-text-muted border border-brand-border">You</span>
+                          )}
                         </div>
-                        <p className="text-[9.5px] font-mono text-text-muted select-all truncate">{teammate.email}</p>
+                        <p className="text-[9.5px] font-mono text-text-muted select-all truncate">{member.user.email}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-0.5 rounded text-[8px] font-mono font-semibold uppercase">{teammate.role}</span>
-                      {teammate.role !== 'Instance Owner' && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      {editable ? (
+                        <select
+                          value={member.role}
+                          disabled={roleMutation.isPending}
+                          onChange={(e) =>
+                            roleMutation.mutate({
+                              userId: member.userId,
+                              role: e.target.value as WorkspaceRole,
+                            })
+                          }
+                          className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase cursor-pointer outline-hidden"
+                        >
+                          <option value="admin">admin</option>
+                          <option value="member">member</option>
+                        </select>
+                      ) : (
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-semibold uppercase border ${ROLE_BADGE[member.role] ?? ROLE_BADGE.member}`}>
+                          {member.role}
+                        </span>
+                      )}
+                      {editable && (
                         <button
-                          onClick={() => removeTeammate(teammate.id)}
-                          className="p-1 hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors"
-                          title="Revoke member seats"
+                          onClick={() => removeMutation.mutate(member.userId)}
+                          disabled={removeMutation.isPending}
+                          className="p-1 hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors disabled:opacity-40"
+                          title="Remove member"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -208,220 +168,65 @@ export default function TeamWebhooksPage() {
                 );
               })}
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Invitation builder */}
+        {/* Invite member */}
+        {canManage && (
           <div className="bg-brand-surface border border-brand-border rounded-xl p-5 text-left space-y-4">
             <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2 mb-1 font-bold">
-              Dispatch Secure Telegram Invitation
+              Invite a member
             </span>
 
-            <form onSubmit={inviteTeammate} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form onSubmit={submitInvite} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                 <div>
-                  <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="collab-name">Collaborator Name</label>
-                  <input 
-                    id="collab-name"
-                    type="text" 
-                    placeholder="e.g. Robin Banks" 
-                    value={inviteName}
-                    onChange={(e) => setInviteName(e.target.value)}
-                    required
-                    className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="collab-email">Invite Email</label>
-                  <input 
-                    id="collab-email"
-                    type="email" 
-                    placeholder="e.g. robin@wriven.io" 
+                  <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="invite-email">Email</label>
+                  <input
+                    id="invite-email"
+                    type="email"
+                    placeholder="e.g. teammate@wriven.io"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     required
                     className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-2xs font-mono text-text-secondary mb-1.5">Assigned Tenant Privileges</label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as any)}
-                  className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
-                >
-                  <option value="Draft Contributor">Draft Contributor (Can outline blog copy drafts only)</option>
-                  <option value="Content Architect">Content Architect (Create database structure schemas and model parameters)</option>
-                </select>
+                <div>
+                  <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="invite-role">Role</label>
+                  <select
+                    id="invite-role"
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as AssignableWorkspaceRole)}
+                    className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
+                  >
+                    <option value="member">member</option>
+                    <option value="admin">admin</option>
+                  </select>
+                </div>
               </div>
 
               <button
                 type="submit"
-                disabled={isInviting || !inviteEmail.trim() || !inviteName.trim()}
+                disabled={addMutation.isPending || !inviteEmail.trim()}
                 className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg cursor-pointer transition-all"
               >
-                {isInviting ? (
+                {addMutation.isPending ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Dispatching invitation envelope...
+                    Adding member…
                   </>
                 ) : (
                   <>
                     <Mail className="w-3.5 h-3.5 text-white" />
-                    Dispatch Co-creator Pass
+                    Add member
                   </>
                 )}
               </button>
             </form>
           </div>
-
-        </div>
-
-        {/* Right Side: Webhooks and API triggers panel */}
-        <div className="lg:col-span-6 space-y-6">
-          
-          {/* Active webhooks list */}
-          <div className="bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-            <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2 mb-1.5 font-bold flex items-center gap-1.5">
-              <Radio className="w-4 h-4 text-brand-secondary" />
-              Committed Webhook Relays
-            </span>
-
-            <div className="space-y-3.5" id="webhooks-rows">
-              {webhooks.map((wh) => (
-                <div 
-                  key={wh.id} 
-                  className={`border p-3.5 rounded-xl text-left space-y-3 transition-colors ${
-                    wh.status === 'Paused' 
-                      ? 'border-brand-border/40 opacity-55 bg-brand-surface-soft/25' 
-                      : 'border-brand-border bg-brand-surface-soft/40'
-                  }`}
-                >
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="min-w-0">
-                      <h3 className="text-2xs font-mono font-bold text-text-primary tracking-tight truncate leading-none mb-1">
-                        {wh.name}
-                      </h3>
-                      <div className="text-[9px] font-mono text-text-muted truncate select-all">{wh.url}</div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => toggleWebhookStatus(wh.id)}
-                        className={`p-1 px-1.5 border rounded text-[9px] font-mono font-bold cursor-pointer ${
-                          wh.status === 'Active' 
-                            ? 'border-amber-500/20 text-amber-500 hover:bg-amber-500/10' 
-                            : 'border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10'
-                        }`}
-                      >
-                        {wh.status === 'Active' ? 'Pause' : 'Resume'}
-                      </button>
-                      <button
-                        onClick={() => removeWebhook(wh.id)}
-                        className="p-1 hover:bg-status-error/15 hover:text-status-error text-text-muted border border-brand-border rounded cursor-pointer"
-                        title="Delete Webhook"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1 border-t border-brand-border/60 pt-2 text-[8px] font-mono leading-none">
-                    <span className="text-text-muted font-bold mr-1 select-none">TRIGGERS:</span>
-                    {wh.events.map(ev => (
-                      <span key={ev} className="bg-brand-surface border border-brand-border px-1.5 py-0.5 rounded text-text-primary font-bold">
-                        {ev}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Webhook Architect builder */}
-          <div className="bg-brand-surface border border-brand-border rounded-xl p-5 text-left space-y-4">
-            <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 mb-1 font-bold">
-              Commission Webhook Endpoints
-            </span>
-
-            <form onSubmit={createWebhook} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="webhook-name">Relay Identifier Name</label>
-                  <input 
-                    id="webhook-name"
-                    type="text" 
-                    placeholder="e.g. Gatsby Build hook" 
-                    value={whName}
-                    onChange={(e) => setWhName(e.target.value)}
-                    required
-                    className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="webhook-endpoint">Target HTTP POST URL</label>
-                  <input 
-                    id="webhook-endpoint"
-                    type="url" 
-                    placeholder="https://your-site.com/rebuild" 
-                    value={whUrl}
-                    onChange={(e) => setWhUrl(e.target.value)}
-                    required
-                    className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden"
-                  />
-                </div>
-              </div>
-
-              {/* Event selectors checks box */}
-              <div>
-                <label className="block text-2xs font-mono text-text-secondary mb-1.5">Registered Event Listeners</label>
-                <div className="grid grid-cols-2 gap-2 text-2xs font-mono">
-                  {["entry.publish", "entry.unpublish", "media.create", "schema.update"].map(eName => {
-                    const isChecked = selectedEvents.includes(eName);
-                    return (
-                      <button
-                        type="button"
-                        key={eName}
-                        onClick={() => toggleEventSelect(eName)}
-                        className={`p-2 border rounded-lg text-left transition-colors flex items-center justify-between cursor-pointer ${
-                          isChecked 
-                            ? 'border-brand-accent bg-brand-accent/5 text-brand-accent font-bold' 
-                            : 'border-brand-border bg-brand-surface-soft/40 hover:bg-brand-surface-soft'
-                        }`}
-                      >
-                        <span>{eName}</span>
-                        {isChecked && <Check className="w-3.5 h-3.5" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isCreatingWh || !whName.trim() || !whUrl.trim()}
-                className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg cursor-pointer transition-all animate-pulse-once"
-              >
-                {isCreatingWh ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Mounting webhook channel...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-3.5 h-3.5 text-white" />
-                    Activate Webhook Endpoint Relay
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-
-        </div>
+        )}
 
       </div>
 

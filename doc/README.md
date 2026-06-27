@@ -25,6 +25,12 @@ Wriven is an **AI-native content management and generation SaaS**. The backend i
 | [auth-service/](./auth-service/auth-service.md) | Identity/tenancy schema, auth flows, tokens, hardening · [members-api.md](./auth-service/members-api.md) (org/workspace member CRUD) |
 | [core-service/](./core-service/core-service.md) | Flexible CMS model, content types/entries/revisions/media, validation |
 
+**Frontend**
+
+| Doc | Covers |
+|-----|--------|
+| [frontend/sidebar.md](./frontend/sidebar.md) | URL-driven scope (workspace→project→feature), nav-config brain vs shell, builders, active-state rule, RBAC seam |
+
 ## Status
 
 Current implementation status per module lives in [08 — Status & Scope](./08-status.md).

@@ -17,7 +17,31 @@ export interface WorkspaceView {
   slug: string;
   createdBy: string;
   role: string;
+  /** The user's default workspace — used as the implicit scope at /dashboard.
+   *  Optional until the backend sends it; falls back to the first workspace. */
+  isDefault?: boolean;
 }
+
+/** Minimal user info embedded in a member record. */
+export interface MemberUser {
+  id: string;
+  email: string;
+  name: string;
+  avatar: string | null;
+}
+
+export interface WorkspaceMemberView {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: string; // owner | admin | member
+  createdAt: string;
+  user: MemberUser;
+}
+
+export type WorkspaceRole = 'owner' | 'admin' | 'member';
+/** Roles assignable when inviting (owner is never granted via add). */
+export type AssignableWorkspaceRole = 'admin' | 'member';
 
 export interface ProjectView {
   id: string;
@@ -32,7 +56,6 @@ export interface ProjectView {
 
 /** Returned by login / register. */
 export interface AuthResult {
-  accessToken: string;
   user: UserView;
   workspace: WorkspaceView;
 }

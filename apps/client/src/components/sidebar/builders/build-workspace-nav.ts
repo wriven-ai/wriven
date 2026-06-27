@@ -1,7 +1,6 @@
 import {
   Activity,
   CreditCard,
-  FolderKanban,
   LayoutDashboard,
   Settings,
   Users,
@@ -28,13 +27,6 @@ export function buildWorkspaceNav(ctx: NavContext): NavGroup | null {
         match: 'exact',
       },
       {
-        href: `${base}/projects`,
-        label: 'Projects',
-        icon: FolderKanban,
-        permission: 'PROJECT_VIEW',
-        scope: { workspaceId: workspace.id },
-      },
-      {
         href: `${base}/members`,
         label: 'Members',
         icon: Users,
@@ -55,7 +47,7 @@ export function buildWorkspaceNav(ctx: NavContext): NavGroup | null {
       },
       {
         href: `${base}/settings`,
-        label: 'Settings',
+        label: 'Workspace Settings',
         icon: Settings,
         permission: 'WORKSPACE_SETTINGS_VIEW',
         scope: { workspaceId: workspace.id },

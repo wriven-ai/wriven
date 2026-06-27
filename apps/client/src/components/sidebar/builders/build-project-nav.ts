@@ -1,4 +1,11 @@
-import { Database, FileText, Image, Key, LayoutDashboard } from 'lucide-react';
+import {
+  Database,
+  FileText,
+  Image,
+  Key,
+  LayoutDashboard,
+  Settings,
+} from 'lucide-react';
 import type { NavContext, NavGroup, NavItem } from '../nav.types';
 import { gate, type Gated } from './gate';
 
@@ -47,6 +54,13 @@ export function buildProjectNav(ctx: NavContext): NavGroup | null {
         label: 'API Keys',
         icon: Key,
         permission: 'API_KEY_VIEW',
+        scope,
+      },
+      {
+        href: `${base}/settings`,
+        label: 'Project Settings',
+        icon: Settings,
+        permission: 'PROJECT_SETTINGS_VIEW',
         scope,
       },
     ] satisfies Gated<NavItem>[],

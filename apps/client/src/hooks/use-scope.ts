@@ -3,6 +3,7 @@
 import { notFound, useParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuthStore } from '../stores/auth';
+import { useWorkspaceProjects } from './use-workspace-projects';
 
 /**
  * URL → store sync for the workspace scope. Resolves `wsSlug` to a workspace and
@@ -33,30 +34,26 @@ export function useSyncWorkspaceFromUrl() {
 }
 
 /**
- * URL → store sync for the project scope. Resolves `projSlug` within the active
- * workspace and mirrors its id into the store for X-Project-Id.
- * Invalid slug (once loaded) → 404.
+ * URL → store sync for the project scope. Resolves `projSlug` against the
+ * active workspace's projects (server state, via React Query) and mirrors its
+ * id into the store for X-Project-Id.
+ *
+ * 404s only once the list is *settled* (fetched, not refetching) and the slug
+ * is absent — so a freshly-created project (cache refetching) or the initial
+ * load never flashes a false 404.
  */
 export function useSyncProjectFromUrl() {
-  const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
-  const status = useAuthStore((s) => s.status);
-  const workspaces = useAuthStore((s) => s.workspaces);
-  const projects = useAuthStore((s) => s.projects);
+  const { projSlug } = useParams<{ projSlug: string }>();
   const setCurrentProjectId = useAuthStore((s) => s.setCurrentProjectId);
+  const { workspace, projects, isSettled } = useWorkspaceProjects();
 
-  const workspace = workspaces.find((w) => w.slug === wsSlug) ?? null;
-  const project =
-    workspace != null
-      ? (projects.find(
-          (p) => p.workspaceId === workspace.id && p.slug === projSlug,
-        ) ?? null)
-      : null;
+  const project = projects.find((p) => p.slug === projSlug) ?? null;
 
   useEffect(() => {
     if (project) setCurrentProjectId(project.id);
   }, [project, setCurrentProjectId]);
 
-  if (status === 'authenticated' && workspace && !project) {
+  if (workspace && isSettled && !project) {
     notFound();
   }
 

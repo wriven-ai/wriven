@@ -5,8 +5,6 @@ export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 interface AuthState {
   status: AuthStatus;
-  /** Access token — kept in memory only, never persisted. */
-  accessToken: string | null;
   user: UserView | null;
   workspaces: WorkspaceView[];
   projects: ProjectView[];
@@ -16,7 +14,6 @@ interface AuthState {
   /** Active project id — a URL mirror, used for the X-Project-Id header. */
   currentProjectId: string | null;
 
-  setAccessToken: (token: string | null) => void;
   /** Apply login/register result. */
   setAuthResult: (result: AuthResult) => void;
   /** Apply GET /auth/me session (reload restore). */
@@ -26,6 +23,8 @@ interface AuthState {
   /** Mirror the URL scope into the store (no side effects). Used by route sync. */
   setCurrentWorkspaceId: (workspaceId: string | null) => void;
   setCurrentProjectId: (projectId: string | null) => void;
+  /** Append a freshly-created workspace so URL navigation resolves it at once. */
+  addWorkspace: (workspace: WorkspaceView) => void;
   setUnauthenticated: () => void;
   clear: () => void;
 }
@@ -33,19 +32,15 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   (set, get) => ({
       status: 'loading',
-      accessToken: null,
       user: null,
       workspaces: [],
       projects: [],
       currentWorkspaceId: null,
       currentProjectId: null,
 
-      setAccessToken: (token) => set({ accessToken: token }),
-
       setAuthResult: (result) =>
         set({
           status: 'authenticated',
-          accessToken: result.accessToken,
           user: result.user,
           workspaces: [result.workspace],
           // No project on signup — the user creates one from the workspace UI.
@@ -98,10 +93,16 @@ export const useAuthStore = create<AuthState>()(
       setCurrentProjectId: (projectId) =>
         set({ currentProjectId: projectId }),
 
+      addWorkspace: (workspace) =>
+        set((state) =>
+          state.workspaces.some((w) => w.id === workspace.id)
+            ? state
+            : { workspaces: [...state.workspaces, workspace] },
+        ),
+
       setUnauthenticated: () =>
         set({
           status: 'unauthenticated',
-          accessToken: null,
           user: null,
           workspaces: [],
           projects: [],
@@ -110,7 +111,6 @@ export const useAuthStore = create<AuthState>()(
       clear: () =>
         set({
           status: 'unauthenticated',
-          accessToken: null,
           user: null,
           workspaces: [],
           projects: [],
