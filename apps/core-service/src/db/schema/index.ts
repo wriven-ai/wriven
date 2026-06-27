@@ -157,6 +157,43 @@ export const mediaAssets = coreSchema.table(
   ],
 );
 
+// ── API keys (authenticate the public Content Delivery API) ──────────────────
+
+/**
+ * A project-scoped API key. The raw token is shown to the user exactly once at
+ * creation; we persist ONLY its sha-256 hash (`tokenHash`) plus a display
+ * `prefix`. The gateway resolves a presented token by hashing it and looking it
+ * up here. See doc/11 — Model A build plan.
+ */
+export const apiKeys = coreSchema.table(
+  'api_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
+    name: text('name').notNull(),
+    tokenHash: text('token_hash').notNull(), // sha-256 hex of the raw token
+    prefix: text('prefix').notNull(), // display only, e.g. "wrk_live_a1b2"
+    scope: text('scope').notNull().default('read'), // read|preview|manage
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('api_keys_token_hash_uq').on(t.tokenHash),
+    index('api_keys_project_id_idx').on(t.projectId),
+    index('api_keys_workspace_id_idx').on(t.workspaceId),
+    check(
+      'api_keys_scope_check',
+      sql`${t.scope} in ('read', 'preview', 'manage')`,
+    ),
+  ],
+);
+
 // ── Relations (Drizzle relational query API; no DB change) ──────────────────
 
 export const contentTypesRelations = relations(contentTypes, ({ many }) => ({

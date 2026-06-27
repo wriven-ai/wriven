@@ -68,6 +68,12 @@ export const CORE_PATTERNS = {
   ENTRY_UPDATE: 'core.entry.update',
   ENTRY_DELETE: 'core.entry.delete',
   ENTRY_PUBLISH: 'core.entry.publish',
+
+  // Project-scoped API keys (Delivery API auth — see doc/11).
+  API_KEY_CREATE: 'core.apiKey.create',
+  API_KEY_LIST: 'core.apiKey.list',
+  API_KEY_REVOKE: 'core.apiKey.revoke',
+  API_KEY_RESOLVE: 'core.apiKey.resolve',
 } as const;
 
 /** Injection tokens for the gateway's TCP ClientProxy instances. */
