@@ -2,7 +2,7 @@
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after User → Workspace → Project tenancy refactor._
+_Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc/11 Phases 0–4)._
 
 ---
 
@@ -26,6 +26,7 @@ _Last reviewed: after User → Workspace → Project tenancy refactor._
 | `JwtAuthGuard` (local JWT validation) | ✅ | |
 | `WorkspaceGuard` (`X-Workspace-Id` membership) | ✅ | calls `auth.validateWorkspaceMember` |
 | `ProjectGuard` (`X-Project-Id` membership + workspace-admin bypass) | ✅ | calls `auth.validateProjectMember` |
+| `ApiKeyGuard` (`Bearer wrk_…` → project scope, TTL cache) | ✅ | public Delivery API auth (doc/11 P2) |
 | Rate limiting (`@nestjs/throttler`) | ✅ | global + per-route |
 | CORS (credentials) | ✅ | `CLIENT_ORIGIN` |
 | Google OAuth (Passport strategy on gateway) | ✅ | |
@@ -59,10 +60,15 @@ _Last reviewed: after User → Workspace → Project tenancy refactor._
 | Content type CRUD | ✅ | soft delete |
 | Entry CRUD (field validation, slug, status, revisions) | ✅ | revision per write |
 | Entry publish + pagination + list filters | ✅ | |
+| **API keys** (project-scoped, hash-only, scope read/preview/manage) | ✅ | `api_keys` table; create/list/revoke/resolve (doc/11 P1) |
+| **Content Delivery API** (published-only read by `apiId`/slug) | ✅ | select/filter/sort/paginate/include (doc/11 P3) |
 | `media_assets` schema | ✅ | R2 keys |
 | Media upload (R2 presign/upload endpoints) | 🔲 | schema only |
-| ImageKit URL building | 🔲 | |
-| Reference field resolution (populate/expand) | 🔲 | stored as ids |
+| ImageKit URL building | 🔲 | doc/11 P9 |
+| Reference field resolution (populate/expand) | 🟡 | expanded in delivery `include`; not in management reads |
+| CDN cache headers + purge on publish | 🔲 | doc/11 P5 |
+| Webhooks (publish → rebuild, HMAC) | 🔲 | doc/11 P6 |
+| Preview API (drafts via `wrk_preview_`) | 🔲 | doc/11 P7 |
 | Unique-field enforcement (`FieldDef.unique`) | 🔲 | declared, not enforced |
 | Default content type seeding on signup | 🔲 | |
 
@@ -88,6 +94,7 @@ _Last reviewed: after User → Workspace → Project tenancy refactor._
 | Dashboard layout: live user data + workspace/project switchers | ✅ | |
 | Projects page wired to `/workspaces/:id/projects` + `/projects/*` | ✅ | TanStack Query |
 | Content dashboard wired to `/content/*` | 🟡 | type/entry pages live; switchers drive `X-Project-Id` |
+| API Keys page (create/list/revoke, one-time token reveal) | ✅ | `apiKeyApi`; real backend (doc/11 P4) |
 | Email verification page | 🔲 | API ready |
 
 ## Known gaps / next candidates
