@@ -7,6 +7,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app/app.module';
+import { CsrfGuard } from './auth/csrf.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,6 +20,9 @@ async function bootstrap() {
     origin: true,
     credentials: true,
   });
+
+  // Double-submit CSRF check for cookie-authenticated, state-changing requests.
+  app.useGlobalGuards(new CsrfGuard());
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -76,7 +76,6 @@ export class AuthService {
     let result: {
       user: UserRow;
       workspace: WorkspaceRow;
-      project: ProjectRow;
     };
     try {
       result = await this.db.transaction(async (tx) => {
@@ -108,24 +107,6 @@ export class AuthService {
             role: 'owner',
           });
 
-        const [project] = await tx
-          .insert(projects)
-          .values({
-            workspaceId: workspace.id,
-            name: 'Default Project',
-            slug: 'default',
-            createdBy: user.id,
-          })
-          .returning();
-
-        await tx
-          .insert(projectMembers)
-          .values({
-            projectId: project.id,
-            userId: user.id,
-            role: 'admin',
-          });
-
         await tx.insert(refreshTokens).values({
           tokenHash: refresh.hash,
           userId: user.id,
@@ -133,7 +114,8 @@ export class AuthService {
           rememberMe: false,
         });
 
-        return { user, workspace, project };
+        // No default project — the user creates their first project in the UI.
+        return { user, workspace };
       });
     } catch (err) {
       // Race: another signup inserted the same email between the check and now.
@@ -155,7 +137,6 @@ export class AuthService {
       refreshExpiresAt: refreshExpiresAt.toISOString(),
       user: this.toUserView(result.user),
       workspace: this.toWorkspaceView(result.workspace, 'owner'),
-      project: this.toProjectView(result.project, 'admin'),
     };
   }
 
@@ -188,7 +169,6 @@ export class AuthService {
     });
 
     const { workspace, workspaceRole } = await this.primaryWorkspace(user.id);
-    const { project, projectRole } = await this.primaryProject(user.id);
 
     return {
       accessToken: this.tokens.signAccessToken(user),
@@ -196,7 +176,6 @@ export class AuthService {
       refreshExpiresAt: refreshExpiresAt.toISOString(),
       user: this.toUserView(user),
       workspace: this.toWorkspaceView(workspace, workspaceRole),
-      project: this.toProjectView(project, projectRole),
     };
   }
 
@@ -405,18 +384,7 @@ export class AuthService {
           await tx
             .insert(workspaceMembers)
             .values({ workspaceId: ws.id, userId: u.id, role: 'owner' });
-          const [project] = await tx
-            .insert(projects)
-            .values({
-              workspaceId: ws.id,
-              name: 'Default Project',
-              slug: 'default',
-              createdBy: u.id,
-            })
-            .returning();
-          await tx
-            .insert(projectMembers)
-            .values({ projectId: project.id, userId: u.id, role: 'admin' });
+          // No default project — the user creates their first project in the UI.
           return u;
         });
       }
@@ -424,13 +392,11 @@ export class AuthService {
 
     const session = await this.startSession(user);
     const { workspace, workspaceRole } = await this.primaryWorkspace(user.id);
-    const { project, projectRole } = await this.primaryProject(user.id);
 
     return {
       ...session,
       user: this.toUserView(user),
       workspace: this.toWorkspaceView(workspace, workspaceRole),
-      project: this.toProjectView(project, projectRole),
     };
   }
 
@@ -633,20 +599,6 @@ export class AuthService {
       throw rpcError('INTERNAL_ERROR', 'User has no workspace.');
     }
     return { workspace: row.workspace, workspaceRole: row.role };
-  }
-
-  private async primaryProject(
-    userId: string,
-  ): Promise<{ project: ProjectRow; projectRole: string }> {
-    const row = await this.db.query.projectMembers.findFirst({
-      where: eq(projectMembers.userId, userId),
-      orderBy: projectMembers.createdAt,
-      with: { project: true },
-    });
-    if (!row) {
-      throw rpcError('INTERNAL_ERROR', 'User has no project.');
-    }
-    return { project: row.project, projectRole: row.role };
   }
 
   private toUserView(u: UserRow): UserView {

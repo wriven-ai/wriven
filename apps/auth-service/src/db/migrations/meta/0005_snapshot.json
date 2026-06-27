@@ -1,6 +1,6 @@
 {
-  "id": "a1b2c3d4-0004-4abc-9def-111111111111",
-  "prevId": "fb63ac81-12b7-4299-b4dc-57c111bfe1ee",
+  "id": "f022b32f-2fa3-4ad1-920e-592a18973732",
+  "prevId": "a1b2c3d4-0004-4abc-9def-111111111111",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -60,9 +60,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "email_verification_tokens_user_id_idx": {
           "name": "email_verification_tokens_user_id_idx",
@@ -75,25 +75,25 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "email_verification_tokens_user_id_users_id_fk": {
           "name": "email_verification_tokens_user_id_users_id_fk",
           "tableFrom": "email_verification_tokens",
-          "tableTo": "users",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -158,9 +158,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "password_reset_tokens_user_id_idx": {
           "name": "password_reset_tokens_user_id_idx",
@@ -173,25 +173,25 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "password_reset_tokens_user_id_users_id_fk": {
           "name": "password_reset_tokens_user_id_users_id_fk",
           "tableFrom": "password_reset_tokens",
-          "tableTo": "users",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -256,9 +256,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "project_members_user_id_idx": {
           "name": "project_members_user_id_idx",
@@ -271,39 +271,39 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "project_members_project_id_projects_id_fk": {
           "name": "project_members_project_id_projects_id_fk",
           "tableFrom": "project_members",
-          "tableTo": "projects",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "project_id"
           ],
+          "tableTo": "projects",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "project_members_user_id_users_id_fk": {
           "name": "project_members_user_id_users_id_fk",
           "tableFrom": "project_members",
-          "tableTo": "users",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -391,9 +391,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "projects_workspace_id_idx": {
           "name": "projects_workspace_id_idx",
@@ -406,9 +406,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "projects_created_by_idx": {
           "name": "projects_created_by_idx",
@@ -421,39 +421,39 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "projects_workspace_id_workspaces_id_fk": {
           "name": "projects_workspace_id_workspaces_id_fk",
           "tableFrom": "projects",
-          "tableTo": "workspaces",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "workspace_id"
           ],
+          "tableTo": "workspaces",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "projects_created_by_users_id_fk": {
           "name": "projects_created_by_users_id_fk",
           "tableFrom": "projects",
-          "tableTo": "users",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "created_by"
           ],
+          "tableTo": "users",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
@@ -525,9 +525,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "refresh_tokens_user_id_idx": {
           "name": "refresh_tokens_user_id_idx",
@@ -540,25 +540,25 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "refresh_tokens_user_id_users_id_fk": {
           "name": "refresh_tokens_user_id_users_id_fk",
           "tableFrom": "refresh_tokens",
-          "tableTo": "users",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -655,9 +655,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -665,10 +665,10 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -742,25 +742,25 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "workspaces_created_by_users_id_fk": {
           "name": "workspaces_created_by_users_id_fk",
           "tableFrom": "workspaces",
-          "tableTo": "users",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "created_by"
           ],
+          "tableTo": "users",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
@@ -825,9 +825,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "workspace_members_user_id_idx": {
           "name": "workspace_members_user_id_idx",
@@ -840,39 +840,39 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "workspace_members_workspace_id_workspaces_id_fk": {
           "name": "workspace_members_workspace_id_workspaces_id_fk",
           "tableFrom": "workspace_members",
-          "tableTo": "workspaces",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "workspace_id"
           ],
+          "tableTo": "workspaces",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "workspace_members_user_id_users_id_fk": {
           "name": "workspace_members_user_id_users_id_fk",
           "tableFrom": "workspace_members",
-          "tableTo": "users",
-          "schemaTo": "auth_svc",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "auth_svc",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -891,10 +891,10 @@
   "schemas": {
     "auth_svc": "auth_svc"
   },
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

@@ -111,8 +111,8 @@ export const workspaces = authSchema.table(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    // Globally unique — workspaces are no longer nested under orgs.
-    slug: text('slug').notNull().unique(),
+    // Unique per owner, not globally — each user can have their own "default".
+    slug: text('slug').notNull(),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
@@ -124,6 +124,9 @@ export const workspaces = authSchema.table(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
+  (t) => [
+    uniqueIndex('workspaces_created_by_slug_uq').on(t.createdBy, t.slug),
+  ],
 );
 
 export const workspaceMembers = authSchema.table(

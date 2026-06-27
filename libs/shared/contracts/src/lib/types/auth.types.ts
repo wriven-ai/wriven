@@ -43,7 +43,6 @@ export interface AuthResult {
   refreshExpiresAt: string;
   user: UserView;
   workspace: WorkspaceView;
-  project: ProjectView;
 }
 
 /** Result of a token refresh: a new access token and a rotated refresh token. */

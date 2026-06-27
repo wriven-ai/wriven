@@ -36,6 +36,13 @@
       "when": 1781400000000,
       "tag": "0004_workspace_project_hierarchy",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782211012899,
+      "tag": "0005_seed_default_projects",
+      "breakpoints": true
     }
   ]
 }
