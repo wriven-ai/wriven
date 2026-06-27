@@ -16,6 +16,9 @@ Wriven is an **AI-native content management and generation SaaS**. The backend i
 | [06 — API Reference](./06-api-reference.md) | Every gateway endpoint: method, auth, headers, body, responses |
 | [07 — Conventions](./07-conventions.md) | Response envelope, error codes, rate limits, env, commands, commit style |
 | [08 — Status & Scope](./08-status.md) | What's implemented per module (✅/🟡/🔲) |
+| [09 — Content Delivery & Plans](./09-content-delivery-and-plans.md) | How customers connect a site (Delivery API, API keys, webhooks), dashboard control surface, pricing tiers, build order |
+| [10 — Embedded Studio](./10-embedded-studio.md) | `@wriven-ai/studio` at the customer's `/wriven` route: cross-origin auth handshake, origin allowlist, editor packaging, distribution |
+| [11 — Model A Build Plan](./11-model-a-build-plan.md) | Phased build: api_keys table, token guard, Delivery API, dashboard keys UI, CDN purge, webhooks, preview, plans/metering, media |
 
 **Per service**
 
