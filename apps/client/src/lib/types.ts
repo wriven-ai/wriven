@@ -143,3 +143,26 @@ export interface Paginated<T> {
   limit: number;
   total: number;
 }
+
+// ── API keys (Delivery API auth) ─────────────────────────────────────────────
+
+export type ApiKeyScope = 'read' | 'preview' | 'manage';
+
+export interface ApiKeyView {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  name: string;
+  prefix: string;
+  scope: ApiKeyScope;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/** Returned only from create — carries the full raw token exactly once. */
+export interface CreateApiKeyResult {
+  key: ApiKeyView;
+  token: string;
+}

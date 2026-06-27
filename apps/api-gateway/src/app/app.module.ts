@@ -14,6 +14,7 @@ import { ProjectGuard } from '../auth/project.guard';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
+import { ApiKeysController } from '../api-keys/api-keys.controller';
 import { ContentController } from '../content/content.controller';
 import { DeliveryController } from '../delivery/delivery.controller';
 import { ProjectsController } from '../members/projects.controller';
@@ -67,6 +68,7 @@ import { AppService } from './app.service';
     AuthController,
     ContentController,
     DeliveryController,
+    ApiKeysController,
     WorkspacesController,
     ProjectsController,
   ],

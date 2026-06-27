@@ -1,9 +1,12 @@
 import type {
   ApiError,
+  ApiKeyScope,
+  ApiKeyView,
   AssignableWorkspaceRole,
   AuthResult,
   ContentEntryView,
   ContentTypeView,
+  CreateApiKeyResult,
   EntryStatus,
   FieldDef,
   LoginInput,
@@ -287,6 +290,24 @@ export const contentApi = {
     }),
   deleteEntry: (id: string) =>
     request<unknown>(`/content/entries/${id}`, {
+      method: 'DELETE',
+      workspace: true,
+      project: true,
+    }),
+};
+
+export const apiKeyApi = {
+  list: () =>
+    request<ApiKeyView[]>('/api-keys', { workspace: true, project: true }),
+  create: (dto: { name: string; scope?: ApiKeyScope }) =>
+    request<CreateApiKeyResult>('/api-keys', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+      project: true,
+    }),
+  revoke: (id: string) =>
+    request<{ success: true }>(`/api-keys/${id}`, {
       method: 'DELETE',
       workspace: true,
       project: true,
