@@ -7,7 +7,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 
@@ -28,6 +28,10 @@ const SORTABLE = {
  * project is fixed by the caller (resolved from the API key at the gateway); a
  * key can never read another project.
  */
+/** Statuses a delivery read may return. Preview keys also see drafts. */
+const visibleStatuses = (preview?: boolean): string[] =>
+  preview ? ['draft', 'published'] : ['published'];
+
 @Injectable()
 export class DeliveryService {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
@@ -36,6 +40,7 @@ export class DeliveryService {
     projectId: string;
     apiId: string;
     query: DeliveryQueryDto;
+    preview?: boolean;
   }): Promise<Paginated<DeliveryEntry>> {
     const type = await this.requireType(p.projectId, p.apiId);
     const page = p.query.page ?? 1;
@@ -44,7 +49,7 @@ export class DeliveryService {
     const filters = [
       eq(contentEntries.projectId, p.projectId),
       eq(contentEntries.contentTypeId, type.id),
-      eq(contentEntries.status, 'published'),
+      inArray(contentEntries.status, visibleStatuses(p.preview)),
       isNull(contentEntries.deletedAt),
     ];
     if (p.query.filter) {
@@ -77,6 +82,7 @@ export class DeliveryService {
     apiId: string;
     slug: string;
     query: DeliveryQueryDto;
+    preview?: boolean;
   }): Promise<DeliveryEntry> {
     const type = await this.requireType(p.projectId, p.apiId);
     const row = await this.db.query.contentEntries.findFirst({
@@ -84,7 +90,7 @@ export class DeliveryService {
         eq(contentEntries.projectId, p.projectId),
         eq(contentEntries.contentTypeId, type.id),
         eq(contentEntries.slug, p.slug),
-        eq(contentEntries.status, 'published'),
+        inArray(contentEntries.status, visibleStatuses(p.preview)),
         isNull(contentEntries.deletedAt),
       ),
     });

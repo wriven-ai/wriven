@@ -9,7 +9,13 @@ export class DeliveryController {
 
   @MessagePattern(CORE_PATTERNS.DELIVERY_LIST)
   list(
-    @Payload() p: { projectId: string; apiId: string; query: DeliveryQueryDto },
+    @Payload()
+    p: {
+      projectId: string;
+      apiId: string;
+      query: DeliveryQueryDto;
+      preview?: boolean;
+    },
   ) {
     return this.delivery.list(p);
   }
@@ -17,7 +23,13 @@ export class DeliveryController {
   @MessagePattern(CORE_PATTERNS.DELIVERY_GET)
   get(
     @Payload()
-    p: { projectId: string; apiId: string; slug: string; query: DeliveryQueryDto },
+    p: {
+      projectId: string;
+      apiId: string;
+      slug: string;
+      query: DeliveryQueryDto;
+      preview?: boolean;
+    },
   ) {
     return this.delivery.get(p);
   }
