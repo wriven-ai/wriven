@@ -232,11 +232,15 @@ export class InvitationsService {
     userId: string,
   ): Promise<void> {
     if (invite.scope === 'workspace') {
+      // Insert, or upgrade an existing `guest` to the invited role. A higher
+      // existing role (owner/admin/member) is left untouched (setWhere skips it).
       await tx
         .insert(workspaceMembers)
         .values({ workspaceId: invite.workspaceId, userId, role: invite.role })
-        .onConflictDoNothing({
+        .onConflictDoUpdate({
           target: [workspaceMembers.workspaceId, workspaceMembers.userId],
+          set: { role: invite.role },
+          setWhere: eq(workspaceMembers.role, 'guest'),
         });
     } else {
       // Project membership implies baseline workspace membership.
@@ -308,23 +312,31 @@ export class InvitationsService {
       columns: { id: true },
     });
     if (!user) return; // no account → definitely not a member yet
-    const existing =
-      scope === 'project'
-        ? await this.db.query.projectMembers.findFirst({
-            where: and(
-              eq(projectMembers.projectId, projectId!),
-              eq(projectMembers.userId, user.id),
-            ),
-            columns: { id: true },
-          })
-        : await this.db.query.workspaceMembers.findFirst({
-            where: and(
-              eq(workspaceMembers.workspaceId, workspaceId),
-              eq(workspaceMembers.userId, user.id),
-            ),
-            columns: { id: true },
-          });
-    if (existing) {
+
+    if (scope === 'project') {
+      const existing = await this.db.query.projectMembers.findFirst({
+        where: and(
+          eq(projectMembers.projectId, projectId!),
+          eq(projectMembers.userId, user.id),
+        ),
+        columns: { id: true },
+      });
+      if (existing) {
+        throw rpcError('CONFLICT', 'That user is already a member.');
+      }
+      return;
+    }
+
+    // Workspace scope: a `guest` (auto-added via a project invite) is NOT a real
+    // member — allow inviting them to upgrade. Block only real members.
+    const existing = await this.db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, user.id),
+      ),
+      columns: { role: true },
+    });
+    if (existing && existing.role !== 'guest') {
       throw rpcError('CONFLICT', 'That user is already a member.');
     }
   }

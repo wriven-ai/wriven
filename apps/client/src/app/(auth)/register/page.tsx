@@ -47,7 +47,14 @@ const RegisterPage = () => {
         workspaceName: values.workspaceName,
       });
       useAuthStore.getState().setAuthResult(result);
-      router.push('/dashboard');
+      // When signing up from an invite, the server auto-claims the pending
+      // invitations — re-bootstrap the session (hard nav) so those joined
+      // workspaces/projects show up instead of only the user's own workspace.
+      const fromInvite = !!new URLSearchParams(window.location.search).get(
+        'email',
+      );
+      if (fromInvite) window.location.assign('/dashboard');
+      else router.push('/dashboard');
     } catch (err) {
       setServerError(
         err instanceof ApiRequestError
