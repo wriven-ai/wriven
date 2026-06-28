@@ -78,6 +78,13 @@ export const CORE_PATTERNS = {
   // Public Content Delivery API — published-only reads by content type.
   DELIVERY_LIST: 'core.delivery.list',
   DELIVERY_GET: 'core.delivery.get',
+
+  // Media library (R2-backed; presigned direct upload — see doc/13).
+  MEDIA_PRESIGN: 'core.media.presign',
+  MEDIA_CREATE: 'core.media.create',
+  MEDIA_LIST: 'core.media.list',
+  MEDIA_GET: 'core.media.get',
+  MEDIA_DELETE: 'core.media.delete',
 } as const;
 
 /** Pending member invitations (workspace + project). Owned by auth-service. */

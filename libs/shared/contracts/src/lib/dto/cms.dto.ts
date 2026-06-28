@@ -162,6 +162,70 @@ export class DeliveryQueryDto {
   filter?: Record<string, string>;
 }
 
+const MEDIA_KINDS = ['image', 'video', 'file'] as const;
+
+export class PresignUploadDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(255)
+  filename!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(150)
+  contentType!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  size?: number;
+}
+
+export class CreateMediaDto {
+  /** The object key returned by presign. */
+  @IsString()
+  @MinLength(1)
+  @MaxLength(512)
+  key!: string;
+
+  @IsIn(MEDIA_KINDS)
+  kind!: (typeof MEDIA_KINDS)[number];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  mime?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  size?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  width?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  height?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  alt?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  originalFilename?: string;
+}
+
 export class ListEntriesQueryDto {
   @IsOptional()
   @IsString()

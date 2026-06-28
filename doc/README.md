@@ -20,6 +20,7 @@ Wriven is an **AI-native content management and generation SaaS**. The backend i
 | [10 — Embedded Studio](./10-embedded-studio.md) | `@wriven-ai/studio` at the customer's `/wriven` route: cross-origin auth handshake, origin allowlist, editor packaging, distribution |
 | [11 — Model A Build Plan](./11-model-a-build-plan.md) | Phased build: api_keys table, token guard, Delivery API, dashboard keys UI, CDN purge, webhooks, preview, plans/metering, media |
 | [12 — Invitations](./12-invitations.md) | Pending-invitation token flow, accept-on-signup, project→workspace auto-add, project-list leak fix, member onboarding |
+| [13 — Media](./13-media.md) | R2 storage adapter, presigned direct upload, keys-only delivery URLs, media library + field picker, transforms deferred |
 
 **Per service**
 

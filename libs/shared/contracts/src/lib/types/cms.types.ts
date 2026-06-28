@@ -68,7 +68,8 @@ export interface MediaView {
   id: string;
   workspaceId: string;
   projectId: string;
-  r2Key: string;
+  /** Public URL reconstructed from the stored object key at read time. */
+  url: string;
   kind: string;
   mime: string | null;
   sizeBytes: number | null;
@@ -77,6 +78,36 @@ export interface MediaView {
   alt: string | null;
   originalFilename: string | null;
   createdAt: string;
+}
+
+/** Result of requesting a presigned upload — browser PUTs the file to `uploadUrl`. */
+export interface PresignResult {
+  uploadUrl: string;
+  /** The object key to send back when creating the media row. */
+  key: string;
+}
+
+/** Max upload size by kind, in bytes. Shared by client guard + server presign check. */
+export const MEDIA_MAX_BYTES = {
+  image: 5 * 1024 * 1024, // 5 MB
+  other: 25 * 1024 * 1024, // 25 MB (video / documents)
+} as const;
+
+/** Resolve the max upload size (bytes) for a given content-type. */
+export const maxBytesForContentType = (contentType: string): number =>
+  contentType.startsWith('image/') ? MEDIA_MAX_BYTES.image : MEDIA_MAX_BYTES.other;
+
+/** Total media storage allowed per workspace, in bytes (R2 free-tier budget). */
+export const WORKSPACE_MEDIA_QUOTA_BYTES = 100 * 1024 * 1024; // 100 MB
+
+/** Public, resolved shape of a `media` field value in a Delivery API response. */
+export interface DeliveryMedia {
+  id: string;
+  url: string;
+  alt: string | null;
+  width: number | null;
+  height: number | null;
+  mime: string | null;
 }
 
 /** Paginated list envelope returned to the gateway. */

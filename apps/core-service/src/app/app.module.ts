@@ -5,6 +5,7 @@ import * as schema from '../db/schema';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { ContentModule } from '../content/content.module';
 import { DeliveryModule } from '../delivery/delivery.module';
+import { MediaModule } from '../media/media.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -18,6 +19,7 @@ import { AppService } from './app.service';
     ContentModule,
     ApiKeysModule,
     DeliveryModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

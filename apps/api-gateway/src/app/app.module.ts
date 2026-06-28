@@ -16,6 +16,7 @@ import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { ApiKeysController } from '../api-keys/api-keys.controller';
 import { ContentController } from '../content/content.controller';
+import { MediaController } from '../content/media.controller';
 import { DeliveryController } from '../delivery/delivery.controller';
 import { InvitationsController } from '../members/invitations.controller';
 import { ProjectsController } from '../members/projects.controller';
@@ -68,6 +69,7 @@ import { AppService } from './app.service';
     AppController,
     AuthController,
     ContentController,
+    MediaController,
     DeliveryController,
     ApiKeysController,
     WorkspacesController,

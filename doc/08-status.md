@@ -63,8 +63,11 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | **API keys** (project-scoped, hash-only, scope read/preview/manage) | ✅ | `api_keys` table; create/list/revoke/resolve (doc/11 P1) |
 | **Content Delivery API** (published-only read by `apiId`/slug) | ✅ | select/filter/sort/paginate/include (doc/11 P3) |
 | `media_assets` schema | ✅ | R2 keys |
-| Media upload (R2 presign/upload endpoints) | 🔲 | schema only |
-| ImageKit URL building | 🔲 | doc/11 P9 |
+| **Media upload** (presigned direct-to-R2 + create/list/delete) | ✅ | storage adapter; keys-only (doc/13) |
+| **Media delivery** (resolve `media` fields → public URL objects) | ✅ | always-resolved in Delivery API |
+| **Inline body images** (TipTap `image` node, assetId-only) | ✅ | delivery hydrates `src`/dims; keys-only (doc/13) |
+| Per-workspace media quota (100 MB) + per-file caps (5/25 MB) | ✅ | enforced at presign (doc/13) |
+| Image transforms (resize/format) | 🔲 | deferred; consumer optimizes (next/image). Adapter-ready (doc/13) |
 | Reference field resolution (populate/expand) | 🟡 | expanded in delivery `include`; not in management reads |
 | CDN cache headers + purge on publish | 🔲 | doc/11 P5 |
 | Webhooks (publish → rebuild, HMAC) | 🔲 | doc/11 P6 |
@@ -95,6 +98,9 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | Projects page wired to `/workspaces/:id/projects` + `/projects/*` | ✅ | TanStack Query |
 | Content dashboard wired to `/content/*` | 🟡 | type/entry pages live; switchers drive `X-Project-Id` |
 | API Keys page (create/list/revoke, one-time token reveal) | ✅ | `apiKeyApi`; real backend (doc/11 P4) |
+| Media Library page + media field picker (upload/select) | ✅ | `mediaApi` + `uploadMedia`; grid/list/lightbox (doc/13) |
+| Content editor: main+sidebar layout + inline body images | ✅ | title/body main, structured fields sidebar (doc/13) |
+| Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (doc/12) |
 | Email verification page | 🔲 | API ready |
 
 ## Known gaps / next candidates

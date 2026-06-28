@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   DeliveryEntry,
+  DeliveryMedia,
   DeliveryQueryDto,
   FieldDef,
   Paginated,
@@ -10,10 +11,18 @@ import type { DrizzleDB } from '@wriven/database';
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { MediaService } from '../media/media.service';
 
 const { contentEntries, contentTypes } = schema;
 type EntryRow = typeof contentEntries.$inferSelect;
 type ContentTypeRow = typeof contentTypes.$inferSelect;
+
+/** Minimal ProseMirror node shape — rich-text bodies are stored as this JSON. */
+interface ProseNode {
+  type?: string;
+  attrs?: Record<string, unknown>;
+  content?: ProseNode[];
+}
 
 /** System columns the delivery API allows sorting on. */
 const SORTABLE = {
@@ -34,7 +43,99 @@ const visibleStatuses = (preview?: boolean): string[] =>
 
 @Injectable()
 export class DeliveryService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly media: MediaService,
+  ) {}
+
+  /** Replace `media` field ids with resolved public objects (or null). Always runs. */
+  private async resolveMediaFields(
+    projectId: string,
+    fields: FieldDef[],
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const mediaFields = fields.filter((f) => f.type === 'media');
+    if (mediaFields.length === 0) return;
+
+    const ids: string[] = [];
+    for (const f of mediaFields) {
+      const v = data[f.key];
+      if (f.multiple && Array.isArray(v)) ids.push(...v.map(String));
+      else if (typeof v === 'string') ids.push(v);
+    }
+    const resolved = await this.media.resolveMany(projectId, ids);
+
+    for (const f of mediaFields) {
+      const v = data[f.key];
+      if (f.multiple && Array.isArray(v)) {
+        data[f.key] = v.map((id) => resolved.get(String(id)) ?? null);
+      } else if (typeof v === 'string') {
+        data[f.key] = resolved.get(v) ?? null;
+      }
+    }
+  }
+
+  /**
+   * Resolve inline `image` nodes inside rich-text bodies. The editor stores only
+   * `assetId` (keys-only); here we hydrate each image node with the public `src`
+   * + dimensions so consumers can render directly. Mirrors `resolveMediaFields`.
+   */
+  private async resolveRichTextMedia(
+    projectId: string,
+    fields: FieldDef[],
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const rtFields = fields.filter((f) => f.type === 'richtext');
+    if (rtFields.length === 0) return;
+
+    const ids: string[] = [];
+    for (const f of rtFields) {
+      const doc = data[f.key];
+      if (doc && typeof doc === 'object') {
+        this.collectImageAssetIds(doc as ProseNode, ids);
+      }
+    }
+    if (ids.length === 0) return;
+
+    const resolved = await this.media.resolveMany(projectId, ids);
+    for (const f of rtFields) {
+      const doc = data[f.key];
+      if (doc && typeof doc === 'object') {
+        this.applyImageResolution(doc as ProseNode, resolved);
+      }
+    }
+  }
+
+  private collectImageAssetIds(node: ProseNode, out: string[]): void {
+    if (node.type === 'image' && node.attrs?.assetId) {
+      out.push(String(node.attrs.assetId));
+    }
+    if (Array.isArray(node.content)) {
+      for (const child of node.content) this.collectImageAssetIds(child, out);
+    }
+  }
+
+  private applyImageResolution(
+    node: ProseNode,
+    resolved: Map<string, DeliveryMedia>,
+  ): void {
+    if (node.type === 'image' && node.attrs?.assetId) {
+      const m = resolved.get(String(node.attrs.assetId));
+      node.attrs = m
+        ? {
+            ...node.attrs,
+            src: m.url,
+            alt: node.attrs.alt ?? m.alt,
+            width: m.width,
+            height: m.height,
+            mime: m.mime,
+          }
+        : { ...node.attrs, src: null };
+    }
+    if (Array.isArray(node.content)) {
+      for (const child of node.content) this.applyImageResolution(child, resolved);
+    }
+  }
 
   async list(p: {
     projectId: string;
@@ -137,10 +238,15 @@ export class DeliveryService {
     select: string | undefined,
     depth: number,
   ): Promise<DeliveryEntry> {
-    let data = row.data as Record<string, unknown>;
+    // Clone once — we resolve media (always) and references (when include > 0).
+    let data: Record<string, unknown> = {
+      ...(row.data as Record<string, unknown>),
+    };
+
+    await this.resolveMediaFields(row.projectId, fields, data);
+    await this.resolveRichTextMedia(row.projectId, fields, data);
 
     if (depth > 0) {
-      data = { ...data };
       for (const f of fields) {
         if (f.type !== 'reference' || !f.refTypeId) continue;
         const value = data[f.key];
