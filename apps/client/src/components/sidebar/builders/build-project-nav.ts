@@ -5,6 +5,7 @@ import {
   Key,
   LayoutDashboard,
   Settings,
+  Users,
 } from 'lucide-react';
 import type { NavContext, NavGroup, NavItem } from '../nav.types';
 import { gate, type Gated } from './gate';
@@ -54,6 +55,13 @@ export function buildProjectNav(ctx: NavContext): NavGroup | null {
         label: 'API Keys',
         icon: Key,
         permission: 'API_KEY_VIEW',
+        scope,
+      },
+      {
+        href: `${base}/members`,
+        label: 'Members',
+        icon: Users,
+        permission: 'MEMBER_VIEW',
         scope,
       },
       {

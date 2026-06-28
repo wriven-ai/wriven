@@ -11,6 +11,8 @@ import type {
   FieldDef,
   LoginInput,
   Paginated,
+  ProjectMemberView,
+  ProjectRole,
   ProjectView,
   RegisterInput,
   SessionView,
@@ -352,6 +354,25 @@ export const memberApi = {
       `/workspaces/${workspaceId}/members/${userId}`,
       { method: 'DELETE' },
     ),
+};
+
+export const projectMemberApi = {
+  list: (projectId: string) =>
+    request<ProjectMemberView[]>(`/projects/${projectId}/members`),
+  add: (projectId: string, dto: { email: string; role: ProjectRole }) =>
+    request<ProjectMemberView>(`/projects/${projectId}/members`, {
+      method: 'POST',
+      body: dto,
+    }),
+  updateRole: (projectId: string, userId: string, role: ProjectRole) =>
+    request<ProjectMemberView>(`/projects/${projectId}/members/${userId}`, {
+      method: 'PATCH',
+      body: { role },
+    }),
+  remove: (projectId: string, userId: string) =>
+    request<{ success: true }>(`/projects/${projectId}/members/${userId}`, {
+      method: 'DELETE',
+    }),
 };
 
 export const projectApi = {

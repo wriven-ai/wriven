@@ -43,6 +43,18 @@ export type WorkspaceRole = 'owner' | 'admin' | 'member';
 /** Roles assignable when inviting (owner is never granted via add). */
 export type AssignableWorkspaceRole = 'admin' | 'member';
 
+export interface ProjectMemberView {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: ProjectRole;
+  createdAt: string;
+  user: MemberUser;
+}
+
+/** Project member roles — a separate enum from workspace roles. All assignable. */
+export type ProjectRole = 'admin' | 'editor' | 'viewer';
+
 export interface ProjectView {
   id: string;
   workspaceId: string;
