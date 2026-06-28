@@ -17,6 +17,7 @@ import { ResponseInterceptor } from '../common/response.interceptor';
 import { ApiKeysController } from '../api-keys/api-keys.controller';
 import { ContentController } from '../content/content.controller';
 import { DeliveryController } from '../delivery/delivery.controller';
+import { InvitationsController } from '../members/invitations.controller';
 import { ProjectsController } from '../members/projects.controller';
 import { WorkspacesController } from '../members/workspaces.controller';
 import { AppController } from './app.controller';
@@ -71,6 +72,7 @@ import { AppService } from './app.service';
     ApiKeysController,
     WorkspacesController,
     ProjectsController,
+    InvitationsController,
   ],
   providers: [
     AppService,

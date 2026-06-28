@@ -36,6 +36,26 @@ export class MailService {
     this.logger.log(`Password reset email sent to ${to} (id: ${info.messageId})`);
   }
 
+  async sendInvitation(
+    to: string,
+    link: string,
+    meta: { inviterName: string | null; targetName: string; role: string },
+  ): Promise<void> {
+    const inviter = meta.inviterName ?? 'Someone';
+    const info = await this.transporter.sendMail({
+      from: this.from,
+      to,
+      subject: `You've been invited to ${meta.targetName} on Wriven`,
+      text: `${inviter} invited you to ${meta.targetName} as ${meta.role}.\n\nAccept the invitation:\n${link}\n\nThis invite expires in 7 days.`,
+      html: `
+        <p><strong>${inviter}</strong> invited you to <strong>${meta.targetName}</strong> as <strong>${meta.role}</strong>.</p>
+        <p><a href="${link}">Accept the invitation</a></p>
+        <p>Or paste this link: ${link}</p>
+        <p>This invite expires in 7 days.</p>`,
+    });
+    this.logger.log(`Invitation email sent to ${to} (id: ${info.messageId})`);
+  }
+
   async sendVerification(to: string, link: string): Promise<void> {
     const info = await this.transporter.sendMail({
       from: this.from,

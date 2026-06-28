@@ -23,6 +23,7 @@ import { durationToMs } from '../common/duration';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { InvitationsService } from './invitations.service';
 import { MailService } from './mail.service';
 import { TokenService } from './token.service';
 
@@ -52,7 +53,17 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly invitations: InvitationsService,
   ) {}
+
+  /** Claim any pending invitations for a freshly-created account. Best-effort. */
+  private async claimInvites(userId: string, email: string): Promise<void> {
+    try {
+      await this.invitations.claimPending(userId, email);
+    } catch (err) {
+      this.logger.warn(`Invite auto-claim failed for ${email}: ${String(err)}`);
+    }
+  }
 
   // ── Register (single transaction) ─────────────────────────────────────────
 
@@ -130,6 +141,7 @@ export class AuthService {
     }
 
     await this.issueVerificationEmail(result.user.id, result.user.email);
+    await this.claimInvites(result.user.id, result.user.email);
 
     return {
       accessToken: this.tokens.signAccessToken(result.user),
@@ -387,6 +399,7 @@ export class AuthService {
           // No default project — the user creates their first project in the UI.
           return u;
         });
+        await this.claimInvites(user.id, user.email);
       }
     }
 
