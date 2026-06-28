@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api';
 import type { ContentTypeView, EntryStatus, FieldDef } from '@/lib/types';
+import { RichTextEditor } from '@/components/editor/rich-text-editor';
 
 const STATUS_COLORS: Record<EntryStatus, string> = {
   draft: 'text-amber-500 bg-amber-500/10 border-amber-500/30',
@@ -49,11 +50,9 @@ function FieldInput({
       );
     case 'richtext':
       return (
-        <textarea
-          rows={8}
-          value={(value as string) ?? ''}
-          onChange={e => onChange(e.target.value)}
-          className={`${base} resize-none leading-relaxed`}
+        <RichTextEditor
+          value={value}
+          onChange={onChange}
           placeholder={`${field.label}…`}
         />
       );

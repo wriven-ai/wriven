@@ -6,6 +6,7 @@ import {
   Filter,
   KeyRound,
   Rocket,
+  Type,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -36,6 +37,7 @@ export const DOCS_NAV: DocGroup[] = [
     items: [
       { title: 'Delivery API', href: '/docs/delivery-api', icon: Database },
       { title: 'Querying & Filtering', href: '/docs/querying', icon: Filter },
+      { title: 'Rich Text', href: '/docs/rich-text', icon: Type },
       { title: 'Preview & Drafts', href: '/docs/preview', icon: Eye },
     ],
   },
