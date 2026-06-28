@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import WrivenLogo from './WrivenLogo';
 import { Menu, X, ArrowRight, Sun, Moon, LayoutDashboard } from 'lucide-react';
 import { useAuth, useLogout } from '../hooks/useAuth';
@@ -11,27 +12,15 @@ export default function Header() {
   const pathname = usePathname();
   const { status, isAuthenticated } = useAuth();
   const logout = useLogout();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  React.useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setTimeout(() => {
-      setTheme(isDark ? 'dark' : 'light');
-    }, 0);
-  }, []);
+  // next-themes resolves on the client only — guard against hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === 'dark';
 
-  const toggleTheme = () => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('wriven-theme', 'dark');
-      setTheme('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('wriven-theme', 'light');
-      setTheme('light');
-    }
-  };
+  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
 
   const navItems = [
     { name: 'Features', href: '/#features' },
@@ -91,7 +80,7 @@ export default function Header() {
               aria-label="Toggle visual theme"
               id="theme-toggle-desktop"
             >
-              {theme === 'dark' ? (
+              {isDark ? (
                 <Sun className="w-4 h-4 text-amber-500 hover:rotate-12 transition-transform shrink-0" />
               ) : (
                 <Moon className="w-4 h-4 text-brand-accent shrink-0" />
@@ -182,7 +171,7 @@ export default function Header() {
                 className="flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors cursor-pointer border border-brand-border bg-brand-surface"
                 id="mobile-nav-theme-toggle"
               >
-                {theme === 'dark' ? (
+                {isDark ? (
                   <>
                     <Sun className="w-4 h-4 text-amber-500 shrink-0" />
                     Use warm light

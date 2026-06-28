@@ -16,7 +16,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn('font-sans', manrope.variable)}>
+    <html
+      lang="en"
+      className={cn('font-sans', manrope.variable)}
+      suppressHydrationWarning
+    >
       <body>
         <Providers>{children}</Providers>
       </body>

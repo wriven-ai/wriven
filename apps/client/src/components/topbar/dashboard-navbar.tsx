@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Bell,
@@ -26,20 +27,14 @@ import { ProjectSwitcher } from './project-switcher';
 export function DashboardNavbar() {
   const { projSlug } = useParams<{ projSlug?: string }>();
   const { user } = useAuth();
+  const { resolvedTheme, setTheme } = useTheme();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setTheme(isDark ? 'dark' : 'light');
-  }, []);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === 'dark';
 
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    document.documentElement.classList.toggle('dark', next === 'dark');
-    localStorage.setItem('wriven-theme', next);
-    setTheme(next);
-  };
+  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
 
   return (
     <header className="h-14 border-b border-brand-border bg-brand-surface/90 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between px-4 sm:px-5 shrink-0">
@@ -72,7 +67,7 @@ export function DashboardNavbar() {
           className="p-2 text-text-secondary hover:text-brand-accent hover:bg-brand-surface-soft rounded-lg border border-transparent hover:border-brand-border transition-all cursor-pointer"
           aria-label="Toggle theme"
         >
-          {theme === 'dark' ? (
+          {isDark ? (
             <Sun className="w-4 h-4 text-amber-500" />
           ) : (
             <Moon className="w-4 h-4 text-brand-accent" />
