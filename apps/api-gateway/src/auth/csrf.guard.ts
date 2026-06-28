@@ -5,6 +5,15 @@ import type { Request } from 'express';
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /**
+ * Session-bootstrap endpoints that establish or clear auth. They are protected
+ * by credentials / single-use tokens / the SameSite refresh cookie — not CSRF —
+ * and must work even when a stale `access_token` cookie lingers (e.g. logging in
+ * again without logging out first). Matched against the request path.
+ */
+const CSRF_EXEMPT =
+  /\/auth\/(login|register|refresh|logout|forgot-password|reset-password|verify-email|google)(\/|$)/;
+
+/**
  * Double-submit CSRF protection for cookie-based auth.
  *
  * Only authenticated, state-changing requests are guarded: when an access-token
@@ -23,6 +32,10 @@ export class CsrfGuard implements CanActivate {
 
     if (!MUTATING.has(req.method)) return true;
 
+    // Unauthenticated bootstrap routes are never CSRF-checked, even if a stale
+    // access cookie is still present from a previous session.
+    if (CSRF_EXEMPT.test(req.path)) return true;
+
     const accessCookie = req.cookies?.['access_token'];
     if (!accessCookie) return true;
 
@@ -36,6 +49,9 @@ export class CsrfGuard implements CanActivate {
   }
 
   private forbidden(): ServiceError {
-    return { ...ERROR_CODES.FORBIDDEN, message: 'why.' };
+    return {
+      ...ERROR_CODES.FORBIDDEN,
+      message: 'Invalid or missing CSRF token.',
+    };
   }
 }
