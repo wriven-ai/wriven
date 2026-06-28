@@ -6,9 +6,12 @@ import type {
   AuthResult,
   ContentEntryView,
   ContentTypeView,
+  AcceptInvitationResult,
   CreateApiKeyResult,
   EntryStatus,
   FieldDef,
+  InvitationPreview,
+  InvitationView,
   LoginInput,
   Paginated,
   ProjectMemberView,
@@ -354,6 +357,37 @@ export const memberApi = {
       `/workspaces/${workspaceId}/members/${userId}`,
       { method: 'DELETE' },
     ),
+};
+
+export const invitationApi = {
+  createWorkspace: (
+    workspaceId: string,
+    dto: { email: string; role: string },
+  ) =>
+    request<InvitationView>(`/workspaces/${workspaceId}/invitations`, {
+      method: 'POST',
+      body: dto,
+    }),
+  createProject: (projectId: string, dto: { email: string; role: string }) =>
+    request<InvitationView>(`/projects/${projectId}/invitations`, {
+      method: 'POST',
+      body: dto,
+    }),
+  listWorkspace: (workspaceId: string) =>
+    request<InvitationView[]>(`/workspaces/${workspaceId}/invitations`),
+  listProject: (projectId: string) =>
+    request<InvitationView[]>(`/projects/${projectId}/invitations`),
+  revoke: (id: string) =>
+    request<{ success: true }>(`/invitations/${id}`, { method: 'DELETE' }),
+  resend: (id: string) =>
+    request<InvitationView>(`/invitations/${id}/resend`, { method: 'POST' }),
+  /** Public — accept page reads this before login. */
+  preview: (token: string) =>
+    request<InvitationPreview>(`/invitations/token/${token}`, { auth: false }),
+  accept: (token: string) =>
+    request<AcceptInvitationResult>(`/invitations/token/${token}/accept`, {
+      method: 'POST',
+    }),
 };
 
 export const projectMemberApi = {

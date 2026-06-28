@@ -3,11 +3,16 @@
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, RefreshCw, Trash2, UserPlus, Users } from 'lucide-react';
-import { ApiRequestError, memberApi, projectMemberApi } from '@/lib/api';
+import { Clock, Mail, RefreshCw, Send, Trash2, UserPlus, Users, X } from 'lucide-react';
+import {
+  ApiRequestError,
+  invitationApi,
+  memberApi,
+  projectMemberApi,
+} from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
-import type { ProjectMemberView, ProjectRole } from '@/lib/types';
+import type { InvitationView, ProjectMemberView, ProjectRole } from '@/lib/types';
 
 const PROJECT_ROLES: ProjectRole[] = ['admin', 'editor', 'viewer'];
 
@@ -86,11 +91,51 @@ export default function ProjectMembersPage() {
     onError: (err) => onError(err, 'Failed to remove member.'),
   });
 
+  // Pending invitations (new emails that haven't accepted yet).
+  const invitesKey = ['project-invitations', projectId];
+  const { data: invites } = useQuery({
+    queryKey: invitesKey,
+    queryFn: () => invitationApi.listProject(projectId!),
+    enabled: !!projectId && canManage,
+  });
+  const invalidateInvites = () =>
+    queryClient.invalidateQueries({ queryKey: invitesKey });
+
+  const inviteMutation = useMutation({
+    mutationFn: (dto: { email: string; role: ProjectRole }) =>
+      invitationApi.createProject(projectId!, dto),
+    onSuccess: () => {
+      invalidateInvites();
+      setInviteEmail('');
+      setInviteRole('editor');
+      setError(null);
+    },
+    onError: (err) => onError(err, 'Failed to send invitation.'),
+  });
+
+  const revokeInviteMutation = useMutation({
+    mutationFn: (id: string) => invitationApi.revoke(id),
+    onSuccess: invalidateInvites,
+    onError: (err) => onError(err, 'Failed to revoke invitation.'),
+  });
+
+  const resendInviteMutation = useMutation({
+    mutationFn: (id: string) => invitationApi.resend(id),
+    onSuccess: invalidateInvites,
+    onError: (err) => onError(err, 'Failed to resend invitation.'),
+  });
+
   const submitInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    const email = addMode === 'existing' ? selectedEmail : inviteEmail.trim();
-    if (!email) return;
-    addMutation.mutate({ email, role: inviteRole });
+    if (addMode === 'invite') {
+      // Brand-new email → create a pending invitation (emails an accept link).
+      if (inviteEmail.trim()) {
+        inviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole });
+      }
+      return;
+    }
+    // Existing workspace member → add directly (they already have an account).
+    if (selectedEmail) addMutation.mutate({ email: selectedEmail, role: inviteRole });
   };
 
   const canSubmit =
@@ -118,8 +163,9 @@ export default function ProjectMembersPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Members List */}
-        <div className={`${canManage ? 'lg:col-span-7' : 'lg:col-span-12'} bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4`}>
+        {/* Members + pending invitations */}
+        <div className={`${canManage ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-6`}>
+        <div className="bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
           <span className="text-[11px] font-mono tracking-wider text-text-secondary border-b border-brand-border pb-2 mb-1.5 font-bold flex items-center gap-1.5">
             <Users className="w-4 h-4 text-brand-secondary" />
             Members{members ? ` (${members.length})` : ''}
@@ -193,6 +239,46 @@ export default function ProjectMembersPage() {
               })}
             </div>
           )}
+        </div>
+
+          {canManage && invites && invites.length > 0 ? (
+            <div className="bg-brand-surface border border-brand-border rounded-xl p-5 space-y-3">
+              <span className="text-[11px] font-mono tracking-wider text-text-secondary flex items-center gap-1.5 border-b border-brand-border pb-2 font-bold">
+                <Clock className="w-3.5 h-3.5 text-brand-secondary" />
+                Pending invitations ({invites.length})
+              </span>
+              <ul className="divide-y divide-brand-border">
+                {invites.map((inv: InvitationView) => (
+                  <li key={inv.id} className="flex items-center justify-between gap-2 py-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-2xs font-bold text-text-primary">{inv.email}</p>
+                      <p className="font-mono text-[9px] text-text-muted uppercase">
+                        {inv.role} · invited {new Date(inv.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => resendInviteMutation.mutate(inv.id)}
+                        disabled={resendInviteMutation.isPending}
+                        title="Resend invitation"
+                        className="p-1 text-text-muted hover:text-brand-accent rounded cursor-pointer disabled:opacity-40"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => revokeInviteMutation.mutate(inv.id)}
+                        disabled={revokeInviteMutation.isPending}
+                        title="Revoke invitation"
+                        className="p-1 text-text-muted hover:text-status-error rounded cursor-pointer disabled:opacity-40"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
 
         {/* Invite member */}
@@ -280,18 +366,20 @@ export default function ProjectMembersPage() {
 
               <button
                 type="submit"
-                disabled={addMutation.isPending || !canSubmit}
+                disabled={
+                  addMutation.isPending || inviteMutation.isPending || !canSubmit
+                }
                 className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg cursor-pointer transition-all"
               >
-                {addMutation.isPending ? (
+                {addMutation.isPending || inviteMutation.isPending ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Adding member…
+                    {addMode === 'invite' ? 'Sending…' : 'Adding member…'}
                   </>
                 ) : (
                   <>
                     <Mail className="w-3.5 h-3.5 text-white" />
-                    Add member
+                    {addMode === 'invite' ? 'Send invitation' : 'Add member'}
                   </>
                 )}
               </button>

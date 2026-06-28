@@ -55,6 +55,40 @@ export interface ProjectMemberView {
 /** Project member roles — a separate enum from workspace roles. All assignable. */
 export type ProjectRole = 'admin' | 'editor' | 'viewer';
 
+// ── Invitations ──────────────────────────────────────────────────────────────
+
+export type InvitationScope = 'workspace' | 'project';
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface InvitationView {
+  id: string;
+  email: string;
+  scope: InvitationScope;
+  workspaceId: string;
+  projectId: string | null;
+  role: string;
+  status: InvitationStatus;
+  invitedByName: string | null;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface InvitationPreview {
+  email: string;
+  scope: InvitationScope;
+  role: string;
+  workspaceName: string;
+  projectName: string | null;
+  inviterName: string | null;
+  requiresSignup: boolean;
+}
+
+export interface AcceptInvitationResult {
+  scope: InvitationScope;
+  workspaceSlug: string;
+  projectSlug: string | null;
+}
+
 export interface ProjectView {
   id: string;
   workspaceId: string;
