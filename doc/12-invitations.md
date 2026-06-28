@@ -25,10 +25,13 @@ onboarding. Two more gaps:
    token only in the email link. Single-use, **7-day expiry**, resendable.
 3. **One `invitations` table** covering both scopes (workspace + project), with a
    `scope` discriminator — not two tables.
-4. **Project membership implies workspace membership.** Adding/accepting a project
-   member auto-adds a workspace `member` row if absent — transactional,
-   idempotent, **never downgrades** a higher existing role, **never auto-removed**
-   on project removal.
+4. **Project membership implies workspace membership — as a `guest`.** Adding/
+   accepting a project member auto-adds a workspace **`guest`** row if absent
+   (transactional, idempotent, **never downgrades** a higher existing role,
+   **never auto-removed** on project removal). A `guest` sees only the projects
+   they belong to; real workspace members (`owner`/`admin`/`member`) see all.
+   This separates "invited to the workspace" from "invited to one project"
+   (GitHub member vs outside-collaborator). Guests can be promoted to `member`.
 5. **Accept-on-signup**: registering (password or Google) auto-claims all pending
    invitations matching the new user's email.
 
@@ -110,11 +113,11 @@ accept. Helper `ensureWorkspaceMember(tx, workspaceId, userId, 'member')`:
 
 ## Project-list leak fix (prerequisite)
 
-`ProjectsService.list`: owner/admin of the workspace see all projects; a plain
-`member` sees **only projects they are a member of**. Filter by a
-`project_members` join for the `member` role. Ship this independently — it's a
-real disclosure bug and a precondition for safely auto-adding project guests as
-workspace members.
+`ProjectsService.list`: real workspace members (`owner`/`admin`/`member`) see all
+projects; a **`guest`** sees **only projects they belong to** (`canSeeAll =
+callerRole !== 'guest'`). This is what makes the project→workspace auto-add safe:
+the guest gets the workspace shell to reach their project, without every other
+project's existence leaking.
 
 ## API surface (gateway → auth-service)
 

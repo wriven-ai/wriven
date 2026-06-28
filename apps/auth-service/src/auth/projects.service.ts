@@ -96,7 +96,7 @@ export class ProjectsService {
     const callerRole = await this.members.requireWorkspaceRole(
       p.callerUserId,
       p.workspaceId,
-      ['owner', 'admin', 'member'],
+      ['owner', 'admin', 'member', 'guest'],
     );
 
     const rows = await this.db.query.projects.findMany({
@@ -114,9 +114,10 @@ export class ProjectsService {
     });
     const roleByProject = new Map(memberships.map((m) => [m.projectId, m.role]));
 
-    // Owners/admins see every project; a plain member sees only the projects
-    // they belong to — otherwise project existence leaks across the workspace.
-    const canSeeAll = callerRole === 'owner' || callerRole === 'admin';
+    // Real workspace members (owner/admin/member) see every project. A `guest`
+    // — auto-added via a single project invite — sees only the projects they
+    // belong to, so project existence doesn't leak to outside collaborators.
+    const canSeeAll = callerRole !== 'guest';
     const visible = canSeeAll
       ? rows
       : rows.filter((r) => roleByProject.has(r.id));
@@ -206,15 +207,16 @@ export class ProjectsService {
   }
 
   /**
-   * Ensure a user is at least a workspace `member`. Idempotent and
+   * Ensure a user has at least baseline workspace access. Auto-adds a `guest`
+   * (sees only assigned projects), not a full `member`. Idempotent and
    * non-destructive: ON CONFLICT DO NOTHING never creates a duplicate and never
-   * downgrades an existing owner/admin. Shared by direct add and invite accept.
+   * downgrades an existing owner/admin/member. Shared by direct add + invite accept.
    */
   async ensureWorkspaceMember(
     tx: Tx,
     workspaceId: string,
     userId: string,
-    role = 'member',
+    role = 'guest',
   ): Promise<void> {
     await tx
       .insert(workspaceMembers)

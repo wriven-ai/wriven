@@ -39,7 +39,7 @@ export interface WorkspaceMemberView {
   user: MemberUser;
 }
 
-export type WorkspaceRole = 'owner' | 'admin' | 'member';
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'guest';
 /** Roles assignable when inviting (owner is never granted via add). */
 export type AssignableWorkspaceRole = 'admin' | 'member';
 

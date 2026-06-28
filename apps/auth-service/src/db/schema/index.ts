@@ -149,7 +149,8 @@ export const workspaceMembers = authSchema.table(
     index('workspace_members_user_id_idx').on(t.userId),
     check(
       'workspace_members_role_check',
-      sql`${t.role} in ('owner', 'admin', 'member')`,
+      // guest = auto-added via a project invite; sees only assigned projects.
+      sql`${t.role} in ('owner', 'admin', 'member', 'guest')`,
     ),
   ],
 );

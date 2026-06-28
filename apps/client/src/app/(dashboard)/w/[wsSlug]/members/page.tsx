@@ -16,7 +16,13 @@ const ROLE_BADGE: Record<string, string> = {
   owner: 'bg-brand-accent/15 text-brand-accent border-brand-accent/30',
   admin: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
   member: 'bg-brand-surface text-text-secondary border-brand-border',
+  guest: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
 };
+
+/** Roles selectable when editing a row. Include the current role so a guest
+ *  (auto-added via a project invite) can be promoted to a full member. */
+const editRoleOptions = (current: string): string[] =>
+  current === 'guest' ? ['guest', 'member', 'admin'] : ['admin', 'member'];
 
 export default function MembersPage() {
   const { user, currentWorkspace, currentWorkspaceId } = useAuth();
@@ -172,8 +178,11 @@ export default function MembersPage() {
                           }
                           className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-1 rounded text-[9px] font-mono font-semibold cursor-pointer outline-hidden"
                         >
-                          <option value="admin">Admin</option>
-                          <option value="member">Member</option>
+                          {editRoleOptions(member.role).map((r) => (
+                            <option key={r} value={r}>
+                              {r.charAt(0).toUpperCase() + r.slice(1)}
+                            </option>
+                          ))}
                         </select>
                       ) : (
                         <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-semibold uppercase border ${ROLE_BADGE[member.role] ?? ROLE_BADGE.member}`}>
