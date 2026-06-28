@@ -92,10 +92,10 @@ export default function MembersPage() {
         </div>
       )}
 
-      <div className="max-w-2xl space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
         {/* Members List */}
-        <div className="bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className={`${canManage ? 'lg:col-span-7' : 'lg:col-span-12'} bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4`}>
           <span className="text-[11px] font-mono tracking-wider text-text-secondary border-b border-brand-border pb-2 mb-1.5 font-bold flex items-center gap-1.5">
             <Users className="w-4 h-4 text-brand-secondary" />
             Members{members ? ` (${members.length})` : ''}
@@ -173,13 +173,13 @@ export default function MembersPage() {
 
         {/* Invite member */}
         {canManage && (
-          <div className="bg-brand-surface border border-brand-border rounded-xl p-5 text-left space-y-4">
+          <div className="lg:col-span-5 lg:sticky lg:top-24 bg-brand-surface border border-brand-border rounded-xl p-5 text-left space-y-4">
             <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2 mb-1 font-bold">
               Invite a member
             </span>
 
             <form onSubmit={submitInvite} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="invite-email">Email</label>
                   <input
