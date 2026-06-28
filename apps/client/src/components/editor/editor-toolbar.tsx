@@ -6,6 +6,7 @@ import {
   Code,
   Heading2,
   Heading3,
+  ImagePlus,
   Italic,
   Link2,
   List,
@@ -20,7 +21,13 @@ import { ToolbarButton } from './toolbar-button';
 const Divider = () => <span className="mx-1 h-5 w-px bg-brand-border" />;
 
 /** Formatting toolbar bound to a TipTap editor instance. */
-export function EditorToolbar({ editor }: { editor: Editor }) {
+export function EditorToolbar({
+  editor,
+  onInsertImage,
+}: {
+  editor: Editor;
+  onInsertImage?: () => void;
+}) {
   const setLink = () => {
     const prev = editor.getAttributes('link').href as string | undefined;
     const url = window.prompt('Link URL', prev ?? 'https://');
@@ -108,6 +115,12 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
       >
         <Link2 className="h-3.5 w-3.5" />
       </ToolbarButton>
+
+      {onInsertImage && (
+        <ToolbarButton label="Insert image" onClick={onInsertImage}>
+          <ImagePlus className="h-3.5 w-3.5" />
+        </ToolbarButton>
+      )}
 
       <Divider />
 

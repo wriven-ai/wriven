@@ -4,8 +4,10 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { EditorToolbar } from './editor-toolbar';
+import { MediaImage } from './extensions/media-image';
+import { MediaPickerDialog } from './media-picker-dialog';
 
 const EMPTY_DOC: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] };
 
@@ -35,7 +37,7 @@ function toDoc(value: unknown): JSONContent {
 }
 
 const CONTENT_CLASS = [
-  'min-h-[200px] px-4 py-3 outline-none font-sans text-sm leading-relaxed text-text-primary',
+  'min-h-[440px] px-4 py-3 outline-none font-sans text-sm leading-relaxed text-text-primary',
   '[&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2',
   '[&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2',
   '[&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1.5',
@@ -62,10 +64,13 @@ export function RichTextEditor({
   onChange: (json: JSONContent) => void;
   placeholder?: string;
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const editor = useEditor({
     immediatelyRender: false, // avoid SSR hydration mismatch in Next.js
     extensions: [
       StarterKit,
+      MediaImage,
       Placeholder.configure({ placeholder: placeholder ?? 'Write…' }),
     ],
     content: toDoc(value),
@@ -87,8 +92,25 @@ export function RichTextEditor({
 
   return (
     <div className="overflow-hidden rounded-lg border border-brand-border bg-brand-surface">
-      <EditorToolbar editor={editor} />
+      <EditorToolbar editor={editor} onInsertImage={() => setPickerOpen(true)} />
       <EditorContent editor={editor} />
+      <MediaPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        kind="image"
+        title="Insert image"
+        description="Pick an image or upload a new one. Inserted at the cursor."
+        onPick={(asset) =>
+          editor
+            .chain()
+            .focus()
+            .insertContent({
+              type: 'image',
+              attrs: { assetId: asset.id, alt: asset.alt },
+            })
+            .run()
+        }
+      />
     </div>
   );
 }

@@ -190,6 +190,28 @@ export interface Paginated<T> {
   total: number;
 }
 
+// ── Media ────────────────────────────────────────────────────────────────────
+
+export interface MediaView {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  url: string;
+  kind: string;
+  mime: string | null;
+  sizeBytes: number | null;
+  width: number | null;
+  height: number | null;
+  alt: string | null;
+  originalFilename: string | null;
+  createdAt: string;
+}
+
+export interface PresignResult {
+  uploadUrl: string;
+  key: string;
+}
+
 // ── API keys (Delivery API auth) ─────────────────────────────────────────────
 
 export type ApiKeyScope = 'read' | 'preview' | 'manage';

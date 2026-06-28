@@ -7,13 +7,14 @@ import {
   Database,
   Plus,
   Trash2,
+  Pencil,
   ChevronRight,
   Type,
   RefreshCw,
   AlertCircle,
 } from 'lucide-react';
 import { contentApi } from '@/lib/api';
-import type { FieldDef, FieldType } from '@/lib/types';
+import type { ContentTypeView, FieldDef, FieldType } from '@/lib/types';
 
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   text: 'Short Text',
@@ -57,11 +58,21 @@ export default function ContentTypesPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: { name?: string; fields?: FieldDef[] } }) =>
+      contentApi.updateType(id, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['content-types'] });
+      resetForm();
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => contentApi.deleteType(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['content-types'] }),
   });
 
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [typeName, setTypeName] = useState('');
   const [typeApiId, setTypeApiId] = useState('');
   const [apiIdTouched, setApiIdTouched] = useState(false);
@@ -76,6 +87,7 @@ export default function ContentTypesPage() {
   const [candOptions, setCandOptions] = useState('');
 
   const resetForm = () => {
+    setEditingId(null);
     setTypeName('');
     setTypeApiId('');
     setApiIdTouched(false);
@@ -86,6 +98,24 @@ export default function ContentTypesPage() {
     setCandType('text');
     setCandRequired(false);
     setCandOptions('');
+  };
+
+  const startEdit = (type: ContentTypeView) => {
+    setEditingId(type.id);
+    setTypeName(type.name);
+    setTypeApiId(type.apiId);
+    setApiIdTouched(true);
+    setFields(
+      type.fields.map((f) => ({
+        _id: crypto.randomUUID(),
+        key: f.key,
+        label: f.label,
+        type: f.type as FieldType,
+        required: !!f.required,
+        options: Array.isArray(f.options) ? f.options.join(', ') : '',
+      })),
+    );
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNameChange = (v: string) => {
@@ -133,11 +163,17 @@ export default function ContentTypesPage() {
         ? { options: f.options.split(',').map(s => s.trim()).filter(Boolean) }
         : {}),
     }));
-    createMutation.mutate({ name: typeName, apiId: typeApiId, fields: dtoFields });
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, dto: { name: typeName, fields: dtoFields } });
+    } else {
+      createMutation.mutate({ name: typeName, apiId: typeApiId, fields: dtoFields });
+    }
   };
 
-  const errMsg = createMutation.error
-    ? ((createMutation.error as any)?.error?.message ?? 'Failed to create content type')
+  const activeMutation = editingId ? updateMutation : createMutation;
+  const errMsg = activeMutation.error
+    ? ((activeMutation.error as any)?.error?.message ??
+        `Failed to ${editingId ? 'update' : 'create'} content type`)
     : null;
 
   return (
@@ -157,9 +193,20 @@ export default function ContentTypesPage() {
 
         {/* Left: Create form */}
         <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-5">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
-            Assemble Content Layout Model
-          </span>
+          <div className="flex items-center justify-between border-b border-brand-border pb-2.5">
+            <span className="text-[11px] font-mono tracking-wider text-text-secondary font-bold">
+              {editingId ? 'Edit Content Layout Model' : 'Assemble Content Layout Model'}
+            </span>
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="text-3xs font-mono font-bold text-text-muted hover:text-status-error cursor-pointer"
+              >
+                Cancel edit
+              </button>
+            )}
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -176,7 +223,10 @@ export default function ContentTypesPage() {
 
             <div>
               <label className="block text-2xs font-mono text-text-secondary mb-1.5">
-                API ID <span className="text-text-muted">(snake_case, auto-derived)</span>
+                API ID{' '}
+                <span className="text-text-muted">
+                  {editingId ? '(immutable)' : '(snake_case, auto-derived)'}
+                </span>
               </label>
               <input
                 type="text"
@@ -184,7 +234,8 @@ export default function ContentTypesPage() {
                 value={typeApiId}
                 onChange={e => { setTypeApiId(e.target.value); setApiIdTouched(true); }}
                 required
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent"
+                disabled={!!editingId}
+                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -289,11 +340,13 @@ export default function ContentTypesPage() {
 
             <button
               type="submit"
-              disabled={!typeName.trim() || !typeApiId.trim() || createMutation.isPending}
+              disabled={!typeName.trim() || !typeApiId.trim() || activeMutation.isPending}
               className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg neo-shadow cursor-pointer transition-all"
             >
-              {createMutation.isPending ? (
-                <><RefreshCw className="w-4 h-4 animate-spin" /> Compiling...</>
+              {activeMutation.isPending ? (
+                <><RefreshCw className="w-4 h-4 animate-spin" /> {editingId ? 'Saving...' : 'Compiling...'}</>
+              ) : editingId ? (
+                <><RefreshCw className="w-4 h-4 text-white" /> Save Changes</>
               ) : (
                 <><Plus className="w-4 h-4 text-white" /> Compile Schematic Model</>
               )}
@@ -330,7 +383,11 @@ export default function ContentTypesPage() {
             {contentTypes.map(type => (
               <div
                 key={type.id}
-                className="bg-brand-surface border border-brand-border hover:border-brand-accent/30 p-5 rounded-xl shadow-xs space-y-4 transition-all"
+                className={`bg-brand-surface border p-5 rounded-xl shadow-xs space-y-4 transition-all ${
+                  editingId === type.id
+                    ? 'border-brand-accent ring-1 ring-brand-accent/30'
+                    : 'border-brand-border hover:border-brand-accent/30'
+                }`}
               >
                 <div className="flex justify-between items-start gap-4">
                   <div className="space-y-1 min-w-0">
@@ -354,6 +411,13 @@ export default function ContentTypesPage() {
                       <ChevronRight
                         className={`w-3.5 h-3.5 transition-transform ${activeExpand === type.id ? 'rotate-90' : ''}`}
                       />
+                    </button>
+                    <button
+                      onClick={() => startEdit(type)}
+                      className="p-1.5 border border-brand-border bg-brand-surface hover:bg-brand-accent/10 hover:text-brand-accent text-text-muted rounded cursor-pointer transition-colors"
+                      title="Edit Schema"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => deleteMutation.mutate(type.id)}

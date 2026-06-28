@@ -13,7 +13,9 @@ import type {
   InvitationPreview,
   InvitationView,
   LoginInput,
+  MediaView,
   Paginated,
+  PresignResult,
   ProjectMemberView,
   ProjectRole,
   ProjectView,
@@ -318,6 +320,133 @@ export const apiKeyApi = {
       project: true,
     }),
 };
+
+export const mediaApi = {
+  presign: (dto: { filename: string; contentType: string; size?: number }) =>
+    request<PresignResult>('/content/media/presign', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+      project: true,
+    }),
+  create: (dto: {
+    key: string;
+    kind: 'image' | 'video' | 'file';
+    mime?: string;
+    size?: number;
+    width?: number;
+    height?: number;
+    alt?: string;
+    originalFilename?: string;
+  }) =>
+    request<MediaView>('/content/media', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+      project: true,
+    }),
+  list: (params?: { page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const q = qs.toString();
+    return request<Paginated<MediaView>>(
+      `/content/media${q ? `?${q}` : ''}`,
+      { workspace: true, project: true },
+    );
+  },
+  get: (id: string) =>
+    request<MediaView>(`/content/media/${id}`, {
+      workspace: true,
+      project: true,
+    }),
+  remove: (id: string) =>
+    request<{ success: true }>(`/content/media/${id}`, {
+      method: 'DELETE',
+      workspace: true,
+      project: true,
+    }),
+};
+
+/** Read intrinsic pixel size of an image File (browser only). */
+function readImageSize(
+  file: File,
+): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      resolve(null);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+}
+
+/**
+ * Full upload: presign → PUT bytes straight to storage → persist metadata.
+ * Returns the created media asset. Image dimensions are read client-side.
+ */
+/** Max upload size by content-type, in bytes (mirrors @wriven/contracts). */
+const MEDIA_MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+const MEDIA_MAX_OTHER_BYTES = 25 * 1024 * 1024; // 25 MB
+
+export async function uploadMedia(file: File): Promise<MediaView> {
+  const contentType = file.type || 'application/octet-stream';
+  const kind: 'image' | 'video' | 'file' = contentType.startsWith('image/')
+    ? 'image'
+    : contentType.startsWith('video/')
+      ? 'video'
+      : 'file';
+
+  const maxBytes =
+    kind === 'image' ? MEDIA_MAX_IMAGE_BYTES : MEDIA_MAX_OTHER_BYTES;
+  if (file.size > maxBytes) {
+    const mb = Math.round(maxBytes / (1024 * 1024));
+    throw new Error(
+      `"${file.name}" is too large. Max ${mb} MB for ${
+        kind === 'image' ? 'images' : 'this file type'
+      }.`,
+    );
+  }
+
+  let width: number | undefined;
+  let height: number | undefined;
+  if (kind === 'image') {
+    const size = await readImageSize(file);
+    if (size) {
+      width = size.width;
+      height = size.height;
+    }
+  }
+
+  const { uploadUrl, key } = await mediaApi.presign({
+    filename: file.name,
+    contentType,
+    size: file.size,
+  });
+
+  const put = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': contentType },
+  });
+  if (!put.ok) throw new Error('Upload to storage failed.');
+
+  return mediaApi.create({
+    key,
+    kind,
+    mime: file.type || undefined,
+    size: file.size,
+    width,
+    height,
+    originalFilename: file.name,
+  });
+}
 
 export const workspaceApi = {
   list: () => request<WorkspaceView[]>('/workspaces'),
