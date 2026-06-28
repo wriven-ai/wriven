@@ -29,7 +29,14 @@ export const LoginPage = () => {
     try {
       const result = await authApi.login(values);
       useAuthStore.getState().setAuthResult(result);
-      router.push('/dashboard');
+      // Honor ?next= for flows that send the user here mid-task (e.g. accepting
+      // an invite). Only allow internal paths — never an open redirect.
+      const next = new URLSearchParams(window.location.search).get('next');
+      const safeNext =
+        next && next.startsWith('/') && !next.startsWith('//')
+          ? next
+          : '/dashboard';
+      router.push(safeNext);
     } catch (err) {
       setServerError(
         err instanceof ApiRequestError

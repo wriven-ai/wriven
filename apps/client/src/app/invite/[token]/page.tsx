@@ -3,14 +3,13 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Check, Loader2, MailWarning, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { ApiRequestError, invitationApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function AcceptInvitePage() {
   const { token } = useParams<{ token: string }>();
-  const router = useRouter();
   const { status, isAuthenticated, user } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +29,10 @@ export default function AcceptInvitePage() {
       const path = res.projectSlug
         ? `/w/${res.workspaceSlug}/p/${res.projectSlug}`
         : `/w/${res.workspaceSlug}`;
-      router.push(path);
+      // Hard navigation re-bootstraps the session (/auth/me) so the freshly
+      // joined workspace/project is in the store — a client push would land on
+      // a scope the store doesn't know yet and trigger notFound().
+      window.location.assign(path);
     },
     onError: (err) =>
       setError(err instanceof ApiRequestError ? err.message : 'Could not accept.'),
