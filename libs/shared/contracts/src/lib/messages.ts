@@ -80,6 +80,16 @@ export const CORE_PATTERNS = {
   DELIVERY_GET: 'core.delivery.get',
 } as const;
 
+/** Pending member invitations (workspace + project). Owned by auth-service. */
+export const INVITATION_PATTERNS = {
+  CREATE: 'auth.invitation.create',
+  LIST: 'auth.invitation.list',
+  REVOKE: 'auth.invitation.revoke',
+  RESEND: 'auth.invitation.resend',
+  PREVIEW: 'auth.invitation.preview',
+  ACCEPT: 'auth.invitation.accept',
+} as const;
+
 /** Injection tokens for the gateway's TCP ClientProxy instances. */
 export const SERVICE_TOKENS = {
   AUTH_SERVICE: 'AUTH_SERVICE',
