@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, RefreshCw, Trash2, Users } from 'lucide-react';
-import { ApiRequestError, projectMemberApi } from '@/lib/api';
+import { Mail, RefreshCw, Trash2, UserPlus, Users } from 'lucide-react';
+import { ApiRequestError, memberApi, projectMemberApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
 import type { ProjectMemberView, ProjectRole } from '@/lib/types';
@@ -19,7 +19,7 @@ const ROLE_BADGE: Record<string, string> = {
 
 export default function ProjectMembersPage() {
   const { projSlug } = useParams<{ projSlug: string }>();
-  const { user } = useAuth();
+  const { user, currentWorkspaceId } = useAuth();
   const { projects } = useWorkspaceProjects();
   const project = projects.find((p) => p.slug === projSlug) ?? null;
   const projectId = project?.id;
@@ -27,6 +27,8 @@ export default function ProjectMembersPage() {
   const queryClient = useQueryClient();
   const queryKey = ['project-members', projectId];
 
+  const [addMode, setAddMode] = useState<'existing' | 'invite'>('existing');
+  const [selectedEmail, setSelectedEmail] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<ProjectRole>('editor');
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +38,18 @@ export default function ProjectMembersPage() {
     queryFn: () => projectMemberApi.list(projectId!),
     enabled: !!projectId,
   });
+
+  // Workspace members are the pool to add from without typing an email.
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ['workspace-members', currentWorkspaceId],
+    queryFn: () => memberApi.list(currentWorkspaceId!),
+    enabled: !!currentWorkspaceId,
+  });
+
+  // Workspace members not already on the project.
+  const candidates = (workspaceMembers ?? []).filter(
+    (wm) => !(members ?? []).some((pm) => pm.userId === wm.userId),
+  );
 
   const callerRole = members?.find((m) => m.userId === user?.id)?.role;
   const canManage = callerRole === 'admin';
@@ -50,6 +64,7 @@ export default function ProjectMembersPage() {
     onSuccess: () => {
       invalidate();
       setInviteEmail('');
+      setSelectedEmail('');
       setInviteRole('editor');
       setError(null);
     },
@@ -71,9 +86,13 @@ export default function ProjectMembersPage() {
 
   const submitInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
-    addMutation.mutate({ email: inviteEmail.trim(), role: inviteRole });
+    const email = addMode === 'existing' ? selectedEmail : inviteEmail.trim();
+    if (!email) return;
+    addMutation.mutate({ email, role: inviteRole });
   };
+
+  const canSubmit =
+    addMode === 'existing' ? !!selectedEmail : !!inviteEmail.trim();
 
   const initials = (name: string) =>
     name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -181,8 +200,55 @@ export default function ProjectMembersPage() {
               Add a member
             </span>
 
+            {/* Mode toggle: pick a workspace member, or invite a new email. */}
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-brand-border bg-brand-surface-soft/40 p-1">
+              {(
+                [
+                  { id: 'existing', label: 'Workspace member', Icon: Users },
+                  { id: 'invite', label: 'New email', Icon: UserPlus },
+                ] as const
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setAddMode(id);
+                    setError(null);
+                  }}
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-2 font-mono text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                    addMode === id
+                      ? 'bg-brand-accent text-white'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <form onSubmit={submitInvite} className="space-y-4">
-              <div className="space-y-4">
+              {addMode === 'existing' ? (
+                <div>
+                  <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="member-select">Workspace member</label>
+                  <select
+                    id="member-select"
+                    value={selectedEmail}
+                    onChange={(e) => setSelectedEmail(e.target.value)}
+                    disabled={candidates.length === 0}
+                    className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer disabled:opacity-60"
+                  >
+                    <option value="">
+                      {candidates.length === 0 ? 'All members already added' : '— Select a member —'}
+                    </option>
+                    {candidates.map((m) => (
+                      <option key={m.userId} value={m.user.email}>
+                        {m.user.name} ({m.user.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
                 <div>
                   <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="invite-email">Email</label>
                   <input
@@ -191,29 +257,28 @@ export default function ProjectMembersPage() {
                     placeholder="e.g. teammate@wriven.io"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    required
                     className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent"
                   />
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="invite-role">Role</label>
-                  <select
-                    id="invite-role"
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as ProjectRole)}
-                    className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
-                  >
-                    {PROJECT_ROLES.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="invite-role">Role</label>
+                <select
+                  id="invite-role"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as ProjectRole)}
+                  className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
+                >
+                  {PROJECT_ROLES.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
               </div>
 
               <button
                 type="submit"
-                disabled={addMutation.isPending || !inviteEmail.trim()}
+                disabled={addMutation.isPending || !canSubmit}
                 className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg cursor-pointer transition-all"
               >
                 {addMutation.isPending ? (
@@ -231,7 +296,10 @@ export default function ProjectMembersPage() {
             </form>
 
             <p className="text-[9.5px] font-mono text-text-muted leading-relaxed">
-              The user must already have a Wriven account. admin: full control · editor: create/edit content · viewer: read only.
+              {addMode === 'invite'
+                ? 'The email must already have a Wriven account. '
+                : ''}
+              admin: full control · editor: create/edit content · viewer: read only.
             </p>
           </div>
         )}
