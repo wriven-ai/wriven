@@ -11,6 +11,8 @@ import type { ProjectMemberView, ProjectRole } from '@/lib/types';
 
 const PROJECT_ROLES: ProjectRole[] = ['admin', 'editor', 'viewer'];
 
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 const ROLE_BADGE: Record<string, string> = {
   admin: 'bg-brand-accent/15 text-brand-accent border-brand-accent/30',
   editor: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
@@ -164,10 +166,10 @@ export default function ProjectMembersPage() {
                               role: e.target.value as ProjectRole,
                             })
                           }
-                          className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase cursor-pointer outline-hidden"
+                          className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-1 rounded text-[9px] font-mono font-semibold cursor-pointer outline-hidden"
                         >
                           {PROJECT_ROLES.map((r) => (
-                            <option key={r} value={r}>{r}</option>
+                            <option key={r} value={r}>{cap(r)}</option>
                           ))}
                         </select>
                       ) : (
@@ -271,7 +273,7 @@ export default function ProjectMembersPage() {
                   className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
                 >
                   {PROJECT_ROLES.map((r) => (
-                    <option key={r} value={r}>{r}</option>
+                    <option key={r} value={r}>{cap(r)}</option>
                   ))}
                 </select>
               </div>

@@ -143,10 +143,10 @@ export default function MembersPage() {
                               role: e.target.value as WorkspaceRole,
                             })
                           }
-                          className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase cursor-pointer outline-hidden"
+                          className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-1 rounded text-[9px] font-mono font-semibold cursor-pointer outline-hidden"
                         >
-                          <option value="admin">admin</option>
-                          <option value="member">member</option>
+                          <option value="admin">Admin</option>
+                          <option value="member">Member</option>
                         </select>
                       ) : (
                         <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-semibold uppercase border ${ROLE_BADGE[member.role] ?? ROLE_BADGE.member}`}>
@@ -201,8 +201,8 @@ export default function MembersPage() {
                     onChange={(e) => setInviteRole(e.target.value as AssignableWorkspaceRole)}
                     className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
                   >
-                    <option value="member">member</option>
-                    <option value="admin">admin</option>
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
                   </select>
                 </div>
               </div>
