@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiRequestError, authApi, googleAuthUrl } from '@/lib/api';
 import { registerSchema, type RegisterValues } from '@/schemas/auth';
@@ -18,6 +18,7 @@ const RegisterPage = () => {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -29,6 +30,12 @@ const RegisterPage = () => {
       agreeTerms: false,
     },
   });
+
+  // Pre-fill the email when arriving from an invitation link (?email=).
+  useEffect(() => {
+    const email = new URLSearchParams(window.location.search).get('email');
+    if (email) setValue('email', email);
+  }, [setValue]);
 
   const onSubmit = async (values: RegisterValues) => {
     setServerError(null);
