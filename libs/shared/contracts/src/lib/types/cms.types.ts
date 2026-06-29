@@ -39,6 +39,17 @@ export interface FieldDef {
 
 export type EntryStatus = 'draft' | 'published' | 'archived';
 
+/** A stored snapshot of an entry's data at a point in time. */
+export interface RevisionView {
+  id: string;
+  entryId: string;
+  version: number;
+  status: string;
+  data: Record<string, unknown>;
+  createdBy: string;
+  createdAt: string;
+}
+
 export interface ContentTypeView {
   id: string;
   workspaceId: string;

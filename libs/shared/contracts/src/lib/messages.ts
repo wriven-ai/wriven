@@ -61,6 +61,7 @@ export const CORE_PATTERNS = {
   CONTENT_TYPE_GET: 'core.contentType.get',
   CONTENT_TYPE_UPDATE: 'core.contentType.update',
   CONTENT_TYPE_DELETE: 'core.contentType.delete',
+  CONTENT_TYPE_SEED: 'core.contentType.seedDefaults',
 
   ENTRY_CREATE: 'core.entry.create',
   ENTRY_LIST: 'core.entry.list',
@@ -68,6 +69,8 @@ export const CORE_PATTERNS = {
   ENTRY_UPDATE: 'core.entry.update',
   ENTRY_DELETE: 'core.entry.delete',
   ENTRY_PUBLISH: 'core.entry.publish',
+  ENTRY_REVISIONS: 'core.entry.revisions',
+  ENTRY_REVISION_RESTORE: 'core.entry.revisionRestore',
 
   // Project-scoped API keys (Delivery API auth — see doc/11).
   API_KEY_CREATE: 'core.apiKey.create',

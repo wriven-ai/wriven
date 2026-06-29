@@ -6,13 +6,14 @@ import {
   FieldDef,
   ListEntriesQueryDto,
   Paginated,
+  RevisionView,
   UpdateEntryDto,
   WebhookEvent,
   WebhookPayload,
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, desc, eq, isNull, max } from 'drizzle-orm';
+import { and, desc, eq, isNull, max, ne, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
@@ -41,6 +42,12 @@ export class EntriesService {
   }): Promise<ContentEntryView> {
     const type = await this.types.requireRow(p.projectId, p.dto.contentTypeId);
     validateEntryData(type.fields as FieldDef[], p.dto.data);
+    await this.assertUniqueFields(
+      p.projectId,
+      type.id,
+      type.fields as FieldDef[],
+      p.dto.data,
+    );
 
     const slug =
       p.dto.slug ??
@@ -139,6 +146,13 @@ export class EntriesService {
       const type = await this.types.requireRow(p.projectId, entry.contentTypeId);
       data = { ...data, ...p.dto.data };
       validateEntryData(type.fields as FieldDef[], data);
+      await this.assertUniqueFields(
+        p.projectId,
+        entry.contentTypeId,
+        type.fields as FieldDef[],
+        data,
+        entry.id,
+      );
     }
 
     const status = (p.dto.status ?? entry.status) as EntryStatus;
@@ -223,6 +237,67 @@ export class EntriesService {
     return { success: true };
   }
 
+  /** Version history for an entry (newest first). */
+  async listRevisions(p: {
+    projectId: string;
+    entryId: string;
+  }): Promise<RevisionView[]> {
+    await this.requireRow(p.projectId, p.entryId); // scope the entry to the project
+    const rows = await this.db.query.contentRevisions.findMany({
+      where: eq(contentRevisions.entryId, p.entryId),
+      orderBy: desc(contentRevisions.version),
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      entryId: r.entryId,
+      version: r.version,
+      status: r.status,
+      data: r.data as Record<string, unknown>,
+      createdBy: r.createdBy,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  /** Restore an entry's data to a past revision (records a new revision). */
+  async restoreRevision(p: {
+    workspaceId: string;
+    projectId: string;
+    userId: string;
+    entryId: string;
+    version: number;
+  }): Promise<ContentEntryView> {
+    const entry = await this.requireRow(p.projectId, p.entryId);
+    const rev = await this.db.query.contentRevisions.findFirst({
+      where: and(
+        eq(contentRevisions.entryId, p.entryId),
+        eq(contentRevisions.version, p.version),
+      ),
+    });
+    if (!rev) throw rpcError('NOT_FOUND', 'Revision not found.');
+
+    const version = await this.nextVersion(entry.id);
+    const updated = await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(contentEntries)
+        .set({ data: rev.data, updatedBy: p.userId })
+        .where(eq(contentEntries.id, entry.id))
+        .returning();
+      await tx.insert(contentRevisions).values({
+        entryId: row.id,
+        version,
+        data: row.data,
+        status: row.status,
+        createdBy: p.userId,
+      });
+      return row;
+    });
+    // A live entry's content changed → refresh caches/consumers.
+    if (updated.status === 'published') {
+      void this.emit(p.projectId, 'entry.published', updated);
+    }
+    return this.toView(updated);
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   /**
@@ -256,6 +331,41 @@ export class EntriesService {
       ]);
     } catch {
       // Webhook/purge failures must never surface to the content operation.
+    }
+  }
+
+  /**
+   * Enforce `FieldDef.unique` within a content type + project. Compares the
+   * JSONB value at each unique field's key; empty values are skipped. Excludes
+   * the entry being updated so re-saving its own value isn't a conflict.
+   */
+  private async assertUniqueFields(
+    projectId: string,
+    contentTypeId: string,
+    fields: FieldDef[],
+    data: Record<string, unknown>,
+    excludeId?: string,
+  ): Promise<void> {
+    const uniques = fields.filter((f) => f.unique);
+    for (const f of uniques) {
+      const value = data[f.key];
+      if (value === undefined || value === null || value === '') continue;
+      const conds = [
+        eq(contentEntries.projectId, projectId),
+        eq(contentEntries.contentTypeId, contentTypeId),
+        isNull(contentEntries.deletedAt),
+        sql`${contentEntries.data} ->> ${f.key} = ${String(value)}`,
+      ];
+      if (excludeId) conds.push(ne(contentEntries.id, excludeId));
+      const existing = await this.db.query.contentEntries.findFirst({
+        where: and(...conds),
+      });
+      if (existing) {
+        throw rpcError(
+          'CONFLICT',
+          `${f.label} must be unique — "${String(value)}" is already taken.`,
+        );
+      }
     }
   }
 

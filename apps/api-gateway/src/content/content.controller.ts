@@ -191,4 +191,38 @@ export class ContentController {
       this.core.send(CORE_PATTERNS.ENTRY_DELETE, { workspaceId, projectId, id }),
     );
   }
+
+  @Get('entries/:id/revisions')
+  listRevisions(
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+    @Param('id') id: string,
+  ) {
+    return firstValueFrom(
+      this.core.send(CORE_PATTERNS.ENTRY_REVISIONS, {
+        workspaceId,
+        projectId,
+        entryId: id,
+      }),
+    );
+  }
+
+  @Post('entries/:id/revisions/:version/restore')
+  restoreRevision(
+    @CurrentUser() user: AuthUser,
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+    @Param('id') id: string,
+    @Param('version') version: string,
+  ) {
+    return firstValueFrom(
+      this.core.send(CORE_PATTERNS.ENTRY_REVISION_RESTORE, {
+        workspaceId,
+        projectId,
+        userId: user.userId,
+        entryId: id,
+        version: Number(version),
+      }),
+    );
+  }
 }

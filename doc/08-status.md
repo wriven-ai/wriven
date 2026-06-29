@@ -72,8 +72,9 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | **CDN cache headers + purge on publish** | ✅ | published reads `s-maxage`+`Cache-Tag`/`Surrogate-Key`; Cloudflare tag-purge on entry events, no-op if unconfigured (doc/11 P5) |
 | **Webhooks** (publish/unpublish/delete → signed POST, HMAC, retry) | ✅ | `webhooks` table; dispatcher on entry events (doc/11 P6) |
 | **Preview API** (drafts via `wrk_preview_`/`wrk_admin_`) | ✅ | key scope drives `preview`→drafts; preview reads `no-store` (doc/11 P7) |
-| Unique-field enforcement (`FieldDef.unique`) | 🔲 | declared, not enforced |
-| Default content type seeding on signup | 🔲 | |
+| **Unique-field enforcement** (`FieldDef.unique`) | ✅ | JSONB value check on create/update; builder has a Unique toggle |
+| **Default content type seeding** | ✅ | seeds a `Post` type on project create (idempotent); builder Unique/Multiple toggles |
+| **Entry revisions API + UI** (list + restore) | ✅ | History drawer; restore records a new revision |
 
 ## ai-service (FastAPI `:8000`)
 
@@ -102,11 +103,10 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | Content editor: main+sidebar layout + inline body images | ✅ | title/body main, structured fields sidebar (doc/13) |
 | Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (doc/12) |
 | Webhooks UI (project settings: add/list/pause/delete, secret once) | ✅ | `webhookApi`; HMAC verify documented inline |
-| Email verification page | 🔲 | API ready |
+| Email verification page (`/verify-email?token=`) | ✅ | auto-verifies on load; success/error states |
 
 ## Known gaps / next candidates
 
 - Consumer **SDK / npm package** + published Delivery API docs.
-- **Unique-field enforcement**; default content-type seeding on signup.
 - **ai-service**.
 - Deploy (Docker Compose on VPS) + CI.
