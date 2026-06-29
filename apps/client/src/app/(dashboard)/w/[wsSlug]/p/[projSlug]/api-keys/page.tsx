@@ -5,6 +5,7 @@ import {
   Activity,
   Check,
   Copy,
+  Folder,
   Key,
   Plus,
   RefreshCw,
@@ -16,6 +17,7 @@ import {
 import { useParams } from 'next/navigation';
 import React, { useState } from 'react';
 import { ApiRequestError, apiKeyApi } from '@/lib/api';
+import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
 import type { ApiKeyScope } from '@/lib/types';
 
 const SCOPES: { value: ApiKeyScope; label: string; desc: string }[] = [
@@ -40,18 +42,28 @@ const scopeLabel = (s: ApiKeyScope) =>
   SCOPES.find((x) => x.value === s)?.label ?? s;
 
 export default function ApiKeysPage() {
-  const { projectId: pathProjectId, projSlug } = useParams<{
-    projectId?: string;
-    projSlug: string;
-  }>();
+  const { projSlug } = useParams<{ projSlug: string }>();
   const queryClient = useQueryClient();
   const queryKey = ['api-keys', projSlug];
+
+  // The URL carries the project *slug*; resolve the real project id (the value
+  // consumers put in the Delivery API path).
+  const { projects } = useWorkspaceProjects();
+  const projectId = projects.find((p) => p.slug === projSlug)?.id ?? '';
 
   const [newName, setNewName] = useState('');
   const [newScope, setNewScope] = useState<ApiKeyScope>('read');
   const [error, setError] = useState<string | null>(null);
   const [newToken, setNewToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+
+  const copyProjectId = () => {
+    if (!projectId) return;
+    navigator.clipboard.writeText(projectId);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
 
   const { data: keys, isLoading } = useQuery({
     queryKey,
@@ -89,7 +101,7 @@ export default function ApiKeysPage() {
   };
 
   const curlExample = `curl "https://wriven.io/api/v1/projects/${
-    pathProjectId ?? '<projectId>'
+    projectId || '<projectId>'
   }/content/blog_post" \\\n  -H "Authorization: Bearer wrk_live_…"`;
 
   return (
@@ -105,6 +117,35 @@ export default function ApiKeysPage() {
         <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
           {'// Keys that authenticate the Content Delivery API from your site'}
         </p>
+      </div>
+
+      {/* Project ID — needed in every Delivery API URL */}
+      <div className="rounded-xl border border-brand-border bg-brand-surface p-4 sm:p-5 space-y-2">
+        <div className="flex items-center gap-2">
+          <Folder className="h-3.5 w-3.5 text-brand-secondary" />
+          <span className="font-mono text-[11px] font-bold text-text-secondary">Project ID</span>
+        </div>
+        <p className="font-mono text-[10px] text-text-muted leading-relaxed">
+          Use this in the Delivery API path:{' '}
+          <code className="text-text-secondary">/v1/projects/&lt;projectId&gt;/content/…</code>
+        </p>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-xs text-text-primary">
+            {projectId || 'Loading…'}
+          </code>
+          <button
+            onClick={copyProjectId}
+            disabled={!projectId}
+            className="shrink-0 rounded-lg border border-brand-border p-2 text-text-muted hover:text-brand-accent transition-colors disabled:opacity-50"
+            aria-label="Copy project ID"
+          >
+            {copiedId ? (
+              <Check className="h-3.5 w-3.5 text-emerald-500" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* One-time token reveal */}
