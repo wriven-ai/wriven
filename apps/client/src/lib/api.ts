@@ -8,6 +8,7 @@ import type {
   ContentTypeView,
   AcceptInvitationResult,
   CreateApiKeyResult,
+  CreateWebhookResult,
   EntryStatus,
   FieldDef,
   InvitationPreview,
@@ -21,6 +22,8 @@ import type {
   ProjectView,
   RegisterInput,
   SessionView,
+  WebhookEvent,
+  WebhookView,
   WorkspaceMemberView,
   WorkspaceRole,
   WorkspaceView,
@@ -315,6 +318,31 @@ export const apiKeyApi = {
     }),
   revoke: (id: string) =>
     request<{ success: true }>(`/api-keys/${id}`, {
+      method: 'DELETE',
+      workspace: true,
+      project: true,
+    }),
+};
+
+export const webhookApi = {
+  list: () =>
+    request<WebhookView[]>('/webhooks', { workspace: true, project: true }),
+  create: (dto: { url: string; events?: WebhookEvent[] }) =>
+    request<CreateWebhookResult>('/webhooks', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+      project: true,
+    }),
+  update: (id: string, dto: { url?: string; events?: WebhookEvent[]; active?: boolean }) =>
+    request<WebhookView>(`/webhooks/${id}`, {
+      method: 'PATCH',
+      body: dto,
+      workspace: true,
+      project: true,
+    }),
+  remove: (id: string) =>
+    request<{ success: true }>(`/webhooks/${id}`, {
       method: 'DELETE',
       workspace: true,
       project: true,

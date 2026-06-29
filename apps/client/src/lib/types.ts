@@ -234,3 +234,32 @@ export interface CreateApiKeyResult {
   key: ApiKeyView;
   token: string;
 }
+
+export type WebhookEvent =
+  | 'entry.published'
+  | 'entry.unpublished'
+  | 'entry.deleted';
+
+export const WEBHOOK_EVENTS: readonly WebhookEvent[] = [
+  'entry.published',
+  'entry.unpublished',
+  'entry.deleted',
+];
+
+export interface WebhookView {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  url: string;
+  events: WebhookEvent[];
+  active: boolean;
+  lastStatus: number | null;
+  lastFiredAt: string | null;
+  createdAt: string;
+}
+
+/** Returned only from create — carries the signing secret exactly once. */
+export interface CreateWebhookResult {
+  webhook: WebhookView;
+  secret: string;
+}

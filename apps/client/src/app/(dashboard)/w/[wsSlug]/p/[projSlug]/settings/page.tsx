@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ApiRequestError, projectApi } from '@/lib/api';
 import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
+import { WebhooksSection } from '@/components/webhooks/webhooks-section';
 
 export default function ProjectSettingsPage() {
   const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
@@ -105,6 +106,8 @@ export default function ProjectSettingsPage() {
           {updateMutation.isPending ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
         </button>
       </form>
+
+      <WebhooksSection />
 
       <div className="space-y-3 rounded-xl border border-status-error/30 bg-status-error/5 p-5">
         <h2 className="font-mono text-xs font-bold text-status-error">Danger zone</h2>
