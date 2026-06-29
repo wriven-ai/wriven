@@ -22,7 +22,11 @@
     "db:core:generate": "drizzle-kit generate --config apps/core-service/drizzle.config.ts",
     "db:core:migrate": "drizzle-kit migrate --config apps/core-service/drizzle.config.ts",
     "db:core:push": "drizzle-kit push --config apps/core-service/drizzle.config.ts",
-    "db:core:studio": "drizzle-kit studio --config apps/core-service/drizzle.config.ts"
+    "db:core:studio": "drizzle-kit studio --config apps/core-service/drizzle.config.ts",
+    "sdk:build": "pnpm -r --filter \"./packages/*\" build",
+    "sdk:test": "pnpm -r --filter \"./packages/*\" test",
+    "sdk:check": "pnpm -r --filter \"./packages/*\" check",
+    "sdk:publish": "pnpm -r --filter \"./packages/*\" publish --access public"
   },
   "private": true,
   "devDependencies": {

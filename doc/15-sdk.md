@@ -160,6 +160,43 @@ Internal dev resolution uses the repo's `@wriven/wriven` export condition →
    content types and emits `.d.ts` so `getEntries('blog_post')` returns a fully
    typed entry.
 
+## Publishing (runbook)
+
+Repo can stay **private** — publishing and repo visibility are independent. Only
+`dist` + `README` + `LICENSE` ship (`files`), never the monorepo source.
+
+Root scripts (recursive over `packages/*`):
+
+```bash
+pnpm sdk:build     # tsup dual build, all packages
+pnpm sdk:test      # node:test suites
+pnpm sdk:check     # publint + are-the-types-wrong
+pnpm sdk:publish   # pnpm publish --access public, all packages
+```
+
+First-time publish:
+
+```bash
+npm login                       # account must be in the `wriven-ai` org
+pnpm sdk:check                  # green before publishing
+# bump versions as needed (package.json "version")
+pnpm sdk:publish                # each runs prepublishOnly → build + check
+```
+
+Or one package at a time:
+
+```bash
+cd packages/client && pnpm publish --access public
+```
+
+Order is free — `react`/`next` depend on `react`/`next` as **peers**, not on
+`@wriven-ai/client`, so there's no inter-package publish order.
+
+**Provenance** is intentionally **off** (`publishConfig: { access: public }`)
+because it requires a public repo + GitHub Actions OIDC. When the repo goes
+public: re-add `"provenance": true` to each `publishConfig` and publish from a CI
+workflow (`npm publish --provenance`) for supply-chain attestation.
+
 ## Definition of done (Phase 1)
 
 - `npm i @wriven-ai/client` works in Node, browser, edge, ESM **and** CJS.
