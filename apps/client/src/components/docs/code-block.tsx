@@ -14,9 +14,9 @@ export function CodeBlock({ code, lang }: { code: string; lang?: string }) {
   };
 
   return (
-    <div className="relative my-4 overflow-hidden rounded-lg border border-brand-border-button bg-text-primary text-brand-surface-soft">
+    <div className="relative my-4 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100">
       {lang ? (
-        <span className="absolute left-4 top-3 font-mono text-[9px] font-bold uppercase tracking-widest text-white/40">
+        <span className="absolute left-4 top-3 font-mono text-[9px] font-bold uppercase tracking-widest text-zinc-500">
           {lang}
         </span>
       ) : null}

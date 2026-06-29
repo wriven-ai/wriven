@@ -4,9 +4,11 @@ import {
   Database,
   Eye,
   Filter,
+  Image,
   KeyRound,
   Rocket,
   Type,
+  Webhook,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -38,11 +40,15 @@ export const DOCS_NAV: DocGroup[] = [
       { title: 'Delivery API', href: '/docs/delivery-api', icon: Database },
       { title: 'Querying & Filtering', href: '/docs/querying', icon: Filter },
       { title: 'Rich Text', href: '/docs/rich-text', icon: Type },
+      { title: 'Media & Images', href: '/docs/media', icon: Image },
       { title: 'Preview & Drafts', href: '/docs/preview', icon: Eye },
     ],
   },
   {
     label: 'Guides',
-    items: [{ title: 'Next.js', href: '/docs/nextjs', icon: Boxes }],
+    items: [
+      { title: 'Next.js', href: '/docs/nextjs', icon: Boxes },
+      { title: 'Webhooks', href: '/docs/webhooks', icon: Webhook },
+    ],
   },
 ];
