@@ -38,10 +38,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 export function createClient(options: ClientOptions): WrivenClient {
   const baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
-  const doFetch = options.fetch ?? globalThis.fetch;
-  if (typeof doFetch !== 'function') {
+  const baseFetch = options.fetch ?? globalThis.fetch;
+  if (typeof baseFetch !== 'function') {
     throw new WrivenError('No fetch implementation available — pass `fetch` in options.', 0, 'NO_FETCH');
   }
+  // Bind the global fetch to globalThis — an unbound reference throws "Illegal
+  // invocation" in browsers. A caller-supplied fetch is used as-is.
+  const doFetch: typeof fetch = options.fetch ? baseFetch : baseFetch.bind(globalThis);
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxRetries = Math.max(0, options.retries ?? DEFAULT_RETRIES);
 
@@ -53,9 +56,10 @@ export function createClient(options: ClientOptions): WrivenClient {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
-      // Honor a caller signal in addition to the timeout.
+      // Honor a caller signal in addition to the timeout (incl. one already aborted).
       const onAbort = () => controller.abort();
-      query?.signal?.addEventListener('abort', onAbort, { once: true });
+      if (query?.signal?.aborted) controller.abort();
+      else query?.signal?.addEventListener('abort', onAbort, { once: true });
       try {
         const res = await doFetch(url, {
           headers,
@@ -102,10 +106,13 @@ export function createClient(options: ClientOptions): WrivenClient {
 
   return {
     getEntry<TData = Record<string, unknown>>(type: string, slug: string, query?: QueryOptions) {
-      return request<WrivenEntry<TData>>(`${type}/${slug}`, query);
+      return request<WrivenEntry<TData>>(
+        `${encodeURIComponent(type)}/${encodeURIComponent(slug)}`,
+        query,
+      );
     },
     getEntries<TData = Record<string, unknown>>(type: string, query?: QueryOptions) {
-      return request<Paginated<WrivenEntry<TData>>>(type, query);
+      return request<Paginated<WrivenEntry<TData>>>(encodeURIComponent(type), query);
     },
   };
 }

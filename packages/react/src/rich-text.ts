@@ -26,14 +26,20 @@ const MARK_TAG: Record<string, string> = {
   code: 'code',
 };
 
+// Allow only safe link schemes — blocks javascript:/data: XSS from authored hrefs.
+const SAFE_HREF = /^(https?:|mailto:|tel:|\/|#|\.|[\w-]+$)/i;
+function safeHref(href: unknown): string {
+  const value = String(href ?? '').trim();
+  return SAFE_HREF.test(value) ? value : '#';
+}
+
 function renderText(node: ProseNode, key: number): ReactNode {
   let el: ReactNode = node.text ?? '';
   for (const mark of node.marks ?? []) {
     if (mark.type === 'link') {
-      const href = String(mark.attrs?.href ?? '#');
       el = createElement(
         'a',
-        { key: `m${key}`, href, rel: 'noreferrer noopener' },
+        { key: `m${key}`, href: safeHref(mark.attrs?.href), rel: 'noreferrer noopener' },
         el,
       );
     } else {

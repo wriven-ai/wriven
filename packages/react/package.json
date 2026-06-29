@@ -22,13 +22,23 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "check": "publint && attw --pack .",
     "prepublishOnly": "pnpm build && pnpm check"
   },
-  "keywords": ["wriven", "cms", "headless", "react", "rich-text", "prosemirror"],
+  "keywords": [
+    "wriven",
+    "cms",
+    "headless",
+    "react",
+    "rich-text",
+    "prosemirror"
+  ],
   "peerDependencies": {
     "react": ">=18"
   },
@@ -42,5 +52,14 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "homepage": "https://wriven.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wriven-ai/wriven.git",
+    "directory": "packages/react"
+  },
+  "bugs": {
+    "url": "https://github.com/wriven-ai/wriven/issues"
   }
 }
