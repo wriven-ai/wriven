@@ -39,7 +39,12 @@ interface DraftField {
   type: FieldType;
   required: boolean;
   options: string;
+  multiple: boolean;
+  refTypeId: string;
 }
+
+/** Field types that can hold an array of values. */
+const MULTIPLE_CAPABLE: FieldType[] = ['media', 'reference', 'select'];
 
 export default function ContentTypesPage() {
   const qc = useQueryClient();
@@ -85,6 +90,8 @@ export default function ContentTypesPage() {
   const [candType, setCandType] = useState<FieldType>('text');
   const [candRequired, setCandRequired] = useState(false);
   const [candOptions, setCandOptions] = useState('');
+  const [candMultiple, setCandMultiple] = useState(false);
+  const [candRefTypeId, setCandRefTypeId] = useState('');
 
   const resetForm = () => {
     setEditingId(null);
@@ -98,6 +105,8 @@ export default function ContentTypesPage() {
     setCandType('text');
     setCandRequired(false);
     setCandOptions('');
+    setCandMultiple(false);
+    setCandRefTypeId('');
   };
 
   const startEdit = (type: ContentTypeView) => {
@@ -113,6 +122,8 @@ export default function ContentTypesPage() {
         type: f.type as FieldType,
         required: !!f.required,
         options: Array.isArray(f.options) ? f.options.join(', ') : '',
+        multiple: !!f.multiple,
+        refTypeId: f.refTypeId ?? '',
       })),
     );
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -130,6 +141,7 @@ export default function ContentTypesPage() {
 
   const addField = () => {
     if (!candLabel.trim() || !candKey.trim()) return;
+    if (candType === 'reference' && !candRefTypeId) return; // need a target type
     setFields(prev => [
       ...prev,
       {
@@ -139,6 +151,8 @@ export default function ContentTypesPage() {
         type: candType,
         required: candRequired,
         options: candOptions,
+        multiple: MULTIPLE_CAPABLE.includes(candType) ? candMultiple : false,
+        refTypeId: candType === 'reference' ? candRefTypeId : '',
       },
     ]);
     setCandLabel('');
@@ -147,6 +161,8 @@ export default function ContentTypesPage() {
     setCandType('text');
     setCandRequired(false);
     setCandOptions('');
+    setCandMultiple(false);
+    setCandRefTypeId('');
   };
 
   const removeField = (id: string) => setFields(prev => prev.filter(f => f._id !== id));
@@ -159,6 +175,8 @@ export default function ContentTypesPage() {
       label: f.label,
       type: f.type,
       ...(f.required && { required: true }),
+      ...(f.multiple && MULTIPLE_CAPABLE.includes(f.type) ? { multiple: true } : {}),
+      ...(f.type === 'reference' && f.refTypeId ? { refTypeId: f.refTypeId } : {}),
       ...(f.type === 'select' && f.options
         ? { options: f.options.split(',').map(s => s.trim()).filter(Boolean) }
         : {}),
@@ -257,7 +275,13 @@ export default function ContentTypesPage() {
                     <div className="flex items-center gap-2 min-w-0">
                       <Type className="w-3.5 h-3.5 text-brand-secondary shrink-0" />
                       <strong className="text-text-primary truncate">{f.label}</strong>
-                      <span className="text-text-muted uppercase text-[9px] font-semibold shrink-0">({f.type})</span>
+                      <span className="text-text-muted uppercase text-[9px] font-semibold shrink-0">
+                        ({f.type}
+                        {f.type === 'reference' && f.refTypeId
+                          ? ` → ${contentTypes.find(t => t.id === f.refTypeId)?.name ?? '?'}`
+                          : ''}
+                        {f.multiple ? '[]' : ''})
+                      </span>
                       {f.required && <span className="text-[8px] font-bold text-brand-accent shrink-0">*</span>}
                     </div>
                     <button
@@ -309,20 +333,57 @@ export default function ContentTypesPage() {
                   />
                 )}
 
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-1.5 font-mono text-[9px] text-text-secondary cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={candRequired}
-                      onChange={e => setCandRequired(e.target.checked)}
-                      className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
-                    />
-                    Required
-                  </label>
+                {candType === 'reference' && (
+                  <div className="space-y-1">
+                    <select
+                      value={candRefTypeId}
+                      onChange={e => setCandRefTypeId(e.target.value)}
+                      className="w-full bg-brand-surface border border-brand-border rounded p-2 text-2xs font-mono text-text-primary outline-hidden cursor-pointer"
+                    >
+                      <option value="">— References which type? —</option>
+                      {contentTypes.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                    {contentTypes.length === 0 && (
+                      <p className="text-[9px] font-mono text-text-muted">
+                        Create a content type first to reference it.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 font-mono text-[9px] text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={candRequired}
+                        onChange={e => setCandRequired(e.target.checked)}
+                        className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                      />
+                      Required
+                    </label>
+                    {MULTIPLE_CAPABLE.includes(candType) && (
+                      <label className="flex items-center gap-1.5 font-mono text-[9px] text-text-secondary cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={candMultiple}
+                          onChange={e => setCandMultiple(e.target.checked)}
+                          className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                        />
+                        Multiple
+                      </label>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={addField}
-                    disabled={!candLabel.trim() || !candKey.trim()}
+                    disabled={
+                      !candLabel.trim() ||
+                      !candKey.trim() ||
+                      (candType === 'reference' && !candRefTypeId)
+                    }
                     className="px-3 py-1 border border-dashed border-brand-border hover:border-brand-accent font-mono text-3xs font-bold text-text-secondary hover:text-brand-accent cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     + Add field

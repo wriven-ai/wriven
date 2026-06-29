@@ -3,6 +3,7 @@
 import type { EntryStatus, FieldDef } from '@/lib/types';
 import { RichTextEditor } from '@/components/editor/rich-text-editor';
 import { MediaField } from '@/components/editor/media-field';
+import { ReferenceField } from './reference-field';
 
 export const STATUS_COLORS: Record<EntryStatus, string> = {
   draft: 'text-amber-500 bg-amber-500/10 border-amber-500/30',
@@ -121,8 +122,13 @@ export function FieldInput({
       );
     case 'reference':
       return (
-        <div className="text-[10px] font-mono text-text-muted p-3 border border-dashed border-brand-border rounded-lg">
-          Reference picker — not yet available
+        <div className={invalid ? 'rounded-lg ring-1 ring-status-error p-2' : ''}>
+          <ReferenceField
+            value={value}
+            onChange={onChange}
+            multiple={field.multiple}
+            refTypeId={field.refTypeId}
+          />
         </div>
       );
     default:
