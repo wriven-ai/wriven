@@ -1,0 +1,46 @@
+{
+  "name": "@wriven-ai/react",
+  "version": "0.1.0",
+  "description": "React renderer for Wriven rich-text (ProseMirror JSON), including inline media — for the Wriven headless CMS.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@wriven/wriven": "./src/index.ts",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "check": "publint && attw --pack .",
+    "prepublishOnly": "pnpm build && pnpm check"
+  },
+  "keywords": ["wriven", "cms", "headless", "react", "rich-text", "prosemirror"],
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

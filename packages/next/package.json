@@ -1,0 +1,42 @@
+{
+  "name": "@wriven-ai/next",
+  "version": "0.1.0",
+  "description": "Next.js helpers for Wriven: a signed webhook → revalidate route handler and preview/draft wiring.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@wriven/wriven": "./src/index.ts",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "check": "publint && attw --pack .",
+    "prepublishOnly": "pnpm build && pnpm check"
+  },
+  "keywords": ["wriven", "cms", "headless", "next", "nextjs", "webhook", "isr", "revalidate"],
+  "peerDependencies": {
+    "next": ">=14"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

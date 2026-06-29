@@ -131,6 +131,22 @@ Foundation decisions that enable scale:
 - Tag pre-1.0 releases `next`/`beta` while the API surface settles; reach `1.0`
   only when the client API is stable.
 
+## Status
+
+Scaffolded under `packages/` (pnpm workspace `packages/*`), built with **tsup**
+(dual ESM/CJS + per-format `.d.ts`/`.d.cts`), each validated by **publint** +
+**are-the-types-wrong** (all green across node10/node16-CJS/node16-ESM/bundler):
+
+- ✅ **`@wriven-ai/client`** — `createClient`, `getEntry`/`getEntries`, query
+  options, typed `WrivenError`, retry + timeout, isomorphic, zero-dep.
+- ✅ **`@wriven-ai/react`** — `WrivenRichText` renderer (text/marks/lists/code/
+  inline images) with per-node `components` overrides; `react` peer.
+- ✅ **`@wriven-ai/next`** — `createWebhookRoute` (verify + revalidate) +
+  `verifyWrivenSignature`; `next` peer.
+
+Internal dev resolution uses the repo's `@wriven/wriven` export condition →
+`src`; published consumers get `dist`. Not yet published to npm.
+
 ## Build order
 
 1. **Phase 1 — `@wriven-ai/client`**: scaffold publishable lib; tsup dual build;
