@@ -21,6 +21,7 @@ import type {
   ProjectRole,
   ProjectView,
   RegisterInput,
+  RevisionView,
   SessionView,
   WebhookEvent,
   WebhookView,
@@ -304,6 +305,16 @@ export const contentApi = {
       workspace: true,
       project: true,
     }),
+  listRevisions: (entryId: string) =>
+    request<RevisionView[]>(`/content/entries/${entryId}/revisions`, {
+      workspace: true,
+      project: true,
+    }),
+  restoreRevision: (entryId: string, version: number) =>
+    request<ContentEntryView>(
+      `/content/entries/${entryId}/revisions/${version}/restore`,
+      { method: 'POST', workspace: true, project: true },
+    ),
 };
 
 export const apiKeyApi = {

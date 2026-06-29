@@ -38,6 +38,7 @@ interface DraftField {
   label: string;
   type: FieldType;
   required: boolean;
+  unique: boolean;
   options: string;
   multiple: boolean;
   refTypeId: string;
@@ -89,6 +90,7 @@ export default function ContentTypesPage() {
   const [candKeyTouched, setCandKeyTouched] = useState(false);
   const [candType, setCandType] = useState<FieldType>('text');
   const [candRequired, setCandRequired] = useState(false);
+  const [candUnique, setCandUnique] = useState(false);
   const [candOptions, setCandOptions] = useState('');
   const [candMultiple, setCandMultiple] = useState(false);
   const [candRefTypeId, setCandRefTypeId] = useState('');
@@ -104,6 +106,7 @@ export default function ContentTypesPage() {
     setCandKeyTouched(false);
     setCandType('text');
     setCandRequired(false);
+    setCandUnique(false);
     setCandOptions('');
     setCandMultiple(false);
     setCandRefTypeId('');
@@ -121,6 +124,7 @@ export default function ContentTypesPage() {
         label: f.label,
         type: f.type as FieldType,
         required: !!f.required,
+        unique: !!f.unique,
         options: Array.isArray(f.options) ? f.options.join(', ') : '',
         multiple: !!f.multiple,
         refTypeId: f.refTypeId ?? '',
@@ -150,6 +154,7 @@ export default function ContentTypesPage() {
         label: candLabel,
         type: candType,
         required: candRequired,
+        unique: candUnique,
         options: candOptions,
         multiple: MULTIPLE_CAPABLE.includes(candType) ? candMultiple : false,
         refTypeId: candType === 'reference' ? candRefTypeId : '',
@@ -160,6 +165,7 @@ export default function ContentTypesPage() {
     setCandKeyTouched(false);
     setCandType('text');
     setCandRequired(false);
+    setCandUnique(false);
     setCandOptions('');
     setCandMultiple(false);
     setCandRefTypeId('');
@@ -175,6 +181,7 @@ export default function ContentTypesPage() {
       label: f.label,
       type: f.type,
       ...(f.required && { required: true }),
+      ...(f.unique && { unique: true }),
       ...(f.multiple && MULTIPLE_CAPABLE.includes(f.type) ? { multiple: true } : {}),
       ...(f.type === 'reference' && f.refTypeId ? { refTypeId: f.refTypeId } : {}),
       ...(f.type === 'select' && f.options
@@ -363,6 +370,15 @@ export default function ContentTypesPage() {
                         className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
                       />
                       Required
+                    </label>
+                    <label className="flex items-center gap-1.5 font-mono text-[9px] text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={candUnique}
+                        onChange={e => setCandUnique(e.target.checked)}
+                        className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                      />
+                      Unique
                     </label>
                     {MULTIPLE_CAPABLE.includes(candType) && (
                       <label className="flex items-center gap-1.5 font-mono text-[9px] text-text-secondary cursor-pointer select-none">

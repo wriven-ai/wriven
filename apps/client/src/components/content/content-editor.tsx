@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Check,
   Clock,
+  History,
   RefreshCw,
   Save,
   Send,
@@ -26,6 +27,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { FieldRow, isFieldEmpty, STATUS_COLORS } from './fields';
+import { RevisionsDrawer } from './revisions-drawer';
 
 /**
  * Single-entry editor (create + edit). Three columns: left = settings (publish,
@@ -66,6 +68,7 @@ export function ContentEditor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [aiPrompt, setAiPrompt] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Populate when an existing entry loads.
   useEffect(() => {
@@ -189,6 +192,16 @@ export function ContentEditor({
             <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${STATUS_COLORS[status as EntryStatus]}`}>
               {status.toUpperCase()}
             </span>
+          )}
+          {entryId && (
+            <button
+              onClick={() => setHistoryOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-xs font-mono font-bold"
+              title="Version history"
+            >
+              <History className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">History</span>
+            </button>
           )}
           <button
             onClick={() => setSettingsOpen(true)}
@@ -397,6 +410,14 @@ export function ContentEditor({
           </div>
         </SheetContent>
       </Sheet>
+
+      {entryId && (
+        <RevisionsDrawer
+          entryId={entryId}
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+        />
+      )}
     </div>
   );
 }

@@ -183,6 +183,16 @@ export interface ContentEntryView {
   updatedAt: string;
 }
 
+export interface RevisionView {
+  id: string;
+  entryId: string;
+  version: number;
+  status: string;
+  data: Record<string, unknown>;
+  createdBy: string;
+  createdAt: string;
+}
+
 export interface Paginated<T> {
   items: T[];
   page: number;
