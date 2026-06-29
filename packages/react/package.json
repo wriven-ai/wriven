@@ -24,12 +24,14 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
     "check": "publint && attw --pack .",
-    "prepublishOnly": "pnpm build && pnpm check"
+    "prepublishOnly": "pnpm build && pnpm check",
+    "test": "tsx --test test/*.test.ts"
   },
   "keywords": [
     "wriven",
@@ -47,8 +49,7 @@
     "react": "^19.0.0"
   },
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "engines": {
     "node": ">=18"
