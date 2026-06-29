@@ -21,6 +21,7 @@ import { DeliveryController } from '../delivery/delivery.controller';
 import { InvitationsController } from '../members/invitations.controller';
 import { ProjectsController } from '../members/projects.controller';
 import { WorkspacesController } from '../members/workspaces.controller';
+import { WebhooksController } from '../webhooks/webhooks.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -75,6 +76,7 @@ import { AppService } from './app.service';
     WorkspacesController,
     ProjectsController,
     InvitationsController,
+    WebhooksController,
   ],
   providers: [
     AppService,

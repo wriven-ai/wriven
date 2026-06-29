@@ -7,6 +7,8 @@ import {
   ListEntriesQueryDto,
   Paginated,
   UpdateEntryDto,
+  WebhookEvent,
+  WebhookPayload,
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
@@ -14,6 +16,7 @@ import { and, desc, eq, isNull, max } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import { ContentTypesService } from './content-types.service';
 import { validateEntryData } from './content.validator';
 
@@ -25,6 +28,7 @@ export class EntriesService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly types: ContentTypesService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   async create(p: {
@@ -126,6 +130,7 @@ export class EntriesService {
     dto: UpdateEntryDto;
   }): Promise<ContentEntryView> {
     const entry = await this.requireRow(p.projectId, p.id);
+    const prevStatus = entry.status;
 
     let data = entry.data as Record<string, unknown>;
     if (p.dto.data) {
@@ -164,6 +169,14 @@ export class EntriesService {
         });
         return row;
       });
+
+      // Fire webhooks on publish-state changes (rebuild the consumer site).
+      if (updated.status === 'published') {
+        void this.emit(p.projectId, 'entry.published', updated);
+      } else if (prevStatus === 'published') {
+        void this.emit(p.projectId, 'entry.unpublished', updated);
+      }
+
       return this.toView(updated);
     } catch (err) {
       if ((err as { code?: string }).code === '23505') {
@@ -196,15 +209,49 @@ export class EntriesService {
     projectId: string;
     id: string;
   }): Promise<{ success: true }> {
-    await this.requireRow(p.projectId, p.id);
+    const row = await this.requireRow(p.projectId, p.id);
     await this.db
       .update(contentEntries)
       .set({ deletedAt: new Date() })
       .where(eq(contentEntries.id, p.id));
+    // Notify subscribers if a published entry was removed (purge consumer caches).
+    if (row.status === 'published') {
+      void this.emit(p.projectId, 'entry.deleted', row);
+    }
     return { success: true };
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /**
+   * Fire a webhook event for an entry, resolving its type's apiId. Fire-and-
+   * forget — never blocks or fails the operation that triggered it.
+   */
+  private async emit(
+    projectId: string,
+    event: WebhookEvent,
+    row: EntryRow,
+  ): Promise<void> {
+    try {
+      const type = await this.types.requireRow(projectId, row.contentTypeId);
+      const payload: WebhookPayload = {
+        event,
+        projectId,
+        firedAt: new Date().toISOString(),
+        entry: {
+          id: row.id,
+          type: type.apiId,
+          slug: row.slug,
+          status: row.status,
+          publishedAt: row.publishedAt ? row.publishedAt.toISOString() : null,
+          updatedAt: row.updatedAt.toISOString(),
+        },
+      };
+      await this.webhooks.dispatch(projectId, payload);
+    } catch {
+      // Webhook failures must never surface to the content operation.
+    }
+  }
 
   private async requireRow(projectId: string, id: string): Promise<EntryRow> {
     const row = await this.db.query.contentEntries.findFirst({

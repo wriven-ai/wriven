@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import {
+  boolean,
   check,
   index,
   jsonb,
@@ -192,6 +193,33 @@ export const apiKeys = coreSchema.table(
       sql`${t.scope} in ('read', 'preview', 'manage')`,
     ),
   ],
+);
+
+// ── Webhooks (publish → signed POST; see doc/11 P6) ─────────────────────────
+
+/**
+ * Outgoing webhook subscriptions. On publish/unpublish/delete, core POSTs a
+ * signed JSON payload to `url`. The `secret` is stored to sign requests (HMAC)
+ * and is shown to the user only once at creation.
+ */
+export const webhooks = coreSchema.table(
+  'webhooks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
+    url: text('url').notNull(),
+    events: jsonb('events').$type<string[]>().notNull(),
+    secret: text('secret').notNull(), // signs outgoing payloads (HMAC-SHA256)
+    active: boolean('active').notNull().default(true),
+    lastStatus: integer('last_status'),
+    lastFiredAt: timestamp('last_fired_at', { withTimezone: true }),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index('webhooks_project_id_idx').on(t.projectId)],
 );
 
 // ── Relations (Drizzle relational query API; no DB change) ──────────────────

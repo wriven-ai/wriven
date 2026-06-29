@@ -70,7 +70,7 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | Image transforms (resize/format) | 🔲 | deferred; consumer optimizes (next/image). Adapter-ready (doc/13) |
 | Reference field resolution (populate/expand) | 🟡 | expanded in delivery `include`; not in management reads |
 | CDN cache headers + purge on publish | 🔲 | doc/11 P5 |
-| Webhooks (publish → rebuild, HMAC) | 🔲 | doc/11 P6 |
+| **Webhooks** (publish/unpublish/delete → signed POST, HMAC, retry) | ✅ | `webhooks` table; dispatcher on entry events (doc/11 P6) |
 | Preview API (drafts via `wrk_preview_`) | 🔲 | doc/11 P7 |
 | Unique-field enforcement (`FieldDef.unique`) | 🔲 | declared, not enforced |
 | Default content type seeding on signup | 🔲 | |
@@ -101,6 +101,7 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | Media Library page + media field picker (upload/select) | ✅ | `mediaApi` + `uploadMedia`; grid/list/lightbox (doc/13) |
 | Content editor: main+sidebar layout + inline body images | ✅ | title/body main, structured fields sidebar (doc/13) |
 | Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (doc/12) |
+| Webhooks UI (project settings: add/list/pause/delete, secret once) | ✅ | `webhookApi`; HMAC verify documented inline |
 | Email verification page | 🔲 | API ready |
 
 ## Known gaps / next candidates

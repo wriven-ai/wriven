@@ -85,6 +85,12 @@ export const CORE_PATTERNS = {
   MEDIA_LIST: 'core.media.list',
   MEDIA_GET: 'core.media.get',
   MEDIA_DELETE: 'core.media.delete',
+
+  // Outgoing webhooks (publish → signed POST; see doc/11 P6).
+  WEBHOOK_CREATE: 'core.webhook.create',
+  WEBHOOK_LIST: 'core.webhook.list',
+  WEBHOOK_UPDATE: 'core.webhook.update',
+  WEBHOOK_DELETE: 'core.webhook.delete',
 } as const;
 
 /** Pending member invitations (workspace + project). Owned by auth-service. */

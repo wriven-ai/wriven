@@ -21,6 +21,7 @@ Wriven is an **AI-native content management and generation SaaS**. The backend i
 | [11 — Model A Build Plan](./11-model-a-build-plan.md) | Phased build: api_keys table, token guard, Delivery API, dashboard keys UI, CDN purge, webhooks, preview, plans/metering, media |
 | [12 — Invitations](./12-invitations.md) | Pending-invitation token flow, accept-on-signup, project→workspace auto-add, project-list leak fix, member onboarding |
 | [13 — Media](./13-media.md) | R2 storage adapter, presigned direct upload, keys-only delivery URLs, media library + field picker, transforms deferred |
+| [14 — Webhooks](./14-webhooks.md) | Outgoing webhooks on publish/unpublish/delete, HMAC signing, retry/backoff, consumer verification, dashboard UI |
 
 **Per service**
 
