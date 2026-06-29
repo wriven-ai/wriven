@@ -16,6 +16,7 @@ import { and, desc, eq, isNull, max } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { CachePurgeService } from '../cache/cache-purge.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { ContentTypesService } from './content-types.service';
 import { validateEntryData } from './content.validator';
@@ -29,6 +30,7 @@ export class EntriesService {
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly types: ContentTypesService,
     private readonly webhooks: WebhooksService,
+    private readonly cache: CachePurgeService,
   ) {}
 
   async create(p: {
@@ -247,9 +249,13 @@ export class EntriesService {
           updatedAt: row.updatedAt.toISOString(),
         },
       };
-      await this.webhooks.dispatch(projectId, payload);
+      // Purge CDN caches for this entry + its type's lists, then notify subscribers.
+      await Promise.all([
+        this.cache.purgeEntry(type.apiId, row.id),
+        this.webhooks.dispatch(projectId, payload),
+      ]);
     } catch {
-      // Webhook failures must never surface to the content operation.
+      // Webhook/purge failures must never surface to the content operation.
     }
   }
 

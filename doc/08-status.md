@@ -69,9 +69,9 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | Per-workspace media quota (100 MB) + per-file caps (5/25 MB) | ✅ | enforced at presign (doc/13) |
 | Image transforms (resize/format) | 🔲 | deferred; consumer optimizes (next/image). Adapter-ready (doc/13) |
 | Reference field resolution (populate/expand) | 🟡 | expanded in delivery `include`; not in management reads |
-| CDN cache headers + purge on publish | 🔲 | doc/11 P5 |
+| **CDN cache headers + purge on publish** | ✅ | published reads `s-maxage`+`Cache-Tag`/`Surrogate-Key`; Cloudflare tag-purge on entry events, no-op if unconfigured (doc/11 P5) |
 | **Webhooks** (publish/unpublish/delete → signed POST, HMAC, retry) | ✅ | `webhooks` table; dispatcher on entry events (doc/11 P6) |
-| Preview API (drafts via `wrk_preview_`) | 🔲 | doc/11 P7 |
+| **Preview API** (drafts via `wrk_preview_`/`wrk_admin_`) | ✅ | key scope drives `preview`→drafts; preview reads `no-store` (doc/11 P7) |
 | Unique-field enforcement (`FieldDef.unique`) | 🔲 | declared, not enforced |
 | Default content type seeding on signup | 🔲 | |
 
@@ -93,7 +93,7 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | Auth pages under `(auth)` route group + shared layout | ✅ | login, register, forgot, reset |
 | Login/register wired (rememberMe, workspaceName, errors) | ✅ | |
 | Google button + `/auth/callback` page | ✅ | |
-| `RequireAuth` guard + `useAuth`/`useLogout` (building blocks) | ✅ | not yet applied to dashboard |
+| `RequireAuth` guard + `useAuth`/`useLogout` | ✅ | applied to the dashboard layout (redirects to /login when unauthenticated) |
 | Dashboard layout: live user data + workspace/project switchers | ✅ | |
 | Projects page wired to `/workspaces/:id/projects` + `/projects/*` | ✅ | TanStack Query |
 | Content dashboard wired to `/content/*` | 🟡 | type/entry pages live; switchers drive `X-Project-Id` |
@@ -106,8 +106,8 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 
 ## Known gaps / next candidates
 
-- Member **invitation** flow (email invite → accept on signup).
-- **Media upload** (R2 presign) + ImageKit.
-- Apply `RequireAuth` to the dashboard layout.
+- **Reference field picker** in the editor (delivery resolves refs; authoring can't pick yet).
+- Consumer **SDK / npm package** + published Delivery API docs.
+- **Unique-field enforcement**; default content-type seeding on signup.
 - **ai-service**.
 - Deploy (Docker Compose on VPS) + CI.

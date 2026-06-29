@@ -37,7 +37,7 @@ export class DeliveryController {
   ) {}
 
   @Get('content/:apiId')
-  list(
+  async list(
     @CurrentApiKey() key: ApiKeyResolution,
     @Param('projectId') projectId: string,
     @Param('apiId') apiId: string,
@@ -46,8 +46,7 @@ export class DeliveryController {
   ) {
     this.assertProject(key, projectId);
     const preview = isPreview(key);
-    this.setCache(res, preview);
-    return firstValueFrom(
+    const result = await firstValueFrom<{ items: Array<{ id: string }> }>(
       this.core.send(CORE_PATTERNS.DELIVERY_LIST, {
         projectId: key.projectId,
         apiId,
@@ -55,10 +54,19 @@ export class DeliveryController {
         preview,
       }),
     );
+    // A list depends on its project, type, and every entry it returned — so it
+    // invalidates when any member is (un)published or deleted.
+    const tags = [
+      `proj_${key.projectId}`,
+      `type_${apiId}`,
+      ...result.items.map((e) => `entry_${e.id}`),
+    ];
+    this.setCache(res, preview, tags);
+    return result;
   }
 
   @Get('content/:apiId/:slug')
-  get(
+  async get(
     @CurrentApiKey() key: ApiKeyResolution,
     @Param('projectId') projectId: string,
     @Param('apiId') apiId: string,
@@ -68,8 +76,7 @@ export class DeliveryController {
   ) {
     this.assertProject(key, projectId);
     const preview = isPreview(key);
-    this.setCache(res, preview);
-    return firstValueFrom(
+    const result = await firstValueFrom<{ id: string }>(
       this.core.send(CORE_PATTERNS.DELIVERY_GET, {
         projectId: key.projectId,
         apiId,
@@ -78,14 +85,28 @@ export class DeliveryController {
         preview,
       }),
     );
+    const tags = [`proj_${key.projectId}`, `type_${apiId}`, `entry_${result.id}`];
+    this.setCache(res, preview, tags);
+    return result;
   }
 
   /**
-   * Preview reads must never be cached (drafts). Published reads are left
-   * uncached for now; CDN cache headers land in doc/11 Phase 5.
+   * Preview reads must never be cached (drafts). Published reads are cacheable at
+   * the CDN with surrogate/cache tags so a publish can purge exactly the affected
+   * responses by tag (doc/11 Phase 5; purge-on-publish lives in core).
    */
-  private setCache(res: Response, preview: boolean): void {
-    if (preview) res.setHeader('Cache-Control', 'private, no-store');
+  private setCache(res: Response, preview: boolean, tags: string[]): void {
+    if (preview) {
+      res.setHeader('Cache-Control', 'private, no-store');
+      return;
+    }
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=60, stale-while-revalidate=300',
+    );
+    const tagValue = tags.join(' ');
+    res.setHeader('Surrogate-Key', tagValue); // Fastly
+    res.setHeader('Cache-Tag', tagValue); // Cloudflare
   }
 
   /** The path project must be the key's project — reject mismatches. */
