@@ -5,8 +5,13 @@ field's ProseMirror JSON — including inline images resolved by the Delivery AP
 into React elements.
 
 ```bash
-npm i @wriven-ai/react
+npm i @wriven-ai/client @wriven-ai/react
 ```
+
+> `@wriven-ai/react` only **renders** content. You fetch it with
+> [`@wriven-ai/client`](https://www.npmjs.com/package/@wriven-ai/client), so install both.
+> On Next.js, add [`@wriven-ai/next`](https://www.npmjs.com/package/@wriven-ai/next)
+> for webhook → ISR revalidation.
 
 ```tsx
 import { WrivenRichText } from '@wriven-ai/react';

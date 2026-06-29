@@ -7,6 +7,20 @@ Delivery API. Isomorphic (Node 18+, browsers, edge), typed, zero-dependency.
 npm i @wriven-ai/client
 ```
 
+## Which packages do I need?
+
+The SDK is split by stack — install only what you use:
+
+| Your stack | Install |
+|------------|---------|
+| Any JS/TS (Node, edge, backend) | `@wriven-ai/client` |
+| React (also render the rich-text body) | `@wriven-ai/client` + [`@wriven-ai/react`](https://www.npmjs.com/package/@wriven-ai/react) |
+| Next.js (also get webhook → ISR revalidation) | `@wriven-ai/client` + [`@wriven-ai/react`](https://www.npmjs.com/package/@wriven-ai/react) + [`@wriven-ai/next`](https://www.npmjs.com/package/@wriven-ai/next) |
+
+`client` fetches content (the only one you always need); `react` renders the
+rich-text body to elements; `next` adds the webhook→revalidate route. The last
+two are add-ons on top of `client`.
+
 ```ts
 import { createClient } from '@wriven-ai/client';
 

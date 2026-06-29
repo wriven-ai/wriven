@@ -4,8 +4,13 @@ Next.js helpers for [Wriven](https://wriven.com): a signed-webhook → ISR
 revalidation route handler, plus the signature verifier.
 
 ```bash
-npm i @wriven-ai/next
+npm i @wriven-ai/client @wriven-ai/react @wriven-ai/next
 ```
+
+> A full Next.js setup uses all three:
+> [`client`](https://www.npmjs.com/package/@wriven-ai/client) fetches,
+> [`react`](https://www.npmjs.com/package/@wriven-ai/react) renders the body,
+> and `next` adds the webhook → revalidate route below.
 
 ## Revalidate on publish
 
