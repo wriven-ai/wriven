@@ -140,10 +140,42 @@ Errors: `CONFLICT` 409 (duplicate `apiId` within the project), `NOT_FOUND` 404, 
 | PATCH | `/content/entries/:id` | `{ slug?, status?, data? }` | updated entry (merges data) |
 | POST | `/content/entries/:id/publish` | — | published entry |
 | DELETE | `/content/entries/:id` | — | `{ success: true }` (soft) |
+| GET | `/content/entries/:id/revisions` | — | `RevisionView[]` (newest first) |
+| POST | `/content/entries/:id/revisions/:version/restore` | — | entry restored to that version (records a new revision) |
 
-`data` is validated against the content type's `fields` → `VALIDATION_ERROR` 422 on mismatch. Slug clash → `CONFLICT` 409 (project-scoped). `NOT_FOUND` 404 if entry/type missing in the project. Pagination: `limit` default 20, max 100.
+`data` is validated against the content type's `fields` → `VALIDATION_ERROR` 422 on mismatch. Slug clash → `CONFLICT` 409 (project-scoped). A field marked `unique` whose value already exists → `CONFLICT` 409. `NOT_FOUND` 404 if entry/type missing in the project. Pagination: `limit` default 20, max 100. On publish/unpublish/delete the entry's CDN cache tags are purged and any matching **webhooks** fire (see below).
 
 `ContentEntryView`: `{ id, workspaceId, projectId, contentTypeId, slug, status, data, authorId, publishedAt, createdAt, updatedAt }`.
+`RevisionView`: `{ id, entryId, version, status, data, createdBy, createdAt }`.
+
+> A starter **Post** content type is auto-seeded on project creation (idempotent).
+
+### Media library
+
+R2-backed; presigned **direct** upload (browser PUTs to R2). Keys-only. See doc/13.
+
+| Method | Path | Body / Query | → |
+|--------|------|-------------|---|
+| POST | `/content/media/presign` | `{ filename, contentType, size? }` | `{ uploadUrl, key }` |
+| POST | `/content/media` | `{ key, kind, mime?, size?, width?, height?, alt?, originalFilename? }` | `MediaView` |
+| GET | `/content/media` | `?page&limit` | `{ items, page, limit, total }` |
+| GET | `/content/media/:id` | — | `MediaView` |
+| DELETE | `/content/media/:id` | — | `{ success: true }` (soft + best-effort R2 delete) |
+
+Limits (enforced at presign): 5 MB/image, 25 MB/other; 100 MB per workspace.
+
+### Webhooks
+
+Outgoing webhooks on entry events; signed with HMAC-SHA256. See doc/14.
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| POST | `/webhooks` | `{ url, events? }` | `{ webhook, secret }` (secret shown once) |
+| GET | `/webhooks` | — | `WebhookView[]` |
+| PATCH | `/webhooks/:id` | `{ url?, events?, active? }` | `WebhookView` |
+| DELETE | `/webhooks/:id` | — | `{ success: true }` |
+
+Events: `entry.published` · `entry.unpublished` · `entry.deleted`.
 
 ---
 
