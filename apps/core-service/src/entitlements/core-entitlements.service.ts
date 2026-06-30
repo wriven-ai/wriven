@@ -14,7 +14,7 @@ import * as schema from '../db/schema';
 
 const { contentEntries, contentTypes, apiKeys, webhooks } = schema;
 
-const RESOLVE_TIMEOUT_MS = 2000;
+const RESOLVE_TIMEOUT_MS = 4000;
 const CACHE_TTL_MS = 30_000;
 
 /**
@@ -105,9 +105,10 @@ export class CoreEntitlementsService {
   async assertWebhookQuota(workspaceId: string): Promise<void> {
     const max = (await this.limits(workspaceId))?.webhooks;
     if (max == null) return;
+    // Only active webhooks consume a slot — a disabled one is free to keep.
     const used = await this.db.$count(
       webhooks,
-      eq(webhooks.workspaceId, workspaceId),
+      and(eq(webhooks.workspaceId, workspaceId), eq(webhooks.active, true)),
     );
     this.assert(used, max, 'webhooks');
   }

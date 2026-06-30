@@ -64,9 +64,12 @@ export class AdminContentService {
     id: string;
     dto: AdminTakedownDto;
   }): Promise<AdminEntryRow> {
+    // Taking down (draft/archived) means it's no longer published — clear the
+    // timestamp so it isn't reported as published. The moderation trail lives in
+    // admin_audit_log (this isn't written to the tenant's revision history).
     const [entry] = await this.db
       .update(contentEntries)
-      .set({ status: payload.dto.status })
+      .set({ status: payload.dto.status, publishedAt: null })
       .where(eq(contentEntries.id, payload.id))
       .returning();
     if (!entry) throw rpcError('NOT_FOUND', 'Entry not found.');

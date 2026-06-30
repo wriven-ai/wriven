@@ -37,22 +37,23 @@ export class AdminJwtGuard implements CanActivate {
     if (!token) {
       throw this.unauthorized('Missing admin access token cookie.');
     }
+    let payload: AdminTokenPayload;
     try {
-      const payload = this.jwt.verify<AdminTokenPayload>(token);
-      // Defence-in-depth: reject anything that isn't an admin-typed token, even
-      // if a misconfiguration ever made ADMIN_JWT_SECRET match the tenant secret.
-      if (payload.typ !== 'admin' || !payload.role) {
-        throw this.unauthorized('Not an admin token.');
-      }
-      req.adminUser = {
-        adminUserId: payload.sub,
-        email: payload.email,
-        role: payload.role,
-      };
-      return true;
+      payload = this.jwt.verify<AdminTokenPayload>(token);
     } catch {
       throw this.unauthorized('Admin access token is invalid or expired.');
     }
+    // Defence-in-depth: reject anything that isn't an admin-typed token, even if a
+    // misconfiguration ever made ADMIN_JWT_SECRET match the tenant secret.
+    if (payload.typ !== 'admin' || !payload.role) {
+      throw this.unauthorized('Not an admin token.');
+    }
+    req.adminUser = {
+      adminUserId: payload.sub,
+      email: payload.email,
+      role: payload.role,
+    };
+    return true;
   }
 
   private unauthorized(message: string): ServiceError {
