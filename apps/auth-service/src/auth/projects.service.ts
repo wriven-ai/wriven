@@ -222,6 +222,17 @@ export class ProjectsService {
     userId: string,
     role = 'guest',
   ): Promise<void> {
+    // Already a member → no new seat consumed.
+    const existing = await tx.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, userId),
+      ),
+      columns: { id: true },
+    });
+    if (existing) return;
+    // New seat (incl. project-invite guests) — enforce the plan's member quota.
+    await this.entitlements.assertMemberQuotaTx(tx, workspaceId);
     await tx
       .insert(workspaceMembers)
       .values({ workspaceId, userId, role })

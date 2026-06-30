@@ -449,6 +449,10 @@ ADMIN_IP_ALLOWLIST=          # comma-separated CIDRs for /admin/* (prod)
 - Core-side (`CoreEntitlementsService` → `auth.entitlements.resolve`): **entries**,
   **contentTypes**, **apiKeys**, **webhooks** on create; **media storage**
   (`storageMb`) enforced at presign against the plan (was a hardcoded constant).
+  The resolve call is **timed out (2s) + short-cached (30s) + fails open** — an
+  auth-service blip can't block content creation.
+- Seat quota also enforced on **project-invite guest auto-add**
+  (`ensureWorkspaceMember`), counting guests — closes the invite seat bypass.
 - Content **takedown purges the CDN** (`CachePurgeService.purgeEntry`).
 
 **Deferred (next slice):** TOTP/MFA. IP allowlist + `/admin/*` rate-limit.
