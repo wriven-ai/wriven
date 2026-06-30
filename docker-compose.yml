@@ -1,0 +1,169 @@
+version: '3.9'
+
+services:
+  # ── Postgres (local dev only — uses Supabase in prod) ─────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: wriven-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wriven
+      POSTGRES_PASSWORD: wriven_dev_password_change_me
+      POSTGRES_DB: wriven
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wriven']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (optional cache) ───────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: wriven-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Auth Service (TCP microservice) ──────────────────────────────────
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: wriven-auth-service
+    restart: unless-stopped
+    environment:
+      PORT: 5001
+      HOST: '0.0.0.0'
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      REFRESH_SECRET: ${REFRESH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER}
+      MAIL_PASS: ${MAIL_PASS}
+      MAIL_FROM: ${MAIL_FROM}
+      NODE_ENV: production
+    ports:
+      - '5001:5001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wriven-net
+
+  # ── Core Service (TCP microservice) ───────────────────────────────────
+  core-service:
+    build:
+      context: .
+      dockerfile: apps/core-service/Dockerfile
+    container_name: wriven-core-service
+    restart: unless-stopped
+    environment:
+      PORT: 5002
+      HOST: '0.0.0.0'
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL}
+      NODE_ENV: production
+    ports:
+      - '5002:5002'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wriven-net
+
+  # ── API Gateway (public HTTP) ────────────────────────────────────────
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: wriven-api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      HOST: '0.0.0.0'
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      REFRESH_SECRET: ${REFRESH_SECRET}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: 5001
+      CORE_SERVICE_HOST: core-service
+      CORE_SERVICE_PORT: 5002
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      NODE_ENV: production
+    ports:
+      - '5000:5000'
+    depends_on:
+      auth-service:
+        condition: service_started
+      core-service:
+        condition: service_started
+    networks:
+      - wriven-net
+
+  # ── Client (Next.js frontend) ────────────────────────────────────────────
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    container_name: wriven-client
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api/v1}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      NODE_ENV: production
+    ports:
+      - '3000:3000'
+    depends_on:
+      api-gateway:
+        condition: service_started
+    networks:
+      - wriven-net
+
+  # ── AI Service (Python FastAPI, optional) ────────────────────────────────
+  ai-service:
+    build:
+      context: apps/ai-service
+      dockerfile: Dockerfile
+    container_name: wriven-ai-service
+    restart: unless-stopped
+    environment:
+      PORT: 8000
+      DATABASE_URL: ${DATABASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - '8000:8000'
+    networks:
+      - wriven-net
+    profiles:
+      - ai
+
+volumes:
+  postgres_data:
+
+networks:
+  wriven-net:
+    driver: bridge
