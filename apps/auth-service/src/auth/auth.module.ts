@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CleanupService } from './cleanup.service';
+import { EntitlementsService } from './entitlements.service';
 import { MailService } from './mail.service';
 import { InvitationsController } from './invitations.controller';
 import { InvitationsService } from './invitations.service';
@@ -43,6 +44,7 @@ import { ProjectsService } from './projects.service';
     WorkspacesService,
     ProjectsService,
     InvitationsService,
+    EntitlementsService,
   ],
 })
 export class AuthModule {}

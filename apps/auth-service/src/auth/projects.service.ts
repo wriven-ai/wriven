@@ -13,6 +13,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { EntitlementsService } from './entitlements.service';
 import { MembersService } from './members.service';
 
 const { projects, projectMembers, workspaceMembers, users } = schema;
@@ -32,6 +33,7 @@ export class ProjectsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly members: MembersService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   // ── Project CRUD ────────────────────────────────────────────────────────────
@@ -47,6 +49,8 @@ export class ProjectsService {
       p.workspaceId,
       ['owner', 'admin'],
     );
+    // Enforce the workspace plan's project quota (e.g. free = 2).
+    await this.entitlements.assertProjectQuota(p.workspaceId);
     const slug = p.dto.slug ?? uniqueSlug(p.dto.name);
     try {
       const result = await this.db.transaction(async (tx) => {

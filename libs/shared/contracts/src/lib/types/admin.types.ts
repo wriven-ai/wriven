@@ -165,6 +165,83 @@ export interface AdminProjectRow {
   createdAt: string;
 }
 
+// ── Moderation views (cross-tenant, core-service) ───────────────────────────
+
+/** A content entry row in the admin Content moderation browser. */
+export interface AdminEntryRow {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  contentTypeId: string;
+  slug: string;
+  status: string; // draft | published | archived
+  authorId: string;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Full entry detail (includes the data payload) for moderation review. */
+export interface AdminEntryDetail extends AdminEntryRow {
+  data: Record<string, unknown>;
+}
+
+/** A media asset row in the admin Media view. */
+export interface AdminMediaRow {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  kind: string; // image | video | file
+  mime: string | null;
+  sizeBytes: number | null;
+  originalFilename: string | null;
+  uploadedBy: string;
+  createdAt: string;
+}
+
+/** Aggregated media storage usage for one workspace. */
+export interface AdminMediaUsageRow {
+  workspaceId: string;
+  assetCount: number;
+  totalBytes: number;
+}
+
+/** An API key row in the admin API Keys view (never exposes the token). */
+export interface AdminApiKeyRow {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  name: string;
+  prefix: string;
+  scope: string; // read | preview | manage
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/** A webhook subscription row in the admin Webhooks view. */
+export interface AdminWebhookRow {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  lastStatus: number | null;
+  lastFiredAt: string | null;
+  createdAt: string;
+}
+
+/** Effective plan limits + current usage for a workspace (enforcement). */
+export interface WorkspaceEntitlements {
+  planKey: string;
+  limits: PlanLimits;
+  usage: {
+    projects: number;
+    members: number;
+  };
+}
+
 /** Platform KPI snapshot for the admin Overview screen. */
 export interface AdminMetricsOverview {
   users: { total: number; verified: number };

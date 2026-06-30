@@ -9,6 +9,7 @@ import type { DrizzleDB } from '@wriven/database';
 import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { EntitlementsService } from './entitlements.service';
 
 const { users, workspaceMembers } = schema;
 
@@ -18,7 +19,10 @@ type WorkspaceMemberRow = typeof workspaceMembers.$inferSelect & {
 
 @Injectable()
 export class MembersService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   // ── Workspace members ────────────────────────────────────────────────────────
 
@@ -50,6 +54,8 @@ export class MembersService {
     ]);
     const user = await this.findUserByEmail(p.dto.email);
     await this.ensureNotWorkspaceMember(p.workspaceId, user.id);
+    // Enforce the workspace plan's member (seat) quota.
+    await this.entitlements.assertMemberQuota(p.workspaceId);
     const [row] = await this.db
       .insert(workspaceMembers)
       .values({ workspaceId: p.workspaceId, userId: user.id, role: p.dto.role })

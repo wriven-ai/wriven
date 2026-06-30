@@ -413,4 +413,26 @@ ADMIN_IP_ALLOWLIST=          # comma-separated CIDRs for /admin/* (prod)
    SPA origin.
 5. `.env.example` updates; update [../08-status.md](../08-status.md) +
    [../06-api-reference.md](../06-api-reference.md) (add the `/admin/*` section).
+
+## 10. Implementation status
+
+- ✅ **Phase A** — admin identity (`admin_users`), `AdminJwtGuard` + `AdminRolesGuard`
+  (`admin`/`moderator`/`member`), `@Audit` interceptor + `admin_audit_log`,
+  `/admin/auth/*`, `/admin/metrics/overview`, `/admin/admins`, `/admin/audit-log`.
+- ✅ **Phase B** — tenant oversight: `/admin/users` (list/detail/suspend/verify/
+  delete), `/admin/workspaces` (list/detail), `/admin/projects` (list/detail/
+  soft-delete). `users.suspendedAt` blocks login.
+- ✅ **Phase C** — moderation (core-service): `/admin/content` (list/get/takedown),
+  `/admin/media` (list/usage/purge), `/admin/api-keys` (list/revoke),
+  `/admin/webhooks` (list/disable).
+- ✅ **Phase D** — plans + enforcement: `/admin/plans` (list/create/update),
+  `PUT /admin/workspaces/:id/plan` (assign). `EntitlementsService` resolves
+  effective limits (plan + subscription overrides) and **enforces** the
+  `projects` and `members` quotas on tenant create paths (free = 2 projects →
+  `PLAN_LIMIT_REACHED`). `auth.entitlements.resolve` RPC exposes limits+usage.
+
+**Deferred (next slice):** core-side limit enforcement (apiKeys, webhooks, media
+storage, entries, contentTypes) — wire each core create path through
+`auth.entitlements.resolve`. Invitation-accept member quota. TOTP/MFA. IP
+allowlist + `/admin/*` rate-limit.
 ```

@@ -5,15 +5,19 @@ import {
   AdminListQueryDto,
   AdminLoginDto,
   AdminUpdateUserDto,
+  AssignPlanDto,
   AuditWritePayload,
   CreateAdminDto,
+  CreatePlanDto,
   LogoutPayload,
   RefreshPayload,
   UpdateAdminDto,
+  UpdatePlanDto,
 } from '@wriven/contracts';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthService } from './admin-auth.service';
 import { AdminMetricsService } from './admin-metrics.service';
+import { AdminPlansService } from './admin-plans.service';
 import { AdminTenancyService } from './admin-tenancy.service';
 import { AdminUsersService } from './admin-users.service';
 
@@ -26,6 +30,7 @@ export class AdminController {
     private readonly audit: AdminAuditService,
     private readonly metrics: AdminMetricsService,
     private readonly tenancy: AdminTenancyService,
+    private readonly plans: AdminPlansService,
   ) {}
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -136,5 +141,30 @@ export class AdminController {
   @MessagePattern(ADMIN_PATTERNS.PROJECTS_DELETE)
   deleteProject(@Payload() payload: { id: string }) {
     return this.tenancy.deleteProject(payload);
+  }
+
+  // ── Plans + assignment ──────────────────────────────────────────────────────
+
+  @MessagePattern(ADMIN_PATTERNS.PLANS_LIST)
+  listPlans() {
+    return this.plans.list();
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.PLANS_CREATE)
+  createPlan(@Payload() dto: CreatePlanDto) {
+    return this.plans.create(dto);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.PLANS_UPDATE)
+  updatePlan(@Payload() payload: { id: string; dto: UpdatePlanDto }) {
+    return this.plans.update(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.WORKSPACES_SET_PLAN)
+  setWorkspacePlan(
+    @Payload()
+    payload: { workspaceId: string; dto: AssignPlanDto; adminUserId: string },
+  ) {
+    return this.plans.assign(payload);
   }
 }

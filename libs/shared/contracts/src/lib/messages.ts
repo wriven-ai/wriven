@@ -17,6 +17,8 @@ export const AUTH_PATTERNS = {
   VALIDATE_USER: 'auth.validateUser',
   GET_USER_BY_ID: 'auth.getUserById',
   GET_SESSION: 'auth.getSession',
+  // Effective plan limits + usage for a workspace (plan enforcement).
+  ENTITLEMENTS_RESOLVE: 'auth.entitlements.resolve',
 } as const;
 
 /**
@@ -135,9 +137,27 @@ export const ADMIN_PATTERNS = {
   USERS_DELETE: 'admin.users.delete',
   WORKSPACES_LIST: 'admin.workspaces.list',
   WORKSPACES_GET: 'admin.workspaces.get',
+  WORKSPACES_SET_PLAN: 'admin.workspaces.setPlan',
   PROJECTS_LIST: 'admin.projects.list',
   PROJECTS_GET: 'admin.projects.get',
   PROJECTS_DELETE: 'admin.projects.delete',
+
+  // Plans (definitions — auth-service)
+  PLANS_LIST: 'admin.plans.list',
+  PLANS_CREATE: 'admin.plans.create',
+  PLANS_UPDATE: 'admin.plans.update',
+
+  // Cross-tenant moderation (core-service)
+  CONTENT_LIST: 'admin.content.list',
+  CONTENT_GET: 'admin.content.get',
+  CONTENT_TAKEDOWN: 'admin.content.takedown',
+  MEDIA_LIST: 'admin.media.list',
+  MEDIA_USAGE: 'admin.media.usage',
+  MEDIA_PURGE: 'admin.media.purge',
+  APIKEYS_LIST: 'admin.apiKeys.list',
+  APIKEYS_REVOKE: 'admin.apiKeys.revoke',
+  WEBHOOKS_LIST: 'admin.webhooks.list',
+  WEBHOOKS_DISABLE: 'admin.webhooks.disable',
 
   // Metrics (auth-side + core-side, merged at the gateway)
   METRICS_AUTH: 'admin.metrics.auth',

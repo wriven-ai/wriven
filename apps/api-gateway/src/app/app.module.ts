@@ -7,13 +7,18 @@ import { PassportModule } from '@nestjs/passport';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { SERVICE_TOKENS } from '@wriven/contracts';
 import { AdminAdminsController } from '../admin/admin-admins.controller';
+import { AdminApiKeysController } from '../admin/admin-apikeys.controller';
 import { AdminAuditController } from '../admin/admin-audit.controller';
 import { AdminAuthController } from '../admin/admin-auth.controller';
+import { AdminContentController } from '../admin/admin-content.controller';
 import { AdminJwtGuard } from '../admin/admin-jwt.guard';
+import { AdminMediaController } from '../admin/admin-media.controller';
 import { AdminMetricsController } from '../admin/admin-metrics.controller';
+import { AdminPlansController } from '../admin/admin-plans.controller';
 import { AdminProjectsController } from '../admin/admin-projects.controller';
 import { AdminRolesGuard } from '../admin/admin-roles.guard';
 import { AdminUsersController } from '../admin/admin-users.controller';
+import { AdminWebhooksController } from '../admin/admin-webhooks.controller';
 import { AdminWorkspacesController } from '../admin/admin-workspaces.controller';
 import { AuditInterceptor } from '../admin/audit.interceptor';
 import { AuthController } from '../auth/auth.controller';
@@ -94,6 +99,11 @@ import { AppService } from './app.service';
     AdminUsersController,
     AdminWorkspacesController,
     AdminProjectsController,
+    AdminContentController,
+    AdminMediaController,
+    AdminApiKeysController,
+    AdminWebhooksController,
+    AdminPlansController,
   ],
   providers: [
     AppService,
