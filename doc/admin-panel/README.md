@@ -11,6 +11,7 @@ This folder is the single source of truth for building it:
 | **README.md** (this) | everyone | What it is, architecture, roles, the two repos |
 | [backend.md](./backend.md) | **the backend agent (this repo)** | Schema, `AdminJwtGuard` + RBAC + audit, cross-tenant RPC, every `/admin/*` endpoint, CORS/cookies for a cross-origin SPA |
 | [frontend.md](./frontend.md) | **the admin-panel frontend agent (separate repo)** | Full SPA build guide: stack, project structure, auth/data layer, every screen, and the design system |
+| [api-contract.md](./api-contract.md) | **the frontend agent** | Concrete `/admin/*` endpoint table (method/path/role/req/resp) + copy-paste TS types & DTOs + deltas from frontend.md. Hand this over directly. |
 
 > **Definition:** a **separate-repo** React + React Router SPA, talking to a new
 > `/admin/*` API surface on the existing gateway, authenticated by a **separate
