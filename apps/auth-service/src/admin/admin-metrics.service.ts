@@ -3,7 +3,7 @@ import { DRIZZLE, DrizzleDB } from '@wriven/database';
 import { count, eq, isNull } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
-const { users, workspaces, projects, workspacePlans } = schema;
+const { users, workspaces, projects, subscriptions } = schema;
 
 export interface AdminAuthMetrics {
   users: { total: number; verified: number };
@@ -36,9 +36,9 @@ export class AdminMetricsService {
         columns: { id: true, key: true, name: true },
       }),
       this.db
-        .select({ planId: workspacePlans.planId, c: count() })
-        .from(workspacePlans)
-        .groupBy(workspacePlans.planId),
+        .select({ planId: subscriptions.planId, c: count() })
+        .from(subscriptions)
+        .groupBy(subscriptions.planId),
     ]);
 
     const assignedByPlan = new Map(assignedRows.map((r) => [r.planId, r.c]));

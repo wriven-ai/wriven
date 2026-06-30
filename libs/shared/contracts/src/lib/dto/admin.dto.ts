@@ -58,6 +58,17 @@ export class UpdateAdminDto {
   active?: boolean;
 }
 
+/** Admin moderation of a tenant user: suspend/reactivate, force email verify. */
+export class AdminUpdateUserDto {
+  @IsOptional()
+  @IsBoolean()
+  suspended?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  emailVerified?: boolean;
+}
+
 /** Common pagination/search query for admin list endpoints. */
 export class AdminListQueryDto {
   @IsOptional()

@@ -128,12 +128,16 @@ export const ADMIN_PATTERNS = {
   AUDIT_WRITE: 'admin.audit.write',
   AUDIT_LIST: 'admin.audit.list',
 
-  // Cross-tenant tenancy reads (auth-service)
+  // Cross-tenant tenancy (auth-service)
   USERS_LIST: 'admin.users.list',
   USERS_GET: 'admin.users.get',
+  USERS_UPDATE: 'admin.users.update', // suspend/reactivate, force-verify
+  USERS_DELETE: 'admin.users.delete',
   WORKSPACES_LIST: 'admin.workspaces.list',
   WORKSPACES_GET: 'admin.workspaces.get',
   PROJECTS_LIST: 'admin.projects.list',
+  PROJECTS_GET: 'admin.projects.get',
+  PROJECTS_DELETE: 'admin.projects.delete',
 
   // Metrics (auth-side + core-side, merged at the gateway)
   METRICS_AUTH: 'admin.metrics.auth',

@@ -107,6 +107,64 @@ export interface PlanView {
   features: PlanFeatures;
 }
 
+// ── Tenant oversight views (cross-tenant, admin panel) ──────────────────────
+
+/** A tenant user row in the admin Users table. */
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  name: string;
+  provider: string;
+  emailVerified: boolean;
+  suspended: boolean;
+  workspaceCount: number;
+  createdAt: string;
+}
+
+/** Full tenant-user detail (memberships) for the admin User detail screen. */
+export interface AdminUserDetail extends AdminUserRow {
+  workspaces: { id: string; name: string; slug: string; role: string }[];
+  projects: {
+    id: string;
+    name: string;
+    workspaceId: string;
+    role: string;
+  }[];
+}
+
+/** A workspace row in the admin Workspaces table. */
+export interface AdminWorkspaceRow {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  ownerEmail: string | null;
+  memberCount: number;
+  projectCount: number;
+  planKey: string | null;
+  planName: string | null;
+  subscriptionStatus: string | null;
+  createdAt: string;
+}
+
+/** Full workspace detail for the admin Workspace detail screen. */
+export interface AdminWorkspaceDetail extends AdminWorkspaceRow {
+  members: { userId: string; email: string; name: string; role: string }[];
+  projects: { id: string; name: string; slug: string }[];
+}
+
+/** A project row in the admin Projects table (cross-workspace). */
+export interface AdminProjectRow {
+  id: string;
+  name: string;
+  slug: string;
+  workspaceId: string;
+  workspaceName: string | null;
+  createdBy: string;
+  deleted: boolean;
+  createdAt: string;
+}
+
 /** Platform KPI snapshot for the admin Overview screen. */
 export interface AdminMetricsOverview {
   users: { total: number; verified: number };

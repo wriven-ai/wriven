@@ -4,6 +4,7 @@ import {
   ADMIN_PATTERNS,
   AdminListQueryDto,
   AdminLoginDto,
+  AdminUpdateUserDto,
   AuditWritePayload,
   CreateAdminDto,
   LogoutPayload,
@@ -13,6 +14,7 @@ import {
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthService } from './admin-auth.service';
 import { AdminMetricsService } from './admin-metrics.service';
+import { AdminTenancyService } from './admin-tenancy.service';
 import { AdminUsersService } from './admin-users.service';
 
 /** TCP surface for the platform admin panel (auth-service side). */
@@ -23,6 +25,7 @@ export class AdminController {
     private readonly admins: AdminUsersService,
     private readonly audit: AdminAuditService,
     private readonly metrics: AdminMetricsService,
+    private readonly tenancy: AdminTenancyService,
   ) {}
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -86,5 +89,52 @@ export class AdminController {
   @MessagePattern(ADMIN_PATTERNS.METRICS_AUTH)
   authMetrics() {
     return this.metrics.auth();
+  }
+
+  // ── Tenant oversight ────────────────────────────────────────────────────────
+
+  @MessagePattern(ADMIN_PATTERNS.USERS_LIST)
+  listUsers(@Payload() query: AdminListQueryDto) {
+    return this.tenancy.listUsers(query);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.USERS_GET)
+  getUser(@Payload() payload: { id: string }) {
+    return this.tenancy.getUser(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.USERS_UPDATE)
+  updateUser(@Payload() payload: { id: string; dto: AdminUpdateUserDto }) {
+    return this.tenancy.updateUser(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.USERS_DELETE)
+  deleteUser(@Payload() payload: { id: string }) {
+    return this.tenancy.deleteUser(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.WORKSPACES_LIST)
+  listWorkspaces(@Payload() query: AdminListQueryDto) {
+    return this.tenancy.listWorkspaces(query);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.WORKSPACES_GET)
+  getWorkspace(@Payload() payload: { id: string }) {
+    return this.tenancy.getWorkspace(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.PROJECTS_LIST)
+  listProjects(@Payload() query: AdminListQueryDto) {
+    return this.tenancy.listProjects(query);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.PROJECTS_GET)
+  getProject(@Payload() payload: { id: string }) {
+    return this.tenancy.getProject(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.PROJECTS_DELETE)
+  deleteProject(@Payload() payload: { id: string }) {
+    return this.tenancy.deleteProject(payload);
   }
 }

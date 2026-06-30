@@ -11,7 +11,10 @@ import { AdminAuditController } from '../admin/admin-audit.controller';
 import { AdminAuthController } from '../admin/admin-auth.controller';
 import { AdminJwtGuard } from '../admin/admin-jwt.guard';
 import { AdminMetricsController } from '../admin/admin-metrics.controller';
+import { AdminProjectsController } from '../admin/admin-projects.controller';
 import { AdminRolesGuard } from '../admin/admin-roles.guard';
+import { AdminUsersController } from '../admin/admin-users.controller';
+import { AdminWorkspacesController } from '../admin/admin-workspaces.controller';
 import { AuditInterceptor } from '../admin/audit.interceptor';
 import { AuthController } from '../auth/auth.controller';
 import { GoogleStrategy } from '../auth/google.strategy';
@@ -88,6 +91,9 @@ import { AppService } from './app.service';
     AdminMetricsController,
     AdminAdminsController,
     AdminAuditController,
+    AdminUsersController,
+    AdminWorkspacesController,
+    AdminProjectsController,
   ],
   providers: [
     AppService,

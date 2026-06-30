@@ -28,6 +28,8 @@ export const users = authSchema.table(
     providerId: text('provider_id'),
     passwordHash: text('password_hash'),
     emailVerified: boolean('email_verified').notNull().default(false),
+    // Set by a platform admin to block sign-in (moderation). Null = active.
+    suspendedAt: timestamp('suspended_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -462,21 +464,58 @@ export const plans = authSchema.table('plans', {
     .$onUpdate(() => new Date()),
 });
 
-export const workspacePlans = authSchema.table('workspace_plans', {
-  workspaceId: uuid('workspace_id')
-    .primaryKey()
-    .references(() => workspaces.id, { onDelete: 'cascade' }),
-  planId: uuid('plan_id')
-    .notNull()
-    .references(() => plans.id, { onDelete: 'restrict' }),
-  status: text('status').notNull().default('active'), // active|past_due|suspended|trialing
-  overrides: jsonb('overrides'), // per-workspace limit overrides (nullable)
-  assignedBy: uuid('assigned_by'), // admin_user id (no FK across concern)
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+/**
+ * A workspace's subscription to a plan. One row per workspace (the billing unit).
+ * Created as `free` when a workspace is created; an admin or the billing flow can
+ * change the plan. Stripe fields are nullable until billing lands. `overrides`
+ * lets an admin bump a single customer's limits without a custom plan.
+ */
+export const subscriptions = authSchema.table(
+  'subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'restrict' }),
+    // active|trialing|past_due|canceled|paused|incomplete
+    status: text('status').notNull().default('active'),
+    billingCycle: text('billing_cycle'), // 'monthly'|'yearly'|null (free)
+    // Stripe linkage (future billing).
+    stripeCustomerId: text('stripe_customer_id'),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    // Billing period + trial tracking.
+    currentPeriodStart: timestamp('current_period_start', {
+      withTimezone: true,
+    }),
+    currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    canceledAt: timestamp('canceled_at', { withTimezone: true }),
+    // Per-workspace limit overrides (admin bump). Null = use the plan's limits.
+    overrides: jsonb('overrides'),
+    // admin_user id who last changed the plan (no FK across concern).
+    updatedBy: uuid('updated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex('subscriptions_workspace_id_uq').on(t.workspaceId),
+    index('subscriptions_plan_id_idx').on(t.planId),
+    index('subscriptions_status_idx').on(t.status),
+    check(
+      'subscriptions_status_check',
+      sql`${t.status} in ('active','trialing','past_due','canceled','paused','incomplete')`,
+    ),
+  ],
+);
 
 export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
   refreshTokens: many(adminRefreshTokens),
@@ -500,13 +539,13 @@ export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
   }),
 }));
 
-export const workspacePlansRelations = relations(workspacePlans, ({ one }) => ({
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   workspace: one(workspaces, {
-    fields: [workspacePlans.workspaceId],
+    fields: [subscriptions.workspaceId],
     references: [workspaces.id],
   }),
   plan: one(plans, {
-    fields: [workspacePlans.planId],
+    fields: [subscriptions.planId],
     references: [plans.id],
   }),
 }));

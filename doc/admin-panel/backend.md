@@ -137,15 +137,33 @@ export const plans = authSchema.table('plans', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const workspacePlans = authSchema.table('workspace_plans', {
-  workspaceId: uuid('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+// One subscription per workspace (the billing unit). Created as `free` when a
+// workspace is created (registration + workspace create). Stripe fields nullable
+// until billing lands; `overrides` lets an admin bump one customer's limits.
+export const subscriptions = authSchema.table('subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),  // unique
   planId: uuid('plan_id').notNull().references(() => plans.id, { onDelete: 'restrict' }),
-  status: text('status').notNull().default('active'),  // active|past_due|suspended|trialing
+  status: text('status').notNull().default('active'),  // active|trialing|past_due|canceled|paused|incomplete
+  billingCycle: text('billing_cycle'),                  // 'monthly'|'yearly'|null
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+  trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+  canceledAt: timestamp('canceled_at', { withTimezone: true }),
   overrides: jsonb('overrides'),                        // per-workspace limit overrides
-  assignedBy: uuid('assigned_by'),                      // admin_user id (no FK across concern)
+  updatedBy: uuid('updated_by'),                        // admin_user id (no FK across concern)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 ```
+
+> **Subscription lifecycle:** a free subscription is created in the same
+> transaction as every workspace (`AuthService.register`, `googleLogin`,
+> `WorkspacesService.create`). Workspaces without a row still resolve to `free`
+> defensively. Suspending a **user** sets `users.suspendedAt` (login blocked).
 
 **Seed** (`apps/auth-service/src/db/seed.ts`, run `pnpm db:auth:seed`):
 - Three plans, upserted on `key` (definitions are config, source of truth = seed):

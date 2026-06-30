@@ -3,6 +3,7 @@ import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthService } from './admin-auth.service';
 import { AdminController } from './admin.controller';
 import { AdminMetricsService } from './admin-metrics.service';
+import { AdminTenancyService } from './admin-tenancy.service';
 import { AdminTokenService } from './admin-token.service';
 import { AdminUsersService } from './admin-users.service';
 
@@ -14,6 +15,7 @@ import { AdminUsersService } from './admin-users.service';
     AdminUsersService,
     AdminAuditService,
     AdminMetricsService,
+    AdminTenancyService,
   ],
 })
 export class AdminModule {}
