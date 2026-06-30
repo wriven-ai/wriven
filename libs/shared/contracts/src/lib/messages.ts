@@ -106,6 +106,40 @@ export const INVITATION_PATTERNS = {
   ACCEPT: 'auth.invitation.accept',
 } as const;
 
+/**
+ * Platform admin panel. Cross-tenant, god-mode operations. Backed by a separate
+ * `admin_users` identity (auth-service) and cross-tenant reads in both services.
+ * See doc/admin-panel.
+ */
+export const ADMIN_PATTERNS = {
+  // Admin identity & sessions (auth-service)
+  LOGIN: 'admin.auth.login',
+  REFRESH: 'admin.auth.refresh',
+  LOGOUT: 'admin.auth.logout',
+  GET_BY_ID: 'admin.auth.getById',
+
+  // admin_users management
+  ADMINS_LIST: 'admin.admins.list',
+  ADMINS_CREATE: 'admin.admins.create',
+  ADMINS_UPDATE: 'admin.admins.update',
+  ADMINS_DELETE: 'admin.admins.delete',
+
+  // Audit log
+  AUDIT_WRITE: 'admin.audit.write',
+  AUDIT_LIST: 'admin.audit.list',
+
+  // Cross-tenant tenancy reads (auth-service)
+  USERS_LIST: 'admin.users.list',
+  USERS_GET: 'admin.users.get',
+  WORKSPACES_LIST: 'admin.workspaces.list',
+  WORKSPACES_GET: 'admin.workspaces.get',
+  PROJECTS_LIST: 'admin.projects.list',
+
+  // Metrics (auth-side + core-side, merged at the gateway)
+  METRICS_AUTH: 'admin.metrics.auth',
+  METRICS_CONTENT: 'admin.metrics.content',
+} as const;
+
 /** Injection tokens for the gateway's TCP ClientProxy instances. */
 export const SERVICE_TOKENS = {
   AUTH_SERVICE: 'AUTH_SERVICE',

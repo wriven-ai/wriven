@@ -19,6 +19,7 @@
     "db:auth:migrate": "drizzle-kit migrate --config apps/auth-service/drizzle.config.ts",
     "db:auth:push": "drizzle-kit push --config apps/auth-service/drizzle.config.ts",
     "db:auth:studio": "drizzle-kit studio --config apps/auth-service/drizzle.config.ts",
+    "db:auth:seed": "tsx --env-file=apps/auth-service/.env apps/auth-service/src/db/seed.ts",
     "db:core:generate": "drizzle-kit generate --config apps/core-service/drizzle.config.ts",
     "db:core:migrate": "drizzle-kit migrate --config apps/core-service/drizzle.config.ts",
     "db:core:push": "drizzle-kit push --config apps/core-service/drizzle.config.ts",

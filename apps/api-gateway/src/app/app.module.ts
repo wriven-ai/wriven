@@ -6,6 +6,13 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { PassportModule } from '@nestjs/passport';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { SERVICE_TOKENS } from '@wriven/contracts';
+import { AdminAdminsController } from '../admin/admin-admins.controller';
+import { AdminAuditController } from '../admin/admin-audit.controller';
+import { AdminAuthController } from '../admin/admin-auth.controller';
+import { AdminJwtGuard } from '../admin/admin-jwt.guard';
+import { AdminMetricsController } from '../admin/admin-metrics.controller';
+import { AdminRolesGuard } from '../admin/admin-roles.guard';
+import { AuditInterceptor } from '../admin/audit.interceptor';
 import { AuthController } from '../auth/auth.controller';
 import { GoogleStrategy } from '../auth/google.strategy';
 import { ApiKeyGuard } from '../auth/api-key.guard';
@@ -77,6 +84,10 @@ import { AppService } from './app.service';
     ProjectsController,
     InvitationsController,
     WebhooksController,
+    AdminAuthController,
+    AdminMetricsController,
+    AdminAdminsController,
+    AdminAuditController,
   ],
   providers: [
     AppService,
@@ -85,6 +96,9 @@ import { AppService } from './app.service';
     ProjectGuard,
     ApiKeyGuard,
     GoogleStrategy,
+    AdminJwtGuard,
+    AdminRolesGuard,
+    AuditInterceptor,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

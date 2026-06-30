@@ -1,6 +1,7 @@
 export * from './lib/contracts.module';
 export * from './lib/messages';
 export * from './lib/errors';
+export * from './lib/dto/admin.dto';
 export * from './lib/dto/api-key.dto';
 export * from './lib/dto/auth.dto';
 export * from './lib/dto/cms.dto';
@@ -9,6 +10,7 @@ export * from './lib/dto/member.dto';
 export * from './lib/dto/workspace.dto';
 export * from './lib/dto/project.dto';
 export * from './lib/dto/webhook.dto';
+export * from './lib/types/admin.types';
 export * from './lib/types/api-key.types';
 export * from './lib/types/webhook.types';
 export * from './lib/types/auth.types';

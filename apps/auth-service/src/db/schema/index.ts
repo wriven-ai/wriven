@@ -3,6 +3,8 @@ import {
   boolean,
   check,
   index,
+  integer,
+  jsonb,
   pgSchema,
   text,
   timestamp,
@@ -344,3 +346,143 @@ export const invitations = authSchema.table(
     ),
   ],
 );
+
+// ── Admin panel (platform staff — SEPARATE from tenant `users`) ─────────────
+// The admin panel is a separate-repo console operated by Wriven staff. Its
+// identity is fully isolated from tenant users: own table, own sessions, own
+// JWT secret/cookies. See doc/admin-panel.
+
+export const adminUsers = authSchema.table(
+  'admin_users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull().unique(),
+    name: text('name').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    role: text('role').notNull().default('member'), // admin | moderator | member
+    totpSecret: text('totp_secret'), // nullable; TOTP MFA (recommended for admin)
+    active: boolean('active').notNull().default(true),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    check(
+      'admin_users_role_check',
+      sql`${t.role} in ('admin', 'moderator', 'member')`,
+    ),
+  ],
+);
+
+export const adminRefreshTokens = authSchema.table(
+  'admin_refresh_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull(),
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revoked: boolean('revoked').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('admin_refresh_tokens_token_hash_uq').on(t.tokenHash),
+    index('admin_refresh_tokens_admin_user_id_idx').on(t.adminUserId),
+  ],
+);
+
+/** Append-only record of every admin write. Mandatory for accountability. */
+export const adminAuditLog = authSchema.table(
+  'admin_audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'restrict' }),
+    action: text('action').notNull(), // e.g. 'user.suspend', 'apikey.revoke'
+    targetType: text('target_type'), // 'user'|'workspace'|'project'|'entry'|...
+    targetId: text('target_id'),
+    metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+    ip: text('ip'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('admin_audit_log_admin_user_id_idx').on(t.adminUserId),
+    index('admin_audit_log_target_idx').on(t.targetType, t.targetId),
+    index('admin_audit_log_created_at_idx').on(t.createdAt),
+  ],
+);
+
+// ── Plans & per-workspace assignment (billing deferred; limits modelled now) ─
+
+export const plans = authSchema.table('plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(), // 'free'|'pro'|'team'|'enterprise'
+  name: text('name').notNull(),
+  // { projects, members, storageMb, entries, apiKeys, webhooks } — absent = unlimited
+  limits: jsonb('limits').notNull().default(sql`'{}'::jsonb`),
+  priceMonthly: integer('price_monthly'), // cents; informational until billing
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const workspacePlans = authSchema.table('workspace_plans', {
+  workspaceId: uuid('workspace_id')
+    .primaryKey()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  planId: uuid('plan_id')
+    .notNull()
+    .references(() => plans.id, { onDelete: 'restrict' }),
+  status: text('status').notNull().default('active'), // active|past_due|suspended|trialing
+  overrides: jsonb('overrides'), // per-workspace limit overrides (nullable)
+  assignedBy: uuid('assigned_by'), // admin_user id (no FK across concern)
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
+  refreshTokens: many(adminRefreshTokens),
+  auditEntries: many(adminAuditLog),
+}));
+
+export const adminRefreshTokensRelations = relations(
+  adminRefreshTokens,
+  ({ one }) => ({
+    admin: one(adminUsers, {
+      fields: [adminRefreshTokens.adminUserId],
+      references: [adminUsers.id],
+    }),
+  }),
+);
+
+export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
+  admin: one(adminUsers, {
+    fields: [adminAuditLog.adminUserId],
+    references: [adminUsers.id],
+  }),
+}));
+
+export const workspacePlansRelations = relations(workspacePlans, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspacePlans.workspaceId],
+    references: [workspaces.id],
+  }),
+  plan: one(plans, {
+    fields: [workspacePlans.planId],
+    references: [plans.id],
+  }),
+}));

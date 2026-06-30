@@ -13,6 +13,9 @@ const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const CSRF_EXEMPT =
   /\/auth\/(login|register|refresh|logout|forgot-password|reset-password|verify-email|google)(\/|$)/;
 
+/** Admin session-bootstrap routes — protected by credentials / refresh cookie. */
+const ADMIN_CSRF_EXEMPT = /\/admin\/auth\/(login|refresh|logout)(\/|$)/;
+
 /**
  * Double-submit CSRF protection for cookie-based auth.
  *
@@ -31,6 +34,19 @@ export class CsrfGuard implements CanActivate {
       .getRequest<Request & { cookies?: Record<string, string> }>();
 
     if (!MUTATING.has(req.method)) return true;
+
+    // Admin surface uses its own cookies (admin_access_token/admin_csrf_token).
+    if (req.path.includes('/admin/')) {
+      if (ADMIN_CSRF_EXEMPT.test(req.path)) return true;
+      const adminAccess = req.cookies?.['admin_access_token'];
+      if (!adminAccess) return true; // unauthenticated → AdminJwtGuard rejects
+      const cookieToken = req.cookies?.['admin_csrf_token'];
+      const headerToken = req.headers['x-csrf-token'];
+      if (cookieToken && headerToken && cookieToken === headerToken) {
+        return true;
+      }
+      throw this.forbidden();
+    }
 
     // Unauthenticated bootstrap routes are never CSRF-checked, even if a stale
     // access cookie is still present from a previous session.
