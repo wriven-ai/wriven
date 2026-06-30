@@ -427,15 +427,39 @@ export const adminAuditLog = authSchema.table(
 
 export const plans = authSchema.table('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
-  key: text('key').notNull().unique(), // 'free'|'pro'|'team'|'enterprise'
+  key: text('key').notNull().unique(), // 'free'|'pro'|'business'
   name: text('name').notNull(),
-  // { projects, members, storageMb, entries, apiKeys, webhooks } — absent = unlimited
-  limits: jsonb('limits').notNull().default(sql`'{}'::jsonb`),
-  priceMonthly: integer('price_monthly'), // cents; informational until billing
+  description: text('description'),
+  // Display: ordering + whether to show on the public pricing page.
+  sortOrder: integer('sort_order').notNull().default(0),
+  isPublic: boolean('is_public').notNull().default(true),
   active: boolean('active').notNull().default(true),
+
+  // Billing (Stripe-ready; all nullable until billing lands). Prices in cents.
+  priceMonthly: integer('price_monthly'),
+  priceYearly: integer('price_yearly'),
+  currency: text('currency').notNull().default('usd'),
+  stripeProductId: text('stripe_product_id'),
+  stripePriceIdMonthly: text('stripe_price_id_monthly'),
+  stripePriceIdYearly: text('stripe_price_id_yearly'),
+  trialDays: integer('trial_days').notNull().default(0),
+
+  // Quotas (numeric; null/absent = unlimited) — see PlanLimits in contracts.
+  // { projects, members, environments, contentTypes, entries, locales,
+  //   storageMb, assetBandwidthGb, apiRequestsPerMonth, apiKeys, webhooks }
+  limits: jsonb('limits').notNull().default(sql`'{}'::jsonb`),
+  // Entitlements (boolean/enum) — see PlanFeatures in contracts.
+  // { scheduledPublishing, revisionHistory, customRoles, sso, auditLog,
+  //   previewApi, supportTier }
+  features: jsonb('features').notNull().default(sql`'{}'::jsonb`),
+
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export const workspacePlans = authSchema.table('workspace_plans', {

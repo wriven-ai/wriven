@@ -107,15 +107,34 @@ export const adminAuditLog = authSchema.table('admin_audit_log', {
 
 // ── Plans & per-workspace assignment ────────────────────────────────────────
 
+// Three self-serve tiers: free / pro / business. Display + billing live in
+// columns (Stripe-ready); quotas + entitlements live in jsonb so new dimensions
+// need no migration. See PlanLimits / PlanFeatures / PlanView in @wriven/contracts.
 export const plans = authSchema.table('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
-  key: text('key').notNull().unique(),     // 'free'|'pro'|'team'|'enterprise'
+  key: text('key').notNull().unique(),     // 'free'|'pro'|'business'
   name: text('name').notNull(),
-  limits: jsonb('limits').notNull().default(sql`'{}'::jsonb`),
-  // { projects, members, storageMb, entries, apiKeys, webhooks } — absent = unlimited
-  priceMonthly: integer('price_monthly'),  // cents; informational until billing
+  description: text('description'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isPublic: boolean('is_public').notNull().default(true),  // show on pricing page
   active: boolean('active').notNull().default(true),
+  // Billing (Stripe-ready; nullable until billing lands). Prices in cents.
+  priceMonthly: integer('price_monthly'),
+  priceYearly: integer('price_yearly'),
+  currency: text('currency').notNull().default('usd'),
+  stripeProductId: text('stripe_product_id'),
+  stripePriceIdMonthly: text('stripe_price_id_monthly'),
+  stripePriceIdYearly: text('stripe_price_id_yearly'),
+  trialDays: integer('trial_days').notNull().default(0),
+  // Quotas (null/absent = unlimited): projects, members, environments,
+  // contentTypes, entries, locales, storageMb, assetBandwidthGb,
+  // apiRequestsPerMonth, apiKeys, webhooks.
+  limits: jsonb('limits').notNull().default(sql`'{}'::jsonb`),
+  // Entitlements: scheduledPublishing, revisionHistory, customRoles, sso,
+  // auditLog, previewApi, supportTier ('community'|'email'|'priority').
+  features: jsonb('features').notNull().default(sql`'{}'::jsonb`),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const workspacePlans = authSchema.table('workspace_plans', {
@@ -128,10 +147,18 @@ export const workspacePlans = authSchema.table('workspace_plans', {
 });
 ```
 
-**Seed (migration or a one-off seed script):**
-- One `free` plan: `{ key:'free', name:'Free', limits:{ projects:3, members:5, storageMb:100, entries:1000, apiKeys:5, webhooks:3 } }`.
-- One bootstrap `admin` user from env (`ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD_HASH`) — never commit a plaintext password.
+**Seed** (`apps/auth-service/src/db/seed.ts`, run `pnpm db:auth:seed`):
+- Three plans, upserted on `key` (definitions are config, source of truth = seed):
+  - **free** — projects 2, members 3, 100 MB, 10 content types, 1k entries,
+    community support. $0.
+  - **pro** — projects 10, members 10, 5 GB, 50 content types, 50k entries,
+    scheduled publishing + revisions + preview, email support. ~$29/mo.
+  - **business** — unlimited projects/types/keys, members 50, 50 GB, SSO +
+    custom roles + audit log, priority support. ~$99/mo.
+- One bootstrap `admin` from env (`ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`) —
+  hashed at seed time; never commit a plaintext password.
 - Workspaces with no `workspace_plans` row resolve to `free` in code.
+- Prices/limits are placeholders — tune in the seed or later via the admin Plans UI.
 
 ---
 

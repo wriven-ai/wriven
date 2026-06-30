@@ -60,6 +60,53 @@ export interface AuditWritePayload {
   ip?: string | null;
 }
 
+/**
+ * Numeric usage quotas for a plan. `null` / absent on any field = unlimited.
+ * Mirrors the dimensions production headless CMS meter on (seats, projects,
+ * environments, content types, entries, locales, storage, bandwidth, API ops).
+ */
+export interface PlanLimits {
+  projects?: number | null;
+  members?: number | null; // seats
+  environments?: number | null;
+  contentTypes?: number | null;
+  entries?: number | null;
+  locales?: number | null;
+  storageMb?: number | null; // media stored
+  assetBandwidthGb?: number | null; // monthly delivery traffic
+  apiRequestsPerMonth?: number | null;
+  apiKeys?: number | null;
+  webhooks?: number | null;
+}
+
+/** Boolean / enum feature entitlements unlocked by a plan. */
+export interface PlanFeatures {
+  scheduledPublishing?: boolean;
+  revisionHistory?: boolean;
+  customRoles?: boolean;
+  sso?: boolean;
+  auditLog?: boolean;
+  previewApi?: boolean;
+  supportTier?: 'community' | 'email' | 'priority';
+}
+
+/** A plan as returned to the admin panel / pricing surfaces. */
+export interface PlanView {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  isPublic: boolean;
+  active: boolean;
+  priceMonthly: number | null; // cents
+  priceYearly: number | null; // cents
+  currency: string;
+  trialDays: number;
+  limits: PlanLimits;
+  features: PlanFeatures;
+}
+
 /** Platform KPI snapshot for the admin Overview screen. */
 export interface AdminMetricsOverview {
   users: { total: number; verified: number };

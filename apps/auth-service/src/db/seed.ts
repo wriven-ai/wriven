@@ -19,24 +19,123 @@ async function main() {
   const client = postgres(url, { prepare: false });
   const db = drizzle(client, { schema });
 
-  // 1. Free plan — default tier. Limits mirror doc/admin-panel.
-  await db
-    .insert(schema.plans)
-    .values({
+  // 1. Plans — free / pro / business. Definitions are config (source of truth
+  //    is this seed), so we upsert on `key`. Prices in cents — placeholders.
+  const planDefs = [
+    {
       key: 'free',
       name: 'Free',
-      limits: {
-        projects: 3,
-        members: 5,
-        storageMb: 100,
-        entries: 1000,
-        apiKeys: 5,
-        webhooks: 3,
-      },
+      description: 'For trying Wriven and small personal projects.',
+      sortOrder: 0,
       priceMonthly: 0,
-    })
-    .onConflictDoNothing({ target: schema.plans.key });
-  console.log('✓ free plan ensured');
+      priceYearly: 0,
+      trialDays: 0,
+      limits: {
+        projects: 2,
+        members: 3,
+        environments: 1,
+        contentTypes: 10,
+        entries: 1000,
+        locales: 1,
+        storageMb: 100,
+        assetBandwidthGb: 10,
+        apiRequestsPerMonth: 100_000,
+        apiKeys: 3,
+        webhooks: 2,
+      },
+      features: {
+        scheduledPublishing: false,
+        revisionHistory: false,
+        customRoles: false,
+        sso: false,
+        auditLog: false,
+        previewApi: false,
+        supportTier: 'community',
+      },
+    },
+    {
+      key: 'pro',
+      name: 'Pro',
+      description: 'For growing teams shipping production content.',
+      sortOrder: 1,
+      priceMonthly: 2900,
+      priceYearly: 29_000,
+      trialDays: 14,
+      limits: {
+        projects: 10,
+        members: 10,
+        environments: 3,
+        contentTypes: 50,
+        entries: 50_000,
+        locales: 5,
+        storageMb: 5_000,
+        assetBandwidthGb: 200,
+        apiRequestsPerMonth: 1_000_000,
+        apiKeys: 20,
+        webhooks: 20,
+      },
+      features: {
+        scheduledPublishing: true,
+        revisionHistory: true,
+        customRoles: false,
+        sso: false,
+        auditLog: false,
+        previewApi: true,
+        supportTier: 'email',
+      },
+    },
+    {
+      key: 'business',
+      name: 'Business',
+      description: 'For scale: high limits, SSO, audit log, priority support.',
+      sortOrder: 2,
+      priceMonthly: 9900,
+      priceYearly: 99_000,
+      trialDays: 14,
+      limits: {
+        projects: null, // unlimited
+        members: 50,
+        environments: 10,
+        contentTypes: null,
+        entries: null,
+        locales: 20,
+        storageMb: 50_000,
+        assetBandwidthGb: 1_000,
+        apiRequestsPerMonth: 5_000_000,
+        apiKeys: null,
+        webhooks: null,
+      },
+      features: {
+        scheduledPublishing: true,
+        revisionHistory: true,
+        customRoles: true,
+        sso: true,
+        auditLog: true,
+        previewApi: true,
+        supportTier: 'priority',
+      },
+    },
+  ] as const;
+
+  for (const p of planDefs) {
+    await db
+      .insert(schema.plans)
+      .values(p)
+      .onConflictDoUpdate({
+        target: schema.plans.key,
+        set: {
+          name: p.name,
+          description: p.description,
+          sortOrder: p.sortOrder,
+          priceMonthly: p.priceMonthly,
+          priceYearly: p.priceYearly,
+          trialDays: p.trialDays,
+          limits: p.limits,
+          features: p.features,
+        },
+      });
+  }
+  console.log(`✓ plans ensured: ${planDefs.map((p) => p.key).join(', ')}`);
 
   // 2. Bootstrap admin (optional — only if env provided).
   const email = process.env.ADMIN_SEED_EMAIL?.trim().toLowerCase();
