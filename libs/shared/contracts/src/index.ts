@@ -17,3 +17,5 @@ export * from './lib/types/auth.types';
 export * from './lib/types/cms.types';
 export * from './lib/types/invitation.types';
 export * from './lib/types/member.types';
+export * from './lib/dto/support.dto';
+export * from './lib/types/support.types';

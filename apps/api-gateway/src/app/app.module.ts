@@ -18,6 +18,8 @@ import { AdminPlansController } from '../admin/admin-plans.controller';
 import { AdminProjectsController } from '../admin/admin-projects.controller';
 import { AdminRolesGuard } from '../admin/admin-roles.guard';
 import { AdminUsersController } from '../admin/admin-users.controller';
+import { AdminSupportController } from '../admin/admin-support.controller';
+import { AdminSupportMetricsController } from '../admin/admin-support-metrics.controller';
 import { AdminWebhooksController } from '../admin/admin-webhooks.controller';
 import { AdminWorkspacesController } from '../admin/admin-workspaces.controller';
 import { AuditInterceptor } from '../admin/audit.interceptor';
@@ -37,6 +39,7 @@ import { InvitationsController } from '../members/invitations.controller';
 import { ProjectsController } from '../members/projects.controller';
 import { WorkspacesController } from '../members/workspaces.controller';
 import { WebhooksController } from '../webhooks/webhooks.controller';
+import { SupportController } from '../support/support.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -92,6 +95,7 @@ import { AppService } from './app.service';
     ProjectsController,
     InvitationsController,
     WebhooksController,
+    SupportController,
     AdminAuthController,
     AdminMetricsController,
     AdminAdminsController,
@@ -104,6 +108,8 @@ import { AppService } from './app.service';
     AdminApiKeysController,
     AdminWebhooksController,
     AdminPlansController,
+    AdminSupportController,
+    AdminSupportMetricsController,
   ],
   providers: [
     AppService,

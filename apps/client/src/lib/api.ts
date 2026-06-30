@@ -23,6 +23,10 @@ import type {
   RegisterInput,
   RevisionView,
   SessionView,
+  SupportScope,
+  SupportStatus,
+  SupportTicketDetail,
+  SupportTicketRow,
   WebhookEvent,
   WebhookView,
   WorkspaceMemberView,
@@ -602,6 +606,78 @@ export const projectApi = {
       workspace: true,
     }),
 };
+
+export const supportApi = {
+  presign: (dto: { filename: string; contentType: string; size?: number }) =>
+    request<{ uploadUrl: string; key: string }>('/support/tickets/attachments/presign', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+    }),
+
+  create: (dto: {
+    subject: string;
+    description: string;
+    scopeType?: SupportScope;
+    scopeProjectId?: string;
+    attachmentKeys?: string[];
+  }) =>
+    request<SupportTicketDetail>('/support/tickets', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+    }),
+
+  list: (params?: { status?: SupportStatus; scopeType?: SupportScope; page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.scopeType) qs.set('scopeType', params.scopeType);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const q = qs.toString();
+    return request<Paginated<SupportTicketRow>>(
+      `/support/tickets${q ? `?${q}` : ''}`,
+      { workspace: true },
+    );
+  },
+
+  get: (id: string) =>
+    request<SupportTicketDetail>(`/support/tickets/${id}`, { workspace: true }),
+
+  reply: (id: string, dto: { body: string; attachmentKeys?: string[] }) =>
+    request<SupportTicketDetail>(`/support/tickets/${id}/messages`, {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+    }),
+
+  close: (id: string) =>
+    request<SupportTicketDetail>(`/support/tickets/${id}`, {
+      method: 'PATCH',
+      body: { status: 'closed' },
+      workspace: true,
+    }),
+};
+
+/**
+ * Presign → PUT → return key (support attachment upload). Image-only, ≤5 MB, ≤3.
+ */
+export async function uploadSupportAttachment(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error('Only images allowed.');
+  if (file.size > 5 * 1024 * 1024) throw new Error('Image must be under 5 MB.');
+  const { uploadUrl, key } = await supportApi.presign({
+    filename: file.name,
+    contentType: file.type,
+    size: file.size,
+  });
+  const put = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': file.type },
+  });
+  if (!put.ok) throw new Error('Upload to storage failed.');
+  return key;
+}
 
 export const api = { request };
 

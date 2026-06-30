@@ -96,6 +96,14 @@ export const CORE_PATTERNS = {
   WEBHOOK_LIST: 'core.webhook.list',
   WEBHOOK_UPDATE: 'core.webhook.update',
   WEBHOOK_DELETE: 'core.webhook.delete',
+
+  // Support tickets (workspace-level; see doc/support-ticket/backend.md).
+  SUPPORT_PRESIGN: 'core.support.presign',
+  SUPPORT_CREATE: 'core.support.create',
+  SUPPORT_LIST: 'core.support.list',
+  SUPPORT_GET: 'core.support.get',
+  SUPPORT_REPLY: 'core.support.reply',
+  SUPPORT_CLOSE: 'core.support.close',
 } as const;
 
 /** Pending member invitations (workspace + project). Owned by auth-service. */
@@ -162,6 +170,13 @@ export const ADMIN_PATTERNS = {
   // Metrics (auth-side + core-side, merged at the gateway)
   METRICS_AUTH: 'admin.metrics.auth',
   METRICS_CONTENT: 'admin.metrics.content',
+
+  // Support tickets (cross-tenant staff management; see doc/support-ticket/backend.md).
+  SUPPORT_LIST: 'admin.support.list',
+  SUPPORT_GET: 'admin.support.get',
+  SUPPORT_REPLY: 'admin.support.reply',
+  SUPPORT_UPDATE: 'admin.support.update',
+  SUPPORT_METRICS: 'admin.support.metrics',
 } as const;
 
 /** Injection tokens for the gateway's TCP ClientProxy instances. */

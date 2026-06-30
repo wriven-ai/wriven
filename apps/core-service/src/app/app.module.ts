@@ -8,6 +8,7 @@ import { ContentModule } from '../content/content.module';
 import { DeliveryModule } from '../delivery/delivery.module';
 import { MediaModule } from '../media/media.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { SupportModule } from '../support/support.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -24,6 +25,7 @@ import { AppService } from './app.service';
     DeliveryModule,
     MediaModule,
     WebhooksModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
