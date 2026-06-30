@@ -107,7 +107,7 @@ So the gaps read in context. ✅ = working.
 - **Why:** table-stakes to be trusted with customer content.
 - **Now:** CSRF + global throttle + admin RBAC/audit done; **CORS open**, **no
   per-key rate limit**, **no tenant 2FA**, **admin TOTP not built** (schema only).
-- **Cross-ref:** [admin-panel/backend.md §8/§10](./admin-panel/backend.md).
+- **Cross-ref:** [admin-panel/backend/10-security.md](./admin-panel/backend/10-security.md), [01-overview.md §4](./admin-panel/backend/01-overview.md).
 
 ### Automated tests — **L**
 - **What:** unit + integration + e2e + load tests.
@@ -182,7 +182,7 @@ So the gaps read in context. ✅ = working.
 ### Admin panel frontend — **L** (in progress, separate repo)
 - **What:** the operational console UI.
 - **Why:** the backend (this repo) is done; ops can't use it without the UI.
-- **Now:** being built in its own repo per [admin-panel/frontend.md](./admin-panel/frontend.md).
+- **Now:** being built in its own repo per [admin-panel/frontend/](./admin-panel/frontend/).
 
 ---
 
@@ -217,7 +217,7 @@ So the gaps read in context. ✅ = working.
 - Metrics/media-usage caching (full COUNT/SUM per dashboard load today), keyset
   pagination (OFFSET today), sort-column indexes, Redis, read replicas, connection
   pooling review.
-- **Cross-ref:** [admin-panel/backend.md §9](./admin-panel/backend.md).
+- **Cross-ref:** [admin-panel/backend/01-overview.md §3](./admin-panel/backend/01-overview.md).
 
 ### Editorial workflow — **L**
 - Approval stages beyond draft/published/archived, content locking, bulk operations,

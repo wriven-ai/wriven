@@ -2,8 +2,8 @@
 
 The concrete `/admin/*` contract for the **separate-repo admin SPA**. Hand this to
 the frontend agent. It can't import `@wriven/contracts`, so the TypeScript types
-below are copy-paste-ready into the SPA's `lib/types.ts` (§4.2 of
-[frontend.md](./frontend.md)).
+below are copy-paste-ready into the SPA's `lib/types.ts` (see
+[frontend/03-data-layer.md §2](./frontend/03-data-layer.md)).
 
 **Conventions (all endpoints):**
 - Base URL: `${VITE_API_URL}` (e.g. `https://api.wriven.com`), prefix `/api/v1`,
@@ -246,7 +246,7 @@ interface AssignPlanDto {
 
 ---
 
-## Deltas from the original frontend.md (call these out to the agent)
+## Deltas from the frontend build guide (call these out to the agent)
 
 - **Roles are `admin` / `moderator` / `member`** (not the earlier draft set).
   Build nav + action gating on these. `member` = read-only everywhere.
@@ -260,7 +260,7 @@ interface AssignPlanDto {
   (moderation is at the **user** level via `PATCH /admin/users/:id { suspended }`).
 - **Media usage** is a separate endpoint (`/admin/media/usage`) returning an array,
   not part of the media list.
-- Everything else in [frontend.md](./frontend.md) (stack, screens, design system)
+- Everything else in [frontend/](./frontend/) (stack, screens, design system)
   still applies.
 
 ---
@@ -269,4 +269,4 @@ interface AssignPlanDto {
 
 CORS allowlist (SPA still works via reflected origin) · TOTP/MFA · IP allowlist ·
 metrics/usage caching · workspace-level suspend · tenant-side audit log. See
-[backend.md §10](./backend.md).
+[backend/01-overview.md §4](./backend/01-overview.md).
