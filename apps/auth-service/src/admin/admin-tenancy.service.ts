@@ -21,6 +21,7 @@ const {
   projects,
   projectMembers,
   subscriptions,
+  refreshTokens,
 } = schema;
 
 @Injectable()
@@ -110,6 +111,15 @@ export class AdminTenancyService {
       .where(eq(users.id, payload.id))
       .returning();
     if (!user) throw rpcError('NOT_FOUND', 'User not found.');
+
+    // Suspending must also kill active sessions (the access token is short-lived,
+    // but revoke refresh tokens so they can't mint new ones).
+    if (payload.dto.suspended === true) {
+      await this.db
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.userId, user.id));
+    }
 
     const counts = await this.workspaceCounts([user.id]);
     return this.toUserRow(user, counts.get(user.id) ?? 0);

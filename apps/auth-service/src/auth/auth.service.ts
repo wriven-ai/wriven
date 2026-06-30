@@ -245,6 +245,14 @@ export class AuthService {
     if (!user) {
       throw rpcError('INVALID_REFRESH_TOKEN', 'The refresh token is invalid.');
     }
+    // A suspended account must not be able to mint new access tokens.
+    if (user.suspendedAt) {
+      await this.db
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.userId, user.id));
+      throw rpcError('FORBIDDEN', 'This account has been suspended.');
+    }
 
     const refresh = this.tokens.newRefreshToken();
     const refreshExpiresAt = this.tokens.refreshExpiresAt(row.rememberMe);

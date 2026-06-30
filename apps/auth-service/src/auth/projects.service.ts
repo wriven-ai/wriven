@@ -9,7 +9,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, count, eq, isNull, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
@@ -50,10 +50,32 @@ export class ProjectsService {
       ['owner', 'admin'],
     );
     // Enforce the workspace plan's project quota (e.g. free = 2).
-    await this.entitlements.assertProjectQuota(p.workspaceId);
+    const { limits } = await this.entitlements.resolveLimits(p.workspaceId);
     const slug = p.dto.slug ?? uniqueSlug(p.dto.name);
     try {
       const result = await this.db.transaction(async (tx) => {
+        // Count + insert under a per-workspace advisory lock so concurrent
+        // creates can't both pass the quota check (TOCTOU-safe).
+        if (limits.projects != null) {
+          await tx.execute(
+            sql`select pg_advisory_xact_lock(hashtextextended(${p.workspaceId}, 0))`,
+          );
+          const [{ value: used }] = await tx
+            .select({ value: count() })
+            .from(projects)
+            .where(
+              and(
+                eq(projects.workspaceId, p.workspaceId),
+                isNull(projects.deletedAt),
+              ),
+            );
+          if (Number(used) >= limits.projects) {
+            throw rpcError(
+              'PLAN_LIMIT_REACHED',
+              `Your plan allows ${limits.projects} project${limits.projects === 1 ? '' : 's'}. Upgrade to add more.`,
+            );
+          }
+        }
         const [project] = await tx
           .insert(projects)
           .values({

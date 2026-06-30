@@ -68,12 +68,15 @@ export class AdminController {
   }
 
   @MessagePattern(ADMIN_PATTERNS.ADMINS_UPDATE)
-  updateAdmin(@Payload() payload: { id: string; dto: UpdateAdminDto }) {
+  updateAdmin(
+    @Payload()
+    payload: { id: string; dto: UpdateAdminDto; actingAdminId: string },
+  ) {
     return this.admins.update(payload);
   }
 
   @MessagePattern(ADMIN_PATTERNS.ADMINS_DELETE)
-  deleteAdmin(@Payload() payload: { id: string }) {
+  deleteAdmin(@Payload() payload: { id: string; actingAdminId: string }) {
     return this.admins.remove(payload);
   }
 

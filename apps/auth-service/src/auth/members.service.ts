@@ -6,7 +6,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 import { EntitlementsService } from './entitlements.service';
@@ -54,12 +54,35 @@ export class MembersService {
     ]);
     const user = await this.findUserByEmail(p.dto.email);
     await this.ensureNotWorkspaceMember(p.workspaceId, user.id);
-    // Enforce the workspace plan's member (seat) quota.
-    await this.entitlements.assertMemberQuota(p.workspaceId);
-    const [row] = await this.db
-      .insert(workspaceMembers)
-      .values({ workspaceId: p.workspaceId, userId: user.id, role: p.dto.role })
-      .returning();
+    // Enforce the plan's seat quota under a per-workspace advisory lock so
+    // concurrent adds can't both pass the check (TOCTOU-safe).
+    const { limits } = await this.entitlements.resolveLimits(p.workspaceId);
+    const row = await this.db.transaction(async (tx) => {
+      if (limits.members != null) {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${p.workspaceId}, 0))`,
+        );
+        const [{ value: used }] = await tx
+          .select({ value: count() })
+          .from(workspaceMembers)
+          .where(eq(workspaceMembers.workspaceId, p.workspaceId));
+        if (Number(used) >= limits.members) {
+          throw rpcError(
+            'PLAN_LIMIT_REACHED',
+            `Your plan allows ${limits.members} member${limits.members === 1 ? '' : 's'}. Upgrade to add more.`,
+          );
+        }
+      }
+      const [r] = await tx
+        .insert(workspaceMembers)
+        .values({
+          workspaceId: p.workspaceId,
+          userId: user.id,
+          role: p.dto.role,
+        })
+        .returning();
+      return r;
+    });
     return this.toWorkspaceMemberView({ ...row, user });
   }
 

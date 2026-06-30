@@ -14,6 +14,7 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import {
   ADMIN_PATTERNS,
+  AdminAuthUser,
   AdminListQueryDto,
   CreateAdminDto,
   SERVICE_TOKENS,
@@ -25,6 +26,7 @@ import { AdminRoles } from './admin-roles.decorator';
 import { AdminRolesGuard } from './admin-roles.guard';
 import { Audit } from './audit.decorator';
 import { AuditInterceptor } from './audit.interceptor';
+import { CurrentAdmin } from './current-admin.decorator';
 
 /** Manage platform admins. `admin` role only. */
 @UseGuards(AdminJwtGuard, AdminRolesGuard)
@@ -49,15 +51,28 @@ export class AdminAdminsController {
 
   @Audit('admin.update', 'admin_user')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateAdminDto) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAdminDto,
+    @CurrentAdmin() admin: AdminAuthUser,
+  ) {
     return firstValueFrom(
-      this.auth.send(ADMIN_PATTERNS.ADMINS_UPDATE, { id, dto }),
+      this.auth.send(ADMIN_PATTERNS.ADMINS_UPDATE, {
+        id,
+        dto,
+        actingAdminId: admin.adminUserId,
+      }),
     );
   }
 
   @Audit('admin.delete', 'admin_user')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return firstValueFrom(this.auth.send(ADMIN_PATTERNS.ADMINS_DELETE, { id }));
+  remove(@Param('id') id: string, @CurrentAdmin() admin: AdminAuthUser) {
+    return firstValueFrom(
+      this.auth.send(ADMIN_PATTERNS.ADMINS_DELETE, {
+        id,
+        actingAdminId: admin.adminUserId,
+      }),
+    );
   }
 }

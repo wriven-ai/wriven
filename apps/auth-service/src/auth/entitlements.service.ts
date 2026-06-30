@@ -2,15 +2,33 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PlanLimits, WorkspaceEntitlements } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
-import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 
 const { plans, subscriptions, projects, workspaceMembers } = schema;
 
 /**
+ * Fail-closed default limits used when no plan/subscription resolves (e.g. the
+ * `free` plan has not been seeded yet). Never leave a workspace effectively
+ * unlimited just because seed data is missing.
+ */
+const FREE_FALLBACK: PlanLimits = {
+  projects: 2,
+  members: 3,
+  environments: 1,
+  contentTypes: 10,
+  entries: 1000,
+  locales: 1,
+  storageMb: 100,
+  assetBandwidthGb: 10,
+  apiRequestsPerMonth: 100_000,
+  apiKeys: 3,
+  webhooks: 2,
+};
+
+/**
  * Resolves a workspace's effective plan limits (plan + per-subscription overrides)
- * and enforces them on tenant write paths. Workspaces with no subscription default
- * to the `free` plan.
+ * for enforcement. Enforcement itself happens inside the create transaction of the
+ * owning service (advisory-locked) to avoid TOCTOU races.
  */
 @Injectable()
 export class EntitlementsService {
@@ -27,18 +45,23 @@ export class EntitlementsService {
       with: { plan: { columns: { key: true, limits: true } } },
     });
 
-    let planKey = sub?.plan?.key ?? 'free';
+    let planKey = sub?.plan?.key;
     let baseLimits = (sub?.plan?.limits ?? null) as PlanLimits | null;
-    if (!baseLimits) {
+    if (!baseLimits || Object.keys(baseLimits).length === 0) {
       const free = await this.db.query.plans.findFirst({
         where: eq(plans.key, 'free'),
         columns: { key: true, limits: true },
       });
+      const freeLimits = (free?.limits ?? null) as PlanLimits | null;
+      // Fail closed: fall back to baked-in free limits if seed is missing.
       planKey = free?.key ?? 'free';
-      baseLimits = (free?.limits ?? {}) as PlanLimits;
+      baseLimits =
+        freeLimits && Object.keys(freeLimits).length > 0
+          ? freeLimits
+          : FREE_FALLBACK;
     }
     const overrides = (sub?.overrides ?? {}) as Partial<PlanLimits>;
-    return { planKey, limits: { ...baseLimits, ...overrides } };
+    return { planKey: planKey ?? 'free', limits: { ...baseLimits, ...overrides } };
   }
 
   async usage(
@@ -47,12 +70,12 @@ export class EntitlementsService {
     const [projectCount, memberCount] = await Promise.all([
       this.db.$count(
         projects,
-        and(
-          eq(projects.workspaceId, workspaceId),
-          isNull(projects.deletedAt),
-        ),
+        and(eq(projects.workspaceId, workspaceId), isNull(projects.deletedAt)),
       ),
-      this.db.$count(workspaceMembers, eq(workspaceMembers.workspaceId, workspaceId)),
+      this.db.$count(
+        workspaceMembers,
+        eq(workspaceMembers.workspaceId, workspaceId),
+      ),
     ]);
     return { projects: projectCount, members: memberCount };
   }
@@ -66,39 +89,5 @@ export class EntitlementsService {
       this.usage(payload.workspaceId),
     ]);
     return { planKey, limits, usage };
-  }
-
-  /** Throw PLAN_LIMIT_REACHED if adding a project would exceed the plan. */
-  async assertProjectQuota(workspaceId: string): Promise<void> {
-    const { limits } = await this.resolveLimits(workspaceId);
-    const max = limits.projects;
-    if (max == null) return; // unlimited
-    const used = await this.db.$count(
-      projects,
-      and(eq(projects.workspaceId, workspaceId), isNull(projects.deletedAt)),
-    );
-    if (used >= max) {
-      throw rpcError(
-        'PLAN_LIMIT_REACHED',
-        `Your plan allows ${max} project${max === 1 ? '' : 's'}. Upgrade to add more.`,
-      );
-    }
-  }
-
-  /** Throw PLAN_LIMIT_REACHED if adding a member would exceed the plan. */
-  async assertMemberQuota(workspaceId: string): Promise<void> {
-    const { limits } = await this.resolveLimits(workspaceId);
-    const max = limits.members;
-    if (max == null) return;
-    const used = await this.db.$count(
-      workspaceMembers,
-      eq(workspaceMembers.workspaceId, workspaceId),
-    );
-    if (used >= max) {
-      throw rpcError(
-        'PLAN_LIMIT_REACHED',
-        `Your plan allows ${max} member${max === 1 ? '' : 's'}. Upgrade to add more.`,
-      );
-    }
   }
 }

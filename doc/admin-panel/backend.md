@@ -431,8 +431,21 @@ ADMIN_IP_ALLOWLIST=          # comma-separated CIDRs for /admin/* (prod)
   `projects` and `members` quotas on tenant create paths (free = 2 projects →
   `PLAN_LIMIT_REACHED`). `auth.entitlements.resolve` RPC exposes limits+usage.
 
+**Hardening applied (review pass):**
+- Suspending a user revokes its refresh tokens; `refresh()` rejects suspended
+  accounts (kills active sessions, not just new logins).
+- Last-active-`admin` and self-deactivate/delete guards on admin-user mgmt.
+- Admin tokens carry `typ:'admin'`; `AdminJwtGuard` rejects non-admin tokens
+  (defence even if secrets were mis-set equal).
+- Project/member quota enforced **inside** the create tx under a per-workspace
+  advisory lock (TOCTOU-safe). Limits **fail closed** to baked-in free defaults
+  if the `free` plan isn't seeded.
+- Plan assignment is an atomic upsert (`onConflictDoUpdate`); create-audit rows
+  capture the new entity id from the handler result.
+
 **Deferred (next slice):** core-side limit enforcement (apiKeys, webhooks, media
 storage, entries, contentTypes) — wire each core create path through
 `auth.entitlements.resolve`. Invitation-accept member quota. TOTP/MFA. IP
-allowlist + `/admin/*` rate-limit.
+allowlist + `/admin/*` rate-limit. **CORS origin allowlist** (still `origin:true`).
+Content-takedown CDN purge. Metrics/media-usage caching at scale.
 ```

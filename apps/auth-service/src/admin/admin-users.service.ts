@@ -10,7 +10,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
 import * as bcrypt from 'bcrypt';
-import { desc, eq, ilike, or } from 'drizzle-orm';
+import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 
@@ -72,7 +72,25 @@ export class AdminUsersService {
   async update(payload: {
     id: string;
     dto: UpdateAdminDto;
+    actingAdminId: string;
   }): Promise<AdminView> {
+    const target = await this.db.query.adminUsers.findFirst({
+      where: eq(adminUsers.id, payload.id),
+    });
+    if (!target) throw rpcError('NOT_FOUND', 'Admin not found.');
+
+    const deactivating = payload.dto.active === false;
+    const demoting =
+      payload.dto.role !== undefined && payload.dto.role !== 'admin';
+
+    if (deactivating && payload.actingAdminId === payload.id) {
+      throw rpcError('CONFLICT', 'You cannot deactivate your own account.');
+    }
+    // Never leave the platform without an active admin.
+    if ((deactivating || demoting) && target.role === 'admin' && target.active) {
+      await this.assertNotLastAdmin();
+    }
+
     const patch: Partial<AdminRow> = {};
     if (payload.dto.role !== undefined) patch.role = payload.dto.role;
     if (payload.dto.active !== undefined) patch.active = payload.dto.active;
@@ -82,21 +100,40 @@ export class AdminUsersService {
       .set(patch)
       .where(eq(adminUsers.id, payload.id))
       .returning();
-    if (!admin) {
-      throw rpcError('NOT_FOUND', 'Admin not found.');
-    }
     return this.toView(admin);
   }
 
-  async remove(payload: { id: string }): Promise<{ success: true }> {
-    const [deleted] = await this.db
-      .delete(adminUsers)
-      .where(eq(adminUsers.id, payload.id))
-      .returning({ id: adminUsers.id });
-    if (!deleted) {
-      throw rpcError('NOT_FOUND', 'Admin not found.');
+  async remove(payload: {
+    id: string;
+    actingAdminId: string;
+  }): Promise<{ success: true }> {
+    if (payload.actingAdminId === payload.id) {
+      throw rpcError('CONFLICT', 'You cannot delete your own account.');
     }
+    const target = await this.db.query.adminUsers.findFirst({
+      where: eq(adminUsers.id, payload.id),
+    });
+    if (!target) throw rpcError('NOT_FOUND', 'Admin not found.');
+    if (target.role === 'admin' && target.active) {
+      await this.assertNotLastAdmin();
+    }
+
+    await this.db.delete(adminUsers).where(eq(adminUsers.id, payload.id));
     return { success: true };
+  }
+
+  /** Guard against removing/demoting the last active `admin`. */
+  private async assertNotLastAdmin(): Promise<void> {
+    const activeAdmins = await this.db.$count(
+      adminUsers,
+      and(eq(adminUsers.role, 'admin'), eq(adminUsers.active, true)),
+    );
+    if (activeAdmins <= 1) {
+      throw rpcError(
+        'CONFLICT',
+        'Cannot remove the last active admin. Promote another admin first.',
+      );
+    }
   }
 
   private toView(a: AdminRow): AdminView {

@@ -90,30 +90,25 @@ export class AdminPlansService {
     if (!ws) throw rpcError('NOT_FOUND', 'Workspace not found.');
 
     const status = payload.dto.status ?? 'active';
-    const existing = await this.db.query.subscriptions.findFirst({
-      where: eq(subscriptions.workspaceId, payload.workspaceId),
-      columns: { id: true },
-    });
-
-    if (existing) {
-      await this.db
-        .update(subscriptions)
-        .set({
-          planId: plan.id,
-          status,
-          overrides: payload.dto.overrides ?? null,
-          updatedBy: payload.adminUserId,
-        })
-        .where(eq(subscriptions.id, existing.id));
-    } else {
-      await this.db.insert(subscriptions).values({
+    // Atomic upsert on the unique workspace_id — race-safe.
+    await this.db
+      .insert(subscriptions)
+      .values({
         workspaceId: payload.workspaceId,
         planId: plan.id,
         status,
         overrides: payload.dto.overrides ?? null,
         updatedBy: payload.adminUserId,
+      })
+      .onConflictDoUpdate({
+        target: subscriptions.workspaceId,
+        set: {
+          planId: plan.id,
+          status,
+          overrides: payload.dto.overrides ?? null,
+          updatedBy: payload.adminUserId,
+        },
       });
-    }
     return { success: true, planKey: plan.key, status };
   }
 

@@ -48,14 +48,20 @@ export class AuditInterceptor implements NestInterceptor {
     >();
 
     return next.handle().pipe(
-      tap(() => {
+      tap((result) => {
         const admin = req.adminUser;
         if (!admin) return;
+        // Prefer the route :id (updates/deletes); fall back to the created
+        // entity's id from the handler result (creates have no :id param).
+        const resultId =
+          result && typeof result === 'object' && 'id' in result
+            ? String((result as { id: unknown }).id)
+            : null;
         const payload: AuditWritePayload = {
           adminUserId: admin.adminUserId,
           action: meta.action,
           targetType: meta.target ?? null,
-          targetId: req.params?.['id'] ?? null,
+          targetId: req.params?.['id'] ?? resultId,
           metadata: req.auditMeta ?? {},
           ip: req.ip ?? null,
         };

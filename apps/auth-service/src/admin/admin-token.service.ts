@@ -27,7 +27,7 @@ export class AdminTokenService {
     role: AdminRole;
   }): string {
     return this.jwt.sign(
-      { sub: admin.id, email: admin.email, role: admin.role },
+      { sub: admin.id, email: admin.email, role: admin.role, typ: 'admin' },
       { expiresIn: this.config.get<string>('ADMIN_JWT_ACCESS_TTL', '15m') },
     );
   }

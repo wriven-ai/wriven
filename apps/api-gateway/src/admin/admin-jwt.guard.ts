@@ -8,6 +8,7 @@ interface AdminTokenPayload {
   sub: string;
   email: string;
   role: AdminRole;
+  typ?: string;
 }
 
 /**
@@ -38,6 +39,11 @@ export class AdminJwtGuard implements CanActivate {
     }
     try {
       const payload = this.jwt.verify<AdminTokenPayload>(token);
+      // Defence-in-depth: reject anything that isn't an admin-typed token, even
+      // if a misconfiguration ever made ADMIN_JWT_SECRET match the tenant secret.
+      if (payload.typ !== 'admin' || !payload.role) {
+        throw this.unauthorized('Not an admin token.');
+      }
       req.adminUser = {
         adminUserId: payload.sub,
         email: payload.email,
