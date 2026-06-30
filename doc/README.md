@@ -24,6 +24,7 @@ Wriven is an **AI-native content management and generation SaaS**. The backend i
 | [14 — Webhooks](./14-webhooks.md) | Outgoing webhooks on publish/unpublish/delete, HMAC signing, retry/backoff, consumer verification, dashboard UI |
 | [15 — Client SDK](./15-sdk.md) | `@wriven-ai/*` package strategy, dual ESM/CJS publishing foundation, isomorphic typed client design, phased build order |
 | [16 — Admin Panel](./admin-panel/README.md) | Platform console (separate repo): `admin`/`moderator`/`member` RBAC, separate `admin_users` identity + audit log + plans tables. [backend.md](./admin-panel/backend.md) (API/guards/schema impl) · [frontend.md](./admin-panel/frontend.md) (React+React Router SPA build guide + design system) |
+| [17 — Market Readiness](./17-market-readiness.md) | Gap analysis: what's missing to ship Wriven as a full-fledged headless CMS — prioritized (P0–P3) with effort + current state; path to first paid launch |
 
 **Per service**
 
