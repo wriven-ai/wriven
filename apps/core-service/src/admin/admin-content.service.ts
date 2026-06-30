@@ -8,16 +8,18 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
 import { and, desc, eq, isNull, SQL } from 'drizzle-orm';
+import { CachePurgeService } from '../cache/cache-purge.service';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 
-const { contentEntries } = schema;
+const { contentEntries, contentTypes } = schema;
 type EntryRow = typeof contentEntries.$inferSelect;
 
 @Injectable()
 export class AdminContentService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly cache: CachePurgeService,
   ) {}
 
   async list(query: AdminContentQueryDto): Promise<Paginated<AdminEntryRow>> {
@@ -68,6 +70,14 @@ export class AdminContentService {
       .where(eq(contentEntries.id, payload.id))
       .returning();
     if (!entry) throw rpcError('NOT_FOUND', 'Entry not found.');
+
+    // Purge the CDN so the taken-down entry stops being served from cache.
+    const type = await this.db.query.contentTypes.findFirst({
+      where: eq(contentTypes.id, entry.contentTypeId),
+      columns: { apiId: true },
+    });
+    if (type) await this.cache.purgeEntry(type.apiId, entry.id);
+
     return this.toRow(entry);
   }
 

@@ -11,6 +11,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { EntitlementsService } from './entitlements.service';
 import { MembersService } from './members.service';
 import { ProjectsService } from './projects.service';
 import { MailService } from './mail.service';
@@ -32,6 +33,7 @@ export class InvitationsService {
     private readonly projects: ProjectsService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   // ── Create ──────────────────────────────────────────────────────────────────
@@ -232,6 +234,18 @@ export class InvitationsService {
     userId: string,
   ): Promise<void> {
     if (invite.scope === 'workspace') {
+      // Enforce the seat quota only when this is a NEW member (re-accepting or a
+      // guest→role upgrade doesn't consume an additional seat).
+      const already = await tx.query.workspaceMembers.findFirst({
+        where: and(
+          eq(workspaceMembers.workspaceId, invite.workspaceId),
+          eq(workspaceMembers.userId, userId),
+        ),
+        columns: { id: true },
+      });
+      if (!already) {
+        await this.entitlements.assertMemberQuotaTx(tx, invite.workspaceId);
+      }
       // Insert, or upgrade an existing `guest` to the invited role. A higher
       // existing role (owner/admin/member) is left untouched (setWhere skips it).
       await tx

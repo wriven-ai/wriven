@@ -1,10 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PlanLimits, WorkspaceEntitlements } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, count, eq, isNull, sql } from 'drizzle-orm';
+import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 
 const { plans, subscriptions, projects, workspaceMembers } = schema;
+
+/** A Drizzle transaction handle (same shape services pass into `db.transaction`). */
+type Tx = Parameters<
+  Parameters<DrizzleDB<typeof schema>['transaction']>[0]
+>[0];
 
 /**
  * Fail-closed default limits used when no plan/subscription resolves (e.g. the
@@ -89,5 +95,48 @@ export class EntitlementsService {
       this.usage(payload.workspaceId),
     ]);
     return { planKey, limits, usage };
+  }
+
+  /**
+   * Enforce the project quota INSIDE a create transaction. Takes a per-workspace
+   * advisory lock so concurrent creates can't both pass (TOCTOU-safe).
+   */
+  async assertProjectQuotaTx(tx: Tx, workspaceId: string): Promise<void> {
+    const { limits } = await this.resolveLimits(workspaceId);
+    if (limits.projects == null) return;
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${workspaceId}, 0))`,
+    );
+    const [{ value: used }] = await tx
+      .select({ value: count() })
+      .from(projects)
+      .where(
+        and(eq(projects.workspaceId, workspaceId), isNull(projects.deletedAt)),
+      );
+    if (Number(used) >= limits.projects) {
+      throw rpcError(
+        'PLAN_LIMIT_REACHED',
+        `Your plan allows ${limits.projects} project${limits.projects === 1 ? '' : 's'}. Upgrade to add more.`,
+      );
+    }
+  }
+
+  /** Enforce the member (seat) quota inside a create transaction (TOCTOU-safe). */
+  async assertMemberQuotaTx(tx: Tx, workspaceId: string): Promise<void> {
+    const { limits } = await this.resolveLimits(workspaceId);
+    if (limits.members == null) return;
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${workspaceId}, 0))`,
+    );
+    const [{ value: used }] = await tx
+      .select({ value: count() })
+      .from(workspaceMembers)
+      .where(eq(workspaceMembers.workspaceId, workspaceId));
+    if (Number(used) >= limits.members) {
+      throw rpcError(
+        'PLAN_LIMIT_REACHED',
+        `Your plan allows ${limits.members} member${limits.members === 1 ? '' : 's'}. Upgrade to add more.`,
+      );
+    }
   }
 }

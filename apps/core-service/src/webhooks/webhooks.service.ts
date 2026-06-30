@@ -14,6 +14,7 @@ import type { DrizzleDB } from '@wriven/database';
 import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 
 const { webhooks } = schema;
 type WebhookRow = typeof webhooks.$inferSelect;
@@ -24,7 +25,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class WebhooksService {
   private readonly logger = new Logger(WebhooksService.name);
 
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly entitlements: CoreEntitlementsService,
+  ) {}
 
   /** Create a subscription. Secret returned ONCE; it signs outgoing payloads. */
   async create(p: {
@@ -33,6 +37,7 @@ export class WebhooksService {
     userId: string;
     dto: CreateWebhookDto;
   }): Promise<CreateWebhookResult> {
+    await this.entitlements.assertWebhookQuota(p.workspaceId);
     const secret = `whsec_${randomBytes(24).toString('base64url')}`;
     const events = p.dto.events?.length ? p.dto.events : [...WEBHOOK_EVENTS];
 

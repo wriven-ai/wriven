@@ -12,6 +12,7 @@ import type { DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 
 const { apiKeys } = schema;
 type ApiKeyRow = typeof apiKeys.$inferSelect;
@@ -28,7 +29,10 @@ const sha256 = (s: string): string =>
 
 @Injectable()
 export class ApiKeysService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly entitlements: CoreEntitlementsService,
+  ) {}
 
   /**
    * Mint a new key. The raw token is returned ONCE here and never stored — only
@@ -40,6 +44,7 @@ export class ApiKeysService {
     userId: string;
     dto: CreateApiKeyDto;
   }): Promise<CreateApiKeyResult> {
+    await this.entitlements.assertApiKeyQuota(p.workspaceId);
     const scope: ApiKeyScope = p.dto.scope ?? 'read';
     // 24 random bytes → 32 url-safe chars. High entropy, so sha-256 (not bcrypt).
     const secret = randomBytes(24).toString('base64url');

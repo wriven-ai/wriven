@@ -443,9 +443,16 @@ ADMIN_IP_ALLOWLIST=          # comma-separated CIDRs for /admin/* (prod)
 - Plan assignment is an atomic upsert (`onConflictDoUpdate`); create-audit rows
   capture the new entity id from the handler result.
 
-**Deferred (next slice):** core-side limit enforcement (apiKeys, webhooks, media
-storage, entries, contentTypes) — wire each core create path through
-`auth.entitlements.resolve`. Invitation-accept member quota. TOTP/MFA. IP
-allowlist + `/admin/*` rate-limit. **CORS origin allowlist** (still `origin:true`).
-Content-takedown CDN purge. Metrics/media-usage caching at scale.
+**Enforcement now complete (auth + core):**
+- Auth-side (TOCTOU-safe, advisory-locked): **projects**, **members** — on
+  direct create, workspace create, and **invitation accept** (new seats only).
+- Core-side (`CoreEntitlementsService` → `auth.entitlements.resolve`): **entries**,
+  **contentTypes**, **apiKeys**, **webhooks** on create; **media storage**
+  (`storageMb`) enforced at presign against the plan (was a hardcoded constant).
+- Content **takedown purges the CDN** (`CachePurgeService.purgeEntry`).
+
+**Deferred (next slice):** TOTP/MFA. IP allowlist + `/admin/*` rate-limit.
+**CORS origin allowlist** (still `origin:true`). Metrics/media-usage caching at
+scale. (Core-side quota counts are point-in-time, not advisory-locked — minor
+race on soft caps; hard storage cap is checked pre-upload.)
 ```
