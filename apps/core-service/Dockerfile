@@ -17,7 +17,6 @@ RUN pnpm install --frozen-lockfile --prefer-offline
 # Copy source
 COPY apps/core-service ./apps/core-service
 COPY libs/shared ./libs/shared
-COPY libs/database ./libs/database
 
 # Build
 RUN pnpm nx build core-service

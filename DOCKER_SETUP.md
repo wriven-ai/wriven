@@ -28,7 +28,7 @@ All services communicate over Docker bridge network `wriven-net`. PostgreSQL and
 ### 1. Prerequisites
 
 - Docker Engine 20.10+
-- Docker Compose 2.0+
+- Docker Compose 2.0+ (the `docker compose` plugin, not the legacy `docker-compose` binary)
 - 4GB RAM minimum (8GB recommended)
 
 ### 2. Environment Variables
@@ -48,16 +48,13 @@ Edit `.env` and set at minimum:
 
 ```bash
 # Build all services
-make build
+docker compose build
 
 # Start everything (detached)
-make up-d
+docker compose up -d
 
 # View logs
-make logs
-
-# Check health
-make health
+docker compose logs -f
 ```
 
 Services available at:
@@ -66,12 +63,18 @@ Services available at:
 - Auth Service (TCP): localhost:5001
 - Core Service (TCP): localhost:5002
 
+> **Note on health checks:** Only the API Gateway (`:5000`) and Client (`:3000`) expose
+> HTTP endpoints. `auth-service` and `core-service` are pure TCP microservices with no
+> HTTP server, so you cannot `curl` their ports. Verify them via the gateway:
+> `curl -sf http://localhost:5000/api/v1/health`, or check container status with
+> `docker compose ps`.
+
 ### 4. Database Migrations
 
 After first start, run migrations:
 
 ```bash
-make db-migrate
+docker compose exec core-service pnpm db:core:migrate
 ```
 
 ---
@@ -101,7 +104,7 @@ All Dockerfiles follow the same multi-stage build:
 
 ### Local Development (`docker-compose.yml`)
 
-- **Postgres included**: Fresh database every `docker-compose down -v`
+- **Postgres included**: Fresh database every `docker compose down -v`
 - **Redis included**: For caching (optional)
 - **Source mounting**: None — rebuild required for changes (intentional; use Nx watch locally for dev)
 - **Hot reload**: Not enabled in Docker — use `pnpm nx serve <service>` directly for development
@@ -126,49 +129,52 @@ All Dockerfiles follow the same multi-stage build:
 
 ```bash
 # All services
-make logs
+docker compose logs -f
 
 # Specific service
-make logs-auth
-make logs-core
-make logs-gateway
-make logs-client
+docker compose logs -f auth-service
+docker compose logs -f core-service
+docker compose logs -f api-gateway
+docker compose logs -f client
 ```
 
 ### Restart Services
 
 ```bash
 # Restart all (no rebuild)
-make restart
+docker compose restart
 
 # Rebuild from scratch + restart
-make rebuild
+docker compose down
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ### Enter Container
 
 ```bash
 # Auth service shell
-docker-compose exec auth-service sh
+docker compose exec auth-service sh
 
 # Core service shell
-docker-compose exec core-service sh
+docker compose exec core-service sh
 
 # Run one-off command
-docker-compose exec api-gateway npx nx test
+docker compose exec api-gateway npx nx test
 ```
 
 ### Clean Up
 
 ```bash
 # Stop + remove containers
-make down
+docker compose down
 
 # Stop + remove volumes (deletes DB data!)
-make clean
+docker compose down -v
+docker system prune -f
 
 # Prune all unused images
-make prune
+docker system prune -a -f --volumes
 ```
 
 ---
@@ -178,13 +184,13 @@ make prune
 ### Services Can't Connect
 
 - Check they're on `wriven-net` network: `docker network ls`
-- Verify env vars: `docker-compose config`
-- Logs: `make logs`
+- Verify env vars: `docker compose config`
+- Logs: `docker compose logs -f`
 
 ### Build Failures
 
 - Clear Docker build cache: `docker builder prune -a`
-- Rebuild without cache: `docker-compose build --no-cache <service>`
+- Rebuild without cache: `docker compose build --no-cache <service>`
 - Check disk space: `docker system df`
 
 ### Port Conflicts
@@ -207,11 +213,17 @@ All containers run as non-root `wriven:1001`. If you see permission errors, ensu
 # Set version/tag
 export TAG=v1.0.0
 
-# Tag all images
-make tag-all
+# Tag images
+docker tag wriven-auth-service:latest wriven/auth-service:$TAG
+docker tag wriven-core-service:latest wriven/core-service:$TAG
+docker tag wriven-api-gateway:latest wriven/api-gateway:$TAG
+docker tag wriven-client:latest wriven/client:$TAG
 
 # Push to registry (configure auth first)
-make push-all
+docker push wriven/auth-service:$TAG
+docker push wriven/core-service:$TAG
+docker push wriven/api-gateway:$TAG
+docker push wriven/client:$TAG
 ```
 
 ### Registry Configuration
