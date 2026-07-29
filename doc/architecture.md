@@ -1,4 +1,4 @@
-# 02 — Architecture
+Architecture
 
 ## Topology
 
@@ -81,7 +81,7 @@ this.core.send(CORE_PATTERNS.ENTRY_CREATE, { workspaceId, userId, dto });
 - **JWT validation** is local (gateway holds `JWT_SECRET`, no remote `/verify` call). Access tokens are short-lived (15m) so the revocation window is acceptable.
 - **Workspace membership** validated via TCP `auth.validateWorkspaceMember` before forwarding workspace-scoped requests.
 - **Rate limiting** (`@nestjs/throttler`) — global default + tighter per-route limits.
-- **Response envelope** — `ResponseInterceptor` (success) + `AllExceptionsFilter` (errors). See [07](./07-conventions.md).
+- **Response envelope** — `ResponseInterceptor` (success) + `AllExceptionsFilter` (errors). See [Conventions](./conventions.md).
 - **CORS** — credentials enabled, origin from `CLIENT_ORIGIN` (refresh cookie is cross-site).
 - Owns **no database tables and no business logic** — it routes and guards.
 
@@ -93,4 +93,4 @@ this.core.send(CORE_PATTERNS.ENTRY_CREATE, { workspaceId, userId, dto });
 | Data | users, sessions, orgs, workspaces, members, tokens | content types, entries, revisions, media |
 | Never owns | content, media | identity, auth tokens, org/workspace records |
 
-A service never reads another service's tables. Cross-service data (e.g. resolving a content author's name) goes over TCP message patterns, not SQL joins. See [03 — Database](./03-database.md) for why there are no cross-service foreign keys.
+A service never reads another service's tables. Cross-service data (e.g. resolving a content author's name) goes over TCP message patterns, not SQL joins. See [Database](./database.md) for why there are no cross-service foreign keys.

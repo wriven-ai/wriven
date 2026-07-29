@@ -1,6 +1,6 @@
 # API Gateway
 
-The only internet-facing service (HTTP `:5000`). Owns **no database tables and no business logic** — it authenticates, authorizes, rate-limits, shapes responses, and forwards to internal services over TCP. Full request lifecycle: [Architecture](../02-architecture.md).
+The only internet-facing service (HTTP `:5000`). Owns **no database tables and no business logic** — it authenticates, authorizes, rate-limits, shapes responses, and forwards to internal services over TCP. Full request lifecycle: [Architecture](../architecture.md).
 
 ## Responsibilities
 
@@ -9,7 +9,7 @@ The only internet-facing service (HTTP `:5000`). Owns **no database tables and n
 | Routing | NestJS controllers → `ClientProxy.send(pattern, payload)` over TCP to auth/core |
 | AuthN | `JwtAuthGuard` — validates the access token locally (`JWT_SECRET`), sets `req.user` |
 | Workspace authZ | `WorkspaceGuard` — validates `X-Workspace-Id` membership via `auth.validateWorkspaceMember`, sets `req.workspaceId` |
-| Rate limiting | `@nestjs/throttler` — global 100/min + tighter per-route (see [Conventions](../07-conventions.md)) |
+| Rate limiting | `@nestjs/throttler` — global 100/min + tighter per-route (see [Conventions](../conventions.md)) |
 | Response shape | `ResponseInterceptor` (success envelope) + `AllExceptionsFilter` (error envelope) |
 | CORS | credentials enabled, origin from `CLIENT_ORIGIN` |
 | Google OAuth | Passport `google` strategy runs here (auth-service has no public HTTP) |
@@ -41,4 +41,4 @@ AI_SERVICE_URL=...            # HTTP (planned)
 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_CALLBACK_URL
 ```
 
-Every endpoint with method/body/response: [API Reference](../06-api-reference.md).
+Every endpoint with method/body/response: [API Reference](../api-reference.md).

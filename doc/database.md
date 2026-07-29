@@ -1,4 +1,4 @@
-# 03 — Database
+Database
 
 ## Engine & ORM
 

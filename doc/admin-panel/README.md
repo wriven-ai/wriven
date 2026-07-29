@@ -107,7 +107,7 @@ Full DDL in [backend.md §2](./backend.md). All in the `auth_svc` schema:
    wired to `/admin/*`, screens in priority order, design system applied.
 
 When a module or material change lands, update these docs and
-[../08-status.md](../08-status.md) (keep `doc/` current — house rule).
+[../../status.md](../status.md) (keep `doc/` current — house rule).
 
 ---
 

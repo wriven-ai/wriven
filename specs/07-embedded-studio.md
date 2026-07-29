@@ -1,13 +1,13 @@
-# 10 — Embedded Studio (`@wriven-ai/studio` at the customer's `/wriven` route)
+# 07 — Embedded Studio (`@wriven-ai/studio` at the customer's `/wriven` route)
 
-Plan for **Model B** from [09 — Content Delivery & Plans](./09-content-delivery-and-plans.md):
+Plan for **Model B** from [01 — Content Delivery & Plans](./01-content-delivery-and-plans.md):
 the customer mounts the Wriven authoring UI **inside their own app** at e.g.
 `mysite.com/wriven`, by installing an npm package. This is the Sanity Studio /
 Payload `/admin` pattern.
 
 > **Read this first:** the embedded studio is **a client of the Management API**,
 > not a replacement for it. It renders editor UI on the customer's domain and
-> talks to `api.wriven.com`. Therefore **everything in doc 09 §2/§3 (the API +
+> talks to `api.wriven.com`. Therefore **everything in specs/01 §2/§3 (the API +
 > token auth) is still a prerequisite.** Choosing the `/wriven` route does not
 > remove API work — it *adds* a frontend + a cross-origin auth handshake + an
 > origin allowlist on top of it.
@@ -83,7 +83,7 @@ Security rules (non-negotiable):
 - Studio JWT is **project-scoped and role-scoped** — it can only touch that one
   project, with that member's role. Short TTL (~15 min) + refresh.
 - Studio tokens are a **distinct token class** from the CDA `wrk_live_` read keys
-  (doc 09 §3). Read keys = machine, long-lived, content read. Studio tokens =
+  (specs/01 §3). Read keys = machine, long-lived, content read. Studio tokens =
   human, short-lived, management scope. Don't conflate.
 
 > This is the single biggest piece of new work and the main reason Model B is a
@@ -148,7 +148,7 @@ of a rewrite.
 
 ### Distribution
 
-- Publish under the existing npm scope **`@wriven-ai`** (see [01 — Overview](./01-overview.md)).
+- Publish under the existing npm scope **`@wriven-ai`** (see [Overview](../doc/overview.md)).
 - Bundle with a library bundler (tsup / Vite library mode); `react` + `react-dom`
   as **peerDependencies**.
 - Strict **semver** — it runs inside customers' builds, so breaking changes are
@@ -158,7 +158,7 @@ of a rewrite.
 
 ## 5. Build order for Model B
 
-Prereqs (from doc 09 — must exist first): the Management API, token auth, project
+Prereqs (from specs/01 — must exist first): the Management API, token auth, project
 scoping. Then:
 
 1. **Make the `apps/client` editor portable** — client-only components, injectable
@@ -174,15 +174,15 @@ scoping. Then:
 5. **`defineConfig` + bundle + publish** to `@wriven-ai` (peer-dep react).
 6. **Customer quickstart docs** — the `app/wriven/[[...index]]/page.tsx` snippet,
    config, domain registration, auth flow. (Goes in the public integration guide,
-   doc 09 §7.)
-7. **Plan-gate it** — embedded studio is a Team+ feature (doc 09 §5).
+   specs/01 §7.)
+7. **Plan-gate it** — embedded studio is a Team+ feature (specs/01 §5).
 
 ---
 
 ## 6. Honest recommendation
 
 - The `/wriven` embedded studio is **real differentiation** but it is a **phase-2+
-  feature**: it needs the whole API (doc 09) *plus* a second auth system *plus* a
+  feature**: it needs the whole API (specs/01) *plus* a second auth system *plus* a
   package extraction. It is the most expensive single feature on the roadmap.
 - **Sequence:** ship **Model A** (hosted dashboard + Delivery API) first — that is
   a complete, sellable product. While building the dashboard editor, follow §4's

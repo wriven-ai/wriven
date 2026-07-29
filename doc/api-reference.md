@@ -1,6 +1,6 @@
-# 06 — API Reference
+API Reference
 
-Base URL: `http://localhost:5000/api/v1` (gateway). All responses use the standard envelope (see [07](./07-conventions.md)):
+Base URL: `http://localhost:5000/api/v1` (gateway). All responses use the standard envelope (see [Conventions](./conventions.md)):
 
 - Success: `{ "success": true, "data": <payload> }`
 - Error: `{ "success": false, "error": { "code", "message", "statusCode" } }`
@@ -152,7 +152,7 @@ Errors: `CONFLICT` 409 (duplicate `apiId` within the project), `NOT_FOUND` 404, 
 
 ### Media library
 
-R2-backed; presigned **direct** upload (browser PUTs to R2). Keys-only. See doc/13.
+R2-backed; presigned **direct** upload (browser PUTs to R2). Keys-only. See specs/03.
 
 | Method | Path | Body / Query | → |
 |--------|------|-------------|---|
@@ -166,7 +166,7 @@ Limits (enforced at presign): 5 MB/image, 25 MB/other; 100 MB per workspace.
 
 ### Webhooks
 
-Outgoing webhooks on entry events; signed with HMAC-SHA256. See doc/14.
+Outgoing webhooks on entry events; signed with HMAC-SHA256. See specs/04.
 
 | Method | Path | Body | → |
 |--------|------|------|---|

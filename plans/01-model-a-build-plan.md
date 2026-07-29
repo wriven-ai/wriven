@@ -1,7 +1,7 @@
-# 11 — Model A Build Plan (Hosted Dashboard + Delivery API)
+# 01 — Model A Build Plan (Hosted Dashboard + Delivery API)
 
 Concrete, phased build plan for **Model A** from
-[09 — Content Delivery & Plans](./09-content-delivery-and-plans.md): the hosted
+[01 — Content Delivery & Plans](../specs/01-content-delivery-and-plans.md): the hosted
 SaaS where a customer authors in `app.wriven.com`, creates an API key, and pulls
 content into their own site over HTTPS. No customer-side install.
 
@@ -9,7 +9,7 @@ State today: the **authoring half** exists (content types, entries, revisions,
 media in `core_svc`; management routes in the gateway behind cookie auth). The
 **delivery half** does not. This plan builds it.
 
-Conventions to respect (from [07 — Conventions](./07-conventions.md), [02 — Architecture](./02-architecture.md)):
+Conventions to respect (from [Conventions](../doc/conventions.md), [Architecture](../doc/architecture.md)):
 gateway is the only public edge; services are TCP microservices; no cross-service
 FKs; DTOs/patterns/types live in `@wriven/contracts`; response envelope +
 error-code shape already standardized.
@@ -21,7 +21,7 @@ error-code shape already standardized.
 Lock these before code; they ripple through every later phase.
 
 - **API version prefix:** all public delivery routes under **`/v1/`**. Frozen
-  contract — the studio (doc 10) and customer code pin to it.
+  contract — the studio (specs/07) and customer code pin to it.
 - **Public base path:** management stays where it is (cookie auth); delivery is a
   **separate route group** `/v1/projects/:projectId/...` with **token** auth.
 - **Token format:** `wrk_<env>_<32+ url-safe random>` — `wrk_live_…` (read),
@@ -43,7 +43,7 @@ Lock these before code; they ripple through every later phase.
 **Goal:** CRUD for project-scoped API keys, hash-on-create, show-once.
 
 - **Schema** ([apps/core-service/src/db/schema/index.ts](../apps/core-service/src/db/schema/index.ts)) — the table from
-  [09 §3](./09-content-delivery-and-plans.md): `id, workspaceId, projectId, name,
+  [01 §3](../specs/01-content-delivery-and-plans.md): `id, workspaceId, projectId, name,
   tokenHash, prefix, scope (read|preview|manage), lastUsedAt, expiresAt,
   revokedAt, createdBy, createdAt`. Index on `tokenHash` (hot lookup) + on
   `projectId` (list).
@@ -198,7 +198,7 @@ preview responses uncached.
 
 ## Phase 8 — Plans, metering, rate limits
 
-**Goal:** enforce the tiers in [09 §5](./09-content-delivery-and-plans.md) and meter
+**Goal:** enforce the tiers in [01 §5](../specs/01-content-delivery-and-plans.md) and meter
 the billable hot path.
 
 - **`plan` on the workspace** (auth_svc): tier + limits (projects, members,
@@ -238,8 +238,8 @@ transformable URL; resizing via query params works; DB still stores only keys.
 (later promoted to public site):
 quickstart, create a token, fetch examples (Next.js / Astro / fetch), filtering &
 field selection, preview mode, webhooks/ISR. Update
-[06 — API Reference](./06-api-reference.md) with every `/v1/...` route and
-[08 — Status](./08-status.md) as phases ship.
+[API Reference](../doc/api-reference.md) with every `/v1/...` route and
+[Status](../doc/status.md) as phases ship.
 
 ---
 
@@ -254,7 +254,7 @@ fast + Jamstack-native.
 
 **Commercialize:** 8 (plans/metering) → 9 (media) → 10 (docs).
 
-Keep [08 — Status](./08-status.md) in lockstep; document each table/endpoint in the
+Keep [Status](../doc/status.md) in lockstep; document each table/endpoint in the
 owning per-service doc as it lands (repo doc-maintenance rule).
 
 ---

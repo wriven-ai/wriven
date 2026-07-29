@@ -1,6 +1,6 @@
 # Auth Service
 
-NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema: `auth_svc`. All handlers are `@MessagePattern` (no HTTP) — the gateway exposes the HTTP routes (see [API Reference](../06-api-reference.md)). Detailed member endpoints: [members-api.md](./members-api.md).
+NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema: `auth_svc`. All handlers are `@MessagePattern` (no HTTP) — the gateway exposes the HTTP routes (see [API Reference](../api-reference.md)). Detailed member endpoints: [members-api.md](./members-api.md).
 
 ## Schema (`auth_svc`)
 
@@ -85,7 +85,7 @@ User ──< workspace_members >── Workspace ──< projects ── project
 - Refresh rotation + revoked-reuse theft detection (revoke-all).
 - Reset revokes all sessions; tokens stored hashed; raw tokens only in cookie/email.
 - No email enumeration (login + forgot).
-- Rate limits at the gateway (see [Conventions](../07-conventions.md)).
+- Rate limits at the gateway (see [Conventions](../conventions.md)).
 - Daily cron (`@nestjs/schedule`) prunes **expired** token rows (revoked-but-unexpired kept so reuse is still detectable within TTL).
 
 ## Session & listing

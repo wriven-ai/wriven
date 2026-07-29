@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /**
- * Purges CDN cache by tag when content changes (doc/11 Phase 5). The Delivery
+ * Purges CDN cache by tag when content changes (plans/01 Phase 5). The Delivery
  * API tags every published response with `proj_<id> type_<apiId> entry_<id>`;
  * here we purge the affected tags so a publish invalidates exactly the right
  * responses — never a wildcard.

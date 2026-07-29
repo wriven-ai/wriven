@@ -304,7 +304,7 @@ export const projectMembersRelations = relations(
 
 /**
  * A pending invitation to a workspace or project. The raw token is emailed once;
- * we persist only its sha-256 hash. Single-use, time-limited. See doc/12.
+ * we persist only its sha-256 hash. Single-use, time-limited. See specs/05.
  */
 export const invitations = authSchema.table(
   'invitations',

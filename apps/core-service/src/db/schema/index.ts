@@ -164,7 +164,7 @@ export const mediaAssets = coreSchema.table(
  * A project-scoped API key. The raw token is shown to the user exactly once at
  * creation; we persist ONLY its sha-256 hash (`tokenHash`) plus a display
  * `prefix`. The gateway resolves a presented token by hashing it and looking it
- * up here. See doc/11 — Model A build plan.
+ * up here. See plans/01 — Model A build plan.
  */
 export const apiKeys = coreSchema.table(
   'api_keys',
@@ -195,7 +195,7 @@ export const apiKeys = coreSchema.table(
   ],
 );
 
-// ── Webhooks (publish → signed POST; see doc/11 P6) ─────────────────────────
+// ── Webhooks (publish → signed POST; see plans/01 P6) ─────────────────────────
 
 /**
  * Outgoing webhook subscriptions. On publish/unpublish/delete, core POSTs a

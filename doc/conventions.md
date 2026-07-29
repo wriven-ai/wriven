@@ -1,4 +1,4 @@
-# 07 — Conventions
+Conventions
 
 ## Response envelope
 
@@ -71,7 +71,7 @@ Single source of truth consumed by all services (and the frontend):
 
 - **Per-service `.env`**, never shared. `.env` is git-ignored; `.env.example` is committed with placeholders.
 - `JWT_SECRET` must be **identical** across auth-service and api-gateway (gateway validates locally).
-- DB-owning services use `DATABASE_URL` (runtime) + `DIRECT_URL` (migrations) — see [03](./03-database.md).
+- DB-owning services use `DATABASE_URL` (runtime) + `DIRECT_URL` (migrations) — see [Database](./database.md).
 - Google OAuth creds live on the **gateway**. SMTP creds on **auth-service**.
 
 ## Commands

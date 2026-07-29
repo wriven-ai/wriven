@@ -1,4 +1,4 @@
-# 01 — Overview
+Overview
 
 ## What Wriven is
 
@@ -54,7 +54,7 @@ These were chosen deliberately — do not re-litigate:
 
 1. **Nx over Turborepo** — first-class NestJS + Next.js + Python in one graph.
 2. **Microservices are intentional** — split by domain (gateway/auth/core/ai), not driven by current scale. Respect the boundaries; don't collapse services.
-3. **Single shared Postgres DB, isolated by schema** (`auth_svc`, `core_svc`) — one Supabase project now; the design keeps a future per-service DB split as a config change (see [03 — Database](./03-database.md)).
+3. **Single shared Postgres DB, isolated by schema** (`auth_svc`, `core_svc`) — one Supabase project now; the design keeps a future per-service DB split as a config change (see [Database](./database.md)).
 4. **R2 object keys only in the DB** — reconstruct URLs at runtime from config, so storage migration is config not data.
 5. **No foreign keys across service boundaries** — `user_id` / `workspace_id` in core are plain `uuid`, validated by the gateway.
 6. **Shared contracts in `@wriven/contracts`** — DTOs, response types, message patterns, error codes consumed by all services.
@@ -73,4 +73,4 @@ pnpm db:auth:generate / db:auth:migrate    # Drizzle, auth schema
 pnpm db:core:generate / db:core:migrate    # Drizzle, core schema
 ```
 
-See [07 — Conventions](./07-conventions.md) for the full command list.
+See [Conventions](./conventions.md) for the full command list.

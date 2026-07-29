@@ -9,8 +9,8 @@ consumes this).
 Conventions to follow throughout: Drizzle in `auth_svc`/`core_svc` schemas,
 NestJS modules + TCP microservices, the `{ success, data }` / `{ success, error }`
 envelope, and the patterns already in
-[06 — API Reference](../06-api-reference.md), [07 — Conventions](../07-conventions.md),
-[02 — Architecture](../02-architecture.md). **Mirror existing code** (guards,
+[API Reference](../api-reference.md), [Conventions](../conventions.md),
+[Architecture](../architecture.md). **Mirror existing code** (guards,
 controllers, message patterns) rather than inventing new shapes.
 
 ---
@@ -58,7 +58,7 @@ apps/api-gateway/src/admin/     # NEW: public HTTP surface for the SPA
 ## 2. Schema (auth_svc) — full DDL
 
 Add to [apps/auth-service/src/db/schema/index.ts](../../apps/auth-service/src/db/schema/index.ts).
-Then generate + run a migration (see [03 — Database](../03-database.md)).
+Then generate + run a migration (see [Database](../database.md)).
 
 ```ts
 // ── Admin identity (platform staff — SEPARATE from tenant `users`) ──────────
@@ -291,7 +291,7 @@ calls both and merges — same pattern the tenant side already uses across the
 `auth_svc`/`core_svc` no-FK boundary.
 
 All list endpoints: **paginate + filter + sort** (match the tenant list contract
-in [06](../06-api-reference.md)). Never return unbounded result sets.
+in [API Reference](../api-reference.md)). Never return unbounded result sets.
 
 ---
 
@@ -411,8 +411,8 @@ ADMIN_IP_ALLOWLIST=          # comma-separated CIDRs for /admin/* (prod)
 4. gateway `admin/` module: `AdminJwtGuard`, `AdminRolesGuard` + decorator,
    `@CurrentAdmin`, `AuditInterceptor` + `@Audit`, all controllers, CORS for the
    SPA origin.
-5. `.env.example` updates; update [../08-status.md](../08-status.md) +
-   [../06-api-reference.md](../06-api-reference.md) (add the `/admin/*` section).
+5. `.env.example` updates; update [../../status.md](../status.md) +
+   [../../api-reference.md](../api-reference.md) (add the `/admin/*` section).
 
 ## 10. Implementation status
 

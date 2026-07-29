@@ -1,4 +1,4 @@
-# 17 — Market Readiness: Gap Analysis
+Market Readiness: Gap Analysis
 
 What's left to ship Wriven as a **full-fledged, sellable headless CMS**. This is a
 candid inventory of gaps — not a roadmap promise. Each item: **what** it is,
@@ -155,7 +155,7 @@ So the gaps read in context. ✅ = working.
 - **Why:** the one true gap vs Sanity called out in the SDK review; consumers expect
   responsive images without pre-generating.
 - **Now:** media served as stored; **no transform service.**
-- **Cross-ref:** [13-media.md](./13-media.md) (transforms deferred).
+- **Cross-ref:** [03-media.md](../specs/03-media.md) (transforms deferred).
 
 ### Richer field types & validation — **M**
 - **What:** nested/repeatable **components** (group/object/array), JSON field,
@@ -169,7 +169,7 @@ So the gaps read in context. ✅ = working.
 - **What:** OpenAPI/Swagger spec for the management + delivery API; GraphQL
   playground; an interactive API explorer; auto-generated typed reference.
 - **Why:** DX is a buying factor; hand-written docs drift.
-- **Now:** prose docs only ([06-api-reference.md](./06-api-reference.md)); **no
+- **Now:** prose docs only ([api-reference.md](./api-reference.md)); **no
   OpenAPI/Swagger** (`@nestjs/swagger` not installed).
 
 ### Publish the SDK — **S**
@@ -177,7 +177,7 @@ So the gaps read in context. ✅ = working.
 - **Why:** consumers can't install them; the whole DX story depends on it.
 - **Now:** built, tested, publint-clean, **not published**. (Blocked earlier on an
   npm 2FA/token issue.)
-- **Cross-ref:** [15-sdk.md](./15-sdk.md).
+- **Cross-ref:** [06-sdk.md](../specs/06-sdk.md).
 
 ### Admin panel frontend — **L** (in progress, separate repo)
 - **What:** the operational console UI.
@@ -241,7 +241,7 @@ So the gaps read in context. ✅ = working.
   status page.
 - **Multi-region / edge** — geo-distributed delivery, advanced caching tiers.
 - **Codegen** — typed `getEntries('blog_post')` from a project's content model
-  (SDK Phase 4 in [15-sdk.md](./15-sdk.md)).
+  (SDK Phase 4 in [06-sdk.md](../specs/06-sdk.md)).
 
 ---
 
