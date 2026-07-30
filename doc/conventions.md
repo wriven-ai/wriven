@@ -32,6 +32,9 @@ Defined in `@wriven/contracts` (`errors.ts`):
 | `INVALID_VERIFICATION_TOKEN` | 400 | Verify token bad/expired/used |
 | `OAUTH_FAILED` | 400 | Google exchange failed |
 | `RATE_LIMITED` | 429 | Too many requests |
+| `PLAN_LIMIT_REACHED` | 403 | Quota exceeded (projects/members/entries/…) |
+| `STRIPE_WEBHOOK_INVALID` | 400 | Stripe webhook signature verification failed |
+| `SUBSCRIPTION_EXISTS` | 409 | Workspace already has a live subscription — use the Billing Portal |
 | `INTERNAL_ERROR` | 500 | Unhandled |
 
 Never leak stack traces, internal service names, or DB errors to the client.
@@ -56,7 +59,7 @@ List endpoints accept `?page=1&limit=20` (default 20, max 100). Response: `{ ite
 ## Message patterns (TCP)
 
 Dot-namespaced constants in `@wriven/contracts` (`messages.ts`), never hardcoded:
-`AUTH_PATTERNS` (`auth.*`), `WORKSPACE_PATTERNS` / `PROJECT_PATTERNS` (`auth.*`), `CORE_PATTERNS` (`core.*`), `SERVICE_TOKENS` (DI tokens for the gateway's TCP clients).
+`AUTH_PATTERNS` (`auth.*`), `WORKSPACE_PATTERNS` / `PROJECT_PATTERNS` (`auth.*`), `CORE_PATTERNS` (`core.*`), `INVITATION_PATTERNS` (`auth.invitation.*`), `BILLING_PATTERNS` (`auth.billing.*`), `ADMIN_PATTERNS` (`admin.*`), `SERVICE_TOKENS` (DI tokens for the gateway's TCP clients).
 
 ## Shared contracts (`@wriven/contracts`)
 
@@ -73,6 +76,7 @@ Single source of truth consumed by all services (and the frontend):
 - `JWT_SECRET` must be **identical** across auth-service and api-gateway (gateway validates locally).
 - DB-owning services use `DATABASE_URL` (runtime) + `DIRECT_URL` (migrations) — see [Database](./database.md).
 - Google OAuth creds live on the **gateway**. SMTP creds on **auth-service**.
+- **Stripe:** `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` on **auth-service** (the gateway only forwards the raw body + signature; auth-service verifies + reconciles). `STRIPE_MANAGED_PAYMENTS=true` opts back into Managed Payments (off by default — needs product tax_codes + Stripe Tax provisioned). `BILLING_GRACE_DAYS` (default 7) = past_due grace before limits revert to free.
 
 ## Commands
 
@@ -88,6 +92,9 @@ pnpm nx typecheck <project>
 # database (Drizzle)
 pnpm db:auth:generate | db:auth:migrate | db:auth:push | db:auth:studio
 pnpm db:core:generate | db:core:migrate | db:core:push | db:core:studio
+
+# billing — replay Stripe events through the same idempotent webhook handler
+pnpm billing:replay [since]   # ISO timestamp, or N = last N hours; omitted = all
 ```
 
 Running a built service directly (used for smoke tests): `node apps/<svc>/dist/main.js` from repo root (loads that service's `.env`).

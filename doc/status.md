@@ -2,7 +2,7 @@ Current Scope & Status
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, plans/01 Phases 0–4)._
+_Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webhook reconciler committed; live e2e pending frontend._
 
 ---
 
@@ -30,6 +30,7 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, pla
 | Rate limiting (`@nestjs/throttler`) | ✅ | global + per-route |
 | CORS (credentials) | ✅ | `CLIENT_ORIGIN` |
 | Google OAuth (Passport strategy on gateway) | ✅ | |
+| Billing + Stripe webhook | ✅ | `/billing/*` (JWT + WorkspaceGuard) + public `POST /webhooks/stripe` (`rawBody: true`, forwards to auth-service) |
 
 ## auth-service (TCP `:5001`)
 
@@ -48,6 +49,7 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, pla
 | **Workspace member CRUD** (list/add/update/remove, owner-guard) | ✅ | add by email; ≥1 owner |
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
+| **Stripe billing** (Checkout, Billing Portal, webhook reconcile) | ✅ | backend done (specs/08); live e2e 🟡 deferred to frontend |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
 
@@ -108,5 +110,6 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, pla
 ## Known gaps / next candidates
 
 - Consumer **SDK / npm package** + published Delivery API docs.
+- **Frontend billing page** — Checkout redirect, Billing Portal link, replace the mock pricing page; consumes `/billing/*`. Unblocks the live Stripe e2e (the hosted Checkout page also needs the sandbox account configured: `pk_test_` publishable key + Managed Payments provisioned/disabled).
 - **ai-service**.
 - Deploy (Docker Compose on VPS) + CI.

@@ -13,12 +13,14 @@ The only internet-facing service (HTTP `:5000`). Owns **no database tables and n
 | Response shape | `ResponseInterceptor` (success envelope) + `AllExceptionsFilter` (error envelope) |
 | CORS | credentials enabled, origin from `CLIENT_ORIGIN` |
 | Google OAuth | Passport `google` strategy runs here (auth-service has no public HTTP) |
+| Raw body | `NestFactory.create(AppModule, { rawBody: true })` — exposes `req.rawBody` for Stripe webhook signature verification (parsed `req.body` still populated for all other routes) |
 | Identity injection | injects `userId` / `workspaceId` into every downstream TCP payload |
 
 ## Decorators
 
 - `@CurrentUser()` → `AuthUser { userId, email }` (from `JwtAuthGuard`).
 - `@CurrentWorkspace()` → validated `workspaceId` string (from `WorkspaceGuard`).
+- `@CurrentWorkspaceRole()` → caller's workspace role (`owner`|`admin`|`member`|`guest`, from `WorkspaceGuard`); forwarded to auth-service for billing mutation gating.
 
 ## Controllers
 
@@ -28,6 +30,8 @@ The only internet-facing service (HTTP `:5000`). Owns **no database tables and n
 | `ContentController` | `/content/*` — content types & entries (JWT + WorkspaceGuard) |
 | `OrgsController` | `/orgs/:orgId/members` (JWT) — see [members-api.md](../auth-service/members-api.md) |
 | `WorkspacesController` | `/workspaces/:workspaceId/members` (JWT) |
+| `BillingController` | `/billing/*` — plans, subscription, checkout, portal (JWT + WorkspaceGuard; checkout/portal forward `workspaceRole`) |
+| `StripeWebhookController` | `POST /webhooks/stripe` — **public** (no JWT; CSRF short-circuits with no access cookie, `@SkipThrottle`); forwards raw body + `stripe-signature` to auth-service, which verifies + reconciles. Bad signature → 400 `STRIPE_WEBHOOK_INVALID`; downstream failure → 500 (Stripe retries) |
 
 ## Environment
 
@@ -39,6 +43,8 @@ AUTH_SERVICE_HOST/PORT=...    # TCP target (5001)
 CORE_SERVICE_HOST/PORT=...    # TCP target (5002)
 AI_SERVICE_URL=...            # HTTP (planned)
 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_CALLBACK_URL
+# No STRIPE_WEBHOOK_SECRET here — the gateway only forwards the raw body +
+# stripe-signature header; auth-service verifies + reconciles.
 ```
 
 Every endpoint with method/body/response: [API Reference](../api-reference.md).

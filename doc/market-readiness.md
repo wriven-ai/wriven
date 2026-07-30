@@ -40,8 +40,10 @@ So the gaps read in context. ✅ = working.
   audit log, metrics, tenant/content/media/key/webhook moderation, plans CRUD +
   assignment, **plan-limit enforcement** (projects, members, entries, content
   types, API keys, webhooks, storage).
-- ✅ **Plans/subscriptions** — free/pro/business, limits + enforcement, Stripe-ready
-  schema (subscription row per workspace, created on signup).
+- ✅ **Plans/subscriptions + billing** — free/pro/business, limits + enforcement,
+  Stripe Checkout + Billing Portal + webhook → `subscriptions` reconciliation
+  (specs/08, backend done; live e2e pending the frontend billing page + sandbox
+  account config).
 - 🟡 **Frontend** — tenant dashboard (Next.js) exists; admin-panel SPA in progress
   (separate repo).
 
@@ -49,18 +51,22 @@ So the gaps read in context. ✅ = working.
 
 ## P0 — Blocks monetization / safe production
 
-### Billing integration (Stripe) — **XL**
+### Billing integration (Stripe) — **M** (backend done; frontend + account config remain)
 - **What:** actual payments — Checkout, customer portal, subscription lifecycle
-  webhooks (created/updated/canceled/past_due), invoices, proration, trials,
-  dunning, tax.
-- **Why:** you cannot charge anyone. Plans/limits/enforcement exist, but there is
-  **no payment path** — every workspace is effectively free.
-- **Now:** `subscriptions`/`plans` tables carry Stripe fields
-  (`stripeCustomerId`, `stripeSubscriptionId`, price ids) but nothing writes them.
-  Pricing + billing pages are UI shells. No Stripe SDK, no webhook handler.
-- **Need:** a billing module — create customer on workspace create, Checkout
-  session, a Stripe-webhook → update `subscriptions.status`/plan, portal link,
-  invoice list. Map Stripe events to the existing subscription model.
+  webhooks (created/updated/canceled/past_due), invoices, proration, dunning, tax.
+- **Why:** you cannot charge anyone without a payment path.
+- **Now:** **backend done** (specs/08) — Stripe SDK, Checkout + Billing Portal
+  sessions, an atomic + idempotent webhook → `subscriptions` reconciler (status,
+  period, plan-from-price-id), event replay script, Managed Payments opt-out.
+  Products/Prices + `plans.stripe_*` backfilled on the sandbox; read path +
+  Checkout-session creation validated live. Entitlements already read the
+  `subscriptions` row, so upgrades/downgrades need zero enforcement changes.
+- **Need:** the **frontend** billing page (Checkout redirect, portal link, replace
+  the mock pricing cards) — separate spec; the sandbox account needs a publishable
+  key + Managed Payments provisioning/disabling before the hosted Checkout page
+  renders; then the live webhook → entitlements e2e. Trials were removed (no trial
+  system); dunning terminal outcome (cancel vs `unpaid`) + cancel-grace policy are
+  open product decisions.
 
 ### Usage metering — **L**
 - **What:** measure API requests/month, asset bandwidth, storage **over time** per
@@ -271,7 +277,7 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 
 | Gap | Priority | Effort | State |
 |-----|----------|--------|-------|
-| Stripe billing | P0 | XL | schema-ready, unbuilt |
+| Stripe billing | P0 | M | backend done; frontend billing page + sandbox account config + live e2e remain |
 | Usage metering (API/bandwidth) | P0 | L | limits defined, unmeasured |
 | Production deploy + infra | P0 | L | local only |
 | Transactional email at scale | P0 | S | Gmail SMTP (dev) |

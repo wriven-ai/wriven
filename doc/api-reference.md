@@ -179,6 +179,29 @@ Events: `entry.published` · `entry.unpublished` · `entry.deleted`.
 
 ---
 
+## Billing (Stripe)
+
+All `/billing/*` routes are **protected** (JWT) and require `X-Workspace-Id`. `POST` routes also require the `X-CSRF-Token` header (double-submit). Plan mutations (checkout/portal) are **owner/admin only** (enforced in auth-service from the forwarded `workspaceRole`).
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| GET | `/billing/plans` | — | `PlanView[]` (public + active plans: free/pro/business, with prices/limits/features) |
+| GET | `/billing/subscription` | — | `SubscriptionView` — the workspace's current plan/status/period |
+| POST | `/billing/checkout` | `{ planKey: 'pro'\|'business', billingCycle: 'monthly'\|'yearly', successUrl?, cancelUrl? }` | `{ url, sessionId }` — Stripe Checkout URL (**owner/admin**; free→paid only) |
+| POST | `/billing/portal` | `{ returnUrl? }` | `{ url }` — Stripe Billing Portal URL (**owner/admin**) |
+
+`SubscriptionView`: `{ planKey, planName, status, billingCycle, currentPeriodStart, currentPeriodEnd, trialEndsAt, cancelAtPeriodEnd, hasPaymentMethod }` (timestamps ISO or null).
+
+- Checkout creates a Stripe Customer on first call (idempotent per workspace) + a `subscription`-mode Checkout Session. Redirect URLs are allowlisted to the app origin (`APP_URL`) — cross-origin/malformed values fall back to the default.
+- Errors: `SUBSCRIPTION_EXISTS` 409 (a live subscription already exists — use the Portal to change plans), `NOT_FOUND` 404 (plan/portal-customer missing), `FORBIDDEN` 403 (non owner/admin), `INTERNAL_ERROR` 500 (plan not linked to a Stripe price).
+- Completing Checkout fires `checkout.session.completed` → the webhook reconciles the `subscriptions` row (plan from price id, status, period, Stripe ids); entitlements/quotas update automatically (no enforcement call site changes).
+
+### POST `/webhooks/stripe`
+**Public** — no JWT (CSRF guard short-circuits with no access cookie); `@SkipThrottle` so Stripe retries aren't rate-limited. Receives Stripe's raw body + `stripe-signature` header, forwards both to auth-service, which verifies with `STRIPE_WEBHOOK_SECRET` and reconciles (idempotent via `stripe_events`).
+→ `{ received: true }` (200). Bad signature → `STRIPE_WEBHOOK_INVALID` 400. Downstream failure → 500 (so Stripe retries). Enabled events: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.paid`, `invoice.payment_failed`.
+
+---
+
 ## Health
 
 ### GET `/health`
