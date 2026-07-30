@@ -9,6 +9,9 @@ import type {
   AcceptInvitationResult,
   CreateApiKeyResult,
   CreateWebhookResult,
+  CreateCheckoutInput,
+  CreatePortalInput,
+  CheckoutSessionView,
   EntryStatus,
   FieldDef,
   InvitationPreview,
@@ -16,6 +19,8 @@ import type {
   LoginInput,
   MediaView,
   Paginated,
+  PlanView,
+  PortalSessionView,
   PresignResult,
   ProjectMemberView,
   ProjectRole,
@@ -23,6 +28,7 @@ import type {
   RegisterInput,
   RevisionView,
   SessionView,
+  SubscriptionView,
   WebhookEvent,
   WebhookView,
   WorkspaceMemberView,
@@ -599,6 +605,29 @@ export const projectApi = {
   remove: (id: string) =>
     request<{ success: true }>(`/projects/${id}`, {
       method: 'DELETE',
+      workspace: true,
+    }),
+};
+
+export const billingApi = {
+  /** Public plan catalog (free/pro/business). */
+  listPlans: () =>
+    request<PlanView[]>('/billing/plans', { workspace: true }),
+  /** The workspace's current subscription (always exists — defaults to free). */
+  getSubscription: () =>
+    request<SubscriptionView>('/billing/subscription', { workspace: true }),
+  /** Start a hosted Stripe Checkout for the free→paid transition. */
+  createCheckout: (dto: CreateCheckoutInput) =>
+    request<CheckoutSessionView>('/billing/checkout', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+    }),
+  /** Open the hosted Stripe Billing Portal (card / plan / cancel). */
+  createPortal: (dto?: CreatePortalInput) =>
+    request<PortalSessionView>('/billing/portal', {
+      method: 'POST',
+      body: dto ?? {},
       workspace: true,
     }),
 };
