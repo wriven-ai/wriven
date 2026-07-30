@@ -437,6 +437,74 @@ function BillingInner() {
           </div>
         </div>
       </div>
+
+      {/* Payment method + Invoice history (shells — invoice endpoint deferred) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Payment method */}
+        <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
+          <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
+            <CreditCard className="w-4 h-4 text-brand-secondary" /> Payment Method
+          </span>
+
+          <div className="bg-brand-surface-soft border border-brand-border rounded-xl p-4 text-center space-y-2">
+            <CreditCard className="w-8 h-8 text-text-muted mx-auto" />
+            {subscription?.hasPaymentMethod ? (
+              <p className="text-2xs font-mono text-text-secondary font-medium">
+                Card on file — manage it in the Billing Portal.
+              </p>
+            ) : (
+              <>
+                <p className="text-2xs font-mono text-text-secondary font-medium">
+                  No payment method on file
+                </p>
+                <p className="text-[10px] font-mono text-text-muted leading-relaxed">
+                  A card is added when you upgrade, or via the Billing Portal.
+                </p>
+              </>
+            )}
+          </div>
+
+          {hasPaidSub && canManage ? (
+            <button
+              onClick={onPortal}
+              disabled={portal.isPending}
+              className="w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-2xs py-2.5 rounded-lg border border-brand-border hover:border-brand-accent hover:text-brand-accent text-text-secondary transition-all disabled:opacity-50"
+            >
+              {portal.isPending ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Opening…
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-3.5 h-3.5" /> Manage in Portal
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              disabled
+              className="w-full inline-flex items-center justify-center gap-1.5 border border-brand-border text-text-muted font-mono font-bold text-2xs py-2.5 rounded-lg cursor-not-allowed opacity-50"
+            >
+              <CreditCard className="w-3.5 h-3.5" /> Add Payment Method
+            </button>
+          )}
+
+          <p className="text-[10px] font-mono text-text-muted text-center">
+            Payments processed securely via Stripe. Card details never touch
+            Wriven servers.
+          </p>
+        </div>
+
+        {/* Invoice history */}
+        <div className="lg:col-span-7 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
+          <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
+            Invoice History
+          </span>
+          <div className="text-center py-6 font-mono text-2xs text-text-muted">
+            No invoices yet.
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
