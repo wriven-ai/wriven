@@ -60,7 +60,7 @@ async function main() {
       sortOrder: 1,
       priceMonthly: 2900,
       priceYearly: 29_000,
-      trialDays: 14,
+      trialDays: 0,
       limits: {
         projects: 10,
         members: 10,
@@ -91,7 +91,7 @@ async function main() {
       sortOrder: 2,
       priceMonthly: 9900,
       priceYearly: 99_000,
-      trialDays: 14,
+      trialDays: 0,
       limits: {
         projects: null, // unlimited
         members: 50,

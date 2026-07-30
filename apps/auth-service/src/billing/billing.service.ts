@@ -109,15 +109,18 @@ export class BillingService {
       );
     }
 
-    // Reject if a live subscription already exists (active / trialing / past-due
-    // within grace). Plan changes go through the Portal. `canceled` rows are
-    // reusable — the webhook will overwrite the stale stripe_subscription_id on
-    // the next checkout.session.completed (syncSubscription guards on sub id).
+    // Reject if a live PAID subscription already exists (active / trialing /
+    // past-due within grace) — a second Checkout would create a second Stripe
+    // subscription and double-charge. Plan changes go through the Portal. Note the
+    // free row always exists with status='active' but a NULL stripe_subscription_id,
+    // so the gate is the Stripe sub id, not the row status. A `canceled` paid row
+    // (stripe_subscription_id still set) is reusable — syncSubscription's sub-id
+    // guard overwrites it on the next checkout.session.completed.
     const existing = await this.db.query.subscriptions.findFirst({
       where: eq(subscriptions.workspaceId, input.workspaceId),
-      columns: { status: true },
+      columns: { status: true, stripeSubscriptionId: true },
     });
-    if (existing && existing.status !== 'canceled') {
+    if (existing?.stripeSubscriptionId && existing.status !== 'canceled') {
       throw rpcError(
         'SUBSCRIPTION_EXISTS',
         'This workspace already has an active subscription. Use the Billing Portal to change plans.',
@@ -143,15 +146,21 @@ export class BillingService {
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
         client_reference_id: input.workspaceId,
+        // Managed Payments is Stripe's 2025+ default (merchant-of-record + Stripe Tax).
+        // It requires products to carry a tax_code and the Checkout page to init against
+        // a fully-configured account — a sandbox without Stripe Tax provisioned fails
+        // ("product tax code missing" at create / "apiKey is not set" on the page).
+        // Default to classic Checkout (no tax_code needed); flip to Managed Payments via
+        // STRIPE_MANAGED_PAYMENTS=true once Stripe Tax + product tax_codes are set up.
+        ...(process.env.STRIPE_MANAGED_PAYMENTS === 'true'
+          ? {}
+          : { managed_payments: { enabled: false } }),
         subscription_data: {
           metadata: {
             workspaceId: input.workspaceId,
             planKey: plan.key,
             billingCycle: input.billingCycle,
           },
-          ...(plan.trialDays > 0
-            ? { trial_period_days: plan.trialDays }
-            : {}),
         },
         success_url: successUrl,
         cancel_url: cancelUrl,
