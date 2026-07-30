@@ -4,12 +4,25 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import {
+  AlertCircle,
+  ArrowUpRight,
+  Boxes,
+  CalendarClock,
   Check,
   CreditCard,
+  Database,
+  Eye,
+  FileText,
+  Globe,
+  History,
+  KeyRound,
+  Layers,
+  LifeBuoy,
   RefreshCw,
-  ArrowUpRight,
+  ScrollText,
   ShieldCheck,
-  AlertCircle,
+  Users,
+  Zap,
 } from 'lucide-react';
 import { useCurrentWorkspace } from '@/hooks/use-current-workspace';
 import {
@@ -64,6 +77,31 @@ function statusBadgeClass(status: string): string {
   if (status === 'canceled' || status === 'incomplete')
     return 'bg-red-500/10 text-red-500 border-red-500/20';
   return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+}
+
+type FeatureIcon = React.ComponentType<{ className?: string }>;
+
+/** Pick an icon per feature by keyword (falls back to a check). */
+const FEATURE_ICON_MAP: { match: string; Icon: FeatureIcon }[] = [
+  { match: 'member', Icon: Users },
+  { match: 'project', Icon: Layers },
+  { match: 'content type', Icon: Boxes },
+  { match: 'entrie', Icon: FileText },
+  { match: 'storage', Icon: Database },
+  { match: 'bandwidth', Icon: Globe },
+  { match: 'api request', Icon: Zap },
+  { match: 'sso', Icon: KeyRound },
+  { match: 'audit', Icon: ScrollText },
+  { match: 'revision', Icon: History },
+  { match: 'scheduled', Icon: CalendarClock },
+  { match: 'preview', Icon: Eye },
+  { match: 'custom role', Icon: ShieldCheck },
+  { match: 'support', Icon: LifeBuoy },
+];
+
+function featureIcon(feature: string): FeatureIcon {
+  const hit = FEATURE_ICON_MAP.find((m) => feature.toLowerCase().includes(m.match));
+  return hit?.Icon ?? Check;
 }
 
 // ── page (Suspense wrapper — useSearchParams requires it) ───────────────────
@@ -219,21 +257,22 @@ function BillingInner() {
       {/* Plans + summary */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Plan cards */}
-        <div className="lg:col-span-8 space-y-4" id="plan-cards">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[11px] font-mono tracking-wider text-text-secondary font-bold">
-              Available Plans
-            </span>
-            {/* Monthly / yearly toggle */}
-            <div className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-wider">
+        <div className="lg:col-span-8 space-y-5" id="plan-cards">
+          <span className="block text-center text-[11px] font-mono tracking-wider text-text-secondary font-bold">
+            Available Plans
+          </span>
+
+          {/* Monthly / yearly toggle — centered above the cards */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-brand-border bg-brand-surface-soft">
               {(['monthly', 'yearly'] as BillingCycle[]).map((c) => (
                 <button
                   key={c}
                   onClick={() => setCycle(c)}
-                  className={`px-2.5 py-1 rounded-lg border transition-colors ${
+                  className={`px-5 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-colors ${
                     cycle === c
-                      ? 'border-brand-accent text-brand-accent bg-brand-surface'
-                      : 'border-brand-border text-text-muted hover:text-text-secondary'
+                      ? 'bg-brand-accent text-white'
+                      : 'text-text-muted hover:text-text-secondary'
                   }`}
                 >
                   {c}
@@ -291,15 +330,18 @@ function BillingInner() {
                   </div>
 
                   <ul className="space-y-2 flex-grow">
-                    {planFeatures(plan).map((feature, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 text-2xs font-mono text-text-secondary"
-                      >
-                        <Check className="w-3.5 h-3.5 text-brand-secondary mt-0.5 shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
+                    {planFeatures(plan).map((feature, i) => {
+                      const Icon = featureIcon(feature);
+                      return (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-2xs font-mono text-text-secondary"
+                        >
+                          <Icon className="w-3.5 h-3.5 text-brand-secondary mt-0.5 shrink-0" />
+                          {feature}
+                        </li>
+                      );
+                    })}
                   </ul>
 
                   <PlanCta
