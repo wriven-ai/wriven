@@ -33,10 +33,11 @@ and ask the user which one to plan. Do not guess.
 - The actual code: search `apps/` and `libs/shared/contracts/` for the files,
   DTOs, message patterns, and endpoints the spec names — confirm they exist and
   note their real shape.
-- **Available tools** — check skills/MCP/plugins relevant to the domain (via
-  `ToolSearch` or the active tool list): DB, storage, payments, email, search,
-  auth, etc. Use one to pull real API/config context instead of memory; record
-  what you checked and used.
+- **Tooling** — read the spec's "Tooling context" section first (discovery
+  happens at spec time, in `/create-spec`). Verify those tools are still
+  available, then map each to the phase that uses it (e.g. "Phase 3: apply
+  migration via supabase MCP"). Only run a fresh `ToolSearch` if the spec has
+  no tooling context or a new domain tool is clearly relevant.
 - Any existing plan in `plans/` for this spec — extend or supersede, don't
   duplicate.
 
