@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PlanLimits, WorkspaceEntitlements } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB } from '@wriven/database';
 import { and, count, eq, isNull, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
@@ -31,6 +31,20 @@ const FREE_FALLBACK: PlanLimits = {
   webhooks: 2,
 };
 
+/** True if the subscription's billing status should collapse to the free plan. */
+function shouldRestrictToFree(
+  sub?: { status?: string | null; currentPeriodEnd?: Date | null } | null,
+): boolean {
+  if (!sub) return false;
+  if (sub.status === 'canceled') return true;
+  if (sub.status === 'past_due' || sub.status === 'incomplete') {
+    if (!sub.currentPeriodEnd) return false;
+    const graceMs = Number(process.env.BILLING_GRACE_DAYS ?? '7') * 86_400_000;
+    return Date.now() > sub.currentPeriodEnd.getTime() + graceMs;
+  }
+  return false;
+}
+
 /**
  * Resolves a workspace's effective plan limits (plan + per-subscription overrides)
  * for enforcement. Enforcement itself happens inside the create transaction of the
@@ -53,6 +67,13 @@ export class EntitlementsService {
 
     let planKey = sub?.plan?.key;
     let baseLimits = (sub?.plan?.limits ?? null) as PlanLimits | null;
+
+    // Billing status policy (specs/08): a canceled subscription, or a
+    // past_due/incomplete one past BILLING_GRACE_DAYS, reverts to free limits.
+    if (baseLimits && shouldRestrictToFree(sub)) {
+      baseLimits = null; // triggers the free-plan fallback below
+    }
+
     if (!baseLimits || Object.keys(baseLimits).length === 0) {
       const free = await this.db.query.plans.findFirst({
         where: eq(plans.key, 'free'),

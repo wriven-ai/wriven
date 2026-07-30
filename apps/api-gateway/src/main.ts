@@ -10,7 +10,10 @@ import { AppModule } from './app/app.module';
 import { CsrfGuard } from './auth/csrf.guard';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true exposes req.rawBody (Buffer) so the Stripe webhook route can
+  // verify signatures over the exact bytes Stripe signed. Parsed req.body is
+  // still populated for every other route.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   const globalPrefix = 'api/v1';
   app.setGlobalPrefix(globalPrefix);

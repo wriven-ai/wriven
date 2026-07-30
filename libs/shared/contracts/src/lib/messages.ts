@@ -109,6 +109,19 @@ export const INVITATION_PATTERNS = {
 } as const;
 
 /**
+ * Billing & subscriptions (Stripe). Owned by auth-service (`auth_svc.plans` /
+ * `subscriptions`). Customer-facing checkout/portal + the inbound Stripe webhook
+ * reconciler. See specs/08.
+ */
+export const BILLING_PATTERNS = {
+  LIST_PLANS: 'auth.billing.listPlans',
+  GET_SUBSCRIPTION: 'auth.billing.getSubscription',
+  CREATE_CHECKOUT: 'auth.billing.createCheckout',
+  CREATE_PORTAL: 'auth.billing.createPortal',
+  STRIPE_WEBHOOK: 'auth.billing.stripeWebhook',
+} as const;
+
+/**
  * Platform admin panel. Cross-tenant, god-mode operations. Backed by a separate
  * `admin_users` identity (auth-service) and cross-tenant reads in both services.
  * See doc/admin-panel.

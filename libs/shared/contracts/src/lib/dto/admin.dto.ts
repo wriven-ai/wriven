@@ -11,6 +11,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { SUBSCRIPTION_STATUSES, type SubscriptionStatus } from '../types/billing.types';
 
 const ADMIN_ROLES = ['admin', 'moderator', 'member'] as const;
 
@@ -210,8 +211,8 @@ export class AssignPlanDto {
   planKey!: string;
 
   @IsOptional()
-  @IsIn(['active', 'trialing', 'past_due', 'canceled', 'paused', 'incomplete'])
-  status?: string;
+  @IsIn([...SUBSCRIPTION_STATUSES])
+  status?: SubscriptionStatus;
 
   @IsOptional()
   overrides?: Record<string, number | null>;

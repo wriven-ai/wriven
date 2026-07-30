@@ -4,6 +4,7 @@ import { DatabaseModule } from '@wriven/database';
 import * as schema from '../db/schema';
 import { AdminModule } from '../admin/admin.module';
 import { AuthModule } from '../auth/auth.module';
+import { BillingModule } from '../billing/billing.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -16,6 +17,7 @@ import { AppService } from './app.service';
     DatabaseModule.forRoot({ schema }),
     AuthModule,
     AdminModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

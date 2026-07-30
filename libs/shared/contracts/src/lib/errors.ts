@@ -16,6 +16,10 @@ export const ERROR_CODES = {
   OAUTH_FAILED: { code: 'OAUTH_FAILED', statusCode: 400 },
   RATE_LIMITED: { code: 'RATE_LIMITED', statusCode: 429 },
   PLAN_LIMIT_REACHED: { code: 'PLAN_LIMIT_REACHED', statusCode: 403 },
+  STRIPE_WEBHOOK_INVALID: { code: 'STRIPE_WEBHOOK_INVALID', statusCode: 400 },
+  // Workspace already has a live Stripe subscription — use the Billing Portal to
+  // change plans (proration) instead of starting a second Checkout subscription.
+  SUBSCRIPTION_EXISTS: { code: 'SUBSCRIPTION_EXISTS', statusCode: 409 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;
 
