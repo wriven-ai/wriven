@@ -122,6 +122,21 @@ User ──< workspace_members >── Workspace ──< projects ── project
 
 ### Invoices
 - `listInvoices(workspaceId)` — read-only; resolves the workspace's `stripe_customer_id` (returns `[]` if none) and maps `stripe.invoices.list({ customer, limit: 20 })` to `InvoiceView` (`number`, `amountPaid`, `currency`, `status`, `createdAt`, `url = hosted_invoice_url`). **Link-out / keys-only** — nothing invoice-related is stored; the download links to Stripe's hosted PDF.
+
+### Admin plan sync (specs/11)
+`AdminPlansService` (in `AdminModule`, shares `StripeModule`) keeps plan create /
+retire two-way with Stripe — **prices are read-only after create** (Stripe owns
+pricing; the app never pushes price edits):
+- `create()` (paid plan) — Stripe-first: creates the Product + monthly + yearly
+  Prices, then inserts the plan row with the 3 ids. Free plan skips Stripe. On
+  failure → `STRIPE_SYNC_FAILED` (no half-linked row).
+- `update({ active: false })` — archives the Stripe Product + deactivates its
+  Prices (best-effort, then DB patch). Other field changes (`name`/`limits`/…)
+  are local-only.
+- **Changing a price** is a manual ops task: create a new Price in Stripe →
+  repoint the plan's `stripe_price_id_*` + update the stored amount. Existing
+  subscribers stay grandfathered on the old price. Reactivation after retire
+  does **not** revive deactivated Prices (irreversible) — re-link manually.
 - Managed Payments: Stripe's 2025+ default demands a product `tax_code` + breaks the hosted page on an unprovisioned account; Checkout opts out via `managed_payments:{enabled:false}` unless `STRIPE_MANAGED_PAYMENTS=true` (enable only after Stripe Tax + product tax codes are configured).
 
 ### Webhook reconciliation (`StripeWebhookService`)
