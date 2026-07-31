@@ -273,10 +273,13 @@ admin.workspaces.setPlan
 admin.projects.list / .get / .delete
 admin.invitations.list
 admin.plans.list / .create / .update
-  # create (paid) also creates the Stripe Product + monthly/yearly Prices and
-  # stores their ids; update with active:false archives the Stripe Product +
-  # deactivates its Prices. Prices are read-only after create (Stripe owns
-  # pricing). Stripe failures → STRIPE_SYNC_FAILED (DB write skipped). See specs/11.
+  # Returns AdminPlanView (PlanView + stripe_product_id / stripe_price_id_monthly /
+  # stripe_price_id_yearly) so the admin can see the Stripe linkage. create
+  # (paid) also creates the Stripe Product + monthly/yearly Prices and stores
+  # their ids; a paid plan with no price (monthly or yearly) → VALIDATION_ERROR.
+  # update with active:false archives the Stripe Product + deactivates its Prices.
+  # Prices are read-only after create (Stripe owns pricing). Stripe failures →
+  # STRIPE_SYNC_FAILED (DB write skipped). See specs/11.
 admin.metrics.overview (counts + growth from auth_svc)
 ```
 

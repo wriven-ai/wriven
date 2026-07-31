@@ -126,10 +126,14 @@ User ──< workspace_members >── Workspace ──< projects ── project
 ### Admin plan sync (specs/11)
 `AdminPlansService` (in `AdminModule`, shares `StripeModule`) keeps plan create /
 retire two-way with Stripe — **prices are read-only after create** (Stripe owns
-pricing; the app never pushes price edits):
-- `create()` (paid plan) — Stripe-first: creates the Product + monthly + yearly
-  Prices, then inserts the plan row with the 3 ids. Free plan skips Stripe. On
-  failure → `STRIPE_SYNC_FAILED` (no half-linked row).
+pricing; the app never pushes price edits). `admin.plans.*` return
+`AdminPlanView` = `PlanView` + the Stripe ids (`stripeProductId`,
+`stripePriceIdMonthly`, `stripePriceIdYearly`) so the admin can see the linkage
+(the tenant `PlanView` deliberately omits them):
+- `create()` (paid plan) — validates the plan has at least one price, then
+  Stripe-first: creates the Product + monthly + yearly Prices, then inserts the
+  plan row with the 3 ids. A paid plan with no price → `VALIDATION_ERROR`. Free
+  plan skips Stripe. On Stripe failure → `STRIPE_SYNC_FAILED` (no half-linked row).
 - `update({ active: false })` — archives the Stripe Product + deactivates its
   Prices (best-effort, then DB patch). Other field changes (`name`/`limits`/…)
   are local-only.
