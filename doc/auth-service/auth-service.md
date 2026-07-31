@@ -119,6 +119,9 @@ User ──< workspace_members >── Workspace ──< projects ── project
 ### Checkout / Portal
 - `createCheckout` — free→paid only. Pre-checks the row: if a live Stripe subscription exists (`stripe_subscription_id` set, status ≠ canceled) → `SUBSCRIPTION_EXISTS` (use the Portal). Ensures a Customer (idempotent `customer:${workspaceId}`), creates a `subscription`-mode Checkout Session with `metadata.workspaceId`/`planKey`/`billingCycle` + `client_reference_id`. **owner/admin only** (role forwarded by the gateway). Redirect URLs allowlisted to `APP_URL`.
 - `createPortal` — Billing Portal session on the workspace's Customer. owner/admin only.
+
+### Invoices
+- `listInvoices(workspaceId)` — read-only; resolves the workspace's `stripe_customer_id` (returns `[]` if none) and maps `stripe.invoices.list({ customer, limit: 20 })` to `InvoiceView` (`number`, `amountPaid`, `currency`, `status`, `createdAt`, `url = hosted_invoice_url`). **Link-out / keys-only** — nothing invoice-related is stored; the download links to Stripe's hosted PDF.
 - Managed Payments: Stripe's 2025+ default demands a product `tax_code` + breaks the hosted page on an unprovisioned account; Checkout opts out via `managed_payments:{enabled:false}` unless `STRIPE_MANAGED_PAYMENTS=true` (enable only after Stripe Tax + product tax codes are configured).
 
 ### Webhook reconciliation (`StripeWebhookService`)

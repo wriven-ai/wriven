@@ -187,6 +187,7 @@ All `/billing/*` routes are **protected** (JWT) and require `X-Workspace-Id`. `P
 |--------|------|------|---|
 | GET | `/billing/plans` | — | `PlanView[]` (public + active plans: free/pro/business, with prices/limits/features) |
 | GET | `/billing/subscription` | — | `SubscriptionView` — the workspace's current plan/status/period |
+| GET | `/billing/invoices` | — | `InvoiceView[]` — last 20 Stripe invoices (number/amount/status/url); `[]` if no customer |
 | POST | `/billing/checkout` | `{ planKey: 'pro'\|'business', billingCycle: 'monthly'\|'yearly', successUrl?, cancelUrl? }` | `{ url, sessionId }` — Stripe Checkout URL (**owner/admin**; free→paid only) |
 | POST | `/billing/portal` | `{ returnUrl? }` | `{ url }` — Stripe Billing Portal URL (**owner/admin**) |
 
