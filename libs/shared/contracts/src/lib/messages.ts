@@ -116,6 +116,7 @@ export const INVITATION_PATTERNS = {
 export const BILLING_PATTERNS = {
   LIST_PLANS: 'auth.billing.listPlans',
   GET_SUBSCRIPTION: 'auth.billing.getSubscription',
+  LIST_INVOICES: 'auth.billing.listInvoices',
   CREATE_CHECKOUT: 'auth.billing.createCheckout',
   CREATE_PORTAL: 'auth.billing.createPortal',
   STRIPE_WEBHOOK: 'auth.billing.stripeWebhook',

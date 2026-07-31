@@ -48,3 +48,27 @@ export interface CheckoutSessionView {
 export interface PortalSessionView {
   url: string;
 }
+
+/** Stripe invoice lifecycle status (mirrors `Invoice.Status`). */
+export type InvoiceStatus =
+  | 'draft'
+  | 'open'
+  | 'paid'
+  | 'uncollectible'
+  | 'void';
+
+/**
+ * A Stripe invoice for the workspace's customer — tenant-facing
+ * (`GET /billing/invoices`). Link-out only: `url` is Stripe's hosted invoice
+ * (downloadable PDF); nothing invoice-related is stored locally.
+ */
+export interface InvoiceView {
+  id: string;
+  number: string | null;
+  amountPaid: number; // cents
+  currency: string;
+  status: InvoiceStatus;
+  createdAt: string; // ISO
+  description: string | null;
+  url: string | null; // hosted_invoice_url (Stripe-hosted PDF)
+}

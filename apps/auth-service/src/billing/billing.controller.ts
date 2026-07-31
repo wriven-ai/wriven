@@ -42,6 +42,11 @@ export class BillingController {
     return this.billing.getSubscription(p.workspaceId);
   }
 
+  @MessagePattern(BILLING_PATTERNS.LIST_INVOICES)
+  listInvoices(@Payload() p: { workspaceId: string }) {
+    return this.billing.listInvoices(p.workspaceId);
+  }
+
   @MessagePattern(BILLING_PATTERNS.CREATE_CHECKOUT)
   createCheckout(
     @Payload()

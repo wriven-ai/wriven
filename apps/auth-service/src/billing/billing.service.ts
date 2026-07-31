@@ -5,6 +5,8 @@ import type Stripe from 'stripe';
 import type {
   BillingCycle,
   CheckoutSessionView,
+  InvoiceStatus,
+  InvoiceView,
   PlanFeatures,
   PlanLimits,
   PlanView,
@@ -79,6 +81,29 @@ export class BillingService {
       cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
       hasPaymentMethod: !!sub?.stripeCustomerId && active,
     };
+  }
+
+  /** Last Stripe invoices for the workspace's customer (link-out only). */
+  async listInvoices(workspaceId: string): Promise<InvoiceView[]> {
+    const sub = await this.db.query.subscriptions.findFirst({
+      where: eq(subscriptions.workspaceId, workspaceId),
+      columns: { stripeCustomerId: true },
+    });
+    if (!sub?.stripeCustomerId) return [];
+    const invoices = await this.stripe.invoices.list({
+      customer: sub.stripeCustomerId,
+      limit: 20,
+    });
+    return invoices.data.map((inv) => ({
+      id: inv.id,
+      number: inv.number,
+      amountPaid: inv.amount_paid,
+      currency: inv.currency,
+      status: (inv.status ?? 'open') as InvoiceStatus,
+      createdAt: new Date(inv.created * 1000).toISOString(),
+      description: inv.description,
+      url: inv.hosted_invoice_url ?? null,
+    }));
   }
 
   /** Create a Stripe Checkout Session for the free → paid transition only.

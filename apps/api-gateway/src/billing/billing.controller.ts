@@ -45,6 +45,13 @@ export class BillingController {
     );
   }
 
+  @Get('invoices')
+  listInvoices(@CurrentWorkspace() workspaceId: string) {
+    return firstValueFrom(
+      this.auth.send(contracts.BILLING_PATTERNS.LIST_INVOICES, { workspaceId }),
+    );
+  }
+
   @Post('checkout')
   createCheckout(
     @CurrentUser() user: contracts.AuthUser,
