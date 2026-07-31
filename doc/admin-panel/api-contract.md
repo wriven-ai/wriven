@@ -79,9 +79,15 @@ Tokens are never returned — only `prefix`.
 | PATCH | `/admin/webhooks/:id/disable` | `[admin, moderator]` | — | `{ success: true }` |
 
 ### Plans
-| GET | `/admin/plans` | any | — | `PlanView[]` (sorted by `sortOrder`) |
-| POST | `/admin/plans` | `[admin]` | `CreatePlanDto` | `PlanView` |
-| PATCH | `/admin/plans/:id` | `[admin]` | `UpdatePlanDto` | `PlanView` |
+| GET | `/admin/plans` | any | — | `AdminPlanView[]` (sorted by `sortOrder`; incl. Stripe ids) |
+| POST | `/admin/plans` | `[admin]` | `CreatePlanDto` | `AdminPlanView` |
+| PATCH | `/admin/plans/:id` | `[admin]` | `UpdatePlanDto` | `AdminPlanView` |
+
+**Plan ↔ Stripe sync (specs/11):**
+- **Create** a paid plan (`key !== 'free'`) also creates the Stripe Product + monthly/yearly Prices and stores their ids — the returned `AdminPlanView` has `stripeProductId` / `stripePriceIdMonthly` / `stripePriceIdYearly` populated. A paid plan with **no** `priceMonthly`/`priceYearly` → `VALIDATION_ERROR` 422. Free plan skips Stripe.
+- **Patch `active:false`** archives the Stripe Product + deactivates its Prices (retire). Other fields are local-only.
+- **Prices are read-only after create** — `UpdatePlanDto` has no price fields; Stripe owns pricing.
+- A Stripe call failing mid-create/retire → `STRIPE_SYNC_FAILED` 500 (the DB row is not left half-linked).
 
 ### Admin users (platform staff)
 | GET | `/admin/admins?page&limit&q` | `[admin]` | — | `Paginated<AdminView>` |
@@ -190,6 +196,13 @@ export interface PlanView {
   currency: string; trialDays: number;
   limits: PlanLimits; features: PlanFeatures;
 }
+// Returned by /admin/plans (admin only) — adds the Stripe linkage the tenant
+// PlanView omits. `stripeProductId === null` ⇒ not yet linked / free plan.
+export interface AdminPlanView extends PlanView {
+  stripeProductId: string | null;
+  stripePriceIdMonthly: string | null;
+  stripePriceIdYearly: string | null;
+}
 
 // ── Audit + metrics ─────────────────────────────────────────────
 export interface AuditLogView {
@@ -227,13 +240,13 @@ interface AdminTakedownDto { status: 'draft' | 'archived'; }
 // POST /admin/plans
 interface CreatePlanDto {
   key: string; name: string; description?: string;
-  priceMonthly?: number; priceYearly?: number; // cents
+  priceMonthly?: number; priceYearly?: number; // cents — required for paid plans (key !== 'free')
   limits?: Record<string, number | null>; features?: Record<string, unknown>;
 }
-// PATCH /admin/plans/:id
+// PATCH /admin/plans/:id  — prices are read-only after create (Stripe owns them)
 interface UpdatePlanDto {
   name?: string; description?: string;
-  priceMonthly?: number; priceYearly?: number; active?: boolean;
+  active?: boolean;
   limits?: Record<string, number | null>; features?: Record<string, unknown>;
 }
 // PUT /admin/workspaces/:id/plan

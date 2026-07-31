@@ -228,8 +228,17 @@ Shared conventions for all:
    last fired, active. Highlight failing endpoints. `[admin|moderator]` disable.
 
 10. **Plans** (`/plans`) `[admin]` — list/define plans + their limit sets
-    (projects, members, storageMb, entries, apiKeys, webhooks), price (display).
-    Create/edit via RHF+zod. Assignment happens on the workspace detail screen.
+    (projects, members, storageMb, entries, apiKeys, webhooks). Create/edit via
+    RHF+zod. Assignment happens on the workspace detail screen.
+    - **List** shows the Stripe link per row (`AdminPlanView.stripeProductId` /
+      `stripePriceIdMonthly` / `stripePriceIdYearly` — `null` ⇒ not linked / free).
+    - **Create** (paid plan) takes `priceMonthly`/`priceYearly` (cents, ≥1 required
+      when `key !== 'free'`) → the backend also creates the Stripe Product + Prices.
+      A paid plan with no price → `VALIDATION_ERROR` 422.
+    - **Edit** form is **name/description/limits/features/active only** — prices are
+      **read-only** after create (`UpdatePlanDto` has no price fields; show the
+      amount as read-only). Setting `active:false` retires the plan and archives it
+      on Stripe. A Stripe failure surfaces as `STRIPE_SYNC_FAILED` 500.
 
 11. **Admins** (`/admins`) `[admin]` — manage `admin_users`: invite/create, set
     role (admin/moderator/member), activate/deactivate, reset MFA. Every change
