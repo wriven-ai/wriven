@@ -366,7 +366,11 @@ function BillingInner() {
                     isCurrent={isCurrent}
                     hasPaidSub={hasPaidSub}
                     canManage={canManage}
-                    busy={checkout.isPending || portal.isPending}
+                    upgradeBusy={
+                      checkout.isPending &&
+                      checkout.variables?.planKey === plan.key
+                    }
+                    portalBusy={portal.isPending}
                     onUpgrade={() => onUpgrade(plan)}
                     onPortal={onPortal}
                   />
@@ -593,7 +597,8 @@ function PlanCta({
   isCurrent,
   hasPaidSub,
   canManage,
-  busy,
+  upgradeBusy,
+  portalBusy,
   onUpgrade,
   onPortal,
 }: {
@@ -601,7 +606,8 @@ function PlanCta({
   isCurrent: boolean;
   hasPaidSub: boolean;
   canManage: boolean;
-  busy: boolean;
+  upgradeBusy: boolean;
+  portalBusy: boolean;
   onUpgrade: () => void;
   onPortal: () => void;
 }) {
@@ -621,10 +627,10 @@ function PlanCta({
     return hasPaidSub ? (
       <button
         onClick={onPortal}
-        disabled={!canManage || busy}
+        disabled={!canManage || portalBusy}
         className="w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-2xs py-2.5 rounded-lg border border-brand-border text-text-secondary hover:border-brand-accent hover:text-brand-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Cancel in Portal
+        {portalBusy ? 'Opening…' : 'Cancel in Portal'}
       </button>
     ) : (
       <div className="h-[38px]" />
@@ -636,10 +642,10 @@ function PlanCta({
     return (
       <button
         onClick={onPortal}
-        disabled={!canManage || busy}
+        disabled={!canManage || portalBusy}
         className="w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-2xs py-2.5 rounded-lg border border-brand-border text-text-secondary hover:border-brand-accent hover:text-brand-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Manage in Portal
+        {portalBusy ? 'Opening…' : 'Manage in Portal'}
       </button>
     );
   }
@@ -647,14 +653,14 @@ function PlanCta({
   return (
     <button
       onClick={onUpgrade}
-      disabled={!canManage || busy}
+      disabled={!canManage || upgradeBusy}
       className={`w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-2xs py-2.5 rounded-lg border cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
         plan.key === 'pro'
           ? 'bg-brand-accent hover:bg-brand-accent-hover text-white border-brand-border-button neo-shadow'
           : 'border-brand-border hover:border-brand-accent hover:text-brand-accent text-text-secondary'
       }`}
     >
-      {busy ? (
+      {upgradeBusy ? (
         <>
           <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Processing…
         </>
