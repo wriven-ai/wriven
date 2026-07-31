@@ -107,6 +107,17 @@ export interface PlanView {
   features: PlanFeatures;
 }
 
+/**
+ * Plan view for the ADMIN panel only — adds the Stripe linkage (Product + Price
+ * ids) that the tenant-facing `PlanView` deliberately omits (the public catalog
+ * must not leak price ids). Returned by `admin.plans.*`.
+ */
+export interface AdminPlanView extends PlanView {
+  stripeProductId: string | null;
+  stripePriceIdMonthly: string | null;
+  stripePriceIdYearly: string | null;
+}
+
 // ── Tenant oversight views (cross-tenant, admin panel) ──────────────────────
 
 /** A tenant user row in the admin Users table. */

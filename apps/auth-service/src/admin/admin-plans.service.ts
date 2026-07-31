@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  AdminPlanView,
   AssignPlanDto,
   CreatePlanDto,
   PlanFeatures,
   PlanLimits,
-  PlanView,
   UpdatePlanDto,
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
@@ -24,20 +24,32 @@ export class AdminPlansService {
     @Inject(STRIPE_CLIENT) private readonly stripe: Stripe,
   ) {}
 
-  async list(): Promise<PlanView[]> {
+  async list(): Promise<AdminPlanView[]> {
     const rows = await this.db.query.plans.findMany({
       orderBy: asc(plans.sortOrder),
     });
-    return rows.map((p) => this.toView(p));
+    return rows.map((p) => this.toAdminView(p));
   }
 
-  async create(dto: CreatePlanDto): Promise<PlanView> {
+  async create(dto: CreatePlanDto): Promise<AdminPlanView> {
     const existing = await this.db.query.plans.findFirst({
       where: eq(plans.key, dto.key),
       columns: { id: true },
     });
     if (existing) {
       throw rpcError('CONFLICT', 'A plan with that key already exists.');
+    }
+    // A paid plan must carry at least one price — otherwise it'd create a Stripe
+    // Product with no Prices (unpurchasable + orphaned). Free plan has no price.
+    if (
+      dto.key !== 'free' &&
+      dto.priceMonthly == null &&
+      dto.priceYearly == null
+    ) {
+      throw rpcError(
+        'VALIDATION_ERROR',
+        'A paid plan needs at least one price (priceMonthly or priceYearly).',
+      );
     }
 
     // Stripe-first for paid plans: create Product + Prices, capture ids, THEN
@@ -86,10 +98,10 @@ export class AdminPlansService {
         stripePriceIdYearly: stripeIds.yearlyId,
       })
       .returning();
-    return this.toView(plan);
+    return this.toAdminView(plan);
   }
 
-  async update(payload: { id: string; dto: UpdatePlanDto }): Promise<PlanView> {
+  async update(payload: { id: string; dto: UpdatePlanDto }): Promise<AdminPlanView> {
     const existing = await this.db.query.plans.findFirst({
       where: eq(plans.id, payload.id),
       columns: {
@@ -128,7 +140,7 @@ export class AdminPlansService {
       .where(eq(plans.id, payload.id))
       .returning();
     if (!plan) throw rpcError('NOT_FOUND', 'Plan not found.');
-    return this.toView(plan);
+    return this.toAdminView(plan);
   }
 
   /** Create monthly + yearly licensed Prices for a Stripe product. */
@@ -229,7 +241,8 @@ export class AdminPlansService {
     return { success: true, planKey: plan.key, status };
   }
 
-  private toView(p: PlanRow): PlanView {
+  /** Admin view includes the Stripe linkage ids (omitted from tenant PlanView). */
+  private toAdminView(p: PlanRow): AdminPlanView {
     return {
       id: p.id,
       key: p.key,
@@ -244,6 +257,9 @@ export class AdminPlansService {
       trialDays: p.trialDays,
       limits: (p.limits ?? {}) as PlanLimits,
       features: (p.features ?? {}) as PlanFeatures,
+      stripeProductId: p.stripeProductId,
+      stripePriceIdMonthly: p.stripePriceIdMonthly,
+      stripePriceIdYearly: p.stripePriceIdYearly,
     };
   }
 }
