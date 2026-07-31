@@ -346,6 +346,25 @@ export interface PortalSessionView {
   url: string;
 }
 
+export type InvoiceStatus =
+  | 'draft'
+  | 'open'
+  | 'paid'
+  | 'uncollectible'
+  | 'void';
+
+/** A Stripe invoice (link-out only — `url` is the hosted PDF). */
+export interface InvoiceView {
+  id: string;
+  number: string | null;
+  amountPaid: number; // cents
+  currency: string;
+  status: InvoiceStatus;
+  createdAt: string; // ISO
+  description: string | null;
+  url: string | null;
+}
+
 export interface CreateCheckoutInput {
   planKey: 'pro' | 'business';
   billingCycle: BillingCycle;

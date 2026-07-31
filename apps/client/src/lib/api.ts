@@ -21,6 +21,7 @@ import type {
   Paginated,
   PlanView,
   PortalSessionView,
+  InvoiceView,
   PresignResult,
   ProjectMemberView,
   ProjectRole,
@@ -616,6 +617,9 @@ export const billingApi = {
   /** The workspace's current subscription (always exists — defaults to free). */
   getSubscription: () =>
     request<SubscriptionView>('/billing/subscription', { workspace: true }),
+  /** Last Stripe invoices for the workspace's customer (link-out only). */
+  listInvoices: () =>
+    request<InvoiceView[]>('/billing/invoices', { workspace: true }),
   /** Start a hosted Stripe Checkout for the free→paid transition. */
   createCheckout: (dto: CreateCheckoutInput) =>
     request<CheckoutSessionView>('/billing/checkout', {

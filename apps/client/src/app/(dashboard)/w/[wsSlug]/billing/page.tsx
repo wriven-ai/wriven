@@ -11,6 +11,7 @@ import {
   Check,
   CreditCard,
   Database,
+  Download,
   Eye,
   FileText,
   Globe,
@@ -27,6 +28,7 @@ import {
 import { useCurrentWorkspace } from '@/hooks/use-current-workspace';
 import {
   useCheckout,
+  useInvoices,
   usePortal,
   usePlans,
   useSubscription,
@@ -42,6 +44,19 @@ function formatPrice(cents: number | null | undefined, currency = 'usd'): string
   const usd = cents / 100;
   const symbol = currency === 'usd' ? '$' : '';
   return `${symbol}${usd % 1 === 0 ? usd : usd.toFixed(2)}`;
+}
+
+/** Always-2-decimals money for invoice amounts. */
+function formatMoney(cents: number | null | undefined, currency = 'usd'): string {
+  const symbol = currency === 'usd' ? '$' : '';
+  return `${symbol}${((cents ?? 0) / 100).toFixed(2)}`;
+}
+
+function invoiceStatusClass(status: string): string {
+  if (status === 'paid') return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+  if (status === 'open') return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+  if (status === 'uncollectible') return 'bg-red-500/10 text-red-500 border-red-500/20';
+  return 'bg-brand-surface-soft text-text-muted border-brand-border';
 }
 
 function storageLabel(mb: number | null | undefined): string {
@@ -127,6 +142,7 @@ function BillingInner() {
 
   const plansQuery = usePlans();
   const subQuery = useSubscription();
+  const invoicesQuery = useInvoices();
   const refreshSubscription = useRefreshSubscription();
 
   const checkout = useCheckout();
@@ -140,6 +156,7 @@ function BillingInner() {
   const subscription = subQuery.data;
   const hasPaidSub = !!subscription && subscription.planKey !== 'free';
   const currentPlanKey = subscription?.planKey ?? 'free';
+  const invoices = invoicesQuery.data ?? [];
 
   // Redirect URLs must point at the real route (/w/[wsSlug]/billing), not the
   // backend default (APP_URL/billing) which omits the workspace segment.
@@ -500,9 +517,60 @@ function BillingInner() {
           <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
             Invoice History
           </span>
-          <div className="text-center py-6 font-mono text-2xs text-text-muted">
-            No invoices yet.
-          </div>
+          {invoicesQuery.isLoading ? (
+            <div className="text-center py-6 font-mono text-2xs text-text-muted">
+              Loading…
+            </div>
+          ) : invoices.length === 0 ? (
+            <div className="text-center py-6 font-mono text-2xs text-text-muted">
+              No invoices yet.
+            </div>
+          ) : (
+            <div className="divide-y divide-brand-border" id="invoice-list">
+              {invoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
+                >
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-2xs font-mono font-bold text-text-primary truncate">
+                      {inv.description ?? `Invoice ${inv.number ?? inv.id}`}
+                    </p>
+                    <p className="text-[9.5px] font-mono text-text-muted">
+                      {inv.number ?? '—'} · {inv.createdAt.slice(0, 10)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-2xs font-mono font-bold text-text-primary">
+                      {formatMoney(inv.amountPaid, inv.currency)}
+                    </span>
+                    <span
+                      className={`text-[8px] font-bold font-mono uppercase px-1.5 py-0.5 rounded border ${invoiceStatusClass(
+                        inv.status,
+                      )}`}
+                    >
+                      {inv.status}
+                    </span>
+                    {inv.url ? (
+                      <a
+                        href={inv.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View / download invoice"
+                        className="p-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-muted hover:text-text-primary rounded cursor-pointer transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    ) : (
+                      <span className="p-1.5 text-text-muted opacity-30">
+                        <Download className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

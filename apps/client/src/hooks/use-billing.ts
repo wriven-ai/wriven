@@ -17,6 +17,7 @@ import type {
 export const BILLING_KEYS = {
   plans: ['billing', 'plans'] as const,
   subscription: ['billing', 'subscription'] as const,
+  invoices: ['billing', 'invoices'] as const,
 };
 
 /** Public plan catalog (free/pro/business with prices/limits/features). */
@@ -32,6 +33,14 @@ export function useSubscription() {
   return useQuery({
     queryKey: BILLING_KEYS.subscription,
     queryFn: billingApi.getSubscription,
+  });
+}
+
+/** Last Stripe invoices for the workspace's customer. */
+export function useInvoices() {
+  return useQuery({
+    queryKey: BILLING_KEYS.invoices,
+    queryFn: billingApi.listInvoices,
   });
 }
 
@@ -59,10 +68,13 @@ export function usePortal() {
   });
 }
 
-/** Invalidate the subscription query — call after the checkout success redirect
- *  (the webhook is the real source of truth; the flip may land a moment later). */
+/** Invalidate the subscription + invoices — call after the checkout success
+ *  redirect (the webhook is the real source of truth; the flip may land a moment
+ *  later, and a new invoice appears once payment is captured). */
 export function useRefreshSubscription() {
   const qc = useQueryClient();
-  return () =>
+  return () => {
     qc.invalidateQueries({ queryKey: BILLING_KEYS.subscription });
+    qc.invalidateQueries({ queryKey: BILLING_KEYS.invoices });
+  };
 }
