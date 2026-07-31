@@ -9,8 +9,10 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
 import { asc, eq } from 'drizzle-orm';
+import type Stripe from 'stripe';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { STRIPE_CLIENT } from '../billing/stripe-client.provider';
 
 const { plans, subscriptions, workspaces } = schema;
 type PlanRow = typeof plans.$inferSelect;
@@ -19,6 +21,7 @@ type PlanRow = typeof plans.$inferSelect;
 export class AdminPlansService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    @Inject(STRIPE_CLIENT) private readonly stripe: Stripe,
   ) {}
 
   async list(): Promise<PlanView[]> {
@@ -36,6 +39,38 @@ export class AdminPlansService {
     if (existing) {
       throw rpcError('CONFLICT', 'A plan with that key already exists.');
     }
+
+    // Stripe-first for paid plans: create Product + Prices, capture ids, THEN
+    // insert the row — so a Stripe failure can't leave a half-linked plan.
+    // Free plan never touches Stripe.
+    let stripeIds = {
+      productId: null as string | null,
+      monthlyId: null as string | null,
+      yearlyId: null as string | null,
+    };
+    if (dto.key !== 'free') {
+      try {
+        const product = await this.stripe.products.create({
+          name: dto.name,
+          description: dto.description ?? undefined,
+          metadata: { planKey: dto.key },
+        });
+        const prices = await this.createPrices(
+          product.id,
+          'usd',
+          dto.key,
+          dto.priceMonthly,
+          dto.priceYearly,
+        );
+        stripeIds = { productId: product.id, ...prices };
+      } catch {
+        throw rpcError(
+          'STRIPE_SYNC_FAILED',
+          'Failed to create the Stripe product/prices for this plan.',
+        );
+      }
+    }
+
     const [plan] = await this.db
       .insert(plans)
       .values({
@@ -46,18 +81,43 @@ export class AdminPlansService {
         priceYearly: dto.priceYearly ?? null,
         limits: dto.limits ?? {},
         features: dto.features ?? {},
+        stripeProductId: stripeIds.productId,
+        stripePriceIdMonthly: stripeIds.monthlyId,
+        stripePriceIdYearly: stripeIds.yearlyId,
       })
       .returning();
     return this.toView(plan);
   }
 
   async update(payload: { id: string; dto: UpdatePlanDto }): Promise<PlanView> {
+    const existing = await this.db.query.plans.findFirst({
+      where: eq(plans.id, payload.id),
+      columns: {
+        stripeProductId: true,
+        stripePriceIdMonthly: true,
+        stripePriceIdYearly: true,
+      },
+    });
+    if (!existing) throw rpcError('NOT_FOUND', 'Plan not found.');
+
+    // Retire → archive on Stripe FIRST (deactivation is idempotent + the safe
+    // direction). On failure, leave the DB row untouched and fail loud so the
+    // admin can retry. Prices are read-only (not in the DTO).
+    if (payload.dto.active === false && existing.stripeProductId) {
+      try {
+        await this.archiveStripe(existing);
+      } catch {
+        throw rpcError(
+          'STRIPE_SYNC_FAILED',
+          'Failed to archive the plan on Stripe.',
+        );
+      }
+    }
+
     const patch: Partial<typeof plans.$inferInsert> = {};
     const d = payload.dto;
     if (d.name !== undefined) patch.name = d.name;
     if (d.description !== undefined) patch.description = d.description;
-    if (d.priceMonthly !== undefined) patch.priceMonthly = d.priceMonthly;
-    if (d.priceYearly !== undefined) patch.priceYearly = d.priceYearly;
     if (d.active !== undefined) patch.active = d.active;
     if (d.limits !== undefined) patch.limits = d.limits;
     if (d.features !== undefined) patch.features = d.features;
@@ -69,6 +129,63 @@ export class AdminPlansService {
       .returning();
     if (!plan) throw rpcError('NOT_FOUND', 'Plan not found.');
     return this.toView(plan);
+  }
+
+  /** Create monthly + yearly licensed Prices for a Stripe product. */
+  private async createPrices(
+    productId: string,
+    currency: string,
+    planKey: string,
+    monthlyCents?: number | null,
+    yearlyCents?: number | null,
+  ): Promise<{ monthlyId: string | null; yearlyId: string | null }> {
+    const [monthly, yearly] = await Promise.all([
+      monthlyCents != null
+        ? this.stripe.prices.create({
+            product: productId,
+            currency,
+            unit_amount: monthlyCents,
+            recurring: { interval: 'month', usage_type: 'licensed' },
+            metadata: { planKey, billingCycle: 'monthly' },
+          })
+        : Promise.resolve(null),
+      yearlyCents != null
+        ? this.stripe.prices.create({
+            product: productId,
+            currency,
+            unit_amount: yearlyCents,
+            recurring: { interval: 'year', usage_type: 'licensed' },
+            metadata: { planKey, billingCycle: 'yearly' },
+          })
+        : Promise.resolve(null),
+    ]);
+    return {
+      monthlyId: monthly ? monthly.id : null,
+      yearlyId: yearly ? yearly.id : null,
+    };
+  }
+
+  /** Archive a plan's Stripe Product + deactivate its Prices (retire). */
+  private async archiveStripe(p: {
+    stripeProductId: string | null;
+    stripePriceIdMonthly: string | null;
+    stripePriceIdYearly: string | null;
+  }): Promise<void> {
+    if (!p.stripeProductId) return;
+    const tasks: Promise<unknown>[] = [
+      this.stripe.products.update(p.stripeProductId, { active: false }),
+    ];
+    if (p.stripePriceIdMonthly) {
+      tasks.push(
+        this.stripe.prices.update(p.stripePriceIdMonthly, { active: false }),
+      );
+    }
+    if (p.stripePriceIdYearly) {
+      tasks.push(
+        this.stripe.prices.update(p.stripePriceIdYearly, { active: false }),
+      );
+    }
+    await Promise.all(tasks);
   }
 
   /** Assign a plan to a workspace (admin). Upserts the subscription row. */

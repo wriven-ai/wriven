@@ -20,6 +20,9 @@ export const ERROR_CODES = {
   // Workspace already has a live Stripe subscription — use the Billing Portal to
   // change plans (proration) instead of starting a second Checkout subscription.
   SUBSCRIPTION_EXISTS: { code: 'SUBSCRIPTION_EXISTS', statusCode: 409 },
+  // A Stripe call failed mid plan create/retire sync — DB write skipped so the
+  // plan row isn't left half-linked. Retryable.
+  STRIPE_SYNC_FAILED: { code: 'STRIPE_SYNC_FAILED', statusCode: 500 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;
 

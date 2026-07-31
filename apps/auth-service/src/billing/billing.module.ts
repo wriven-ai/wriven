@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
-import { stripeClientProvider } from './stripe-client.provider';
+import { StripeModule } from './stripe.module';
 import { StripeWebhookService } from './stripe-webhook.service';
 
 @Module({
+  imports: [StripeModule],
   controllers: [BillingController],
-  providers: [BillingService, StripeWebhookService, stripeClientProvider],
+  providers: [BillingService, StripeWebhookService],
 })
 export class BillingModule {}
