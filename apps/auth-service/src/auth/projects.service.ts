@@ -2,10 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   AddProjectMemberDto,
   CreateProjectDto,
+  Permission,
   ProjectMemberView,
   ProjectView,
   UpdateProjectDto,
   UpdateProjectMemberDto,
+  getProjectScope,
 } from '@wriven/contracts';
 import type { ProjectRole, WorkspaceRole } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
@@ -14,6 +16,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { AuthorizationService } from './authorization.service';
 import { EntitlementsService } from './entitlements.service';
 import { MembersService } from './members.service';
 
@@ -35,6 +38,7 @@ export class ProjectsService {
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly members: MembersService,
     private readonly entitlements: EntitlementsService,
+    private readonly authz: AuthorizationService,
   ) {}
 
   // ── Project CRUD ────────────────────────────────────────────────────────────
@@ -45,11 +49,11 @@ export class ProjectsService {
     dto: CreateProjectDto;
   }): Promise<ProjectView> {
     // Only workspace owner/admin can create projects.
-    await this.members.requireWorkspaceRole(
-      p.callerUserId,
-      p.workspaceId,
-      ['owner', 'admin'],
-    );
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_PROJECT_CREATE,
+      workspaceId: p.workspaceId,
+    });
     const slug = p.dto.slug ?? uniqueSlug(p.dto.name);
     try {
       const result = await this.db.transaction(async (tx) => {
@@ -86,23 +90,29 @@ export class ProjectsService {
     callerUserId: string;
     projectId: string;
   }): Promise<ProjectView> {
-    const role = await this.requireProjectRole(p.callerUserId, p.projectId, [
-      'admin',
-      'editor',
-      'viewer',
-    ]);
-    return this.toView(await this.requireRow(p.projectId), role);
+    // PROJECT_VIEW is held by every project role AND cascades to workspace
+    // owner/admin, so a workspace owner sees a project even with no project row.
+    const { projRole } = await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.PROJECT_VIEW,
+      projectId: p.projectId,
+    });
+    return this.toView(await this.requireRow(p.projectId), projRole);
   }
 
   async list(p: {
     callerUserId: string;
     workspaceId: string;
   }): Promise<ProjectView[]> {
-    const callerRole = await this.members.requireWorkspaceRole(
-      p.callerUserId,
-      p.workspaceId,
-      ['owner', 'admin', 'member', 'guest'],
-    );
+    // Listing is scope-driven (data filtering), not a single permission gate:
+    // real workspace members see ALL projects; a `guest` sees only ASSIGNED.
+    const { wsRole } = await this.authz.resolveRoles(p.callerUserId, {
+      workspaceId: p.workspaceId,
+    });
+    const scope = getProjectScope(wsRole);
+    if (scope === 'NONE') {
+      throw rpcError('FORBIDDEN', 'You do not have access to this workspace.');
+    }
 
     const rows = await this.db.query.projects.findMany({
       where: and(
@@ -119,13 +129,8 @@ export class ProjectsService {
     });
     const roleByProject = new Map(memberships.map((m) => [m.projectId, m.role]));
 
-    // Real workspace members (owner/admin/member) see every project. A `guest`
-    // — auto-added via a single project invite — sees only the projects they
-    // belong to, so project existence doesn't leak to outside collaborators.
-    const canSeeAll = callerRole !== 'guest';
-    const visible = canSeeAll
-      ? rows
-      : rows.filter((r) => roleByProject.has(r.id));
+    const visible =
+      scope === 'ALL' ? rows : rows.filter((r) => roleByProject.has(r.id));
 
     return visible.map((r) =>
       this.toView(r, roleByProject.get(r.id) ?? 'viewer'),
@@ -137,7 +142,11 @@ export class ProjectsService {
     projectId: string;
     dto: UpdateProjectDto;
   }): Promise<ProjectView> {
-    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.PROJECT_EDIT,
+      projectId: p.projectId,
+    });
     const set: Partial<ProjectRow> = {};
     if (p.dto.name !== undefined) set.name = p.dto.name;
     if (p.dto.slug !== undefined) set.slug = slugify(p.dto.slug);
@@ -161,7 +170,11 @@ export class ProjectsService {
     callerUserId: string;
     projectId: string;
   }): Promise<{ success: true }> {
-    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.PROJECT_DELETE,
+      projectId: p.projectId,
+    });
     await this.db
       .update(projects)
       .set({ deletedAt: new Date() })
@@ -175,11 +188,11 @@ export class ProjectsService {
     callerUserId: string;
     projectId: string;
   }): Promise<ProjectMemberView[]> {
-    await this.requireProjectRole(p.callerUserId, p.projectId, [
-      'admin',
-      'editor',
-      'viewer',
-    ]);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.PROJECT_MEMBERS_VIEW,
+      projectId: p.projectId,
+    });
     const rows = await this.db.query.projectMembers.findMany({
       where: eq(projectMembers.projectId, p.projectId),
       orderBy: projectMembers.createdAt,
@@ -193,7 +206,11 @@ export class ProjectsService {
     projectId: string;
     dto: AddProjectMemberDto;
   }): Promise<ProjectMemberView> {
-    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.PROJECT_MEMBERS_MANAGE,
+      projectId: p.projectId,
+    });
     const project = await this.requireRow(p.projectId);
     const user = await this.members.findUserByEmail(p.dto.email);
     await this.ensureNotMember(p.projectId, user.id);
@@ -248,7 +265,11 @@ export class ProjectsService {
     targetUserId: string;
     dto: UpdateProjectMemberDto;
   }): Promise<ProjectMemberView> {
-    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.PROJECT_MEMBERS_MANAGE,
+      projectId: p.projectId,
+    });
     const target = await this.requireMembership(p.projectId, p.targetUserId);
     if (target.role === 'admin' && p.dto.role !== 'admin') {
       await this.assertNotLastAdmin(p.projectId);
@@ -275,7 +296,11 @@ export class ProjectsService {
     projectId: string;
     targetUserId: string;
   }): Promise<{ success: true }> {
-    await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.PROJECT_MEMBERS_MANAGE,
+      projectId: p.projectId,
+    });
     const target = await this.requireMembership(p.projectId, p.targetUserId);
     if (target.role === 'admin') {
       await this.assertNotLastAdmin(p.projectId);
@@ -289,26 +314,6 @@ export class ProjectsService {
         ),
       );
     return { success: true };
-  }
-
-  // ── Authorization helpers ─────────────────────────────────────────────────────
-
-  async requireProjectRole(
-    userId: string,
-    projectId: string,
-    allowed: string[],
-  ): Promise<ProjectRole> {
-    const row = await this.db.query.projectMembers.findFirst({
-      where: and(
-        eq(projectMembers.projectId, projectId),
-        eq(projectMembers.userId, userId),
-      ),
-      columns: { role: true },
-    });
-    if (!row || !allowed.includes(row.role)) {
-      throw rpcError('FORBIDDEN', 'You do not have access to this project.');
-    }
-    return row.role;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -359,7 +364,10 @@ export class ProjectsService {
     }
   }
 
-  private async roleFor(projectId: string, userId: string): Promise<ProjectRole | null> {
+  private async roleFor(
+    projectId: string,
+    userId: string,
+  ): Promise<ProjectRole | null> {
     const row = await this.db.query.projectMembers.findFirst({
       where: and(
         eq(projectMembers.projectId, projectId),

@@ -4,6 +4,7 @@ import {
   InvitationPreview,
   InvitationScope,
   InvitationView,
+  Permission,
 } from '@wriven/contracts';
 import type { ProjectRole, WorkspaceRole } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
@@ -12,8 +13,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { AuthorizationService } from './authorization.service';
 import { EntitlementsService } from './entitlements.service';
-import { MembersService } from './members.service';
 import { ProjectsService } from './projects.service';
 import { MailService } from './mail.service';
 
@@ -30,7 +31,7 @@ export class InvitationsService {
 
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
-    private readonly members: MembersService,
+    private readonly authz: AuthorizationService,
     private readonly projects: ProjectsService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
@@ -51,14 +52,17 @@ export class InvitationsService {
     if (p.scope === 'project') {
       const project = await this.requireProject(p.projectId!);
       workspaceId = project.workspaceId;
-      await this.projects.requireProjectRole(p.callerUserId, p.projectId!, [
-        'admin',
-      ]);
+      await this.authz.authorize({
+        userId: p.callerUserId,
+        permission: Permission.PROJECT_MEMBERS_MANAGE,
+        projectId: p.projectId!,
+      });
     } else {
-      await this.members.requireWorkspaceRole(p.callerUserId, workspaceId, [
-        'owner',
-        'admin',
-      ]);
+      await this.authz.authorize({
+        userId: p.callerUserId,
+        permission: Permission.WORKSPACE_MEMBERS_MANAGE,
+        workspaceId,
+      });
     }
 
     await this.ensureNotAlreadyMember(p.scope, workspaceId, p.projectId, p.email);
@@ -92,14 +96,17 @@ export class InvitationsService {
     projectId?: string;
   }): Promise<InvitationView[]> {
     if (p.scope === 'project') {
-      await this.projects.requireProjectRole(p.callerUserId, p.projectId!, [
-        'admin',
-      ]);
+      await this.authz.authorize({
+        userId: p.callerUserId,
+        permission: Permission.PROJECT_MEMBERS_MANAGE,
+        projectId: p.projectId!,
+      });
     } else {
-      await this.members.requireWorkspaceRole(p.callerUserId, p.workspaceId!, [
-        'owner',
-        'admin',
-      ]);
+      await this.authz.authorize({
+        userId: p.callerUserId,
+        permission: Permission.WORKSPACE_MEMBERS_MANAGE,
+        workspaceId: p.workspaceId!,
+      });
     }
 
     const where =
@@ -313,14 +320,17 @@ export class InvitationsService {
     row: InvitationRow,
   ): Promise<void> {
     if (row.scope === 'project') {
-      await this.projects.requireProjectRole(callerUserId, row.projectId!, [
-        'admin',
-      ]);
+      await this.authz.authorize({
+        userId: callerUserId,
+        permission: Permission.PROJECT_MEMBERS_MANAGE,
+        projectId: row.projectId!,
+      });
     } else {
-      await this.members.requireWorkspaceRole(callerUserId, row.workspaceId, [
-        'owner',
-        'admin',
-      ]);
+      await this.authz.authorize({
+        userId: callerUserId,
+        permission: Permission.WORKSPACE_MEMBERS_MANAGE,
+        workspaceId: row.workspaceId,
+      });
     }
   }
 

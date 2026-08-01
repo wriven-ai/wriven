@@ -1,15 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   AddWorkspaceMemberDto,
+  Permission,
   UpdateWorkspaceMemberDto,
   WorkspaceMemberView,
 } from '@wriven/contracts';
-import type { WorkspaceRole } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { AuthorizationService } from './authorization.service';
 import { EntitlementsService } from './entitlements.service';
 
 const { users, workspaceMembers } = schema;
@@ -23,6 +24,7 @@ export class MembersService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly entitlements: EntitlementsService,
+    private readonly authz: AuthorizationService,
   ) {}
 
   // ── Workspace members ────────────────────────────────────────────────────────
@@ -31,11 +33,11 @@ export class MembersService {
     callerUserId: string;
     workspaceId: string;
   }): Promise<WorkspaceMemberView[]> {
-    await this.requireWorkspaceRole(p.callerUserId, p.workspaceId, [
-      'owner',
-      'admin',
-      'member',
-    ]);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_MEMBERS_VIEW,
+      workspaceId: p.workspaceId,
+    });
     const rows = await this.db.query.workspaceMembers.findMany({
       where: eq(workspaceMembers.workspaceId, p.workspaceId),
       orderBy: workspaceMembers.createdAt,
@@ -49,10 +51,11 @@ export class MembersService {
     workspaceId: string;
     dto: AddWorkspaceMemberDto;
   }): Promise<WorkspaceMemberView> {
-    await this.requireWorkspaceRole(p.callerUserId, p.workspaceId, [
-      'owner',
-      'admin',
-    ]);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_MEMBERS_MANAGE,
+      workspaceId: p.workspaceId,
+    });
     const user = await this.findUserByEmail(p.dto.email);
     await this.ensureNotWorkspaceMember(p.workspaceId, user.id);
     const row = await this.db.transaction(async (tx) => {
@@ -77,22 +80,24 @@ export class MembersService {
     targetUserId: string;
     dto: UpdateWorkspaceMemberDto;
   }): Promise<WorkspaceMemberView> {
-    const callerRole = await this.requireWorkspaceRole(
-      p.callerUserId,
-      p.workspaceId,
-      ['owner', 'admin'],
-    );
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_MEMBERS_MANAGE,
+      workspaceId: p.workspaceId,
+    });
     const target = await this.requireWorkspaceMembership(
       p.workspaceId,
       p.targetUserId,
     );
 
-    // Only an owner may grant or change the owner role.
-    if (
-      (p.dto.role === 'owner' || target.role === 'owner') &&
-      callerRole !== 'owner'
-    ) {
-      throw rpcError('FORBIDDEN', 'Only an owner can manage the owner role.');
+    // Granting or changing the owner role is owner-only (WORKSPACE_ROLE_ASSIGN).
+    const touchesOwnerRole = p.dto.role === 'owner' || target.role === 'owner';
+    if (touchesOwnerRole) {
+      await this.authz.authorize({
+        userId: p.callerUserId,
+        permission: Permission.WORKSPACE_ROLE_ASSIGN,
+        workspaceId: p.workspaceId,
+      });
     }
     // Don't leave the workspace without an owner.
     if (target.role === 'owner' && p.dto.role !== 'owner') {
@@ -118,20 +123,23 @@ export class MembersService {
     workspaceId: string;
     targetUserId: string;
   }): Promise<{ success: true }> {
-    const callerRole = await this.requireWorkspaceRole(
-      p.callerUserId,
-      p.workspaceId,
-      ['owner', 'admin'],
-    );
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_MEMBERS_MANAGE,
+      workspaceId: p.workspaceId,
+    });
     const target = await this.requireWorkspaceMembership(
       p.workspaceId,
       p.targetUserId,
     );
 
+    // Removing an owner is owner-only + can't remove the last owner.
     if (target.role === 'owner') {
-      if (callerRole !== 'owner') {
-        throw rpcError('FORBIDDEN', 'Only an owner can remove an owner.');
-      }
+      await this.authz.authorize({
+        userId: p.callerUserId,
+        permission: Permission.WORKSPACE_ROLE_ASSIGN,
+        workspaceId: p.workspaceId,
+      });
       await this.assertNotLastWorkspaceOwner(p.workspaceId);
     }
 
@@ -144,26 +152,6 @@ export class MembersService {
         ),
       );
     return { success: true };
-  }
-
-  // ── Authorization helpers ─────────────────────────────────────────────────────
-
-  async requireWorkspaceRole(
-    userId: string,
-    workspaceId: string,
-    allowed: string[],
-  ): Promise<WorkspaceRole> {
-    const row = await this.db.query.workspaceMembers.findFirst({
-      where: and(
-        eq(workspaceMembers.workspaceId, workspaceId),
-        eq(workspaceMembers.userId, userId),
-      ),
-      columns: { role: true },
-    });
-    if (!row || !allowed.includes(row.role)) {
-      throw rpcError('FORBIDDEN', 'You do not have access to this workspace.');
-    }
-    return row.role;
   }
 
   // ── Lookups & guards ──────────────────────────────────────────────────────────

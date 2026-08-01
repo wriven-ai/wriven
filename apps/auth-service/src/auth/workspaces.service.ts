@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   CreateWorkspaceDto,
+  Permission,
   UpdateWorkspaceDto,
   WorkspaceView,
 } from '@wriven/contracts';
@@ -11,7 +12,7 @@ import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
-import { MembersService } from './members.service';
+import { AuthorizationService } from './authorization.service';
 
 const {
   workspaces,
@@ -28,7 +29,7 @@ type WorkspaceRow = typeof workspaces.$inferSelect;
 export class WorkspacesService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
-    private readonly members: MembersService,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async create(p: {
@@ -96,13 +97,13 @@ export class WorkspacesService {
     callerUserId: string;
     workspaceId: string;
   }): Promise<WorkspaceView> {
-    const role = await this.members.requireWorkspaceRole(
-      p.callerUserId,
-      p.workspaceId,
-      ['owner', 'admin', 'member'],
-    );
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_VIEW,
+      workspaceId: p.workspaceId,
+    });
     const row = await this.requireRow(p.workspaceId);
-    return this.toView(row, role);
+    return this.toView(row, await this.roleFor(p.workspaceId, p.callerUserId));
   }
 
   async list(p: { userId: string }): Promise<WorkspaceView[]> {
@@ -119,11 +120,11 @@ export class WorkspacesService {
     workspaceId: string;
     dto: UpdateWorkspaceDto;
   }): Promise<WorkspaceView> {
-    await this.members.requireWorkspaceRole(
-      p.callerUserId,
-      p.workspaceId,
-      ['owner', 'admin'],
-    );
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_EDIT,
+      workspaceId: p.workspaceId,
+    });
     const set: Partial<WorkspaceRow> = {};
     if (p.dto.name !== undefined) set.name = p.dto.name;
     if (p.dto.slug !== undefined) {
@@ -149,9 +150,11 @@ export class WorkspacesService {
     callerUserId: string;
     workspaceId: string;
   }): Promise<{ success: true }> {
-    await this.members.requireWorkspaceRole(p.callerUserId, p.workspaceId, [
-      'owner',
-    ]);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_DELETE,
+      workspaceId: p.workspaceId,
+    });
     await this.db.delete(workspaces).where(eq(workspaces.id, p.workspaceId));
     return { success: true };
   }
