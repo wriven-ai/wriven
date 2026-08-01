@@ -24,8 +24,9 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | Public HTTP edge → TCP to services | ✅ | |
 | Response envelope (interceptor + exception filter) | ✅ | `{success,data}` / `{success,error}` |
 | `JwtAuthGuard` (local JWT validation) | ✅ | |
-| `WorkspaceGuard` (`X-Workspace-Id` membership) | ✅ | calls `auth.validateWorkspaceMember` |
-| `ProjectGuard` (`X-Project-Id` membership + workspace-admin bypass) | ✅ | calls `auth.validateProjectMember` |
+| `WorkspaceGuard` (`X-Workspace-Id` membership) | ✅ | calls `auth.validateWorkspaceMember`; attaches cascade-resolved `workspacePermissions` |
+| `ProjectGuard` (`X-Project-Id` membership) | ✅ | calls `auth.validateProjectMember`; attaches `projectPermissions` (cascade absorbed auth-service-side — no more gateway bypass) |
+| `PermissionGuard` (`@RequirePermission`) | ✅ | tenant RBAC edge enforcement; mirrors `AdminRolesGuard`. Content/media/api-keys/webhooks/billing routes gated (specs/12) |
 | `ApiKeyGuard` (`Bearer wrk_…` → project scope, TTL cache) | ✅ | public Delivery API auth (plans/01 P2) |
 | Rate limiting (`@nestjs/throttler`) | ✅ | global + per-route |
 | CORS (credentials) | ✅ | `CLIENT_ORIGIN` |
@@ -50,6 +51,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
 | **Stripe billing** (Checkout, Billing Portal, webhook reconcile) | ✅ | backend done (specs/08); live e2e 🟡 deferred to frontend |
+| **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan` deferred to its own spec |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
 

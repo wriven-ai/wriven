@@ -93,13 +93,17 @@ Nothing here is re-done — this plan layers permissions on top of all of the ab
 - **Shared contracts:** none.
 - **Verify:** `pnpm nx typecheck @wriven/api-gateway` · `pnpm nx lint @wriven/api-gateway` · manual smoke across one route per level (workspace: list members as `member` → 200; project: publish entry as `viewer` → 403, as `editor`/`admin` → 200).
 
-### Phase 6 — Frontend: fill `useCan()`
+### Phase 6 — Frontend: fill `useCan()` — DEFERRED to a separate spec + plan
 
-- **Why here:** depends on Phase 1 (imports the maps + `Permission`). Last functional piece; backend already enforces so the UI gate is defense-in-depth + UX, not a security boundary.
-- **Files — modify:**
-  - `apps/client/src/components/sidebar/use-can.ts` — implement `useCan()`: read the active workspace + project role from the auth store (`stores/auth.ts`, via `currentWorkspaceId`/`currentProjectId` → the matching `WorkspaceView`/`ProjectView.role`), build the effective set = `WORKSPACE_ROLE_PERMISSIONS[wsRole] ∪ PROJECT_ROLE_PERMISSIONS[projRole]` (same cascade as backend), return `set.has(permission)`. Keep the existing `Can` signature stable (already `string`-typed) so no builder/renderer changes. Convert the imported `Permission` enum values to strings for the `.has()` check (enum members are string-valued).
-- **Shared contracts:** none (consumes Phase 1).
-- **Verify:** `pnpm nx typecheck @wriven-ai/client` · `pnpm nx lint @wriven-ai/client` · manual UI: log in as a project `viewer` → nav items gated behind `CONTENT_ENTRY_PUBLISH` hidden; as `editor`/`admin` → visible.
+**This phase is out of this plan.** The frontend RBAC piece (filling
+`apps/client/src/components/sidebar/use-can.ts` against the shared role→permission
+maps) will be done as its **own spec + plan**, not folded into this backend work.
+The backend seam it consumes already exists: `Permission` enum +
+`WORKSPACE_ROLE_PERMISSIONS` / `PROJECT_ROLE_PERMISSIONS` + `effectivePermissions()`
+cascade live in `@wriven/contracts` (`libs/shared/contracts/src/lib/types/rbac.types.ts`),
+so `useCan()` imports the identical maps the gateway uses.
+
+See memory `rbac-frontend-split`.
 
 ### Phase 7 — Docs + DoD sweep
 
@@ -128,6 +132,7 @@ Nothing here is re-done — this plan layers permissions on top of all of the ab
 - The `project_members.workspace_id` column + composite FK (separate task).
 - Permission caching (Redis TTL) — only if profiling demands it.
 - Per-button UI gating beyond the sidebar nav (iterative feature work).
+- **Frontend `useCan()` / nav gating** — split to its own spec + plan (was Phase 6). Backend-only here.
 
 ## Definition of done
 
@@ -139,7 +144,7 @@ Nothing here is re-done — this plan layers permissions on top of all of the ab
 - [ ] Scope test green: `getProjectScope('guest') === 'ASSIGNED'`, `('member') === 'ALL'` (Phase 1/2).
 - [ ] Invariant tests green: last-owner / last-admin demotion or removal → `CONFLICT` (Phase 4).
 - [ ] No new TCP round-trip: project-scoped request resolves in the single `validateProjectMember` call; `ProjectGuard` bypass block deleted (Phase 3).
-- [ ] Frontend: `viewer` session hides `CONTENT_ENTRY_PUBLISH`-gated nav; `editor`/`admin` show it (Phase 6).
+- [ ] ~~Frontend: `viewer` session hides `CONTENT_ENTRY_PUBLISH`-gated nav~~ → moved to the separate frontend RBAC spec (Phase 6 deferred).
 - [ ] Manual smoke (all four dev services): workspace owner publishes with no project row; invited project `viewer` gets 403 on publish and sees only the assigned project (Phase 4/5).
 - [ ] Docs updated: `members-api.md`, `auth-service.md`, `status.md`, `sidebar.md` (Phase 7).
 - [ ] Frontend and backend changes in **separate commits**; one-line Conventional Commits, no AI co-author trailer.

@@ -98,14 +98,14 @@ User ──< workspace_members >── Workspace ──< projects ── project
 `WorkspacesService` handles workspace CRUD (patterns `auth.{createWorkspace,getWorkspace,listWorkspaces,updateWorkspace,deleteWorkspace}`), exposed by the gateway under `/workspaces` and `/workspaces/:workspaceId`. `ProjectsService` handles project CRUD + project membership (patterns `auth.project.*` / `auth.createProject` etc.), exposed under `/workspaces/:workspaceId/projects` and `/projects/:projectId` (full detail: [members-api.md](./members-api.md)). Authorization is enforced here from the caller's role:
 
 - **Workspace:** create/list = any authed user; update = owner/admin; delete = owner. Members: list = any member; add/update/remove = owner/admin. Only an owner manages the `owner` role; the workspace must keep ≥1 owner.
-- **Project:** create = workspace owner/admin; list = any workspace member; update/delete = project admin. Members: list = any member; add/update/remove = project admin (workspace owners/admins have implicit access via the gateway `ProjectGuard`). The project must keep ≥1 admin.
+- **Project:** create = workspace owner/admin; list = any workspace member (`getProjectScope` — `guest` sees only assigned); update/delete = project admin. Members: list = any member; add/update/remove = project admin. Workspace owners/admins get project permissions via the **cascade** (resolved auth-service-side in `validateProjectMember` — the gateway no longer has a bypass). The project must keep ≥1 admin. Authorization is permission-based (`AuthorizationService.authorize`), not role-string checks.
 - Creating a workspace seeds a "Default Project" and adds the creator as project admin.
 - Members are added by **email** and must be an existing user (no invitation flow yet).
 
 ## Cross-service handlers
 
-- `auth.validateWorkspaceMember({ userId, workspaceId })` → `{ workspaceId, role }` or `FORBIDDEN`. Called by the gateway's `WorkspaceGuard` before forwarding workspace-scoped requests.
-- `auth.validateProjectMember({ userId, projectId })` → `{ projectId, role }` or `FORBIDDEN`. Called by the gateway's `ProjectGuard` before forwarding project-scoped requests (content).
+- `auth.validateWorkspaceMember({ userId, workspaceId })` → `{ workspaceId, role, permissions }` or `FORBIDDEN`. Called by the gateway's `WorkspaceGuard`; `permissions` is the cascade-resolved set the gateway's `PermissionGuard` checks.
+- `auth.validateProjectMember({ userId, projectId })` → `{ projectId, role, permissions }` or `FORBIDDEN`. The cascade (workspace owner/admin → all project perms, even with no `project_members` row) is resolved here, so the gateway needs no bypass. `role` is null when access is workspace-derived only.
 
 ## Billing (Stripe)
 
