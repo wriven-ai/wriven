@@ -1,63 +1,30 @@
 version: 2
 updates:
-  # Root workspace dependencies (npm/pnpm)
+  # Single npm entry — pnpm uses one root lockfile for the whole monorepo.
+  # All minor/patch bumps bundled into ONE monthly PR; major bumps ignored
+  # (do those manually when you choose). Security alerts are separate (repo setting).
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 10
+      interval: monthly
+    open-pull-requests-limit: 1
     groups:
-      # Bundle minor/patch bumps together to reduce PR noise
       minor-and-patch:
         update-types:
           - minor
           - patch
+    ignore:
+      - update-types: [major]
     commit-message:
       prefix: chore
       include: scope
 
-  # Per-app manifests
-  - package-ecosystem: npm
-    directory: /apps/auth-service
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: chore
-      include: scope
-
-  - package-ecosystem: npm
-    directory: /apps/core-service
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: chore
-      include: scope
-
-  - package-ecosystem: npm
-    directory: /apps/api-gateway
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: chore
-      include: scope
-
-  - package-ecosystem: npm
-    directory: /apps/client
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: chore
-      include: scope
-
-  # Keep GitHub Actions up to date
+  # Keep GitHub Actions current — one monthly PR.
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 1
     commit-message:
       prefix: chore
       include: scope

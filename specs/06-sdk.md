@@ -1,4 +1,4 @@
-# 15 — Client SDK & Package Strategy
+# 06 — Client SDK & Package Strategy
 
 Plan for the consumer-facing SDK ecosystem. Goal: a **strong, scalable
 foundation** — typed, isomorphic, dual-format, versioned — that can grow into
@@ -7,7 +7,7 @@ webhooks) is already done; this is purely the consumer DX layer.
 
 ## Naming & package layout
 
-Public scope is **`@wriven-ai`** (matches `@wriven-ai/studio` in doc/10). The
+Public scope is **`@wriven-ai`** (matches `@wriven-ai/studio` in specs/07). The
 internal Nx scope `@wriven/*` stays private (never published).
 
 | Package | Purpose | Phase |
@@ -107,7 +107,7 @@ Foundation decisions that enable scale:
   Later: optional generic `getEntries<T>()` + a codegen path that emits per-project
   types from the content model (Sanity/Hygraph do this — big DX win, Phase 4).
 - **Query builder = a typed options object** (`select`, `filter`, `sort`, `page`,
-  `limit`, `include`) mapped to query params — matches doc/06. No bespoke DSL.
+  `limit`, `include`) mapped to query params — matches doc/api-reference. No bespoke DSL.
 - **Versioned API** — pin `/v1` in the client; bump deliberately. The API path
   already carries the version, so a `@wriven-ai/client@2` can target `/v2`
   without breaking `@1`.
@@ -153,7 +153,7 @@ Internal dev resolution uses the repo's `@wriven/wriven` export condition →
    `exports` + publint + are-the-types-wrong; `createClient` + `getEntry(s)` +
    querying + preview + typed errors + retry. Ship `0.1.0`/`next`.
 2. **Phase 2 — `@wriven-ai/react`**: `<WrivenRichText>` renderer for body JSON
-   (handles the inline media `image` nodes from doc/13) + a `useEntry` helper.
+   (handles the inline media `image` nodes from specs/03) + a `useEntry` helper.
 3. **Phase 3 — `@wriven-ai/next`**: webhook → `revalidatePath` handler, draft mode
    + preview wiring, typed `fetch` cache options.
 4. **Phase 4 — typed codegen** (optional, high DX): a CLI that reads a project's

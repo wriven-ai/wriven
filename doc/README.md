@@ -4,28 +4,31 @@ Reference documentation for the Wriven backend. Start here.
 
 Wriven is an **AI-native content management and generation SaaS**. The backend is an Nx monorepo of NestJS microservices (plus a Python AI service, not yet built) behind a single public API gateway, with a Next.js frontend.
 
-## Index
+The docs split into three layers:
+
+- **Reference** (below) — how the system *is*. Stable, current truth.
+- **Specs** ([`../specs/`](../specs/)) — feature design docs: what a feature does and why; its schema/endpoints/contracts, definition of done. Drafted via `/create-spec` before implementation.
+- **Plans** ([`../plans/`](../plans/)) — execution recipes derived from a spec: ordered steps, files per step, per-step verification. Drafted via `/create-plan`; opt-in (small features skip straight to plan mode).
+
+## Reference
 
 **Cross-cutting**
 
 | Doc | Covers |
 |-----|--------|
-| [01 — Overview](./01-overview.md) | Product, tech stack, monorepo layout, settled architecture decisions |
-| [02 — Architecture](./02-architecture.md) | Microservices, gateway, TCP transport, service boundaries, request lifecycle |
-| [03 — Database](./03-database.md) | Drizzle ORM, single shared Postgres DB, schema isolation, migrations workflow |
-| [06 — API Reference](./06-api-reference.md) | Every gateway endpoint: method, auth, headers, body, responses |
-| [07 — Conventions](./07-conventions.md) | Response envelope, error codes, rate limits, env, commands, commit style |
-| [08 — Status & Scope](./08-status.md) | What's implemented per module (✅/🟡/🔲) |
-| [09 — Content Delivery & Plans](./09-content-delivery-and-plans.md) | How customers connect a site (Delivery API, API keys, webhooks), dashboard control surface, pricing tiers, build order |
-| [10 — Embedded Studio](./10-embedded-studio.md) | `@wriven-ai/studio` at the customer's `/wriven` route: cross-origin auth handshake, origin allowlist, editor packaging, distribution |
-| [11 — Model A Build Plan](./11-model-a-build-plan.md) | Phased build: api_keys table, token guard, Delivery API, dashboard keys UI, CDN purge, webhooks, preview, plans/metering, media |
-| [12 — Invitations](./12-invitations.md) | Pending-invitation token flow, accept-on-signup, project→workspace auto-add, project-list leak fix, member onboarding |
-| [13 — Media](./13-media.md) | R2 storage adapter, presigned direct upload, keys-only delivery URLs, media library + field picker, transforms deferred |
-| [14 — Webhooks](./14-webhooks.md) | Outgoing webhooks on publish/unpublish/delete, HMAC signing, retry/backoff, consumer verification, dashboard UI |
-| [15 — Client SDK](./15-sdk.md) | `@wriven-ai/*` package strategy, dual ESM/CJS publishing foundation, isomorphic typed client design, phased build order |
-| [16 — Admin Panel](./admin-panel/README.md) | Platform console (separate repo): `admin`/`moderator`/`member` RBAC, separate `admin_users` identity + audit log + plans tables. Split one-file-per-module: [backend/](./admin-panel/backend/) (schema/auth/rpc/endpoints/tenancy/moderation/plans/security) · [frontend/](./admin-panel/frontend/) (stack/data-layer/screens/design-system) |
-| [17 — Market Readiness](./17-market-readiness.md) | Gap analysis: what's missing to ship Wriven as a full-fledged headless CMS — prioritized (P0–P3) with effort + current state; path to first paid launch |
-| [18 — Support Tickets](./support-ticket/README.md) | Workspace-level support ticketing (plan): title + description + ≤3 images + scope dropdown, threaded user↔staff conversation, status/priority/assignment. Separate plans for [backend](./support-ticket/backend.md) (core_svc tables + `*.support.*` RPC) · [client](./support-ticket/client.md) (tenant dashboard) · [admin-panel](./support-ticket/admin-panel.md) (staff queue, separate repo) |
+| [Overview](./overview.md) | Product, tech stack, monorepo layout, settled architecture decisions |
+| [Architecture](./architecture.md) | Microservices, gateway, TCP transport, service boundaries, request lifecycle |
+| [Database](./database.md) | Drizzle ORM, single shared Postgres DB, schema isolation, migrations workflow |
+| [API Reference](./api-reference.md) | Every gateway endpoint: method, auth, headers, body, responses |
+| [Conventions](./conventions.md) | Response envelope, error codes, rate limits, env, commands, commit style |
+| [Support Tickets](./support-ticket/README.md) | Workspace-level support ticketing: subject + description + ≤3 images + scope dropdown, threaded user↔staff conversation, status/priority. Separate plans: [backend](./support-ticket/backend.md) · [client](./support-ticket/client.md) · [admin-panel](./support-ticket/admin-panel.md) |
+
+**Status & planning**
+
+| Doc | Covers |
+|-----|--------|
+| [Status & Scope](./status.md) | What's implemented per module (✅/🟡/🔲) |
+| [Market Readiness](./market-readiness.md) | Gap analysis: what's missing to ship Wriven as a full-fledged headless CMS — prioritized (P0–P3) with effort + current state; path to first paid launch |
 
 **Per service**
 
@@ -34,15 +37,42 @@ Wriven is an **AI-native content management and generation SaaS**. The backend i
 | [api-gateway/](./api-gateway/api-gateway.md) | Responsibilities, guards, controllers, env |
 | [auth-service/](./auth-service/auth-service.md) | Identity/tenancy schema, auth flows, tokens, hardening · [members-api.md](./auth-service/members-api.md) (org/workspace member CRUD) |
 | [core-service/](./core-service/core-service.md) | Flexible CMS model, content types/entries/revisions/media, validation |
+| [admin-panel/](./admin-panel/README.md) | Platform console: `admin`/`moderator`/`member` RBAC, separate `admin_users` identity + audit log + plans tables · [backend.md](./admin-panel/backend.md) (impl) · [frontend.md](./admin-panel/frontend.md) (SPA build guide) · [api-contract.md](./admin-panel/api-contract.md) (handoff) |
 
 **Frontend**
 
 | Doc | Covers |
 |-----|--------|
-| [frontend/sidebar.md](./frontend/sidebar.md) | URL-driven scope (workspace→project→feature), nav-config brain vs shell, builders, active-state rule, RBAC seam |
+| [frontend/frontend.md](./frontend/frontend.md) | Stack, project structure, cookie auth + CSRF, Zustand/Query state, the API client, scope, guards, env |
+| [frontend/sidebar.md](./frontend/sidebar.md) | Dashboard nav architecture: URL-driven scope, nav-config brain vs shell, builders, active-state rule, RBAC seam |
+
+## Specs
+
+Feature design docs live in [`../specs/`](../specs/). Each describes one feature/area: overview, endpoints, schema, shared contracts, build order, definition of done.
+
+| Spec | Covers |
+|------|--------|
+| [01 — Content Delivery & Plans](../specs/01-content-delivery-and-plans.md) | How customers connect a site (Delivery API, API keys, webhooks), dashboard control surface, pricing tiers, build order |
+| [03 — Media](../specs/03-media.md) | R2 storage adapter, presigned direct upload, keys-only delivery URLs, media library + field picker, transforms deferred |
+| [04 — Webhooks](../specs/04-webhooks.md) | Outgoing webhooks on publish/unpublish/delete, HMAC signing, retry/backoff, consumer verification, dashboard UI |
+| [05 — Invitations](../specs/05-invitations.md) | Pending-invitation token flow, accept-on-signup, project→workspace auto-add, project-list leak fix, member onboarding |
+| [06 — Client SDK](../specs/06-sdk.md) | `@wriven-ai/*` package strategy, dual ESM/CJS publishing foundation, isomorphic typed client design, phased build order |
+| [07 — Embedded Studio](../specs/07-embedded-studio.md) | `@wriven-ai/studio` at the customer's `/wriven` route: cross-origin auth handshake, origin allowlist, editor packaging, distribution |
+
+> New spec? Run `/create-spec <feature name>` — it drafts the file under `../specs/` with the next number. (Spec numbering is non-contiguous: `02` graduated to `plans/`.)
+
+## Plans
+
+Execution recipes derived from a spec — ordered steps, files per step, per-step verification. Opt-in: only large/multi-step features need one; small features use plan mode directly.
+
+| Plan | Executes spec | Covers |
+|------|---------------|--------|
+| [01 — Model A Build Plan](../plans/01-model-a-build-plan.md) | [01 — Content Delivery & Plans](../specs/01-content-delivery-and-plans.md) | Phased build: api_keys table, token guard, Delivery API, dashboard keys UI, CDN purge, webhooks, preview, plans/metering, media |
+
+> New plan? Run `/create-plan <spec number or slug>` — it reads the spec + codebase and drafts `../plans/<NN>-<slug>.md`.
 
 ## Status
 
-Current implementation status per module lives in [08 — Status & Scope](./08-status.md).
+Current implementation status per module lives in [Status & Scope](./status.md).
 
-> Note: `PROJECT.md` and `BACKEND.md` at the repo root are the original product/architecture briefs (git-ignored). This `doc/` set is the maintained, current reference.
+> Note: this `doc/` set is the maintained, current reference — the source of truth for the codebase. (The original `PROJECT.md`/`BACKEND.md` briefs have been removed; `doc/` supersedes them.) For agent working rules, see the root [CLAUDE.md](../CLAUDE.md).

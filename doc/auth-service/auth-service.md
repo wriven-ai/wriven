@@ -1,6 +1,6 @@
 # Auth Service
 
-NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema: `auth_svc`. All handlers are `@MessagePattern` (no HTTP) — the gateway exposes the HTTP routes (see [API Reference](../06-api-reference.md)). Detailed member endpoints: [members-api.md](./members-api.md).
+NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema: `auth_svc`. All handlers are `@MessagePattern` (no HTTP) — the gateway exposes the HTTP routes (see [API Reference](../api-reference.md)). Detailed member endpoints: [members-api.md](./members-api.md).
 
 ## Schema (`auth_svc`)
 
@@ -85,7 +85,7 @@ User ──< workspace_members >── Workspace ──< projects ── project
 - Refresh rotation + revoked-reuse theft detection (revoke-all).
 - Reset revokes all sessions; tokens stored hashed; raw tokens only in cookie/email.
 - No email enumeration (login + forgot).
-- Rate limits at the gateway (see [Conventions](../07-conventions.md)).
+- Rate limits at the gateway (see [Conventions](../conventions.md)).
 - Daily cron (`@nestjs/schedule`) prunes **expired** token rows (revoked-but-unexpired kept so reuse is still detectable within TTL).
 
 ## Session & listing
@@ -107,6 +107,56 @@ User ──< workspace_members >── Workspace ──< projects ── project
 - `auth.validateWorkspaceMember({ userId, workspaceId })` → `{ workspaceId, role }` or `FORBIDDEN`. Called by the gateway's `WorkspaceGuard` before forwarding workspace-scoped requests.
 - `auth.validateProjectMember({ userId, projectId })` → `{ projectId, role }` or `FORBIDDEN`. Called by the gateway's `ProjectGuard` before forwarding project-scoped requests (content).
 
+## Billing (Stripe)
+
+`BillingService` + `StripeWebhookService` own the payment path (patterns `auth.billing.*`). Entitlements/quotas already read the `subscriptions` row, so the integration changes **zero enforcement call sites** — it only keeps the row in sync with Stripe.
+
+### Schema (`auth_svc`)
+- **plans** — `key` (free/pro/business), prices (cents), `stripe_product_id` / `stripe_price_id_monthly` / `stripe_price_id_yearly` (backfilled after creating Stripe Products/Prices; the seed's `onConflictDoUpdate` omits these so reseeds don't clobber them), `trial_days` (0 — trials removed), `limits` + `features` (jsonb).
+- **subscriptions** — one row per workspace (created `free`/`active` on signup). Stripe linkage (`stripe_customer_id`, `stripe_subscription_id`), `status` (CHECK: active/trialing/past_due/canceled/paused/incomplete), `billing_cycle`, `current_period_start/end`, `trial_ends_at`, `cancel_at_period_end`, `canceled_at`, `stripe_event_created_at` (last applied event time — stale-event guard), `overrides` (admin per-customer limit bump), `updated_by`.
+- **stripe_events** — webhook idempotency log: `event_id` (Stripe `evt_…`, unique dedupe key), `event_type`, `event_created_at` (Stripe's `event.created`), `payload` (raw, for debug/replay).
+
+### Checkout / Portal
+- `createCheckout` — free→paid only. Pre-checks the row: if a live Stripe subscription exists (`stripe_subscription_id` set, status ≠ canceled) → `SUBSCRIPTION_EXISTS` (use the Portal). Ensures a Customer (idempotent `customer:${workspaceId}`), creates a `subscription`-mode Checkout Session with `metadata.workspaceId`/`planKey`/`billingCycle` + `client_reference_id`. **owner/admin only** (role forwarded by the gateway). Redirect URLs allowlisted to `APP_URL`.
+- `createPortal` — Billing Portal session on the workspace's Customer. owner/admin only.
+
+### Invoices
+- `listInvoices(workspaceId)` — read-only; resolves the workspace's `stripe_customer_id` (returns `[]` if none) and maps `stripe.invoices.list({ customer, limit: 20 })` to `InvoiceView` (`number`, `amountPaid`, `currency`, `status`, `createdAt`, `url = hosted_invoice_url`). **Link-out / keys-only** — nothing invoice-related is stored; the download links to Stripe's hosted PDF.
+
+### Admin plan sync (specs/11)
+`AdminPlansService` (in `AdminModule`, shares `StripeModule`) keeps plan create /
+retire two-way with Stripe — **prices are read-only after create** (Stripe owns
+pricing; the app never pushes price edits). `admin.plans.*` return
+`AdminPlanView` = `PlanView` + the Stripe ids (`stripeProductId`,
+`stripePriceIdMonthly`, `stripePriceIdYearly`) so the admin can see the linkage
+(the tenant `PlanView` deliberately omits them):
+- `create()` (paid plan) — validates the plan has at least one price, then
+  Stripe-first: creates the Product + monthly + yearly Prices, then inserts the
+  plan row with the 3 ids. A paid plan with no price → `VALIDATION_ERROR`. Free
+  plan skips Stripe. On Stripe failure → `STRIPE_SYNC_FAILED` (no half-linked row).
+- `update({ active: false })` — archives the Stripe Product + deactivates its
+  Prices (best-effort, then DB patch). Other field changes (`name`/`limits`/…)
+  are local-only.
+- **Changing a price** is a manual ops task: create a new Price in Stripe →
+  repoint the plan's `stripe_price_id_*` + update the stored amount. Existing
+  subscribers stay grandfathered on the old price. Reactivation after retire
+  does **not** revive deactivated Prices (irreversible) — re-link manually.
+- Managed Payments: Stripe's 2025+ default demands a product `tax_code` + breaks the hosted page on an unprovisioned account; Checkout opts out via `managed_payments:{enabled:false}` unless `STRIPE_MANAGED_PAYMENTS=true` (enable only after Stripe Tax + product tax codes are configured).
+
+### Webhook reconciliation (`StripeWebhookService`)
+- The gateway forwards raw body + signature; auth-service verifies (`STRIPE_WEBHOOK_SECRET`) then reconciles in **one transaction**: insert `stripe_events` (`onConflictDoNothing` on `event_id` — conflict = already applied, true no-op) + update `subscriptions`.
+- State is **payload-derived** (`event.data.object.status`), never event-type-derived — covers past_due→active, trialing→active, etc. without a branch per transition.
+- **Ordering:** a per-workspace `pg_advisory_xact_lock` serializes concurrent events; a stale event (`event.created` strictly older than the last applied) is skipped; the UPDATE is guarded on `stripe_subscription_id` so a delayed event for an OLD subscription can't stomp a newer one.
+- **Price→plan map** via `plans.stripe_price_id_monthly|yearly`; an unmapped price throws `INTERNAL_ERROR` (→ 5xx → Stripe retries) — never silently recorded as applied.
+- Period fields come from `subscription.items.data[0].current_period_start/end` (they moved to `SubscriptionItem` in stripe@22).
+- 400 on bad signature; 500 on any downstream failure (Stripe retries).
+
+### Entitlements status policy
+`EntitlementsService.resolveLimits` reads `subscriptions` + `plan.limits` + `overrides`; `shouldRestrictToFree` collapses to free limits when `status === 'canceled'`, or `past_due`/`incomplete` past `current_period_end + BILLING_GRACE_DAYS` (default 7). `active`/`trialing`/`paused` keep the row's plan.
+
+### Event replay
+`pnpm billing:replay [since]` — streams `stripe.events.list` through the same idempotent `handleEvent` (recovery for a down endpoint / after a price-id backfill fix). Exits non-zero if any event fails.
+
 ## Environment (`apps/auth-service/.env`)
 
 ```
@@ -121,7 +171,12 @@ BCRYPT_ROUNDS=12
 RESET_TOKEN_TTL=1h
 EMAIL_VERIFY_TTL=24h
 MAIL_HOST= MAIL_PORT=587 MAIL_USER= MAIL_PASS= MAIL_FROM=
-APP_URL=                # frontend base for reset/verify links
+APP_URL=                # frontend base for reset/verify links + billing redirect allowlist
+# Stripe (billing)
+STRIPE_SECRET_KEY=      # sk_test_… / sk_live_…
+STRIPE_WEBHOOK_SECRET=  # whsec_… (auth-service verifies; gateway only forwards)
+BILLING_GRACE_DAYS=7    # past_due grace before limits revert to free
+STRIPE_MANAGED_PAYMENTS=false  # true opts into Managed Payments (needs tax_codes + Stripe Tax)
 ```
 
 > Google OAuth credentials live on the **gateway**, not here (the strategy runs there).

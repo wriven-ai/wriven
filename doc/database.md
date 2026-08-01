@@ -1,4 +1,4 @@
-# 03 — Database
+Database
 
 ## Engine & ORM
 
@@ -12,7 +12,7 @@ All services connect to **one** Postgres database. Isolation is by **Postgres sc
 
 | Service | Schema | Tables |
 |---------|--------|--------|
-| auth-service | `auth_svc` | users, refresh_tokens, password_reset_tokens, email_verification_tokens, workspaces, workspace_members, projects, project_members |
+| auth-service | `auth_svc` | users, refresh_tokens, password_reset_tokens, email_verification_tokens, workspaces, workspace_members, projects, project_members, invitations, plans, subscriptions, stripe_events, admin_users, admin_refresh_tokens, admin_audit_log |
 | core-service | `core_svc` | content_types, content_entries, content_revisions, media_assets |
 | (migrations journal) | `drizzle` | `__drizzle_migrations` (shared) |
 
@@ -95,6 +95,7 @@ Notes:
 - `users`: `unique(email)`, `unique(provider, provider_id)` (OAuth; NULLs distinct so many locals are fine), CHECK `provider in ('local','google')`.
 - `workspace_members.role` / `project_members.role` CHECK constraints; `content_entries.status` CHECK `in ('draft','published','archived')`.
 - `workspaces`: `unique(slug)` (globally unique — top-level tenancy). `projects`: `unique(workspace_id, slug)`. `content_entries`: `unique(project_id, content_type_id, slug)`, GIN index on `data` jsonb.
+- **Billing:** `plans.key` unique; `subscriptions` `uniqueIndex(workspace_id)` (one row per workspace) + `status` CHECK `in ('active','trialing','past_due','canceled','paused','incomplete')`; `stripe_events.event_id` unique (webhook idempotency dedupe) + `event_type` index.
 - `users.updated_at` / workspace / content tables: `$onUpdate` auto-bump.
 
 ## RLS

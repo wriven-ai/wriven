@@ -304,7 +304,7 @@ export const projectMembersRelations = relations(
 
 /**
  * A pending invitation to a workspace or project. The raw token is emailed once;
- * we persist only its sha-256 hash. Single-use, time-limited. See doc/12.
+ * we persist only its sha-256 hash. Single-use, time-limited. See specs/05.
  */
 export const invitations = authSchema.table(
   'invitations',
@@ -486,6 +486,10 @@ export const subscriptions = authSchema.table(
     // Stripe linkage (future billing).
     stripeCustomerId: text('stripe_customer_id'),
     stripeSubscriptionId: text('stripe_subscription_id'),
+    // Timestamp of the last Stripe event applied (event.created) — stale-event guard.
+    stripeEventCreatedAt: timestamp('stripe_event_created_at', {
+      withTimezone: true,
+    }),
     // Billing period + trial tracking.
     currentPeriodStart: timestamp('current_period_start', {
       withTimezone: true,
@@ -515,6 +519,27 @@ export const subscriptions = authSchema.table(
       sql`${t.status} in ('active','trialing','past_due','canceled','paused','incomplete')`,
     ),
   ],
+);
+
+/**
+ * Stripe webhook event log — idempotency + ordering. Stripe delivers events
+ * at-least-once, possibly duplicated or out of order; `event_id` (Stripe's
+ * `evt_…`) is the dedupe key. Payload kept for debug/replay. See specs/08.
+ */
+export const stripeEvents = authSchema.table(
+  'stripe_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    eventId: text('event_id').notNull().unique(),
+    eventType: text('event_type').notNull(),
+    // Stripe's own event.created (unix ts) — orders events for the stale-event guard.
+    eventCreatedAt: timestamp('event_created_at', { withTimezone: true }),
+    payload: jsonb('payload'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index('stripe_events_type_idx').on(t.eventType)],
 );
 
 export const adminUsersRelations = relations(adminUsers, ({ many }) => ({

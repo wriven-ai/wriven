@@ -40,6 +40,8 @@ import { ProjectsController } from '../members/projects.controller';
 import { WorkspacesController } from '../members/workspaces.controller';
 import { WebhooksController } from '../webhooks/webhooks.controller';
 import { SupportController } from '../support/support.controller';
+import { BillingController } from '../billing/billing.controller';
+import { StripeWebhookController } from '../billing/stripe-webhook.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -96,6 +98,8 @@ import { AppService } from './app.service';
     InvitationsController,
     WebhooksController,
     SupportController,
+    BillingController,
+    StripeWebhookController,
     AdminAuthController,
     AdminMetricsController,
     AdminAdminsController,

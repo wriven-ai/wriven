@@ -93,7 +93,7 @@ export class DeliveryController {
   /**
    * Preview reads must never be cached (drafts). Published reads are cacheable at
    * the CDN with surrogate/cache tags so a publish can purge exactly the affected
-   * responses by tag (doc/11 Phase 5; purge-on-publish lives in core).
+   * responses by tag (plans/01 Phase 5; purge-on-publish lives in core).
    */
   private setCache(res: Response, preview: boolean, tags: string[]): void {
     if (preview) {

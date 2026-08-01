@@ -1,4 +1,4 @@
-# 13 — Media (Storage, Upload & Delivery)
+# 03 — Media (Storage, Upload & Delivery)
 
 How files (images/video/docs) are uploaded, stored, and returned by the Delivery
 API. Lives in **core-service** (owns the `media_assets` table). Storage is behind

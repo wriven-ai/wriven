@@ -1,4 +1,4 @@
-# 12 — Invitations & Membership Onboarding
+# 05 — Invitations & Membership Onboarding
 
 How users are invited to a workspace or project, how brand-new (account-less)
 people join, and the rule that project membership implies baseline workspace

@@ -6,7 +6,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
@@ -17,7 +17,6 @@ const {
   workspaceMembers,
   projects,
   projectMembers,
-  users,
   plans,
   subscriptions,
 } = schema;

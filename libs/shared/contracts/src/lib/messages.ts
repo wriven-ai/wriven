@@ -74,7 +74,7 @@ export const CORE_PATTERNS = {
   ENTRY_REVISIONS: 'core.entry.revisions',
   ENTRY_REVISION_RESTORE: 'core.entry.revisionRestore',
 
-  // Project-scoped API keys (Delivery API auth — see doc/11).
+  // Project-scoped API keys (Delivery API auth — see plans/01).
   API_KEY_CREATE: 'core.apiKey.create',
   API_KEY_LIST: 'core.apiKey.list',
   API_KEY_REVOKE: 'core.apiKey.revoke',
@@ -84,14 +84,14 @@ export const CORE_PATTERNS = {
   DELIVERY_LIST: 'core.delivery.list',
   DELIVERY_GET: 'core.delivery.get',
 
-  // Media library (R2-backed; presigned direct upload — see doc/13).
+  // Media library (R2-backed; presigned direct upload — see specs/03).
   MEDIA_PRESIGN: 'core.media.presign',
   MEDIA_CREATE: 'core.media.create',
   MEDIA_LIST: 'core.media.list',
   MEDIA_GET: 'core.media.get',
   MEDIA_DELETE: 'core.media.delete',
 
-  // Outgoing webhooks (publish → signed POST; see doc/11 P6).
+  // Outgoing webhooks (publish → signed POST; see plans/01 P6).
   WEBHOOK_CREATE: 'core.webhook.create',
   WEBHOOK_LIST: 'core.webhook.list',
   WEBHOOK_UPDATE: 'core.webhook.update',
@@ -114,6 +114,20 @@ export const INVITATION_PATTERNS = {
   RESEND: 'auth.invitation.resend',
   PREVIEW: 'auth.invitation.preview',
   ACCEPT: 'auth.invitation.accept',
+} as const;
+
+/**
+ * Billing & subscriptions (Stripe). Owned by auth-service (`auth_svc.plans` /
+ * `subscriptions`). Customer-facing checkout/portal + the inbound Stripe webhook
+ * reconciler. See specs/08.
+ */
+export const BILLING_PATTERNS = {
+  LIST_PLANS: 'auth.billing.listPlans',
+  GET_SUBSCRIPTION: 'auth.billing.getSubscription',
+  LIST_INVOICES: 'auth.billing.listInvoices',
+  CREATE_CHECKOUT: 'auth.billing.createCheckout',
+  CREATE_PORTAL: 'auth.billing.createPortal',
+  STRIPE_WEBHOOK: 'auth.billing.stripeWebhook',
 } as const;
 
 /**

@@ -1,6 +1,6 @@
 /**
  * Pending invitations onboard new or existing users into a workspace or project.
- * Raw token emailed once; only its hash is stored. See doc/12.
+ * Raw token emailed once; only its hash is stored. See specs/05.
  */
 
 export type InvitationScope = 'workspace' | 'project';

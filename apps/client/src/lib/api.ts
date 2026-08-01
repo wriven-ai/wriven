@@ -9,6 +9,9 @@ import type {
   AcceptInvitationResult,
   CreateApiKeyResult,
   CreateWebhookResult,
+  CreateCheckoutInput,
+  CreatePortalInput,
+  CheckoutSessionView,
   EntryStatus,
   FieldDef,
   InvitationPreview,
@@ -16,6 +19,9 @@ import type {
   LoginInput,
   MediaView,
   Paginated,
+  PlanView,
+  PortalSessionView,
+  InvoiceView,
   PresignResult,
   ProjectMemberView,
   ProjectRole,
@@ -27,6 +33,7 @@ import type {
   SupportStatus,
   SupportTicketDetail,
   SupportTicketRow,
+  SubscriptionView,
   WebhookEvent,
   WebhookView,
   WorkspaceMemberView,
@@ -609,11 +616,14 @@ export const projectApi = {
 
 export const supportApi = {
   presign: (dto: { filename: string; contentType: string; size?: number }) =>
-    request<{ uploadUrl: string; key: string }>('/support/tickets/attachments/presign', {
-      method: 'POST',
-      body: dto,
-      workspace: true,
-    }),
+    request<{ uploadUrl: string; key: string }>(
+      '/support/tickets/attachments/presign',
+      {
+        method: 'POST',
+        body: dto,
+        workspace: true,
+      },
+    ),
 
   create: (dto: {
     subject: string;
@@ -628,7 +638,12 @@ export const supportApi = {
       workspace: true,
     }),
 
-  list: (params?: { status?: SupportStatus; scopeType?: SupportScope; page?: number; limit?: number }) => {
+  list: (params?: {
+    status?: SupportStatus;
+    scopeType?: SupportScope;
+    page?: number;
+    limit?: number;
+  }) => {
     const qs = new URLSearchParams();
     if (params?.status) qs.set('status', params.status);
     if (params?.scopeType) qs.set('scopeType', params.scopeType);
@@ -655,6 +670,31 @@ export const supportApi = {
     request<SupportTicketDetail>(`/support/tickets/${id}`, {
       method: 'PATCH',
       body: { status: 'closed' },
+      workspace: true,
+    }),
+};
+
+export const billingApi = {
+  /** Public plan catalog (free/pro/business). */
+  listPlans: () => request<PlanView[]>('/billing/plans', { workspace: true }),
+  /** The workspace's current subscription (always exists — defaults to free). */
+  getSubscription: () =>
+    request<SubscriptionView>('/billing/subscription', { workspace: true }),
+  /** Last Stripe invoices for the workspace's customer (link-out only). */
+  listInvoices: () =>
+    request<InvoiceView[]>('/billing/invoices', { workspace: true }),
+  /** Start a hosted Stripe Checkout for the free→paid transition. */
+  createCheckout: (dto: CreateCheckoutInput) =>
+    request<CheckoutSessionView>('/billing/checkout', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+    }),
+  /** Open the hosted Stripe Billing Portal (card / plan / cancel). */
+  createPortal: (dto?: CreatePortalInput) =>
+    request<PortalSessionView>('/billing/portal', {
+      method: 'POST',
+      body: dto ?? {},
       workspace: true,
     }),
 };

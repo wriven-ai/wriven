@@ -322,3 +322,105 @@ export interface SupportTicketDetail extends SupportTicketRow {
   attachments: SupportAttachmentView[];
   messages: SupportMessageView[];
 }
+
+// ── Billing (Stripe) ────────────────────────────────────────────────────────
+
+export interface PlanLimits {
+  projects?: number | null;
+  members?: number | null;
+  environments?: number | null;
+  contentTypes?: number | null;
+  entries?: number | null;
+  locales?: number | null;
+  storageMb?: number | null;
+  assetBandwidthGb?: number | null;
+  apiRequestsPerMonth?: number | null;
+  apiKeys?: number | null;
+  webhooks?: number | null;
+}
+
+export interface PlanFeatures {
+  scheduledPublishing?: boolean;
+  revisionHistory?: boolean;
+  customRoles?: boolean;
+  sso?: boolean;
+  auditLog?: boolean;
+  previewApi?: boolean;
+  supportTier?: 'community' | 'email' | 'priority';
+}
+
+export interface PlanView {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  isPublic: boolean;
+  active: boolean;
+  priceMonthly: number | null; // cents
+  priceYearly: number | null; // cents
+  currency: string;
+  trialDays: number;
+  limits: PlanLimits;
+  features: PlanFeatures;
+}
+
+export type SubscriptionStatus =
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'canceled'
+  | 'paused'
+  | 'incomplete';
+export type BillingCycle = 'monthly' | 'yearly';
+
+export interface SubscriptionView {
+  planKey: string;
+  planName: string;
+  status: SubscriptionStatus;
+  billingCycle: BillingCycle | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  trialEndsAt: string | null;
+  cancelAtPeriodEnd: boolean;
+  hasPaymentMethod: boolean;
+}
+
+export interface CheckoutSessionView {
+  url: string;
+  sessionId: string;
+}
+
+export interface PortalSessionView {
+  url: string;
+}
+
+export type InvoiceStatus =
+  | 'draft'
+  | 'open'
+  | 'paid'
+  | 'uncollectible'
+  | 'void';
+
+/** A Stripe invoice (link-out only — `url` is the hosted PDF). */
+export interface InvoiceView {
+  id: string;
+  number: string | null;
+  amountPaid: number; // cents
+  currency: string;
+  status: InvoiceStatus;
+  createdAt: string; // ISO
+  description: string | null;
+  url: string | null;
+}
+
+export interface CreateCheckoutInput {
+  planKey: 'pro' | 'business';
+  billingCycle: BillingCycle;
+  successUrl?: string;
+  cancelUrl?: string;
+}
+
+export interface CreatePortalInput {
+  returnUrl?: string;
+}

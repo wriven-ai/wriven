@@ -1,8 +1,8 @@
-# 08 — Current Scope & Status
+Current Scope & Status
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc/11 Phases 0–4)._
+_Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webhook reconciler committed; live e2e pending frontend._
 
 ---
 
@@ -26,10 +26,11 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | `JwtAuthGuard` (local JWT validation) | ✅ | |
 | `WorkspaceGuard` (`X-Workspace-Id` membership) | ✅ | calls `auth.validateWorkspaceMember` |
 | `ProjectGuard` (`X-Project-Id` membership + workspace-admin bypass) | ✅ | calls `auth.validateProjectMember` |
-| `ApiKeyGuard` (`Bearer wrk_…` → project scope, TTL cache) | ✅ | public Delivery API auth (doc/11 P2) |
+| `ApiKeyGuard` (`Bearer wrk_…` → project scope, TTL cache) | ✅ | public Delivery API auth (plans/01 P2) |
 | Rate limiting (`@nestjs/throttler`) | ✅ | global + per-route |
 | CORS (credentials) | ✅ | `CLIENT_ORIGIN` |
 | Google OAuth (Passport strategy on gateway) | ✅ | |
+| Billing + Stripe webhook | ✅ | `/billing/*` (JWT + WorkspaceGuard) + public `POST /webhooks/stripe` (`rawBody: true`, forwards to auth-service) |
 
 ## auth-service (TCP `:5001`)
 
@@ -48,6 +49,7 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | **Workspace member CRUD** (list/add/update/remove, owner-guard) | ✅ | add by email; ≥1 owner |
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
+| **Stripe billing** (Checkout, Billing Portal, webhook reconcile) | ✅ | backend done (specs/08); live e2e 🟡 deferred to frontend |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
 
@@ -60,18 +62,18 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | Content type CRUD | ✅ | soft delete |
 | Entry CRUD (field validation, slug, status, revisions) | ✅ | revision per write |
 | Entry publish + pagination + list filters | ✅ | |
-| **API keys** (project-scoped, hash-only, scope read/preview/manage) | ✅ | `api_keys` table; create/list/revoke/resolve (doc/11 P1) |
-| **Content Delivery API** (published-only read by `apiId`/slug) | ✅ | select/filter/sort/paginate/include (doc/11 P3) |
+| **API keys** (project-scoped, hash-only, scope read/preview/manage) | ✅ | `api_keys` table; create/list/revoke/resolve (plans/01 P1) |
+| **Content Delivery API** (published-only read by `apiId`/slug) | ✅ | select/filter/sort/paginate/include (plans/01 P3) |
 | `media_assets` schema | ✅ | R2 keys |
-| **Media upload** (presigned direct-to-R2 + create/list/delete) | ✅ | storage adapter; keys-only (doc/13) |
+| **Media upload** (presigned direct-to-R2 + create/list/delete) | ✅ | storage adapter; keys-only (specs/03) |
 | **Media delivery** (resolve `media` fields → public URL objects) | ✅ | always-resolved in Delivery API |
-| **Inline body images** (TipTap `image` node, assetId-only) | ✅ | delivery hydrates `src`/dims; keys-only (doc/13) |
-| Per-workspace media quota (100 MB) + per-file caps (5/25 MB) | ✅ | enforced at presign (doc/13) |
-| Image transforms (resize/format) | 🔲 | deferred; consumer optimizes (next/image). Adapter-ready (doc/13) |
+| **Inline body images** (TipTap `image` node, assetId-only) | ✅ | delivery hydrates `src`/dims; keys-only (specs/03) |
+| Per-workspace media quota (100 MB) + per-file caps (5/25 MB) | ✅ | enforced at presign (specs/03) |
+| Image transforms (resize/format) | 🔲 | deferred; consumer optimizes (next/image). Adapter-ready (specs/03) |
 | Reference fields (author target type + pick + expand) | ✅ | builder sets `refTypeId`+`multiple`; editor reference picker; delivery `include` expands |
-| **CDN cache headers + purge on publish** | ✅ | published reads `s-maxage`+`Cache-Tag`/`Surrogate-Key`; Cloudflare tag-purge on entry events, no-op if unconfigured (doc/11 P5) |
-| **Webhooks** (publish/unpublish/delete → signed POST, HMAC, retry) | ✅ | `webhooks` table; dispatcher on entry events (doc/11 P6) |
-| **Preview API** (drafts via `wrk_preview_`/`wrk_admin_`) | ✅ | key scope drives `preview`→drafts; preview reads `no-store` (doc/11 P7) |
+| **CDN cache headers + purge on publish** | ✅ | published reads `s-maxage`+`Cache-Tag`/`Surrogate-Key`; Cloudflare tag-purge on entry events, no-op if unconfigured (plans/01 P5) |
+| **Webhooks** (publish/unpublish/delete → signed POST, HMAC, retry) | ✅ | `webhooks` table; dispatcher on entry events (plans/01 P6) |
+| **Preview API** (drafts via `wrk_preview_`/`wrk_admin_`) | ✅ | key scope drives `preview`→drafts; preview reads `no-store` (plans/01 P7) |
 | **Unique-field enforcement** (`FieldDef.unique`) | ✅ | JSONB value check on create/update; builder has a Unique toggle |
 | **Default content type seeding** | ✅ | seeds a `Post` type on project create (idempotent); builder Unique/Multiple toggles |
 | **Entry revisions API + UI** (list + restore) | ✅ | History drawer; restore records a new revision |
@@ -98,15 +100,16 @@ _Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc
 | Dashboard layout: live user data + workspace/project switchers | ✅ | |
 | Projects page wired to `/workspaces/:id/projects` + `/projects/*` | ✅ | TanStack Query |
 | Content dashboard wired to `/content/*` | 🟡 | type/entry pages live; switchers drive `X-Project-Id` |
-| API Keys page (create/list/revoke, one-time token reveal) | ✅ | `apiKeyApi`; real backend (doc/11 P4) |
-| Media Library page + media field picker (upload/select) | ✅ | `mediaApi` + `uploadMedia`; grid/list/lightbox (doc/13) |
-| Content editor: main+sidebar layout + inline body images | ✅ | title/body main, structured fields sidebar (doc/13) |
-| Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (doc/12) |
+| API Keys page (create/list/revoke, one-time token reveal) | ✅ | `apiKeyApi`; real backend (plans/01 P4) |
+| Media Library page + media field picker (upload/select) | ✅ | `mediaApi` + `uploadMedia`; grid/list/lightbox (specs/03) |
+| Content editor: main+sidebar layout + inline body images | ✅ | title/body main, structured fields sidebar (specs/03) |
+| Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (specs/05) |
 | Webhooks UI (project settings: add/list/pause/delete, secret once) | ✅ | `webhookApi`; HMAC verify documented inline |
 | Email verification page (`/verify-email?token=`) | ✅ | auto-verifies on load; success/error states |
 
 ## Known gaps / next candidates
 
 - Consumer **SDK / npm package** + published Delivery API docs.
+- **Frontend billing page** — Checkout redirect, Billing Portal link, replace the mock pricing page; consumes `/billing/*`. Unblocks the live Stripe e2e (the hosted Checkout page also needs the sandbox account configured: `pk_test_` publishable key + Managed Payments provisioned/disabled).
 - **ai-service**.
 - Deploy (Docker Compose on VPS) + CI.

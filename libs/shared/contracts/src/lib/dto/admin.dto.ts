@@ -11,6 +11,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { SUBSCRIPTION_STATUSES, type SubscriptionStatus } from '../types/billing.types';
 
 const ADMIN_ROLES = ['admin', 'moderator', 'member'] as const;
 
@@ -167,7 +168,8 @@ export class CreatePlanDto {
   features?: Record<string, unknown>;
 }
 
-/** Update a plan (admin). All fields optional. */
+/** Update a plan (admin). All fields optional. Prices are read-only after
+ *  create (Stripe owns pricing — change via a new Stripe Price + repoint). */
 export class UpdatePlanDto {
   @IsOptional()
   @IsString()
@@ -178,18 +180,6 @@ export class UpdatePlanDto {
   @IsString()
   @MaxLength(200)
   description?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  priceMonthly?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  priceYearly?: number;
 
   @IsOptional()
   @IsBoolean()
@@ -210,8 +200,8 @@ export class AssignPlanDto {
   planKey!: string;
 
   @IsOptional()
-  @IsIn(['active', 'trialing', 'past_due', 'canceled', 'paused', 'incomplete'])
-  status?: string;
+  @IsIn([...SUBSCRIPTION_STATUSES])
+  status?: SubscriptionStatus;
 
   @IsOptional()
   overrides?: Record<string, number | null>;

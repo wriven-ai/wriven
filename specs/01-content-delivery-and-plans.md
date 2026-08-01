@@ -1,11 +1,11 @@
-# 09 — Content Delivery, Website Integration & Plans
+# 01 — Content Delivery, Website Integration & Plans
 
 How a Wriven customer connects their own website/app to Wriven and pulls content,
 what they can control from the dashboard, and the pricing tiers that gate it.
 
 This is the **product/architecture spec** for the "consume content" half of the
 platform. The "author content" half (content types, entries, media) already
-exists in `core_svc` — see [core-service](./core-service/core-service.md). What is
+exists in `core_svc` — see [core-service](../doc/core-service/core-service.md). What is
 described here is mostly **not yet built**; the build order is in §6.
 
 ---
@@ -276,13 +276,13 @@ Per the repo's doc-maintenance rule, when these features land, document them her
 and in the per-service docs. Specifically:
 
 - This file (`09`) — keep §1–§6 current as decisions firm up.
-- New **`doc/06-api-reference.md`** entries for every `/v1/...` CDA/CPA endpoint
+- New **`doc/api-reference.md`** entries for every `/v1/...` CDA/CPA endpoint
   (method, token scope, params, response).
 - **`doc/core-service/`** — the `api_keys` table + delivery read path.
 - A new **`doc/integration-guide.md`** aimed at *customers* (not internal): "How to
   connect your Next.js/Astro/mobile app to Wriven" — quickstart, token creation,
   fetch examples, webhooks, preview mode. This becomes public docs later.
-- **`doc/08-status.md`** — flip each roadmap item ✅ as it ships.
+- **`doc/status.md`** — flip each roadmap item ✅ as it ships.
 
 ---
 

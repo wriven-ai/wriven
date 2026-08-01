@@ -1,8 +1,8 @@
-# 14 — Webhooks (publish → site rebuild)
+# 04 — Webhooks (publish → site rebuild)
 
 The Jamstack loop: when content changes, the customer's site rebuilds. Core
 emits **signed** HTTP POSTs to registered URLs on entry events. Implements
-doc/11 Phase 6.
+plans/01 Phase 6.
 
 ## Events
 
@@ -98,5 +98,5 @@ list with last delivery status, pause/resume (`active`), delete.
 - **Secret rotation** endpoint.
 - Move dispatch to a durable queue (BullMQ) for at-least-once delivery across
   restarts — current retries are in-process only.
-- Wire the **same publish events to CDN purge** (doc/11 P5) — the dispatcher hook
+- Wire the **same publish events to CDN purge** (plans/01 P5) — the dispatcher hook
   point is shared.
