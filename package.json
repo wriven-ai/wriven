@@ -22,10 +22,15 @@
     "db:core:generate": "drizzle-kit generate --config apps/core-service/drizzle.config.ts",
     "db:core:migrate": "drizzle-kit migrate --config apps/core-service/drizzle.config.ts",
     "db:core:push": "drizzle-kit push --config apps/core-service/drizzle.config.ts",
-    "db:core:studio": "drizzle-kit studio --config apps/core-service/drizzle.config.ts"
+    "db:core:studio": "drizzle-kit studio --config apps/core-service/drizzle.config.ts",
+    "sdk:build": "pnpm -r --filter \"./packages/*\" build",
+    "sdk:test": "pnpm -r --filter \"./packages/*\" test",
+    "sdk:check": "pnpm -r --filter \"./packages/*\" check",
+    "sdk:publish": "pnpm -r --filter \"./packages/*\" publish --access public"
   },
   "private": true,
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.4",
     "@eslint/js": "^9.8.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
@@ -67,10 +72,13 @@
     "nx": "22.7.5",
     "postcss": "8.5.15",
     "prettier": "^3.8.1",
+    "publint": "^0.3.21",
     "tailwindcss": "3.4.3",
     "ts-jest": "^29.4.0",
     "ts-node": "10.9.1",
     "tslib": "^2.3.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.40.0",
     "webpack-cli": "^5.1.4"

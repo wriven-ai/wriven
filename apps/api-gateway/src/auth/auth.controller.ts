@@ -27,6 +27,7 @@ import {
   WORKSPACE_PATTERNS,
 } from '@wriven/contracts';
 import { Throttle } from '@nestjs/throttler';
+import { randomBytes } from 'crypto';
 import type { Request, Response } from 'express';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from './current-user.decorator';
@@ -36,6 +37,14 @@ const MINUTE = 60000;
 
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_COOKIE_PATH = '/api/v1/auth';
+
+// Access JWT + CSRF token ride cookies scoped to the whole API. The access
+// cookie is httpOnly (JS can't read it); the CSRF cookie is readable so the SPA
+// can echo it back in a header (double-submit). Both share the access TTL.
+const ACCESS_COOKIE = 'access_token';
+const CSRF_COOKIE = 'csrf_token';
+const API_COOKIE_PATH = '/api/v1';
+const ACCESS_COOKIE_MAX_AGE = 15 * MINUTE; // matches JWT_ACCESS_TTL
 
 @Controller('auth')
 export class AuthController {
@@ -82,7 +91,8 @@ export class AuthController {
       }),
     );
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
-    return { accessToken: result.accessToken };
+    const csrfToken = this.setAccessCookies(res, result.accessToken);
+    return { csrfToken };
   }
 
   @Post('logout')
@@ -97,6 +107,8 @@ export class AuthController {
       );
     }
     res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
+    res.clearCookie(ACCESS_COOKIE, { path: API_COOKIE_PATH });
+    res.clearCookie(CSRF_COOKIE, { path: API_COOKIE_PATH });
     return { success: true };
   }
 
@@ -133,10 +145,12 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@CurrentUser() user: AuthUser) {
-    return firstValueFrom(
+  async me(@CurrentUser() user: AuthUser, @Req() req: Request) {
+    const session = await firstValueFrom(
       this.auth.send(AUTH_PATTERNS.GET_SESSION, { userId: user.userId }),
     );
+    // Hand the SPA the current CSRF token on reload (the cookie is httpOnly).
+    return { ...(session as object), csrfToken: req.cookies?.[CSRF_COOKIE] ?? null };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -167,21 +181,24 @@ export class AuthController {
       this.auth.send<AuthResult>(AUTH_PATTERNS.GOOGLE_LOGIN, profile),
     );
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
+    this.setAccessCookies(res, result.accessToken);
     const origin = process.env.CLIENT_ORIGIN ?? 'http://localhost:3000';
-    // Access token in the URL fragment — not sent to servers or logged.
-    res.redirect(`${origin}/auth/callback#access_token=${result.accessToken}`);
+    // Tokens are now in httpOnly cookies — redirect to a clean URL, no fragment.
+    res.redirect(`${origin}/auth/callback`);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /** Set the refresh cookie and return the client-facing payload (no raw token). */
+  /** Set the session cookies and return the client-facing payload. The CSRF
+   *  token is returned in the body (synchronizer-token pattern) because the SPA
+   *  and gateway are different hosts — JS can't read the cookie cross-host. */
   private completeAuth(res: Response, result: AuthResult) {
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
+    const csrfToken = this.setAccessCookies(res, result.accessToken);
     return {
-      accessToken: result.accessToken,
       user: result.user,
       workspace: result.workspace,
-      project: result.project,
+      csrfToken,
     };
   }
 
@@ -193,6 +210,30 @@ export class AuthController {
       path: REFRESH_COOKIE_PATH,
       expires: new Date(expiresAt),
     });
+  }
+
+  /** Set the httpOnly access + CSRF cookies and return the CSRF token so the
+   *  caller can hand it to the SPA in the response body. The SPA echoes it as
+   *  `X-CSRF-Token`; the gateway compares header against the `csrf_token`
+   *  cookie (double-submit). */
+  private setAccessCookies(res: Response, accessToken: string): string {
+    const secure = process.env.NODE_ENV === 'production';
+    res.cookie(ACCESS_COOKIE, accessToken, {
+      httpOnly: true,
+      secure,
+      sameSite: 'lax',
+      path: API_COOKIE_PATH,
+      maxAge: ACCESS_COOKIE_MAX_AGE,
+    });
+    const csrfToken = randomBytes(32).toString('hex');
+    res.cookie(CSRF_COOKIE, csrfToken, {
+      httpOnly: true, // delivered to the SPA via the response body, not JS-read
+      secure,
+      sameSite: 'lax',
+      path: API_COOKIE_PATH,
+      maxAge: ACCESS_COOKIE_MAX_AGE,
+    });
+    return csrfToken;
   }
 
   private error(

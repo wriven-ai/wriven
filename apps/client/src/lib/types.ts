@@ -17,6 +17,76 @@ export interface WorkspaceView {
   slug: string;
   createdBy: string;
   role: string;
+  /** The user's default workspace — used as the implicit scope at /dashboard.
+   *  Optional until the backend sends it; falls back to the first workspace. */
+  isDefault?: boolean;
+}
+
+/** Minimal user info embedded in a member record. */
+export interface MemberUser {
+  id: string;
+  email: string;
+  name: string;
+  avatar: string | null;
+}
+
+export interface WorkspaceMemberView {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: string; // owner | admin | member
+  createdAt: string;
+  user: MemberUser;
+}
+
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'guest';
+/** Roles assignable when inviting (owner is never granted via add). */
+export type AssignableWorkspaceRole = 'admin' | 'member';
+
+export interface ProjectMemberView {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: ProjectRole;
+  createdAt: string;
+  user: MemberUser;
+}
+
+/** Project member roles — a separate enum from workspace roles. All assignable. */
+export type ProjectRole = 'admin' | 'editor' | 'viewer';
+
+// ── Invitations ──────────────────────────────────────────────────────────────
+
+export type InvitationScope = 'workspace' | 'project';
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface InvitationView {
+  id: string;
+  email: string;
+  scope: InvitationScope;
+  workspaceId: string;
+  projectId: string | null;
+  role: string;
+  status: InvitationStatus;
+  invitedByName: string | null;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface InvitationPreview {
+  email: string;
+  scope: InvitationScope;
+  role: string;
+  workspaceName: string;
+  projectName: string | null;
+  inviterName: string | null;
+  requiresSignup: boolean;
+}
+
+export interface AcceptInvitationResult {
+  scope: InvitationScope;
+  workspaceSlug: string;
+  projectSlug: string | null;
 }
 
 export interface ProjectView {
@@ -32,10 +102,8 @@ export interface ProjectView {
 
 /** Returned by login / register. */
 export interface AuthResult {
-  accessToken: string;
   user: UserView;
   workspace: WorkspaceView;
-  project: ProjectView;
 }
 
 /** Returned by GET /auth/me — full session for reload restore. */
@@ -115,9 +183,93 @@ export interface ContentEntryView {
   updatedAt: string;
 }
 
+export interface RevisionView {
+  id: string;
+  entryId: string;
+  version: number;
+  status: string;
+  data: Record<string, unknown>;
+  createdBy: string;
+  createdAt: string;
+}
+
 export interface Paginated<T> {
   items: T[];
   page: number;
   limit: number;
   total: number;
+}
+
+// ── Media ────────────────────────────────────────────────────────────────────
+
+export interface MediaView {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  url: string;
+  kind: string;
+  mime: string | null;
+  sizeBytes: number | null;
+  width: number | null;
+  height: number | null;
+  alt: string | null;
+  originalFilename: string | null;
+  createdAt: string;
+}
+
+export interface PresignResult {
+  uploadUrl: string;
+  key: string;
+}
+
+// ── API keys (Delivery API auth) ─────────────────────────────────────────────
+
+export type ApiKeyScope = 'read' | 'preview' | 'manage';
+
+export interface ApiKeyView {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  name: string;
+  prefix: string;
+  scope: ApiKeyScope;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/** Returned only from create — carries the full raw token exactly once. */
+export interface CreateApiKeyResult {
+  key: ApiKeyView;
+  token: string;
+}
+
+export type WebhookEvent =
+  | 'entry.published'
+  | 'entry.unpublished'
+  | 'entry.deleted';
+
+export const WEBHOOK_EVENTS: readonly WebhookEvent[] = [
+  'entry.published',
+  'entry.unpublished',
+  'entry.deleted',
+];
+
+export interface WebhookView {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  url: string;
+  events: WebhookEvent[];
+  active: boolean;
+  lastStatus: number | null;
+  lastFiredAt: string | null;
+  createdAt: string;
+}
+
+/** Returned only from create — carries the signing secret exactly once. */
+export interface CreateWebhookResult {
+  webhook: WebhookView;
+  secret: string;
 }

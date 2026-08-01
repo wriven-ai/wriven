@@ -1,34 +1,26 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import WrivenLogo from './WrivenLogo';
-import { Menu, X, ArrowRight, Sun, Moon } from 'lucide-react';
+import { Menu, X, ArrowRight, Sun, Moon, LayoutDashboard } from 'lucide-react';
+import { useAuth, useLogout } from '../hooks/useAuth';
 
 export default function Header() {
   const pathname = usePathname();
+  const { status, isAuthenticated } = useAuth();
+  const logout = useLogout();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  React.useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setTimeout(() => {
-      setTheme(isDark ? 'dark' : 'light');
-    }, 0);
-  }, []);
+  // next-themes resolves on the client only — guard against hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === 'dark';
 
-  const toggleTheme = () => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('wriven-theme', 'dark');
-      setTheme('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('wriven-theme', 'light');
-      setTheme('light');
-    }
-  };
+  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
 
   const navItems = [
     { name: 'Features', href: '/#features' },
@@ -36,9 +28,12 @@ export default function Header() {
     { name: 'About', href: '/about' },
     { name: 'Blog', href: '/blog' },
     { name: 'Docs', href: '/docs' },
-    { name: 'Dashboard', href: '/dashboard' },
     { name: 'Contact', href: '/contact' },
   ];
+
+  // Don't render auth CTAs until the session is resolved — avoids a flash of
+  // "Sign In" for a user who is actually logged in.
+  const authResolved = status !== 'loading';
 
   const isActive = (path: string) => {
     if (path.startsWith('/#')) return false; // anchor link
@@ -85,27 +80,50 @@ export default function Header() {
               aria-label="Toggle visual theme"
               id="theme-toggle-desktop"
             >
-              {theme === 'dark' ? (
+              {isDark ? (
                 <Sun className="w-4 h-4 text-amber-500 hover:rotate-12 transition-transform shrink-0" />
               ) : (
                 <Moon className="w-4 h-4 text-brand-accent shrink-0" />
               )}
             </button>
-            <Link
-              href="/login"
-              className="text-xs font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2"
-              id="header-login-btn"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
-              id="header-signup-btn"
-            >
-              Get started free
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            {authResolved &&
+              (isAuthenticated ? (
+                <>
+                  <button
+                    onClick={() => logout()}
+                    className="text-xs font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2 cursor-pointer"
+                    id="header-logout-btn"
+                  >
+                    Sign Out
+                  </button>
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
+                    id="header-dashboard-btn"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    Dashboard
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-xs font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2"
+                    id="header-login-btn"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
+                    id="header-signup-btn"
+                  >
+                    Get started free
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </>
+              ))}
           </div>
 
           {/* Mobile Menu Button */}
@@ -153,7 +171,7 @@ export default function Header() {
                 className="flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors cursor-pointer border border-brand-border bg-brand-surface"
                 id="mobile-nav-theme-toggle"
               >
-                {theme === 'dark' ? (
+                {isDark ? (
                   <>
                     <Sun className="w-4 h-4 text-amber-500 shrink-0" />
                     Use warm light
@@ -165,23 +183,50 @@ export default function Header() {
                   </>
                 )}
               </button>
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-center rounded-lg px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors"
-                id="mobile-nav-login"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-2 bg-brand-accent text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-3 rounded-lg neo-shadow transition-all"
-                id="mobile-nav-signup"
-              >
-                Get started free
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              {authResolved &&
+                (isAuthenticated ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 bg-brand-accent text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-3 rounded-lg neo-shadow transition-all"
+                      id="mobile-nav-dashboard"
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        logout();
+                      }}
+                      className="block text-center rounded-lg px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors cursor-pointer"
+                      id="mobile-nav-logout"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block text-center rounded-lg px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors"
+                      id="mobile-nav-login"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 bg-brand-accent text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-3 rounded-lg neo-shadow transition-all"
+                      id="mobile-nav-signup"
+                    >
+                      Get started free
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </>
+                ))}
             </div>
           </div>
         </div>

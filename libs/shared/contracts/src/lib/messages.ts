@@ -61,6 +61,7 @@ export const CORE_PATTERNS = {
   CONTENT_TYPE_GET: 'core.contentType.get',
   CONTENT_TYPE_UPDATE: 'core.contentType.update',
   CONTENT_TYPE_DELETE: 'core.contentType.delete',
+  CONTENT_TYPE_SEED: 'core.contentType.seedDefaults',
 
   ENTRY_CREATE: 'core.entry.create',
   ENTRY_LIST: 'core.entry.list',
@@ -68,6 +69,41 @@ export const CORE_PATTERNS = {
   ENTRY_UPDATE: 'core.entry.update',
   ENTRY_DELETE: 'core.entry.delete',
   ENTRY_PUBLISH: 'core.entry.publish',
+  ENTRY_REVISIONS: 'core.entry.revisions',
+  ENTRY_REVISION_RESTORE: 'core.entry.revisionRestore',
+
+  // Project-scoped API keys (Delivery API auth — see doc/11).
+  API_KEY_CREATE: 'core.apiKey.create',
+  API_KEY_LIST: 'core.apiKey.list',
+  API_KEY_REVOKE: 'core.apiKey.revoke',
+  API_KEY_RESOLVE: 'core.apiKey.resolve',
+
+  // Public Content Delivery API — published-only reads by content type.
+  DELIVERY_LIST: 'core.delivery.list',
+  DELIVERY_GET: 'core.delivery.get',
+
+  // Media library (R2-backed; presigned direct upload — see doc/13).
+  MEDIA_PRESIGN: 'core.media.presign',
+  MEDIA_CREATE: 'core.media.create',
+  MEDIA_LIST: 'core.media.list',
+  MEDIA_GET: 'core.media.get',
+  MEDIA_DELETE: 'core.media.delete',
+
+  // Outgoing webhooks (publish → signed POST; see doc/11 P6).
+  WEBHOOK_CREATE: 'core.webhook.create',
+  WEBHOOK_LIST: 'core.webhook.list',
+  WEBHOOK_UPDATE: 'core.webhook.update',
+  WEBHOOK_DELETE: 'core.webhook.delete',
+} as const;
+
+/** Pending member invitations (workspace + project). Owned by auth-service. */
+export const INVITATION_PATTERNS = {
+  CREATE: 'auth.invitation.create',
+  LIST: 'auth.invitation.list',
+  REVOKE: 'auth.invitation.revoke',
+  RESEND: 'auth.invitation.resend',
+  PREVIEW: 'auth.invitation.preview',
+  ACCEPT: 'auth.invitation.accept',
 } as const;
 
 /** Injection tokens for the gateway's TCP ClientProxy instances. */

@@ -111,8 +111,8 @@ export const workspaces = authSchema.table(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    // Globally unique — workspaces are no longer nested under orgs.
-    slug: text('slug').notNull().unique(),
+    // Unique per owner, not globally — each user can have their own "default".
+    slug: text('slug').notNull(),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
@@ -124,6 +124,9 @@ export const workspaces = authSchema.table(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
+  (t) => [
+    uniqueIndex('workspaces_created_by_slug_uq').on(t.createdBy, t.slug),
+  ],
 );
 
 export const workspaceMembers = authSchema.table(
@@ -146,7 +149,8 @@ export const workspaceMembers = authSchema.table(
     index('workspace_members_user_id_idx').on(t.userId),
     check(
       'workspace_members_role_check',
-      sql`${t.role} in ('owner', 'admin', 'member')`,
+      // guest = auto-added via a project invite; sees only assigned projects.
+      sql`${t.role} in ('owner', 'admin', 'member', 'guest')`,
     ),
   ],
 );
@@ -290,4 +294,53 @@ export const projectMembersRelations = relations(
       references: [users.id],
     }),
   }),
+);
+
+// ── Invitations (pending member onboarding) ─────────────────────────────────
+
+/**
+ * A pending invitation to a workspace or project. The raw token is emailed once;
+ * we persist only its sha-256 hash. Single-use, time-limited. See doc/12.
+ */
+export const invitations = authSchema.table(
+  'invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(), // invitee, lowercased
+    scope: text('scope').notNull(), // workspace | project
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id').references(() => projects.id, {
+      onDelete: 'cascade',
+    }),
+    role: text('role').notNull(), // ws: admin|member · proj: admin|editor|viewer
+    tokenHash: text('token_hash').notNull(),
+    status: text('status').notNull().default('pending'),
+    invitedBy: uuid('invited_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    acceptedBy: uuid('accepted_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('invitations_token_hash_uq').on(t.tokenHash),
+    index('invitations_email_idx').on(t.email),
+    index('invitations_workspace_id_idx').on(t.workspaceId),
+    index('invitations_project_id_idx').on(t.projectId),
+    check(
+      'invitations_scope_check',
+      sql`${t.scope} in ('workspace', 'project')`,
+    ),
+    check(
+      'invitations_status_check',
+      sql`${t.status} in ('pending', 'accepted', 'revoked', 'expired')`,
+    ),
+  ],
 );

@@ -15,7 +15,12 @@ import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
 import { MembersService } from './members.service';
 
-const { projects, projectMembers, users } = schema;
+const { projects, projectMembers, workspaceMembers, users } = schema;
+
+/** The transaction handle Drizzle passes to `db.transaction(cb)`. */
+type Tx = Parameters<
+  Parameters<DrizzleDB<typeof schema>['transaction']>[0]
+>[0];
 
 type ProjectRow = typeof projects.$inferSelect;
 type ProjectMemberRow = typeof projectMembers.$inferSelect & {
@@ -88,12 +93,12 @@ export class ProjectsService {
     callerUserId: string;
     workspaceId: string;
   }): Promise<ProjectView[]> {
-    // Any workspace member can list projects in the workspace.
-    await this.members.requireWorkspaceRole(
+    const callerRole = await this.members.requireWorkspaceRole(
       p.callerUserId,
       p.workspaceId,
-      ['owner', 'admin', 'member'],
+      ['owner', 'admin', 'member', 'guest'],
     );
+
     const rows = await this.db.query.projects.findMany({
       where: and(
         eq(projects.workspaceId, p.workspaceId),
@@ -101,20 +106,25 @@ export class ProjectsService {
       ),
       orderBy: projects.createdAt,
     });
-    // Resolve caller's role per project (members see role, non-members see none).
-    const withRoles = await Promise.all(
-      rows.map(async (r) => {
-        const membership = await this.db.query.projectMembers.findFirst({
-          where: and(
-            eq(projectMembers.projectId, r.id),
-            eq(projectMembers.userId, p.callerUserId),
-          ),
-          columns: { role: true },
-        });
-        return this.toView(r, membership?.role ?? 'viewer');
-      }),
+
+    // The caller's project memberships (project id → role).
+    const memberships = await this.db.query.projectMembers.findMany({
+      where: eq(projectMembers.userId, p.callerUserId),
+      columns: { projectId: true, role: true },
+    });
+    const roleByProject = new Map(memberships.map((m) => [m.projectId, m.role]));
+
+    // Real workspace members (owner/admin/member) see every project. A `guest`
+    // — auto-added via a single project invite — sees only the projects they
+    // belong to, so project existence doesn't leak to outside collaborators.
+    const canSeeAll = callerRole !== 'guest';
+    const visible = canSeeAll
+      ? rows
+      : rows.filter((r) => roleByProject.has(r.id));
+
+    return visible.map((r) =>
+      this.toView(r, roleByProject.get(r.id) ?? 'viewer'),
     );
-    return withRoles;
   }
 
   async update(p: {
@@ -179,13 +189,41 @@ export class ProjectsService {
     dto: AddProjectMemberDto;
   }): Promise<ProjectMemberView> {
     await this.requireProjectRole(p.callerUserId, p.projectId, ['admin']);
+    const project = await this.requireRow(p.projectId);
     const user = await this.members.findUserByEmail(p.dto.email);
     await this.ensureNotMember(p.projectId, user.id);
-    const [row] = await this.db
-      .insert(projectMembers)
-      .values({ projectId: p.projectId, userId: user.id, role: p.dto.role })
-      .returning();
+
+    // Project membership implies workspace membership — add a baseline workspace
+    // member if absent, then the project membership, atomically.
+    const row = await this.db.transaction(async (tx) => {
+      await this.ensureWorkspaceMember(tx, project.workspaceId, user.id);
+      const [r] = await tx
+        .insert(projectMembers)
+        .values({ projectId: p.projectId, userId: user.id, role: p.dto.role })
+        .returning();
+      return r;
+    });
     return this.toMemberView({ ...row, user });
+  }
+
+  /**
+   * Ensure a user has at least baseline workspace access. Auto-adds a `guest`
+   * (sees only assigned projects), not a full `member`. Idempotent and
+   * non-destructive: ON CONFLICT DO NOTHING never creates a duplicate and never
+   * downgrades an existing owner/admin/member. Shared by direct add + invite accept.
+   */
+  async ensureWorkspaceMember(
+    tx: Tx,
+    workspaceId: string,
+    userId: string,
+    role = 'guest',
+  ): Promise<void> {
+    await tx
+      .insert(workspaceMembers)
+      .values({ workspaceId, userId, role })
+      .onConflictDoNothing({
+        target: [workspaceMembers.workspaceId, workspaceMembers.userId],
+      });
   }
 
   async updateMember(p: {

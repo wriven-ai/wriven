@@ -1,14 +1,14 @@
 'use client';
 
+import { ApiRequestError, authApi, googleAuthUrl } from '@/lib/api';
+import { loginSchema, type LoginValues } from '@/schemas/auth';
+import { useAuthStore } from '@/stores/auth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ApiRequestError, authApi, googleAuthUrl } from '@/lib/api';
-import { loginSchema, type LoginValues } from '@/schemas/auth';
-import { useAuthStore } from '@/stores/auth';
 
 export const LoginPage = () => {
   const router = useRouter();
@@ -29,7 +29,14 @@ export const LoginPage = () => {
     try {
       const result = await authApi.login(values);
       useAuthStore.getState().setAuthResult(result);
-      router.push('/dashboard');
+      // Honor ?next= for flows that send the user here mid-task (e.g. accepting
+      // an invite). Only allow internal paths — never an open redirect.
+      const next = new URLSearchParams(window.location.search).get('next');
+      const safeNext =
+        next && next.startsWith('/') && !next.startsWith('//')
+          ? next
+          : '/dashboard';
+      router.push(safeNext);
     } catch (err) {
       setServerError(
         err instanceof ApiRequestError

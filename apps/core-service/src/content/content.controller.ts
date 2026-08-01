@@ -67,6 +67,13 @@ export class ContentController {
     return this.types.remove(p);
   }
 
+  @MessagePattern(CORE_PATTERNS.CONTENT_TYPE_SEED)
+  seedTypes(
+    @Payload() p: { workspaceId: string; projectId: string; userId: string },
+  ) {
+    return this.types.seedDefaults(p);
+  }
+
   // ── Entries ───────────────────────────────────────────────────────────────
 
   @MessagePattern(CORE_PATTERNS.ENTRY_CREATE)
@@ -133,5 +140,26 @@ export class ContentController {
     @Payload() p: { workspaceId: string; projectId: string; id: string },
   ) {
     return this.entries.remove(p);
+  }
+
+  @MessagePattern(CORE_PATTERNS.ENTRY_REVISIONS)
+  listRevisions(
+    @Payload() p: { workspaceId: string; projectId: string; entryId: string },
+  ) {
+    return this.entries.listRevisions(p);
+  }
+
+  @MessagePattern(CORE_PATTERNS.ENTRY_REVISION_RESTORE)
+  restoreRevision(
+    @Payload()
+    p: {
+      workspaceId: string;
+      projectId: string;
+      userId: string;
+      entryId: string;
+      version: number;
+    },
+  ) {
+    return this.entries.restoreRevision(p);
   }
 }

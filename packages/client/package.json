@@ -1,0 +1,59 @@
+{
+  "name": "@wriven-ai/client",
+  "version": "0.1.0",
+  "description": "Official client for the Wriven headless CMS Content Delivery API. Isomorphic, typed, zero-dependency.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@wriven/wriven": "./src/index.ts",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "check": "publint && attw --pack .",
+    "prepublishOnly": "pnpm build && pnpm check",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "keywords": [
+    "wriven",
+    "cms",
+    "headless",
+    "content",
+    "sdk",
+    "client"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://wriven.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wriven-ai/wriven.git",
+    "directory": "packages/client"
+  },
+  "bugs": {
+    "url": "https://github.com/wriven-ai/wriven/issues"
+  }
+}

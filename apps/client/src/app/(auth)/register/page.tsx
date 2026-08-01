@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiRequestError, authApi, googleAuthUrl } from '@/lib/api';
 import { registerSchema, type RegisterValues } from '@/schemas/auth';
@@ -18,6 +18,7 @@ const RegisterPage = () => {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -30,6 +31,12 @@ const RegisterPage = () => {
     },
   });
 
+  // Pre-fill the email when arriving from an invitation link (?email=).
+  useEffect(() => {
+    const email = new URLSearchParams(window.location.search).get('email');
+    if (email) setValue('email', email);
+  }, [setValue]);
+
   const onSubmit = async (values: RegisterValues) => {
     setServerError(null);
     try {
@@ -40,7 +47,14 @@ const RegisterPage = () => {
         workspaceName: values.workspaceName,
       });
       useAuthStore.getState().setAuthResult(result);
-      router.push('/dashboard');
+      // When signing up from an invite, the server auto-claims the pending
+      // invitations — re-bootstrap the session (hard nav) so those joined
+      // workspaces/projects show up instead of only the user's own workspace.
+      const fromInvite = !!new URLSearchParams(window.location.search).get(
+        'email',
+      );
+      if (fromInvite) window.location.assign('/dashboard');
+      else router.push('/dashboard');
     } catch (err) {
       setServerError(
         err instanceof ApiRequestError

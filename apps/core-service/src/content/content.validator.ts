@@ -5,11 +5,26 @@ function fail(message: string): never {
   throw rpcError('VALIDATION_ERROR', message);
 }
 
+/** A minimal ProseMirror document: `{ type: 'doc', content: [...] }`. */
+function isProseMirrorDoc(value: unknown): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { type?: unknown }).type === 'doc' &&
+    Array.isArray((value as { content?: unknown }).content)
+  );
+}
+
 function checkScalar(field: FieldDef, value: unknown): void {
   switch (field.type) {
     case 'text':
-    case 'richtext':
       if (typeof value !== 'string') fail(`Field "${field.key}" must be a string.`);
+      break;
+    case 'richtext':
+      // Rich text is stored as a ProseMirror JSON document. Legacy plain
+      // strings are still accepted so pre-existing entries keep validating.
+      if (!isProseMirrorDoc(value) && typeof value !== 'string')
+        fail(`Field "${field.key}" must be a rich-text document.`);
       break;
     case 'number':
       if (typeof value !== 'number' || Number.isNaN(value))

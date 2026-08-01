@@ -19,7 +19,20 @@
   --color-background: var(--brand-bg);
   --color-foreground: var(--text-primary);
   --color-border: var(--brand-border);
+  --color-input: var(--brand-border);
   --color-ring: var(--brand-accent);
+  --color-popover: var(--brand-surface);
+  --color-popover-foreground: var(--text-primary);
+  --color-card: var(--brand-surface);
+  --color-card-foreground: var(--text-primary);
+  --color-muted: var(--brand-surface-soft);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--brand-surface-soft);
+  --color-accent-foreground: var(--text-primary);
+  --color-primary: var(--brand-accent);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--brand-surface-soft);
+  --color-secondary-foreground: var(--text-primary);
 
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);

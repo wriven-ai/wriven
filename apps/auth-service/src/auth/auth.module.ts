@@ -6,6 +6,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CleanupService } from './cleanup.service';
 import { MailService } from './mail.service';
+import { InvitationsController } from './invitations.controller';
+import { InvitationsService } from './invitations.service';
 import { MembersController } from './members.controller';
 import { MembersService } from './members.service';
 import { TokenService } from './token.service';
@@ -30,6 +32,7 @@ import { ProjectsService } from './projects.service';
     MembersController,
     WorkspacesController,
     ProjectsController,
+    InvitationsController,
   ],
   providers: [
     AuthService,
@@ -39,6 +42,7 @@ import { ProjectsService } from './projects.service';
     MembersService,
     WorkspacesService,
     ProjectsService,
+    InvitationsService,
   ],
 })
 export class AuthModule {}

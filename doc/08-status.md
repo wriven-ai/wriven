@@ -2,7 +2,7 @@
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after User → Workspace → Project tenancy refactor._
+_Last reviewed: after Model A delivery MVP (API keys + Content Delivery API, doc/11 Phases 0–4)._
 
 ---
 
@@ -26,6 +26,7 @@ _Last reviewed: after User → Workspace → Project tenancy refactor._
 | `JwtAuthGuard` (local JWT validation) | ✅ | |
 | `WorkspaceGuard` (`X-Workspace-Id` membership) | ✅ | calls `auth.validateWorkspaceMember` |
 | `ProjectGuard` (`X-Project-Id` membership + workspace-admin bypass) | ✅ | calls `auth.validateProjectMember` |
+| `ApiKeyGuard` (`Bearer wrk_…` → project scope, TTL cache) | ✅ | public Delivery API auth (doc/11 P2) |
 | Rate limiting (`@nestjs/throttler`) | ✅ | global + per-route |
 | CORS (credentials) | ✅ | `CLIENT_ORIGIN` |
 | Google OAuth (Passport strategy on gateway) | ✅ | |
@@ -59,12 +60,21 @@ _Last reviewed: after User → Workspace → Project tenancy refactor._
 | Content type CRUD | ✅ | soft delete |
 | Entry CRUD (field validation, slug, status, revisions) | ✅ | revision per write |
 | Entry publish + pagination + list filters | ✅ | |
+| **API keys** (project-scoped, hash-only, scope read/preview/manage) | ✅ | `api_keys` table; create/list/revoke/resolve (doc/11 P1) |
+| **Content Delivery API** (published-only read by `apiId`/slug) | ✅ | select/filter/sort/paginate/include (doc/11 P3) |
 | `media_assets` schema | ✅ | R2 keys |
-| Media upload (R2 presign/upload endpoints) | 🔲 | schema only |
-| ImageKit URL building | 🔲 | |
-| Reference field resolution (populate/expand) | 🔲 | stored as ids |
-| Unique-field enforcement (`FieldDef.unique`) | 🔲 | declared, not enforced |
-| Default content type seeding on signup | 🔲 | |
+| **Media upload** (presigned direct-to-R2 + create/list/delete) | ✅ | storage adapter; keys-only (doc/13) |
+| **Media delivery** (resolve `media` fields → public URL objects) | ✅ | always-resolved in Delivery API |
+| **Inline body images** (TipTap `image` node, assetId-only) | ✅ | delivery hydrates `src`/dims; keys-only (doc/13) |
+| Per-workspace media quota (100 MB) + per-file caps (5/25 MB) | ✅ | enforced at presign (doc/13) |
+| Image transforms (resize/format) | 🔲 | deferred; consumer optimizes (next/image). Adapter-ready (doc/13) |
+| Reference fields (author target type + pick + expand) | ✅ | builder sets `refTypeId`+`multiple`; editor reference picker; delivery `include` expands |
+| **CDN cache headers + purge on publish** | ✅ | published reads `s-maxage`+`Cache-Tag`/`Surrogate-Key`; Cloudflare tag-purge on entry events, no-op if unconfigured (doc/11 P5) |
+| **Webhooks** (publish/unpublish/delete → signed POST, HMAC, retry) | ✅ | `webhooks` table; dispatcher on entry events (doc/11 P6) |
+| **Preview API** (drafts via `wrk_preview_`/`wrk_admin_`) | ✅ | key scope drives `preview`→drafts; preview reads `no-store` (doc/11 P7) |
+| **Unique-field enforcement** (`FieldDef.unique`) | ✅ | JSONB value check on create/update; builder has a Unique toggle |
+| **Default content type seeding** | ✅ | seeds a `Post` type on project create (idempotent); builder Unique/Multiple toggles |
+| **Entry revisions API + UI** (list + restore) | ✅ | History drawer; restore records a new revision |
 
 ## ai-service (FastAPI `:8000`)
 
@@ -84,16 +94,19 @@ _Last reviewed: after User → Workspace → Project tenancy refactor._
 | Auth pages under `(auth)` route group + shared layout | ✅ | login, register, forgot, reset |
 | Login/register wired (rememberMe, workspaceName, errors) | ✅ | |
 | Google button + `/auth/callback` page | ✅ | |
-| `RequireAuth` guard + `useAuth`/`useLogout` (building blocks) | ✅ | not yet applied to dashboard |
+| `RequireAuth` guard + `useAuth`/`useLogout` | ✅ | applied to the dashboard layout (redirects to /login when unauthenticated) |
 | Dashboard layout: live user data + workspace/project switchers | ✅ | |
 | Projects page wired to `/workspaces/:id/projects` + `/projects/*` | ✅ | TanStack Query |
 | Content dashboard wired to `/content/*` | 🟡 | type/entry pages live; switchers drive `X-Project-Id` |
-| Email verification page | 🔲 | API ready |
+| API Keys page (create/list/revoke, one-time token reveal) | ✅ | `apiKeyApi`; real backend (doc/11 P4) |
+| Media Library page + media field picker (upload/select) | ✅ | `mediaApi` + `uploadMedia`; grid/list/lightbox (doc/13) |
+| Content editor: main+sidebar layout + inline body images | ✅ | title/body main, structured fields sidebar (doc/13) |
+| Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (doc/12) |
+| Webhooks UI (project settings: add/list/pause/delete, secret once) | ✅ | `webhookApi`; HMAC verify documented inline |
+| Email verification page (`/verify-email?token=`) | ✅ | auto-verifies on load; success/error states |
 
 ## Known gaps / next candidates
 
-- Member **invitation** flow (email invite → accept on signup).
-- **Media upload** (R2 presign) + ImageKit.
-- Apply `RequireAuth` to the dashboard layout.
+- Consumer **SDK / npm package** + published Delivery API docs.
 - **ai-service**.
 - Deploy (Docker Compose on VPS) + CI.

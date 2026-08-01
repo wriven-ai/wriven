@@ -1,8 +1,8 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsIn } from 'class-validator';
 
-const WORKSPACE_ROLES = ['owner', 'admin', 'member'] as const;
-const WORKSPACE_ASSIGNABLE = ['admin', 'member'] as const; // owner not granted via add
+const WORKSPACE_ROLES = ['owner', 'admin', 'member', 'guest'] as const;
+const WORKSPACE_ASSIGNABLE = ['admin', 'member'] as const; // owner/guest not granted via add
 const PROJECT_ROLES = ['admin', 'editor', 'viewer'] as const;
 
 const lowerEmail = ({ value }: { value: unknown }) =>

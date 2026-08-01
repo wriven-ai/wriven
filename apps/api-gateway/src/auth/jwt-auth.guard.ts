@@ -17,15 +17,17 @@ export class JwtAuthGuard implements CanActivate {
   constructor(private readonly jwt: JwtService) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest<Request & { user?: AuthUser }>();
-    const header = req.headers.authorization;
+    const req = context
+      .switchToHttp()
+      .getRequest<Request & { user?: AuthUser; cookies?: Record<string, string> }>();
+    const token = req.cookies?.['access_token'];
 
-    if (!header?.startsWith('Bearer ')) {
-      throw this.unauthorized('Missing or malformed Authorization header.');
+    if (!token) {
+      throw this.unauthorized('Missing access token cookie.');
     }
 
     try {
-      const payload = this.jwt.verify<AccessTokenPayload>(header.slice(7));
+      const payload = this.jwt.verify<AccessTokenPayload>(token);
       req.user = { userId: payload.sub, email: payload.email };
       return true;
     } catch {
