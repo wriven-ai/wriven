@@ -1,36 +1,29 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { BILLING_PATTERNS } from '@wriven/contracts';
+import { BILLING_PATTERNS, Permission } from '@wriven/contracts';
 import type {
   CreateCheckoutSessionDto,
   CreatePortalSessionDto,
 } from '@wriven/contracts';
-import { rpcError } from '../common/rpc-error';
+import { AuthorizationService } from '../auth/authorization.service';
 import { BillingService } from './billing.service';
 import { StripeWebhookService } from './stripe-webhook.service';
 
 /**
  * TCP handlers for the billing module. The api-gateway billing controller +
  * Stripe webhook receiver forward to these patterns. See specs/08.
+ *
+ * Billing mutations (checkout / portal) require WORKSPACE_BILLING_MANAGE,
+ * enforced at both the gateway (`PermissionGuard`) and here (defense-in-depth,
+ * resolving from auth-service's own membership data).
  */
 @Controller()
 export class BillingController {
   constructor(
     private readonly billing: BillingService,
     private readonly webhooks: StripeWebhookService,
+    private readonly authz: AuthorizationService,
   ) {}
-
-  /** Billing mutations (checkout / portal) are owner/admin-only. The gateway
-   *  forwards the workspaceRole from WorkspaceGuard; auth-service trusts it
-   *  (gateway injects identity, no re-validation). */
-  private assertCanManageBilling(role: string | undefined): void {
-    if (role !== 'owner' && role !== 'admin') {
-      throw rpcError(
-        'FORBIDDEN',
-        'Only workspace owners or admins can manage billing.',
-      );
-    }
-  }
 
   @MessagePattern(BILLING_PATTERNS.LIST_PLANS)
   listPlans() {
@@ -48,16 +41,15 @@ export class BillingController {
   }
 
   @MessagePattern(BILLING_PATTERNS.CREATE_CHECKOUT)
-  createCheckout(
+  async createCheckout(
     @Payload()
-    p: {
-      userId: string;
-      workspaceId: string;
-      workspaceRole?: string;
-      dto: CreateCheckoutSessionDto;
-    },
+    p: { userId: string; workspaceId: string; dto: CreateCheckoutSessionDto },
   ) {
-    this.assertCanManageBilling(p.workspaceRole);
+    await this.authz.authorize({
+      userId: p.userId,
+      permission: Permission.WORKSPACE_BILLING_MANAGE,
+      workspaceId: p.workspaceId,
+    });
     return this.billing.createCheckout({
       workspaceId: p.workspaceId,
       userId: p.userId,
@@ -69,14 +61,15 @@ export class BillingController {
   }
 
   @MessagePattern(BILLING_PATTERNS.CREATE_PORTAL)
-  createPortal(
-    @Payload() p: {
-      workspaceId: string;
-      workspaceRole?: string;
-      dto: CreatePortalSessionDto;
-    },
+  async createPortal(
+    @Payload()
+    p: { userId: string; workspaceId: string; dto: CreatePortalSessionDto },
   ) {
-    this.assertCanManageBilling(p.workspaceRole);
+    await this.authz.authorize({
+      userId: p.userId,
+      permission: Permission.WORKSPACE_BILLING_MANAGE,
+      workspaceId: p.workspaceId,
+    });
     return this.billing.createPortal({
       workspaceId: p.workspaceId,
       returnUrl: p.dto.returnUrl,

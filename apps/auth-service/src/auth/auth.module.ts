@@ -48,5 +48,6 @@ import { ProjectsService } from './projects.service';
     InvitationsService,
     EntitlementsService,
   ],
+  exports: [AuthorizationService],
 })
 export class AuthModule {}

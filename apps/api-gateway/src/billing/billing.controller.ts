@@ -14,7 +14,6 @@ import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
-import { CurrentWorkspaceRole } from '../auth/current-workspace-role.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
@@ -22,10 +21,10 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 
 /**
  * Customer-facing billing endpoints. Thin HTTP adapter → auth-service over TCP.
- * Workspace-scoped (WorkspaceGuard sets workspaceId + workspaceRole + the
- * cascade-resolved permission set). PermissionGuard gates mutations to billing
- * admins; reads are open to any member. Checkout + portal still forward the
- * role so auth-service's assertCanManageBilling acts as defense-in-depth. See specs/08.
+ * Workspace-scoped (WorkspaceGuard sets workspaceId + the cascade-resolved
+ * permission set). PermissionGuard gates mutations to billing admins; reads are
+ * open to any member. auth-service re-checks WORKSPACE_BILLING_MANAGE as
+ * defense-in-depth. See specs/08.
  */
 @Controller('billing')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, PermissionGuard)
@@ -63,14 +62,12 @@ export class BillingController {
   createCheckout(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
-    @CurrentWorkspaceRole() workspaceRole: string | undefined,
     @Body() dto: contracts.CreateCheckoutSessionDto,
   ) {
     return firstValueFrom(
       this.auth.send(contracts.BILLING_PATTERNS.CREATE_CHECKOUT, {
         userId: user.userId,
         workspaceId,
-        workspaceRole,
         dto,
       }),
     );
@@ -79,14 +76,14 @@ export class BillingController {
   @Post('portal')
   @RequirePermission(contracts.Permission.WORKSPACE_BILLING_MANAGE)
   createPortal(
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
-    @CurrentWorkspaceRole() workspaceRole: string | undefined,
     @Body() dto: contracts.CreatePortalSessionDto,
   ) {
     return firstValueFrom(
       this.auth.send(contracts.BILLING_PATTERNS.CREATE_PORTAL, {
+        userId: user.userId,
         workspaceId,
-        workspaceRole,
         dto,
       }),
     );
