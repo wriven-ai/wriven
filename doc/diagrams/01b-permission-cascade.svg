@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 860" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#818cf8"/></marker>
+  </defs>
+  <rect width="1240" height="860" fill="#0b1120"/>
+
+  <text x="620" y="34" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">RBAC — Permission Cascade</text>
+  <text x="620" y="56" text-anchor="middle" fill="#94a3b8" font-size="12">Roles → permission sets → union = effectivePermissions (single definition in @wriven/contracts)</text>
+
+  <!-- column headers -->
+  <text x="200" y="96" text-anchor="middle" fill="#5eead4" font-size="12" font-weight="bold">WORKSPACE roles · WORKSPACE_ROLE_PERMISSIONS</text>
+  <text x="1030" y="96" text-anchor="middle" fill="#fcd34d" font-size="12" font-weight="bold">PROJECT roles · PROJECT_ROLE_PERMISSIONS</text>
+
+  <!-- WORKSPACE roles -->
+  <g><rect x="40" y="110" width="320" height="70" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="56" y="132" fill="#e2e8f0" font-weight="bold">owner</text>
+    <text x="56" y="150" fill="#5eead4" font-size="10">= new Set(Object.values(Permission))</text>
+    <text x="56" y="166" fill="#94a3b8" font-size="10">everything (incl. DELETE, ROLE_ASSIGN)</text></g>
+  <g><rect x="40" y="190" width="320" height="100" rx="8" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+    <text x="56" y="212" fill="#e2e8f0" font-weight="bold">admin</text>
+    <text x="56" y="230" fill="#94a3b8" font-size="10">WORKSPACE_VIEW/EDIT, MEMBERS_VIEW,</text>
+    <text x="56" y="246" fill="#94a3b8" font-size="10">MEMBERS_MANAGE, PROJECT_CREATE,</text>
+    <text x="56" y="262" fill="#94a3b8" font-size="10">BILLING_MANAGE, USAGE_VIEW</text>
+    <text x="56" y="280" fill="#fcd34d" font-size="10">+ ALL project perms (via cascade)</text></g>
+  <g><rect x="40" y="300" width="320" height="70" rx="8" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+    <text x="56" y="322" fill="#e2e8f0" font-weight="bold">member</text>
+    <text x="56" y="340" fill="#94a3b8" font-size="10">WORKSPACE_VIEW, MEMBERS_VIEW,</text>
+    <text x="56" y="356" fill="#94a3b8" font-size="10">PROJECT_VIEW, PROJECT_VIEW_ALL</text></g>
+  <g><rect x="40" y="380" width="320" height="60" rx="8" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+    <text x="56" y="402" fill="#e2e8f0" font-weight="bold">guest</text>
+    <text x="56" y="420" fill="#94a3b8" font-size="10">PROJECT_VIEW, PROJECT_VIEW_ASSIGNED</text></g>
+
+  <!-- PROJECT roles -->
+  <g><rect x="860" y="110" width="340" height="150" rx="8" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+    <text x="876" y="132" fill="#e2e8f0" font-weight="bold">admin</text>
+    <text x="876" y="150" fill="#94a3b8" font-size="10">PROJECT_VIEW/EDIT/DELETE, MEMBERS_*,</text>
+    <text x="876" y="166" fill="#94a3b8" font-size="10">ROLE_ASSIGN, CONTENT_TYPE_MANAGE,</text>
+    <text x="876" y="182" fill="#94a3b8" font-size="10">ENTRY_CREATE/UPDATE/PUBLISH/DELETE,</text>
+    <text x="876" y="198" fill="#94a3b8" font-size="10">MEDIA_MANAGE, WEBHOOK_MANAGE,</text>
+    <text x="876" y="214" fill="#94a3b8" font-size="10">API_KEY_MANAGE</text></g>
+  <g><rect x="860" y="270" width="340" height="80" rx="8" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+    <text x="876" y="292" fill="#e2e8f0" font-weight="bold">editor</text>
+    <text x="876" y="310" fill="#94a3b8" font-size="10">PROJECT_VIEW, ENTRY_CREATE,</text>
+    <text x="876" y="326" fill="#94a3b8" font-size="10">ENTRY_UPDATE, MEDIA_MANAGE</text>
+    <text x="876" y="344" fill="#fda4af" font-size="10">no publish/delete/types/members</text></g>
+  <g><rect x="860" y="360" width="340" height="55" rx="8" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+    <text x="876" y="382" fill="#e2e8f0" font-weight="bold">viewer</text>
+    <text x="876" y="400" fill="#94a3b8" font-size="10">PROJECT_VIEW (read only)</text></g>
+
+  <!-- UNION -->
+  <g><rect x="420" y="200" width="400" height="180" rx="12" fill="#171433" stroke="#818cf8" stroke-width="2"/>
+    <text x="620" y="226" text-anchor="middle" fill="#c7d2fe" font-size="13" font-weight="bold">effectivePermissions(wsRole, projRole)</text>
+    <text x="620" y="252" text-anchor="middle" fill="#e2e8f0" font-size="11">= WORKSPACE_ROLE_PERMISSIONS[wsRole]</text>
+    <text x="620" y="272" text-anchor="middle" fill="#e2e8f0" font-size="11">  ∪ PROJECT_ROLE_PERMISSIONS[projRole]</text>
+    <line x1="450" y1="288" x2="790" y2="288" stroke="#334155"/>
+    <text x="620" y="310" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">union — project role only ADDS,</text>
+    <text x="620" y="328" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">never revokes a workspace grant</text>
+    <text x="620" y="356" text-anchor="middle" fill="#94a3b8" font-size="10">projRole == null (no project row) → ws set alone</text>
+    <text x="620" y="372" text-anchor="middle" fill="#64748b" font-size="9">shared by auth-service resolver + client useCan()</text></g>
+
+  <!-- arrows into union -->
+  <line x1="360" y1="200" x2="418" y2="270" stroke="#818cf8" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="860" y1="200" x2="822" y2="270" stroke="#818cf8" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- example resolutions table -->
+  <text x="620" y="430" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">EXAMPLE RESOLUTIONS</text>
+  <g>
+    <rect x="120" y="442" width="1000" height="28" fill="#1e293b"/>
+    <text x="200" y="460" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">wsRole</text>
+    <text x="360" y="460" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">projRole</text>
+    <text x="560" y="460" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">ENTRY_PUBLISH?</text>
+    <text x="740" y="460" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">WORKSPACE_DELETE?</text>
+    <text x="940" y="460" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="bold">project list scope</text>
+  </g>
+  <g font-size="10" fill="#e2e8f0">
+    <text x="200" y="486" text-anchor="middle">owner</text><text x="360" y="486" text-anchor="middle">null</text><text x="560" y="486" text-anchor="middle" fill="#34d399">yes</text><text x="740" y="486" text-anchor="middle" fill="#34d399">yes</text><text x="940" y="486" text-anchor="middle">ALL</text>
+    <line x1="120" y1="494" x2="1120" y2="494" stroke="#1e293b"/>
+    <text x="200" y="510" text-anchor="middle">admin</text><text x="360" y="510" text-anchor="middle">null</text><text x="560" y="510" text-anchor="middle" fill="#34d399">yes</text><text x="740" y="510" text-anchor="middle" fill="#f43f5e">no</text><text x="940" y="510" text-anchor="middle">ALL</text>
+    <line x1="120" y1="518" x2="1120" y2="518" stroke="#1e293b"/>
+    <text x="200" y="534" text-anchor="middle">member</text><text x="360" y="534" text-anchor="middle">editor</text><text x="560" y="534" text-anchor="middle" fill="#f43f5e">no</text><text x="740" y="534" text-anchor="middle" fill="#f43f5e">no</text><text x="940" y="534" text-anchor="middle">ALL</text>
+    <line x1="120" y1="542" x2="1120" y2="542" stroke="#1e293b"/>
+    <text x="200" y="558" text-anchor="middle">member</text><text x="360" y="558" text-anchor="middle">viewer</text><text x="560" y="558" text-anchor="middle" fill="#f43f5e">no</text><text x="740" y="558" text-anchor="middle" fill="#f43f5e">no</text><text x="940" y="558" text-anchor="middle">ALL</text>
+    <line x1="120" y1="566" x2="1120" y2="566" stroke="#1e293b"/>
+    <text x="200" y="582" text-anchor="middle">guest</text><text x="360" y="582" text-anchor="middle">viewer</text><text x="560" y="582" text-anchor="middle" fill="#f43f5e">no</text><text x="740" y="582" text-anchor="middle" fill="#f43f5e">no</text><text x="940" y="582" text-anchor="middle" fill="#fcd34d">ASSIGNED</text>
+    <line x1="120" y1="590" x2="1120" y2="590" stroke="#1e293b"/>
+    <text x="200" y="606" text-anchor="middle">guest</text><text x="360" y="606" text-anchor="middle">null</text><text x="560" y="606" text-anchor="middle" fill="#f43f5e">no</text><text x="740" y="606" text-anchor="middle" fill="#f43f5e">no</text><text x="940" y="606" text-anchor="middle">ASSIGNED</text>
+  </g>
+
+  <text x="620" y="640" text-anchor="middle" fill="#64748b" font-size="10">null projRole = no project_members row. owner/admin still get full project access via the workspace set (cascade). ENTRY_PUBLISH is project-level so a member needs an editor/admin project role to publish.</text>
+  <text x="620" y="658" text-anchor="middle" fill="#64748b" font-size="10">scope ALL (owner/admin/member) = see every project; ASSIGNED (guest) = only projects with a project_members row; NONE = no workspace membership.</text>
+</svg>
