@@ -16,15 +16,19 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
 import { CurrentWorkspaceRole } from '../auth/current-workspace-role.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionGuard } from '../auth/permission.guard';
+import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 
 /**
  * Customer-facing billing endpoints. Thin HTTP adapter → auth-service over TCP.
- * Workspace-scoped (WorkspaceGuard sets workspaceId + workspaceRole). Checkout +
- * portal forward the role so auth-service can gate them to owner/admin. See specs/08.
+ * Workspace-scoped (WorkspaceGuard sets workspaceId + workspaceRole + the
+ * cascade-resolved permission set). PermissionGuard gates mutations to billing
+ * admins; reads are open to any member. Checkout + portal still forward the
+ * role so auth-service's assertCanManageBilling acts as defense-in-depth. See specs/08.
  */
 @Controller('billing')
-@UseGuards(JwtAuthGuard, WorkspaceGuard)
+@UseGuards(JwtAuthGuard, WorkspaceGuard, PermissionGuard)
 export class BillingController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE)
@@ -39,6 +43,7 @@ export class BillingController {
   }
 
   @Get('subscription')
+  @RequirePermission(contracts.Permission.WORKSPACE_VIEW)
   getSubscription(@CurrentWorkspace() workspaceId: string) {
     return firstValueFrom(
       this.auth.send(contracts.BILLING_PATTERNS.GET_SUBSCRIPTION, { workspaceId }),
@@ -46,6 +51,7 @@ export class BillingController {
   }
 
   @Get('invoices')
+  @RequirePermission(contracts.Permission.WORKSPACE_VIEW)
   listInvoices(@CurrentWorkspace() workspaceId: string) {
     return firstValueFrom(
       this.auth.send(contracts.BILLING_PATTERNS.LIST_INVOICES, { workspaceId }),
@@ -53,6 +59,7 @@ export class BillingController {
   }
 
   @Post('checkout')
+  @RequirePermission(contracts.Permission.WORKSPACE_BILLING_MANAGE)
   createCheckout(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -70,6 +77,7 @@ export class BillingController {
   }
 
   @Post('portal')
+  @RequirePermission(contracts.Permission.WORKSPACE_BILLING_MANAGE)
   createPortal(
     @CurrentWorkspace() workspaceId: string,
     @CurrentWorkspaceRole() workspaceRole: string | undefined,

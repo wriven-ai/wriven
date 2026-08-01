@@ -14,6 +14,7 @@ import {
   AuthUser,
   CORE_PATTERNS,
   CreateMediaDto,
+  Permission,
   PresignUploadDto,
   SERVICE_TOKENS,
 } from '@wriven/contracts';
@@ -22,17 +23,20 @@ import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
+import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 
 @Controller('content/media')
-@UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard)
+@UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 export class MediaController {
   constructor(
     @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Post('presign')
+  @RequirePermission(Permission.MEDIA_MANAGE)
   presign(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -50,6 +54,7 @@ export class MediaController {
   }
 
   @Post()
+  @RequirePermission(Permission.MEDIA_MANAGE)
   create(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -67,6 +72,7 @@ export class MediaController {
   }
 
   @Get()
+  @RequirePermission(Permission.PROJECT_VIEW)
   list(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -84,6 +90,7 @@ export class MediaController {
   }
 
   @Get(':id')
+  @RequirePermission(Permission.PROJECT_VIEW)
   get(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -95,6 +102,7 @@ export class MediaController {
   }
 
   @Delete(':id')
+  @RequirePermission(Permission.MEDIA_MANAGE)
   remove(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,

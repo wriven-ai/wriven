@@ -17,6 +17,7 @@ import {
   CreateContentTypeDto,
   CreateEntryDto,
   ListEntriesQueryDto,
+  Permission,
   SERVICE_TOKENS,
   UpdateContentTypeDto,
   UpdateEntryDto,
@@ -26,11 +27,13 @@ import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
+import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 
 @Controller('content')
-@UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard)
+@UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 export class ContentController {
   constructor(
     @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
@@ -39,6 +42,7 @@ export class ContentController {
   // ── Content types ───────────────────────────────────────────────────────────
 
   @Post('types')
+  @RequirePermission(Permission.CONTENT_TYPE_MANAGE)
   createType(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -56,6 +60,7 @@ export class ContentController {
   }
 
   @Get('types')
+  @RequirePermission(Permission.PROJECT_VIEW)
   listTypes(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -66,6 +71,7 @@ export class ContentController {
   }
 
   @Get('types/:id')
+  @RequirePermission(Permission.PROJECT_VIEW)
   getType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -77,6 +83,7 @@ export class ContentController {
   }
 
   @Patch('types/:id')
+  @RequirePermission(Permission.CONTENT_TYPE_MANAGE)
   updateType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -94,6 +101,7 @@ export class ContentController {
   }
 
   @Delete('types/:id')
+  @RequirePermission(Permission.CONTENT_TYPE_MANAGE)
   deleteType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -107,6 +115,7 @@ export class ContentController {
   // ── Entries ───────────────────────────────────────────────────────────────
 
   @Post('entries')
+  @RequirePermission(Permission.CONTENT_ENTRY_CREATE)
   createEntry(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -124,6 +133,7 @@ export class ContentController {
   }
 
   @Get('entries')
+  @RequirePermission(Permission.PROJECT_VIEW)
   listEntries(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -135,6 +145,7 @@ export class ContentController {
   }
 
   @Get('entries/:id')
+  @RequirePermission(Permission.PROJECT_VIEW)
   getEntry(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -146,6 +157,7 @@ export class ContentController {
   }
 
   @Patch('entries/:id')
+  @RequirePermission(Permission.CONTENT_ENTRY_UPDATE)
   updateEntry(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -165,6 +177,7 @@ export class ContentController {
   }
 
   @Post('entries/:id/publish')
+  @RequirePermission(Permission.CONTENT_ENTRY_PUBLISH)
   publishEntry(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -182,6 +195,7 @@ export class ContentController {
   }
 
   @Delete('entries/:id')
+  @RequirePermission(Permission.CONTENT_ENTRY_DELETE)
   deleteEntry(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -193,6 +207,7 @@ export class ContentController {
   }
 
   @Get('entries/:id/revisions')
+  @RequirePermission(Permission.PROJECT_VIEW)
   listRevisions(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -208,6 +223,7 @@ export class ContentController {
   }
 
   @Post('entries/:id/revisions/:version/restore')
+  @RequirePermission(Permission.CONTENT_ENTRY_UPDATE)
   restoreRevision(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,
