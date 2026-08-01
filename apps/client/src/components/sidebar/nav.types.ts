@@ -3,6 +3,7 @@
 // Keep this file free of React/runtime imports beyond types.
 
 import type { ComponentType, SVGProps } from 'react';
+import type { Permission } from '@wriven/contracts/rbac';
 
 export type IconType = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -61,7 +62,7 @@ export type NavContext = {
     feature?: string;
   };
   /** Single access gate, injected. Builders call only this — never auth internals. */
-  can: (permission: string, scope?: Record<string, string>) => boolean;
+  can: (permission: Permission) => boolean;
   /** Pre-resolved data the nav needs. Never fetched inside a builder. */
   data: NavData;
 };

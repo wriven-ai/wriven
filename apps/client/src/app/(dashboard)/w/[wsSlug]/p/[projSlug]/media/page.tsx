@@ -22,6 +22,9 @@ import { useParams } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiRequestError, mediaApi, uploadMedia } from '@/lib/api';
 import type { MediaView } from '@/lib/types';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
+import { NoAccess } from '@/components/auth/no-access';
 
 const fmtSize = (bytes: number | null): string => {
   if (!bytes) return '—';
@@ -52,6 +55,8 @@ export default function MediaLibraryPage() {
   const queryClient = useQueryClient();
   const queryKey = ['media', projSlug];
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const can = useCan();
+  const canManage = can(Permission.MEDIA_MANAGE);
 
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,6 +118,7 @@ export default function MediaLibraryPage() {
   }, [lightbox]);
 
   const handleFiles = (files: FileList | null) => {
+    if (!canManage) return;
     if (files && files.length) uploadMutation.mutate(Array.from(files));
   };
 
@@ -141,6 +147,8 @@ export default function MediaLibraryPage() {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
+
+  if (!canManage) return <NoAccess />;
 
   return (
     <div className="space-y-8 text-left" id="media-library-workspace">
@@ -311,13 +319,15 @@ export default function MediaLibraryPage() {
                             <Eye className="w-3 h-3" />
                           )}
                         </button>
-                        <button
-                          onClick={(e) => handleDelete(asset.id, e)}
-                          className="p-1 rounded bg-black/50 hover:bg-status-error text-white transition-colors"
-                          title="Delete Asset"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        {canManage && (
+                          <button
+                            onClick={(e) => handleDelete(asset.id, e)}
+                            className="p-1 rounded bg-black/50 hover:bg-status-error text-white transition-colors"
+                            title="Delete Asset"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -381,12 +391,14 @@ export default function MediaLibraryPage() {
                         >
                           {copiedId === asset.id ? 'Copied' : 'ID'}
                         </button>
-                        <button
-                          onClick={(e) => handleDelete(asset.id, e)}
-                          className="p-1.5 border border-brand-border bg-brand-surface hover:bg-status-error/10 hover:text-status-error text-text-muted rounded"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canManage && (
+                          <button
+                            onClick={(e) => handleDelete(asset.id, e)}
+                            className="p-1.5 border border-brand-border bg-brand-surface hover:bg-status-error/10 hover:text-status-error text-text-muted rounded"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

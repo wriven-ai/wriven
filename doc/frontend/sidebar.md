@@ -88,7 +88,26 @@ This is what prevents two rows lighting up at once. A collapsible auto-opens whe
 
 ## RBAC seam
 
-`components/sidebar/use-can.ts` — `useCan()` returns `can(permission, scope?) => boolean`, currently a stub returning `true`. `WorkspaceView.role` / `ProjectView.role` already exist on the session types and are the input for the real implementation. Filling the hook body is the only change needed when RBAC lands — no builder or renderer edits.
+`components/sidebar/use-can.ts` — `useCan()` returns `can(permission: Permission)
+=> boolean`. It resolves the active workspace + project role from the auth store
+(`workspaces`/`projects` keyed by the URL-synced `currentWorkspaceId`/
+`currentProjectId`), computes `effectivePermissions(wsRole, projRole)` once
+(memoized), and tests against it. The cascade is the **identical**
+`effectivePermissions` function the auth-service resolver and gateway
+`PermissionGuard` use — imported from `@wriven/contracts/rbac`, the pure-TS
+subpath of the shared contracts package (the NestJS/class-validator DTOs are
+tree-shaken out). So a workspace owner/admin with no `project_members` row still
+holds every project permission.
+
+The `can` contract is `Permission`-typed (no `scope` param — the store already
+carries active scope), so builders pass enum literals. Builder `permission:`
+values are the **action** perm for that surface (Content Types →
+`CONTENT_TYPE_MANAGE`, Billing → `WORKSPACE_BILLING_MANAGE`, …); list-only
+surfaces every project member reads use `PROJECT_VIEW` (Content). Nav hides
+items the role cannot act on; per-action buttons and management routes gate
+further via `<Can>` / `<RequirePermission>`
+(`components/auth/`). Client gating is UX only — the backend `PermissionGuard`
+(403) is the real gate.
 
 ## Adding navigation
 
@@ -104,7 +123,6 @@ This is what prevents two rows lighting up at once. A collapsible auto-opens whe
 ## Follow-ups
 
 - Feature-level exclusive sub-context (drill-in + back link).
-- Fill `useCan()` against role once the RBAC backend exists.
 - Slug-rename redirects if workspace/project slugs become user-editable.
 - **Default workspace for `/dashboard` — deferred.** `/dashboard` currently resolves the
   active workspace via `pickDefault()` in [use-current-workspace.ts](../../apps/client/src/hooks/use-current-workspace.ts):

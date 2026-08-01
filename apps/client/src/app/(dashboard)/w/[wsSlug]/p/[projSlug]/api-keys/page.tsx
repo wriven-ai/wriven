@@ -18,6 +18,9 @@ import { useParams } from 'next/navigation';
 import React, { useState } from 'react';
 import { ApiRequestError, apiKeyApi } from '@/lib/api';
 import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
+import { NoAccess } from '@/components/auth/no-access';
 import type { ApiKeyScope } from '@/lib/types';
 
 const SCOPES: { value: ApiKeyScope; label: string; desc: string }[] = [
@@ -49,6 +52,7 @@ export default function ApiKeysPage() {
   // The URL carries the project *slug*; resolve the real project id (the value
   // consumers put in the Delivery API path).
   const { projects } = useWorkspaceProjects();
+  const canManage = useCan()(Permission.API_KEY_MANAGE);
   const projectId = projects.find((p) => p.slug === projSlug)?.id ?? '';
 
   const [newName, setNewName] = useState('');
@@ -103,6 +107,8 @@ export default function ApiKeysPage() {
   const curlExample = `curl "https://wriven.io/api/v1/projects/${
     projectId || '<projectId>'
   }/content/blog_post" \\\n  -H "Authorization: Bearer wrk_live_…"`;
+
+  if (!canManage) return <NoAccess />;
 
   return (
     <div className="space-y-8 text-left">
@@ -246,7 +252,7 @@ export default function ApiKeysPage() {
 
             <button
               type="submit"
-              disabled={createMutation.isPending || !newName.trim()}
+              disabled={createMutation.isPending || !newName.trim() || !canManage}
               className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:opacity-60 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg neo-shadow cursor-pointer transition-all"
             >
               {createMutation.isPending ? (
@@ -324,7 +330,7 @@ export default function ApiKeysPage() {
                           revokeMutation.mutate(key.id);
                         }
                       }}
-                      disabled={revokeMutation.isPending}
+                      disabled={revokeMutation.isPending || !canManage}
                       className="inline-flex shrink-0 items-center gap-1.5 p-1.5 px-2.5 border border-brand-border text-text-secondary hover:bg-status-error/10 hover:text-status-error hover:border-status-error/30 rounded-lg font-mono text-3xs font-semibold leading-none cursor-pointer transition-colors disabled:opacity-60"
                     >
                       <Trash2 className="w-3 h-3" />

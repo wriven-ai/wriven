@@ -11,6 +11,8 @@ import {
   projectMemberApi,
 } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
 import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
 import type { InvitationView, ProjectMemberView, ProjectRole } from '@/lib/types';
 
@@ -58,8 +60,8 @@ export default function ProjectMembersPage() {
     (wm) => !(members ?? []).some((pm) => pm.userId === wm.userId),
   );
 
-  const callerRole = members?.find((m) => m.userId === user?.id)?.role;
-  const canManage = callerRole === 'admin';
+  const can = useCan();
+  const canManage = can(Permission.PROJECT_MEMBERS_MANAGE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
   const onError = (err: unknown, fallback: string) =>

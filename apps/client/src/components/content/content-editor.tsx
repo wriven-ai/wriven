@@ -28,6 +28,8 @@ import {
 } from '@/components/ui/sheet';
 import { FieldRow, isFieldEmpty, STATUS_COLORS } from './fields';
 import { RevisionsDrawer } from './revisions-drawer';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
 
 /**
  * Single-entry editor (create + edit). Three columns: left = settings (publish,
@@ -43,6 +45,7 @@ export function ContentEditor({
 }) {
   const router = useRouter();
   const qc = useQueryClient();
+  const can = useCan();
   const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
   const contentBase = `/w/${wsSlug}/p/${projSlug}/content`;
   const contentTypesHref = `/w/${wsSlug}/p/${projSlug}/content-types`;
@@ -211,7 +214,7 @@ export function ContentEditor({
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Settings</span>
           </button>
-          {entryId && (
+          {entryId && can(Permission.CONTENT_ENTRY_DELETE) && (
             <button
               onClick={() => {
                 if (confirm('Delete this entry?')) deleteMutation.mutate();
@@ -224,7 +227,13 @@ export function ContentEditor({
           )}
           <button
             onClick={handleSave}
-            disabled={isSaving || !activeTypeId}
+            disabled={
+              isSaving ||
+              !activeTypeId ||
+              (entryId
+                ? !can(Permission.CONTENT_ENTRY_UPDATE)
+                : !can(Permission.CONTENT_ENTRY_CREATE))
+            }
             className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button px-5 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer neo-shadow"
           >
             {isSaving ? (
@@ -235,7 +244,7 @@ export function ContentEditor({
               <><Save className="w-3.5 h-3.5" /> {entryId ? 'Save' : 'Create'}</>
             )}
           </button>
-          {entry && entry.status !== 'published' && (
+          {entry && entry.status !== 'published' && can(Permission.CONTENT_ENTRY_PUBLISH) && (
             <button
               onClick={() => publishMutation.mutate()}
               disabled={publishMutation.isPending || isDirty}

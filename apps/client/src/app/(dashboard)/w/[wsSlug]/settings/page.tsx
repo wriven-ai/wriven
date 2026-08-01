@@ -7,9 +7,13 @@ import { useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { ApiRequestError, memberApi, workspaceApi } from '@/lib/api';
 import { useCurrentWorkspace } from '@/hooks/use-current-workspace';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
+import { NoAccess } from '@/components/auth/no-access';
 
 export default function WorkspaceSettingsPage() {
   const workspace = useCurrentWorkspace();
+  const can = useCan();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
@@ -73,6 +77,8 @@ export default function WorkspaceSettingsPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
+  if (!can(Permission.WORKSPACE_EDIT)) return <NoAccess />;
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">

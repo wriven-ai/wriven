@@ -25,7 +25,6 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import { useCurrentWorkspace } from '@/hooks/use-current-workspace';
 import {
   useCheckout,
   useInvoices,
@@ -36,6 +35,9 @@ import {
 } from '@/hooks/use-billing';
 import { ApiRequestError } from '@/lib/api';
 import type { BillingCycle, PlanView } from '@/lib/types';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
+import { NoAccess } from '@/components/auth/no-access';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -136,9 +138,8 @@ function BillingInner() {
   const searchParams = useSearchParams();
   const checkoutParam = searchParams.get('checkout');
 
-  const workspace = useCurrentWorkspace();
-  const canManage =
-    workspace?.role === 'owner' || workspace?.role === 'admin';
+  const can = useCan();
+  const canManage = can(Permission.WORKSPACE_BILLING_MANAGE);
 
   const plansQuery = usePlans();
   const subQuery = useSubscription();
@@ -216,6 +217,8 @@ function BillingInner() {
     setNotice(null);
     portal.mutate({ returnUrl: `${origin}${billingPath}` });
   };
+
+  if (!canManage) return <NoAccess />;
 
   return (
     <div className="space-y-8 text-left" id="billing-workspace">

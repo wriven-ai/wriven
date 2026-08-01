@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { ApiRequestError, webhookApi } from '@/lib/api';
 import { WEBHOOK_EVENTS } from '@/lib/types';
 import type { WebhookEvent } from '@/lib/types';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
 
 const EVENT_LABEL: Record<WebhookEvent, string> = {
   'entry.published': 'Published',
@@ -17,6 +19,7 @@ const EVENT_LABEL: Record<WebhookEvent, string> = {
 export function WebhooksSection() {
   const { projSlug } = useParams<{ projSlug: string }>();
   const qc = useQueryClient();
+  const canManage = useCan()(Permission.WEBHOOK_MANAGE);
   const queryKey = ['webhooks', projSlug];
 
   const [url, setUrl] = useState('');
@@ -139,7 +142,7 @@ export function WebhooksSection() {
               <div className="flex shrink-0 items-center gap-2">
                 <button
                   onClick={() => toggleMutation.mutate({ id: h.id, active: !h.active })}
-                  disabled={toggleMutation.isPending}
+                  disabled={toggleMutation.isPending || !canManage}
                   className={`rounded px-2 py-0.5 font-mono text-[8px] font-bold border ${
                     h.active
                       ? 'text-green-500 bg-green-500/10 border-green-500/30'
@@ -152,7 +155,8 @@ export function WebhooksSection() {
                   onClick={() => {
                     if (confirm('Delete this webhook?')) deleteMutation.mutate(h.id);
                   }}
-                  className="text-text-muted hover:text-status-error transition-colors"
+                  disabled={!canManage}
+                  className="text-text-muted hover:text-status-error transition-colors disabled:opacity-40"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -193,7 +197,7 @@ export function WebhooksSection() {
         {error && <p className="font-mono text-[10px] text-status-error">{error}</p>}
         <button
           type="submit"
-          disabled={!url.trim() || events.length === 0 || createMutation.isPending}
+          disabled={!url.trim() || events.length === 0 || createMutation.isPending || !canManage}
           className="inline-flex items-center gap-1.5 rounded-lg bg-brand-accent px-4 py-2 font-mono text-xs font-bold text-white transition-all hover:bg-brand-accent-hover disabled:opacity-60"
         >
           <Plus className="h-3.5 w-3.5" />

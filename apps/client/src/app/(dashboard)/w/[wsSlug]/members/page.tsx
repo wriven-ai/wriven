@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Clock, Mail, RefreshCw, Send, Trash2, Users, X } from 'lucide-react';
 import { ApiRequestError, invitationApi, memberApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
 import type {
   AssignableWorkspaceRole,
   InvitationView,
@@ -39,8 +41,8 @@ export default function MembersPage() {
     enabled: !!currentWorkspaceId,
   });
 
-  const callerRole = members?.find((m) => m.userId === user?.id)?.role;
-  const canManage = callerRole === 'owner' || callerRole === 'admin';
+  const can = useCan();
+  const canManage = can(Permission.WORKSPACE_MEMBERS_MANAGE);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
   const onError = (err: unknown, fallback: string) =>

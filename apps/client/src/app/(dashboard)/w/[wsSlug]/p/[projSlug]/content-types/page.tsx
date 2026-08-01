@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api';
 import type { ContentTypeView, FieldDef, FieldType } from '@/lib/types';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
+import { NoAccess } from '@/components/auth/no-access';
 
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   text: 'Short Text',
@@ -49,6 +52,7 @@ const MULTIPLE_CAPABLE: FieldType[] = ['media', 'reference', 'select'];
 
 export default function ContentTypesPage() {
   const qc = useQueryClient();
+  const canManage = useCan()(Permission.CONTENT_TYPE_MANAGE);
 
   const { data: contentTypes = [], isLoading, error } = useQuery({
     queryKey: ['content-types'],
@@ -200,6 +204,8 @@ export default function ContentTypesPage() {
     ? ((activeMutation.error as any)?.error?.message ??
         `Failed to ${editingId ? 'update' : 'create'} content type`)
     : null;
+
+  if (!canManage) return <NoAccess />;
 
   return (
     <div className="space-y-8 text-left">
@@ -396,6 +402,7 @@ export default function ContentTypesPage() {
                     type="button"
                     onClick={addField}
                     disabled={
+                      !canManage ||
                       !candLabel.trim() ||
                       !candKey.trim() ||
                       (candType === 'reference' && !candRefTypeId)
@@ -417,7 +424,7 @@ export default function ContentTypesPage() {
 
             <button
               type="submit"
-              disabled={!typeName.trim() || !typeApiId.trim() || activeMutation.isPending}
+              disabled={!canManage || !typeName.trim() || !typeApiId.trim() || activeMutation.isPending}
               className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg neo-shadow cursor-pointer transition-all"
             >
               {activeMutation.isPending ? (
@@ -491,14 +498,15 @@ export default function ContentTypesPage() {
                     </button>
                     <button
                       onClick={() => startEdit(type)}
-                      className="p-1.5 border border-brand-border bg-brand-surface hover:bg-brand-accent/10 hover:text-brand-accent text-text-muted rounded cursor-pointer transition-colors"
+                      disabled={!canManage}
+                      className="p-1.5 border border-brand-border bg-brand-surface hover:bg-brand-accent/10 hover:text-brand-accent text-text-muted rounded cursor-pointer transition-colors disabled:opacity-40"
                       title="Edit Schema"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => deleteMutation.mutate(type.id)}
-                      disabled={deleteMutation.isPending}
+                      disabled={!canManage || deleteMutation.isPending}
                       className="p-1.5 border border-brand-border bg-brand-surface hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors disabled:opacity-40"
                       title="Delete Schema"
                     >

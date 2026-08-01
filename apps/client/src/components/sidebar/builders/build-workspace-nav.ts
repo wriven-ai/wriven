@@ -6,6 +6,7 @@ import {
   Settings,
   Users,
 } from 'lucide-react';
+import { Permission } from '@wriven/contracts/rbac';
 import type { NavContext, NavGroup, NavItem } from '../nav.types';
 import { gate, type Gated } from './gate';
 
@@ -31,27 +32,25 @@ export function buildWorkspaceNav(ctx: NavContext): NavGroup | null {
         href: `${base}/members`,
         label: 'Members',
         icon: Users,
-        permission: 'MEMBER_VIEW',
-        scope: { workspaceId: workspace.id },
+        permission: Permission.WORKSPACE_MEMBERS_VIEW,
       },
       {
         href: `${base}/usage`,
         label: 'Usage & Stats',
         icon: Activity,
+        permission: Permission.WORKSPACE_USAGE_VIEW,
       },
       {
         href: `${base}/billing`,
         label: 'Billing',
         icon: CreditCard,
-        permission: 'BILLING_VIEW',
-        scope: { workspaceId: workspace.id },
+        permission: Permission.WORKSPACE_BILLING_MANAGE,
       },
       {
         href: `${base}/settings`,
         label: 'Workspace Settings',
         icon: Settings,
-        permission: 'WORKSPACE_SETTINGS_VIEW',
-        scope: { workspaceId: workspace.id },
+        permission: Permission.WORKSPACE_EDIT,
       },
       {
         href: `${base}/support`,

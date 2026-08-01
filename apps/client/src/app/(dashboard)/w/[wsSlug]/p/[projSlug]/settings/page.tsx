@@ -7,11 +7,15 @@ import { useEffect, useState } from 'react';
 import { ApiRequestError, projectApi } from '@/lib/api';
 import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
 import { WebhooksSection } from '@/components/webhooks/webhooks-section';
+import { useCan } from '@/components/sidebar/use-can';
+import { Permission } from '@wriven/contracts/rbac';
+import { NoAccess } from '@/components/auth/no-access';
 
 export default function ProjectSettingsPage() {
   const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const can = useCan();
   const { workspace, projects, isLoading } = useWorkspaceProjects();
   const project = projects.find((p) => p.slug === projSlug) ?? null;
 
@@ -50,6 +54,8 @@ export default function ProjectSettingsPage() {
   if (isLoading || !project) {
     return <p className="font-mono text-xs text-text-muted">Loading…</p>;
   }
+
+  if (!can(Permission.PROJECT_EDIT)) return <NoAccess />;
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">

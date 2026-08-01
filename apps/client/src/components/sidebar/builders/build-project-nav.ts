@@ -7,6 +7,7 @@ import {
   Settings,
   Users,
 } from 'lucide-react';
+import { Permission } from '@wriven/contracts/rbac';
 import type { NavContext, NavGroup, NavItem } from '../nav.types';
 import { gate, type Gated } from './gate';
 
@@ -19,7 +20,6 @@ export function buildProjectNav(ctx: NavContext): NavGroup | null {
   if (!workspace || !project) return null;
 
   const base = `/w/${workspace.slug}/p/${project.slug}`;
-  const scope = { workspaceId: workspace.id, projectId: project.id };
 
   const items = gate<NavItem>(
     [
@@ -33,43 +33,37 @@ export function buildProjectNav(ctx: NavContext): NavGroup | null {
         href: `${base}/content-types`,
         label: 'Content Types',
         icon: Database,
-        permission: 'CONTENT_TYPE_VIEW',
-        scope,
+        permission: Permission.CONTENT_TYPE_MANAGE,
       },
       {
         href: `${base}/content`,
         label: 'Content',
         icon: FileText,
-        permission: 'CONTENT_VIEW',
-        scope,
+        permission: Permission.PROJECT_VIEW,
       },
       {
         href: `${base}/media`,
         label: 'Media Library',
         icon: Image,
-        permission: 'MEDIA_VIEW',
-        scope,
+        permission: Permission.MEDIA_MANAGE,
       },
       {
         href: `${base}/api-keys`,
         label: 'API Keys',
         icon: Key,
-        permission: 'API_KEY_VIEW',
-        scope,
+        permission: Permission.API_KEY_MANAGE,
       },
       {
         href: `${base}/members`,
         label: 'Members',
         icon: Users,
-        permission: 'MEMBER_VIEW',
-        scope,
+        permission: Permission.PROJECT_MEMBERS_VIEW,
       },
       {
         href: `${base}/settings`,
         label: 'Project Settings',
         icon: Settings,
-        permission: 'PROJECT_SETTINGS_VIEW',
-        scope,
+        permission: Permission.PROJECT_EDIT,
       },
     ] satisfies Gated<NavItem>[],
     ctx.can,

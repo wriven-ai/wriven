@@ -1,5 +1,14 @@
-// Client-facing API shapes. Mirrors the relevant views from @wriven/contracts
-// (kept local so the frontend bundle doesn't pull in the Node/validation lib).
+// Client-facing API shapes. Mirrors the relevant views from @wriven/contracts.
+// Role unions + the RBAC permission catalog are imported directly from
+// @wriven/contracts (its rbac.types module is pure TS — no NestJS/class-validator
+// runtime, so it is safe in the client bundle); the rest is mirrored locally.
+
+import type { ProjectRole, WorkspaceRole } from '@wriven/contracts/rbac';
+import { WORKSPACE_ASSIGNABLE_ROLES } from '@wriven/contracts/rbac';
+
+export type { ProjectRole, WorkspaceRole };
+/** Roles assignable when inviting (owner/guest are never granted via add). */
+export type AssignableWorkspaceRole = (typeof WORKSPACE_ASSIGNABLE_ROLES)[number];
 
 export interface UserView {
   id: string;
@@ -16,7 +25,7 @@ export interface WorkspaceView {
   name: string;
   slug: string;
   createdBy: string;
-  role: string;
+  role: WorkspaceRole;
   /** The user's default workspace — used as the implicit scope at /dashboard.
    *  Optional until the backend sends it; falls back to the first workspace. */
   isDefault?: boolean;
@@ -34,14 +43,10 @@ export interface WorkspaceMemberView {
   id: string;
   workspaceId: string;
   userId: string;
-  role: string; // owner | admin | member
+  role: WorkspaceRole;
   createdAt: string;
   user: MemberUser;
 }
-
-export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'guest';
-/** Roles assignable when inviting (owner is never granted via add). */
-export type AssignableWorkspaceRole = 'admin' | 'member';
 
 export interface ProjectMemberView {
   id: string;
@@ -51,9 +56,6 @@ export interface ProjectMemberView {
   createdAt: string;
   user: MemberUser;
 }
-
-/** Project member roles — a separate enum from workspace roles. All assignable. */
-export type ProjectRole = 'admin' | 'editor' | 'viewer';
 
 // ── Invitations ──────────────────────────────────────────────────────────────
 
@@ -97,7 +99,8 @@ export interface ProjectView {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-  role: string;
+  /** Project role, or null when access is derived from a workspace owner/admin role. */
+  role: ProjectRole | null;
 }
 
 /** Returned by login / register. */

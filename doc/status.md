@@ -51,7 +51,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
 | **Stripe billing** (Checkout, Billing Portal, webhook reconcile) | ✅ | backend done (specs/08); live e2e 🟡 deferred to frontend |
-| **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan` deferred to its own spec |
+| **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan()` filled against the shared cascade; nav + action buttons + management routes gated (specs/13) |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
 
@@ -108,6 +108,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (specs/05) |
 | Webhooks UI (project settings: add/list/pause/delete, secret once) | ✅ | `webhookApi`; HMAC verify documented inline |
 | Email verification page (`/verify-email?token=`) | ✅ | auto-verifies on load; success/error states |
+| **RBAC gating** (`useCan()`, `<Can>`, `<RequirePermission>`) | ✅ | nav + action buttons + management routes gated by `Permission` via the shared `effectivePermissions` cascade (specs/13) |
 
 ## Known gaps / next candidates
 
