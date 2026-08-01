@@ -90,3 +90,5 @@ PROJECT.md
 .gemini
 .cursor
 .commandcode
+
+publish-sdk.sh
