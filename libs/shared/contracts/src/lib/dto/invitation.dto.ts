@@ -1,8 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsIn } from 'class-validator';
-
-const WORKSPACE_ASSIGNABLE = ['admin', 'member'] as const;
-const PROJECT_ROLES = ['admin', 'editor', 'viewer'] as const;
+import { PROJECT_ROLES, WORKSPACE_ASSIGNABLE_ROLES } from '../types/rbac.types';
 
 const lowerEmail = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
@@ -12,8 +10,8 @@ export class CreateWorkspaceInvitationDto {
   @Transform(lowerEmail)
   email!: string;
 
-  @IsIn(WORKSPACE_ASSIGNABLE)
-  role!: (typeof WORKSPACE_ASSIGNABLE)[number];
+  @IsIn(WORKSPACE_ASSIGNABLE_ROLES)
+  role!: (typeof WORKSPACE_ASSIGNABLE_ROLES)[number];
 }
 
 export class CreateProjectInvitationDto {

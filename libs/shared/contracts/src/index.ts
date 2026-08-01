@@ -16,6 +16,7 @@ export * from './lib/types/billing.types';
 export * from './lib/types/api-key.types';
 export * from './lib/types/webhook.types';
 export * from './lib/types/auth.types';
+export * from './lib/types/rbac.types';
 export * from './lib/types/cms.types';
 export * from './lib/types/invitation.types';
 export * from './lib/types/member.types';

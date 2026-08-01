@@ -1,5 +1,7 @@
 /** Shapes exchanged between auth-service and the gateway over TCP. */
 
+import type { Permission, ProjectRole, WorkspaceRole } from './rbac.types';
+
 export interface UserView {
   id: string;
   email: string;
@@ -17,8 +19,8 @@ export interface WorkspaceView {
   slug: string;
   /** User id of the workspace creator. */
   createdBy: string;
-  /** Caller's role in this workspace (`owner` | `admin` | `member`). */
-  role: string;
+  /** Caller's role in this workspace. */
+  role: WorkspaceRole;
 }
 
 /** A project owns CMS content and lives under a workspace. */
@@ -31,8 +33,8 @@ export interface ProjectView {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-  /** Caller's role in this project (`admin` | `editor` | `viewer`). */
-  role: string;
+  /** Caller's role in this project (null if access is workspace-derived only). */
+  role: ProjectRole | null;
 }
 
 /** Result of register/login: tokens + the user's initial tenancy context. */
@@ -77,13 +79,18 @@ export interface AuthUser {
 /** Result of a workspace-membership check. */
 export interface WorkspaceMembership {
   workspaceId: string;
-  role: string;
+  role: WorkspaceRole;
+  /** Cascade-resolved permission set (auth-service computes; gateway enforces). */
+  permissions: Permission[];
 }
 
 /** Result of a project-membership check. */
 export interface ProjectMembership {
   projectId: string;
-  role: string;
+  /** Project role, or null when access is derived from a workspace owner/admin role. */
+  role: ProjectRole | null;
+  /** Cascade-resolved permission set (auth-service computes; gateway enforces). */
+  permissions: Permission[];
 }
 
 /** Full session context — used to restore state after a page reload. */
