@@ -42,6 +42,7 @@ export type EntryStatus = 'draft' | 'published' | 'archived';
 export interface ContentTypeView {
   id: string;
   workspaceId: string;
+  projectId: string;
   name: string;
   apiId: string;
   fields: FieldDef[];
@@ -52,6 +53,7 @@ export interface ContentTypeView {
 export interface ContentEntryView {
   id: string;
   workspaceId: string;
+  projectId: string;
   contentTypeId: string;
   slug: string;
   status: EntryStatus;
@@ -65,6 +67,7 @@ export interface ContentEntryView {
 export interface MediaView {
   id: string;
   workspaceId: string;
+  projectId: string;
   r2Key: string;
   kind: string;
   mime: string | null;

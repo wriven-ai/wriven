@@ -18,11 +18,12 @@ export function Providers({ children }: { children: ReactNode }) {
   const bootstrapped = useRef(false);
 
   useEffect(() => {
-    // Wire the API client to the auth store (token, workspace, auth-failure).
+    // Wire the API client to the auth store (token, workspace, project, auth-failure).
     configureApi({
       getAccessToken: () => useAuthStore.getState().accessToken,
       setAccessToken: (token) => useAuthStore.getState().setAccessToken(token),
       getWorkspaceId: () => useAuthStore.getState().currentWorkspaceId,
+      getProjectId: () => useAuthStore.getState().currentProjectId,
       onAuthFailure: () => useAuthStore.getState().setUnauthenticated(),
     });
 

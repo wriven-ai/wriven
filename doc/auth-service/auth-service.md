@@ -25,16 +25,16 @@ NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema
 
 ### Tenancy
 
-**orgs** — id, name, `slug` (unique), `created_by`→users, created_at.
-**org_members** — org_id→orgs, user_id→users, `role` (`owner`\|`admin`\|`member` CHECK), `unique(org_id, user_id)`, `user_id` index.
-**workspaces** — id, org_id→orgs, name, slug, `unique(org_id, slug)`.
-**workspace_members** — workspace_id→workspaces, user_id→users, `role` (`admin`\|`editor`\|`viewer` CHECK), `unique(workspace_id, user_id)`, `user_id` index.
+**workspaces** — id, name, `slug` (globally unique), `created_by`→users, created_at, updated_at.
+**workspace_members** — workspace_id→workspaces, user_id→users, `role` (`owner`\|`admin`\|`member` CHECK), `unique(workspace_id, user_id)`, `user_id` index.
+**projects** — id, workspace_id→workspaces (cascade), name, slug, `created_by`→users (restrict), `unique(workspace_id, slug)`, `deleted_at` (soft delete).
+**project_members** — project_id→projects (cascade), user_id→users (cascade), `role` (`admin`\|`editor`\|`viewer` CHECK), `unique(project_id, user_id)`, `user_id` index.
 
 ### Hierarchy
 
 ```
-User ──< org_members >── Org ──< workspaces ── workspace_members >── User
-   (a user can belong to many orgs; signup auto-creates one org + one workspace)
+User ──< workspace_members >── Workspace ──< projects ── project_members >── User
+   (a user can belong to many workspaces; signup auto-creates one workspace + one "Default Project")
 ```
 
 ## Tokens
@@ -46,15 +46,15 @@ User ──< org_members >── Org ──< workspaces ── workspace_members
 ## Flows
 
 ### Register (single transaction)
-`POST /auth/register { name, email, password }` →
+`POST /auth/register { name, email, password, workspaceName? }` →
 1. Reject if email exists (`EMAIL_ALREADY_EXISTS`; also caught on the unique constraint for races).
 2. bcrypt hash (rounds `BCRYPT_ROUNDS`, default 12).
-3. **One transaction:** insert user → org (name from optional `orgName`, else `"<name>'s Organization"`; random-suffixed slug) → org_member `owner` → workspace (`Default Workspace`, slug `default`) → workspace_member `admin` → refresh token row.
+3. **One transaction:** insert user → workspace (name from optional `workspaceName`, else `"<name>'s Workspace"`; random-suffixed slug) → workspace_member `owner` → project (`Default Project`, slug `default`) → project_member `admin` → refresh token row.
 4. Issue access + refresh tokens; send verification email (failure logged, never blocks).
-5. Return `{ accessToken, user, org, workspace }` + refresh cookie.
+5. Return `{ accessToken, user, workspace, project }` + refresh cookie.
 
 ### Login
-`POST /auth/login { email, password, rememberMe? }` → look up user, bcrypt compare. On missing email, runs a **dummy bcrypt compare** so timing doesn't leak existence. Generic `INVALID_CREDENTIALS` on any failure. Issues tokens + returns primary org/workspace.
+`POST /auth/login { email, password, rememberMe? }` → look up user, bcrypt compare. On missing email, runs a **dummy bcrypt compare** so timing doesn't leak existence. Generic `INVALID_CREDENTIALS` on any failure. Issues tokens + returns primary workspace/project.
 
 ### Refresh (mandatory rotation)
 `POST /auth/refresh` (refresh cookie) → hash, look up row. If **revoked token is reused → theft**: revoke all of the user's tokens, reject. If valid: revoke old + issue new (rotation), return new access token + cookie.
@@ -90,20 +90,22 @@ User ──< org_members >── Org ──< workspaces ── workspace_members
 
 ## Session & listing
 
-- `auth.getSession({ userId })` → `{ user, orgs[], workspaces[] }` — backs `GET /auth/me`; lets the client restore full context after a page reload + silent refresh.
-- `auth.listOrgs` / `auth.listWorkspaces` → the user's orgs/workspaces with role — back `GET /auth/orgs` and `GET /auth/workspaces`.
+- `auth.getSession({ userId })` → `{ user, workspaces[], projects[] }` — backs `GET /auth/me`; lets the client restore full context after a page reload + silent refresh.
+- `auth.listWorkspaces` → the user's workspaces with role — backs `GET /auth/workspaces`.
 
-## Member management
+## Workspace & project management
 
-`MembersService` handles org & workspace membership CRUD (patterns `auth.org.*` / `auth.workspace.*`), exposed by the gateway under `/orgs/:orgId/members` and `/workspaces/:workspaceId/members` (full detail: [members-api.md](./members-api.md)). Authorization is enforced here from the caller's role:
+`WorkspacesService` handles workspace CRUD (patterns `auth.{createWorkspace,getWorkspace,listWorkspaces,updateWorkspace,deleteWorkspace}`), exposed by the gateway under `/workspaces` and `/workspaces/:workspaceId`. `ProjectsService` handles project CRUD + project membership (patterns `auth.project.*` / `auth.createProject` etc.), exposed under `/workspaces/:workspaceId/projects` and `/projects/:projectId` (full detail: [members-api.md](./members-api.md)). Authorization is enforced here from the caller's role:
 
-- **Org:** list = any member; add/update/remove = owner/admin. Only an owner manages the `owner` role; the org must keep ≥1 owner.
-- **Workspace:** list = any member; add/update/remove = admin. The workspace must keep ≥1 admin.
+- **Workspace:** create/list = any authed user; update = owner/admin; delete = owner. Members: list = any member; add/update/remove = owner/admin. Only an owner manages the `owner` role; the workspace must keep ≥1 owner.
+- **Project:** create = workspace owner/admin; list = any workspace member; update/delete = project admin. Members: list = any member; add/update/remove = project admin (workspace owners/admins have implicit access via the gateway `ProjectGuard`). The project must keep ≥1 admin.
+- Creating a workspace seeds a "Default Project" and adds the creator as project admin.
 - Members are added by **email** and must be an existing user (no invitation flow yet).
 
-## Cross-service handler
+## Cross-service handlers
 
-`auth.validateWorkspaceMember({ userId, workspaceId })` → `{ workspaceId, role }` or `FORBIDDEN`. Called by the gateway's WorkspaceGuard before forwarding workspace-scoped requests to core-service.
+- `auth.validateWorkspaceMember({ userId, workspaceId })` → `{ workspaceId, role }` or `FORBIDDEN`. Called by the gateway's `WorkspaceGuard` before forwarding workspace-scoped requests.
+- `auth.validateProjectMember({ userId, projectId })` → `{ projectId, role }` or `FORBIDDEN`. Called by the gateway's `ProjectGuard` before forwarding project-scoped requests (content).
 
 ## Environment (`apps/auth-service/.env`)
 

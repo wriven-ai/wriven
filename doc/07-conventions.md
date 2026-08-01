@@ -56,7 +56,7 @@ List endpoints accept `?page=1&limit=20` (default 20, max 100). Response: `{ ite
 ## Message patterns (TCP)
 
 Dot-namespaced constants in `@wriven/contracts` (`messages.ts`), never hardcoded:
-`AUTH_PATTERNS` (`auth.*`), `WORKSPACE_PATTERNS` / `ORG_PATTERNS` (`auth.*`), `CORE_PATTERNS` (`core.*`), `SERVICE_TOKENS` (DI tokens for the gateway's TCP clients).
+`AUTH_PATTERNS` (`auth.*`), `WORKSPACE_PATTERNS` / `PROJECT_PATTERNS` (`auth.*`), `CORE_PATTERNS` (`core.*`), `SERVICE_TOKENS` (DI tokens for the gateway's TCP clients).
 
 ## Shared contracts (`@wriven/contracts`)
 

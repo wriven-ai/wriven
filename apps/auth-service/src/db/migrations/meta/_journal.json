@@ -29,6 +29,13 @@
       "when": 1781332603317,
       "tag": "0003_jittery_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781400000000,
+      "tag": "0004_workspace_project_hierarchy",
+      "breakpoints": true
     }
   ]
 }

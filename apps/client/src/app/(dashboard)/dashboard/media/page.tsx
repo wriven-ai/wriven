@@ -2,22 +2,19 @@
 
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Image as ImageIcon, 
-  Upload, 
-  Trash2, 
-  Search, 
-  File, 
-  Grid, 
-  List, 
-  ExternalLink, 
-  Check, 
-  Sparkles, 
-  Eye, 
+import {
+  Upload,
+  Trash2,
+  Search,
+  File,
+  Grid,
+  List,
+  ExternalLink,
+  Check,
+  Eye,
   Layers,
-  FileImage,
   ArrowUpRight,
-  Info
+  Info,
 } from 'lucide-react';
 
 interface MediaAsset {

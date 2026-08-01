@@ -12,7 +12,7 @@ All services connect to **one** Postgres database. Isolation is by **Postgres sc
 
 | Service | Schema | Tables |
 |---------|--------|--------|
-| auth-service | `auth_svc` | users, refresh_tokens, password_reset_tokens, email_verification_tokens, orgs, org_members, workspaces, workspace_members |
+| auth-service | `auth_svc` | users, refresh_tokens, password_reset_tokens, email_verification_tokens, workspaces, workspace_members, projects, project_members |
 | core-service | `core_svc` | content_types, content_entries, content_revisions, media_assets |
 | (migrations journal) | `drizzle` | `__drizzle_migrations` (shared) |
 
@@ -22,11 +22,11 @@ Defined in Drizzle with `pgSchema('auth_svc')` / `pgSchema('core_svc')`. Each se
 
 ## No foreign keys across service boundaries
 
-`user_id`, `workspace_id`, `author_id`, `created_by` in `core_svc` are plain `uuid` columns with **no FK** to `auth_svc`. This is deliberate:
+`user_id`, `workspace_id`, `project_id`, `author_id`, `created_by` in `core_svc` are plain `uuid` columns with **no FK** to `auth_svc`. This is deliberate:
 
 - **Pro:** services are decoupled; auth can restructure its tables freely; future DB split won't break.
 - **Con:** no DB-level referential integrity across services; no cross-service SQL joins.
-- **Mitigations:** the gateway validates `workspace_id` membership at the edge; user/workspace deletion cleanup will be handled by events later; denormalize (e.g. snapshot author name) only where a per-render TCP call would hurt.
+- **Mitigations:** the gateway validates `workspace_id` / `project_id` membership at the edge; user/workspace/project deletion cleanup will be handled by events later; denormalize (e.g. snapshot author name) only where a per-render TCP call would hurt.
 
 FKs *within* a schema are used normally (e.g. `refresh_tokens.user_id → users`, `content_entries.content_type_id → content_types`).
 
@@ -91,11 +91,11 @@ Notes:
 ## Indexes & constraints (highlights)
 
 - Unique on every token hash (`refresh_tokens`, `password_reset_tokens`, `email_verification_tokens`) — looked up on every request.
-- `user_id` indexed on token + member tables (member tables also have a standalone `user_id` index, since the composite `(org_id, user_id)` can't serve `user_id`-only lookups).
+- `user_id` indexed on token + member tables (member tables also have a standalone `user_id` index, since the composite `(workspace_id, user_id)` / `(project_id, user_id)` can't serve `user_id`-only lookups).
 - `users`: `unique(email)`, `unique(provider, provider_id)` (OAuth; NULLs distinct so many locals are fine), CHECK `provider in ('local','google')`.
-- `org_members.role` / `workspace_members.role` CHECK constraints; `content_entries.status` CHECK `in ('draft','published','archived')`.
-- `workspaces`: `unique(org_id, slug)`. `content_entries`: `unique(workspace_id, content_type_id, slug)`, GIN index on `data` jsonb.
-- `users.updated_at` / content tables: `$onUpdate` auto-bump.
+- `workspace_members.role` / `project_members.role` CHECK constraints; `content_entries.status` CHECK `in ('draft','published','archived')`.
+- `workspaces`: `unique(slug)` (globally unique — top-level tenancy). `projects`: `unique(workspace_id, slug)`. `content_entries`: `unique(project_id, content_type_id, slug)`, GIN index on `data` jsonb.
+- `users.updated_at` / workspace / content tables: `$onUpdate` auto-bump.
 
 ## RLS
 

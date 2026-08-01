@@ -2,7 +2,7 @@
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after org/workspace member CRUD + client auth integration._
+_Last reviewed: after User → Workspace → Project tenancy refactor._
 
 ---
 
@@ -25,6 +25,7 @@ _Last reviewed: after org/workspace member CRUD + client auth integration._
 | Response envelope (interceptor + exception filter) | ✅ | `{success,data}` / `{success,error}` |
 | `JwtAuthGuard` (local JWT validation) | ✅ | |
 | `WorkspaceGuard` (`X-Workspace-Id` membership) | ✅ | calls `auth.validateWorkspaceMember` |
+| `ProjectGuard` (`X-Project-Id` membership + workspace-admin bypass) | ✅ | calls `auth.validateProjectMember` |
 | Rate limiting (`@nestjs/throttler`) | ✅ | global + per-route |
 | CORS (credentials) | ✅ | `CLIENT_ORIGIN` |
 | Google OAuth (Passport strategy on gateway) | ✅ | |
@@ -33,26 +34,28 @@ _Last reviewed: after org/workspace member CRUD + client auth integration._
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Register (single signup transaction, optional `orgName`) | ✅ | user+org+workspace+memberships |
+| Register (single signup transaction, optional `workspaceName`) | ✅ | user+workspace+project+memberships |
 | Login (timing-safe, generic error) | ✅ | rememberMe TTL |
 | Refresh (rotation + revoked-reuse theft detection) | ✅ | |
 | Logout | ✅ | |
 | Forgot / reset password (revoke all sessions) | ✅ | no enumeration; mail via nodemailer |
 | Email verification (verify + resend) | ✅ | login not blocked on unverified |
 | Google OAuth login + account linking | ✅ | find-by-googleId → link-by-email → signup |
-| Session `GET /auth/me` (user+orgs+workspaces) | ✅ | reload restore |
-| List orgs / workspaces (`/auth/orgs`, `/auth/workspaces`) | ✅ | |
-| **Org member CRUD** (list/add/update/remove, owner-guard) | ✅ | add by email; ≥1 owner |
-| **Workspace member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
+| Session `GET /auth/me` (user+workspaces+projects) | ✅ | reload restore |
+| List workspaces (`/auth/workspaces`) | ✅ | |
+| **Workspace CRUD** (create/get/update/delete, owner-guard) | ✅ | delete cascades projects+members |
+| **Workspace member CRUD** (list/add/update/remove, owner-guard) | ✅ | add by email; ≥1 owner |
+| **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
+| **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
-| Org/workspace create/rename/delete endpoints | 🔲 | only auto-created on signup so far |
 
 ## core-service (TCP `:5002`) — CMS
 
 | Item | Status | Notes |
 |------|--------|-------|
 | Flexible content model (types + entries + JSONB) | ✅ | headless; user-defined fields |
+| Project-scoped content (content types/entries/media by `project_id`) | ✅ | `workspace_id` retained as denormalized scoping |
 | Content type CRUD | ✅ | soft delete |
 | Entry CRUD (field validation, slug, status, revisions) | ✅ | revision per write |
 | Entry publish + pagination + list filters | ✅ | |
@@ -76,21 +79,21 @@ _Last reviewed: after org/workspace member CRUD + client auth integration._
 | Item | Status | Notes |
 |------|--------|-------|
 | Tailwind v4 | ✅ | |
-| API client (envelope unwrap, 401→refresh→retry, `X-Workspace-Id`) | ✅ | `src/lib/api.ts` |
-| Auth store (Zustand, token in memory) + TanStack Query provider | ✅ | silent session bootstrap |
+| API client (envelope unwrap, 401→refresh→retry, `X-Workspace-Id` + `X-Project-Id`) | ✅ | `src/lib/api.ts` |
+| Auth store (Zustand, token in memory) + TanStack Query provider | ✅ | silent session bootstrap; tracks `currentProjectId` |
 | Auth pages under `(auth)` route group + shared layout | ✅ | login, register, forgot, reset |
-| Login/register wired (rememberMe, orgName, errors) | ✅ | |
+| Login/register wired (rememberMe, workspaceName, errors) | ✅ | |
 | Google button + `/auth/callback` page | ✅ | |
 | `RequireAuth` guard + `useAuth`/`useLogout` (building blocks) | ✅ | not yet applied to dashboard |
-| Dashboard pages | 🟡 | scaffold UI (WIP), not wired to API |
-| Content dashboard wired to `/content/*` | 🔲 | TanStack Query hooks pending |
+| Dashboard layout: live user data + workspace/project switchers | ✅ | |
+| Projects page wired to `/workspaces/:id/projects` + `/projects/*` | ✅ | TanStack Query |
+| Content dashboard wired to `/content/*` | 🟡 | type/entry pages live; switchers drive `X-Project-Id` |
 | Email verification page | 🔲 | API ready |
 
 ## Known gaps / next candidates
 
 - Member **invitation** flow (email invite → accept on signup).
 - **Media upload** (R2 presign) + ImageKit.
-- Org/workspace **management** endpoints (create additional, rename, delete).
-- **Content dashboard** wiring (F5) + apply `RequireAuth` to the dashboard layout.
+- Apply `RequireAuth` to the dashboard layout.
 - **ai-service**.
 - Deploy (Docker Compose on VPS) + CI.

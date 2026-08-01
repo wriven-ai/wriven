@@ -9,6 +9,10 @@ import { MailService } from './mail.service';
 import { MembersController } from './members.controller';
 import { MembersService } from './members.service';
 import { TokenService } from './token.service';
+import { WorkspacesController } from './workspaces.controller';
+import { WorkspacesService } from './workspaces.service';
+import { ProjectsController } from './projects.controller';
+import { ProjectsService } from './projects.service';
 
 @Module({
   imports: [
@@ -21,13 +25,20 @@ import { TokenService } from './token.service';
       }),
     }),
   ],
-  controllers: [AuthController, MembersController],
+  controllers: [
+    AuthController,
+    MembersController,
+    WorkspacesController,
+    ProjectsController,
+  ],
   providers: [
     AuthService,
     TokenService,
     MailService,
     CleanupService,
     MembersService,
+    WorkspacesService,
+    ProjectsService,
   ],
 })
 export class AuthModule {}

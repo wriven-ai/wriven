@@ -31,7 +31,7 @@ export class RegisterDto {
   @MinLength(1)
   @MaxLength(80)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  orgName?: string;
+  workspaceName?: string;
 }
 
 export class LoginDto {

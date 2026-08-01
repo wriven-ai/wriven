@@ -29,13 +29,11 @@ export class EntriesService {
 
   async create(p: {
     workspaceId: string;
+    projectId: string;
     userId: string;
     dto: CreateEntryDto;
   }): Promise<ContentEntryView> {
-    const type = await this.types.requireRow(
-      p.workspaceId,
-      p.dto.contentTypeId,
-    );
+    const type = await this.types.requireRow(p.projectId, p.dto.contentTypeId);
     validateEntryData(type.fields as FieldDef[], p.dto.data);
 
     const slug =
@@ -50,6 +48,7 @@ export class EntriesService {
           .insert(contentEntries)
           .values({
             workspaceId: p.workspaceId,
+            projectId: p.projectId,
             contentTypeId: type.id,
             slug,
             status,
@@ -82,13 +81,14 @@ export class EntriesService {
 
   async list(p: {
     workspaceId: string;
+    projectId: string;
     query: ListEntriesQueryDto;
   }): Promise<Paginated<ContentEntryView>> {
     const page = p.query.page ?? 1;
     const limit = p.query.limit ?? 20;
 
     const filters = [
-      eq(contentEntries.workspaceId, p.workspaceId),
+      eq(contentEntries.projectId, p.projectId),
       isNull(contentEntries.deletedAt),
     ];
     if (p.query.contentTypeId) {
@@ -110,24 +110,26 @@ export class EntriesService {
     return { items: rows.map((r) => this.toView(r)), page, limit, total };
   }
 
-  async get(p: { workspaceId: string; id: string }): Promise<ContentEntryView> {
-    return this.toView(await this.requireRow(p.workspaceId, p.id));
+  async get(p: {
+    workspaceId: string;
+    projectId: string;
+    id: string;
+  }): Promise<ContentEntryView> {
+    return this.toView(await this.requireRow(p.projectId, p.id));
   }
 
   async update(p: {
     workspaceId: string;
+    projectId: string;
     userId: string;
     id: string;
     dto: UpdateEntryDto;
   }): Promise<ContentEntryView> {
-    const entry = await this.requireRow(p.workspaceId, p.id);
+    const entry = await this.requireRow(p.projectId, p.id);
 
     let data = entry.data as Record<string, unknown>;
     if (p.dto.data) {
-      const type = await this.types.requireRow(
-        p.workspaceId,
-        entry.contentTypeId,
-      );
+      const type = await this.types.requireRow(p.projectId, entry.contentTypeId);
       data = { ...data, ...p.dto.data };
       validateEntryData(type.fields as FieldDef[], data);
     }
@@ -176,11 +178,13 @@ export class EntriesService {
 
   async publish(p: {
     workspaceId: string;
+    projectId: string;
     userId: string;
     id: string;
   }): Promise<ContentEntryView> {
     return this.update({
       workspaceId: p.workspaceId,
+      projectId: p.projectId,
       userId: p.userId,
       id: p.id,
       dto: { status: 'published' },
@@ -189,9 +193,10 @@ export class EntriesService {
 
   async remove(p: {
     workspaceId: string;
+    projectId: string;
     id: string;
   }): Promise<{ success: true }> {
-    await this.requireRow(p.workspaceId, p.id);
+    await this.requireRow(p.projectId, p.id);
     await this.db
       .update(contentEntries)
       .set({ deletedAt: new Date() })
@@ -201,11 +206,11 @@ export class EntriesService {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  private async requireRow(workspaceId: string, id: string): Promise<EntryRow> {
+  private async requireRow(projectId: string, id: string): Promise<EntryRow> {
     const row = await this.db.query.contentEntries.findFirst({
       where: and(
         eq(contentEntries.id, id),
-        eq(contentEntries.workspaceId, workspaceId),
+        eq(contentEntries.projectId, projectId),
         isNull(contentEntries.deletedAt),
       ),
     });
@@ -240,6 +245,7 @@ export class EntriesService {
     return {
       id: r.id,
       workspaceId: r.workspaceId,
+      projectId: r.projectId,
       contentTypeId: r.contentTypeId,
       slug: r.slug,
       status: r.status as EntryStatus,

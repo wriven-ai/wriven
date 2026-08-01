@@ -1,21 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Users, 
-  Plus, 
-  Trash2, 
-  Mail, 
-  Globe, 
-  Radio, 
-  Check, 
-  RefreshCw, 
-  Shield, 
-  Sparkles, 
-  Info, 
-  ExternalLink,
-  Lock
+import {
+  Users,
+  Plus,
+  Trash2,
+  Mail,
+  Radio,
+  Check,
+  RefreshCw,
 } from 'lucide-react';
 
 interface Teammate {

@@ -13,7 +13,9 @@ import { ClientProxy } from '@nestjs/microservices';
 import {
   AddWorkspaceMemberDto,
   AuthUser,
+  CreateWorkspaceDto,
   SERVICE_TOKENS,
+  UpdateWorkspaceDto,
   UpdateWorkspaceMemberDto,
   WORKSPACE_PATTERNS,
 } from '@wriven/contracts';
@@ -28,8 +30,75 @@ export class WorkspacesController {
     @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
   ) {}
 
+  // ── Workspace CRUD ───────────────────────────────────────────────────────────
+
+  @Post()
+  create(@CurrentUser() user: AuthUser, @Body() dto: CreateWorkspaceDto) {
+    return firstValueFrom(
+      this.auth.send(WORKSPACE_PATTERNS.CREATE_WORKSPACE, {
+        userId: user.userId,
+        dto,
+      }),
+    );
+  }
+
+  @Get()
+  list(@CurrentUser() user: AuthUser) {
+    return firstValueFrom(
+      this.auth.send(WORKSPACE_PATTERNS.LIST_WORKSPACES, {
+        userId: user.userId,
+      }),
+    );
+  }
+
+  @Get(':workspaceId')
+  get(
+    @CurrentUser() user: AuthUser,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return firstValueFrom(
+      this.auth.send(WORKSPACE_PATTERNS.GET_WORKSPACE, {
+        callerUserId: user.userId,
+        workspaceId,
+      }),
+    );
+  }
+
+  @Patch(':workspaceId')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: UpdateWorkspaceDto,
+  ) {
+    return firstValueFrom(
+      this.auth.send(WORKSPACE_PATTERNS.UPDATE_WORKSPACE, {
+        callerUserId: user.userId,
+        workspaceId,
+        dto,
+      }),
+    );
+  }
+
+  @Delete(':workspaceId')
+  remove(
+    @CurrentUser() user: AuthUser,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return firstValueFrom(
+      this.auth.send(WORKSPACE_PATTERNS.DELETE_WORKSPACE, {
+        callerUserId: user.userId,
+        workspaceId,
+      }),
+    );
+  }
+
+  // ── Workspace members ────────────────────────────────────────────────────────
+
   @Get(':workspaceId/members')
-  list(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
+  listMembers(
+    @CurrentUser() user: AuthUser,
+    @Param('workspaceId') workspaceId: string,
+  ) {
     return firstValueFrom(
       this.auth.send(WORKSPACE_PATTERNS.LIST_MEMBERS, {
         callerUserId: user.userId,
@@ -39,7 +108,7 @@ export class WorkspacesController {
   }
 
   @Post(':workspaceId/members')
-  add(
+  addMember(
     @CurrentUser() user: AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Body() dto: AddWorkspaceMemberDto,
@@ -54,7 +123,7 @@ export class WorkspacesController {
   }
 
   @Patch(':workspaceId/members/:userId')
-  update(
+  updateMember(
     @CurrentUser() user: AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Param('userId') targetUserId: string,
@@ -71,7 +140,7 @@ export class WorkspacesController {
   }
 
   @Delete(':workspaceId/members/:userId')
-  remove(
+  removeMember(
     @CurrentUser() user: AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Param('userId') targetUserId: string,

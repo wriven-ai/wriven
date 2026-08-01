@@ -6,18 +6,18 @@ export interface MemberUser {
   avatar: string | null;
 }
 
-export interface OrgMemberView {
+export interface WorkspaceMemberView {
   id: string;
-  orgId: string;
+  workspaceId: string;
   userId: string;
   role: string; // owner | admin | member
   createdAt: string;
   user: MemberUser;
 }
 
-export interface WorkspaceMemberView {
+export interface ProjectMemberView {
   id: string;
-  workspaceId: string;
+  projectId: string;
   userId: string;
   role: string; // admin | editor | viewer
   createdAt: string;

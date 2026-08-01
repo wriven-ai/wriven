@@ -9,11 +9,12 @@ import { SERVICE_TOKENS } from '@wriven/contracts';
 import { AuthController } from '../auth/auth.controller';
 import { GoogleStrategy } from '../auth/google.strategy';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ProjectGuard } from '../auth/project.guard';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { ContentController } from '../content/content.controller';
-import { OrgsController } from '../members/orgs.controller';
+import { ProjectsController } from '../members/projects.controller';
 import { WorkspacesController } from '../members/workspaces.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -63,13 +64,14 @@ import { AppService } from './app.service';
     AppController,
     AuthController,
     ContentController,
-    OrgsController,
     WorkspacesController,
+    ProjectsController,
   ],
   providers: [
     AppService,
     JwtAuthGuard,
     WorkspaceGuard,
+    ProjectGuard,
     GoogleStrategy,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },

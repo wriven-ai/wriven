@@ -103,58 +103,27 @@ export const emailVerificationTokens = authSchema.table(
 );
 
 // ── Tenancy ───────────────────────────────────────────────────────────────
-
-export const orgs = authSchema.table('orgs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  slug: text('slug').notNull().unique(),
-  createdBy: uuid('created_by')
-    .notNull()
-    .references(() => users.id, { onDelete: 'restrict' }),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
-export const orgMembers = authSchema.table(
-  'org_members',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    orgId: uuid('org_id')
-      .notNull()
-      .references(() => orgs.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull().default('member'), // owner | admin | member
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [
-    uniqueIndex('org_members_org_user_uq').on(t.orgId, t.userId),
-    index('org_members_user_id_idx').on(t.userId),
-    check(
-      'org_members_role_check',
-      sql`${t.role} in ('owner', 'admin', 'member')`,
-    ),
-  ],
-);
+// Hierarchy: User → Workspace → Project → (content, owned by core-service).
+// Workspaces are the top-level tenancy unit, owned directly by a user.
 
 export const workspaces = authSchema.table(
   'workspaces',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    orgId: uuid('org_id')
-      .notNull()
-      .references(() => orgs.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
-    slug: text('slug').notNull(),
+    // Globally unique — workspaces are no longer nested under orgs.
+    slug: text('slug').notNull().unique(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
-  (t) => [uniqueIndex('workspaces_org_slug_uq').on(t.orgId, t.slug)],
 );
 
 export const workspaceMembers = authSchema.table(
@@ -167,7 +136,7 @@ export const workspaceMembers = authSchema.table(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull().default('viewer'), // admin | editor | viewer
+    role: text('role').notNull().default('member'), // owner | admin | member
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -177,6 +146,60 @@ export const workspaceMembers = authSchema.table(
     index('workspace_members_user_id_idx').on(t.userId),
     check(
       'workspace_members_role_check',
+      sql`${t.role} in ('owner', 'admin', 'member')`,
+    ),
+  ],
+);
+
+export const projects = authSchema.table(
+  'projects',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    // Unique within the workspace.
+    slug: text('slug').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('projects_workspace_slug_uq').on(t.workspaceId, t.slug),
+    index('projects_workspace_id_idx').on(t.workspaceId),
+    index('projects_created_by_idx').on(t.createdBy),
+  ],
+);
+
+export const projectMembers = authSchema.table(
+  'project_members',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().default('viewer'), // admin | editor | viewer
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('project_members_project_user_uq').on(t.projectId, t.userId),
+    index('project_members_user_id_idx').on(t.userId),
+    check(
+      'project_members_role_check',
       sql`${t.role} in ('admin', 'editor', 'viewer')`,
     ),
   ],
@@ -188,9 +211,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
   passwordResetTokens: many(passwordResetTokens),
   emailVerificationTokens: many(emailVerificationTokens),
-  orgMemberships: many(orgMembers),
   workspaceMemberships: many(workspaceMembers),
-  createdOrgs: many(orgs),
+  projectMemberships: many(projectMembers),
+  createdWorkspaces: many(workspaces),
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
@@ -220,23 +243,13 @@ export const emailVerificationTokensRelations = relations(
   }),
 );
 
-export const orgsRelations = relations(orgs, ({ one, many }) => ({
+export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   creator: one(users, {
-    fields: [orgs.createdBy],
+    fields: [workspaces.createdBy],
     references: [users.id],
   }),
-  members: many(orgMembers),
-  workspaces: many(workspaces),
-}));
-
-export const orgMembersRelations = relations(orgMembers, ({ one }) => ({
-  org: one(orgs, { fields: [orgMembers.orgId], references: [orgs.id] }),
-  user: one(users, { fields: [orgMembers.userId], references: [users.id] }),
-}));
-
-export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
-  org: one(orgs, { fields: [workspaces.orgId], references: [orgs.id] }),
   members: many(workspaceMembers),
+  projects: many(projects),
 }));
 
 export const workspaceMembersRelations = relations(
@@ -248,6 +261,32 @@ export const workspaceMembersRelations = relations(
     }),
     user: one(users, {
       fields: [workspaceMembers.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  workspace: one(workspaces, {
+    fields: [projects.workspaceId],
+    references: [workspaces.id],
+  }),
+  creator: one(users, {
+    fields: [projects.createdBy],
+    references: [users.id],
+  }),
+  members: many(projectMembers),
+}));
+
+export const projectMembersRelations = relations(
+  projectMembers,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [projectMembers.projectId],
+      references: [projects.id],
+    }),
+    user: one(users, {
+      fields: [projectMembers.userId],
       references: [users.id],
     }),
   }),
