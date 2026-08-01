@@ -9,6 +9,7 @@ import type { DrizzleDB } from '@wriven/database';
 import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { EntitlementsService } from './entitlements.service';
 
 const { users, workspaceMembers } = schema;
 
@@ -18,7 +19,10 @@ type WorkspaceMemberRow = typeof workspaceMembers.$inferSelect & {
 
 @Injectable()
 export class MembersService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   // ── Workspace members ────────────────────────────────────────────────────────
 
@@ -50,10 +54,19 @@ export class MembersService {
     ]);
     const user = await this.findUserByEmail(p.dto.email);
     await this.ensureNotWorkspaceMember(p.workspaceId, user.id);
-    const [row] = await this.db
-      .insert(workspaceMembers)
-      .values({ workspaceId: p.workspaceId, userId: user.id, role: p.dto.role })
-      .returning();
+    const row = await this.db.transaction(async (tx) => {
+      // Enforce the plan's seat quota (TOCTOU-safe, advisory-locked).
+      await this.entitlements.assertMemberQuotaTx(tx, p.workspaceId);
+      const [r] = await tx
+        .insert(workspaceMembers)
+        .values({
+          workspaceId: p.workspaceId,
+          userId: user.id,
+          role: p.dto.role,
+        })
+        .returning();
+      return r;
+    });
     return this.toWorkspaceMemberView({ ...row, user });
   }
 

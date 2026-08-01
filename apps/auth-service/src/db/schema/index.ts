@@ -3,6 +3,8 @@ import {
   boolean,
   check,
   index,
+  integer,
+  jsonb,
   pgSchema,
   text,
   timestamp,
@@ -26,6 +28,8 @@ export const users = authSchema.table(
     providerId: text('provider_id'),
     passwordHash: text('password_hash'),
     emailVerified: boolean('email_verified').notNull().default(false),
+    // Set by a platform admin to block sign-in (moderation). Null = active.
+    suspendedAt: timestamp('suspended_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -344,3 +348,204 @@ export const invitations = authSchema.table(
     ),
   ],
 );
+
+// ── Admin panel (platform staff — SEPARATE from tenant `users`) ─────────────
+// The admin panel is a separate-repo console operated by Wriven staff. Its
+// identity is fully isolated from tenant users: own table, own sessions, own
+// JWT secret/cookies. See doc/admin-panel.
+
+export const adminUsers = authSchema.table(
+  'admin_users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull().unique(),
+    name: text('name').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    role: text('role').notNull().default('member'), // admin | moderator | member
+    totpSecret: text('totp_secret'), // nullable; TOTP MFA (recommended for admin)
+    active: boolean('active').notNull().default(true),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    check(
+      'admin_users_role_check',
+      sql`${t.role} in ('admin', 'moderator', 'member')`,
+    ),
+  ],
+);
+
+export const adminRefreshTokens = authSchema.table(
+  'admin_refresh_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull(),
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revoked: boolean('revoked').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('admin_refresh_tokens_token_hash_uq').on(t.tokenHash),
+    index('admin_refresh_tokens_admin_user_id_idx').on(t.adminUserId),
+  ],
+);
+
+/** Append-only record of every admin write. Mandatory for accountability. */
+export const adminAuditLog = authSchema.table(
+  'admin_audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'restrict' }),
+    action: text('action').notNull(), // e.g. 'user.suspend', 'apikey.revoke'
+    targetType: text('target_type'), // 'user'|'workspace'|'project'|'entry'|...
+    targetId: text('target_id'),
+    metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+    ip: text('ip'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('admin_audit_log_admin_user_id_idx').on(t.adminUserId),
+    index('admin_audit_log_target_idx').on(t.targetType, t.targetId),
+    index('admin_audit_log_created_at_idx').on(t.createdAt),
+  ],
+);
+
+// ── Plans & per-workspace assignment (billing deferred; limits modelled now) ─
+
+export const plans = authSchema.table('plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(), // 'free'|'pro'|'business'
+  name: text('name').notNull(),
+  description: text('description'),
+  // Display: ordering + whether to show on the public pricing page.
+  sortOrder: integer('sort_order').notNull().default(0),
+  isPublic: boolean('is_public').notNull().default(true),
+  active: boolean('active').notNull().default(true),
+
+  // Billing (Stripe-ready; all nullable until billing lands). Prices in cents.
+  priceMonthly: integer('price_monthly'),
+  priceYearly: integer('price_yearly'),
+  currency: text('currency').notNull().default('usd'),
+  stripeProductId: text('stripe_product_id'),
+  stripePriceIdMonthly: text('stripe_price_id_monthly'),
+  stripePriceIdYearly: text('stripe_price_id_yearly'),
+  trialDays: integer('trial_days').notNull().default(0),
+
+  // Quotas (numeric; null/absent = unlimited) — see PlanLimits in contracts.
+  // { projects, members, environments, contentTypes, entries, locales,
+  //   storageMb, assetBandwidthGb, apiRequestsPerMonth, apiKeys, webhooks }
+  limits: jsonb('limits').notNull().default(sql`'{}'::jsonb`),
+  // Entitlements (boolean/enum) — see PlanFeatures in contracts.
+  // { scheduledPublishing, revisionHistory, customRoles, sso, auditLog,
+  //   previewApi, supportTier }
+  features: jsonb('features').notNull().default(sql`'{}'::jsonb`),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * A workspace's subscription to a plan. One row per workspace (the billing unit).
+ * Created as `free` when a workspace is created; an admin or the billing flow can
+ * change the plan. Stripe fields are nullable until billing lands. `overrides`
+ * lets an admin bump a single customer's limits without a custom plan.
+ */
+export const subscriptions = authSchema.table(
+  'subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'restrict' }),
+    // active|trialing|past_due|canceled|paused|incomplete
+    status: text('status').notNull().default('active'),
+    billingCycle: text('billing_cycle'), // 'monthly'|'yearly'|null (free)
+    // Stripe linkage (future billing).
+    stripeCustomerId: text('stripe_customer_id'),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    // Billing period + trial tracking.
+    currentPeriodStart: timestamp('current_period_start', {
+      withTimezone: true,
+    }),
+    currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    canceledAt: timestamp('canceled_at', { withTimezone: true }),
+    // Per-workspace limit overrides (admin bump). Null = use the plan's limits.
+    overrides: jsonb('overrides'),
+    // admin_user id who last changed the plan (no FK across concern).
+    updatedBy: uuid('updated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex('subscriptions_workspace_id_uq').on(t.workspaceId),
+    index('subscriptions_plan_id_idx').on(t.planId),
+    index('subscriptions_status_idx').on(t.status),
+    check(
+      'subscriptions_status_check',
+      sql`${t.status} in ('active','trialing','past_due','canceled','paused','incomplete')`,
+    ),
+  ],
+);
+
+export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
+  refreshTokens: many(adminRefreshTokens),
+  auditEntries: many(adminAuditLog),
+}));
+
+export const adminRefreshTokensRelations = relations(
+  adminRefreshTokens,
+  ({ one }) => ({
+    admin: one(adminUsers, {
+      fields: [adminRefreshTokens.adminUserId],
+      references: [adminUsers.id],
+    }),
+  }),
+);
+
+export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
+  admin: one(adminUsers, {
+    fields: [adminAuditLog.adminUserId],
+    references: [adminUsers.id],
+  }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [subscriptions.workspaceId],
+    references: [workspaces.id],
+  }),
+  plan: one(plans, {
+    fields: [subscriptions.planId],
+    references: [plans.id],
+  }),
+}));

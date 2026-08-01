@@ -8,13 +8,13 @@ import {
   Paginated,
   PresignResult,
   PresignUploadDto,
-  WORKSPACE_MEDIA_QUOTA_BYTES,
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 import { StorageService } from '../storage/storage.service';
 
 const { mediaAssets } = schema;
@@ -45,6 +45,7 @@ export class MediaService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly storage: StorageService,
+    private readonly entitlements: CoreEntitlementsService,
   ) {}
 
   /** Issue a presigned PUT URL + the object key the browser uploads to. */
@@ -65,19 +66,24 @@ export class MediaService {
         `File too large. Max ${mb} MB for this file type.`,
       );
     }
-    // Per-workspace storage quota (R2 free-tier budget). Block before signing.
+    // Per-workspace storage quota from the plan (storageMb). Block before signing.
     if (p.dto.size != null) {
-      const used = await this.workspaceUsage(p.workspaceId);
-      if (used + p.dto.size > WORKSPACE_MEDIA_QUOTA_BYTES) {
-        const quotaMb = Math.round(WORKSPACE_MEDIA_QUOTA_BYTES / (1024 * 1024));
-        const remainingMb = Math.max(
-          0,
-          (WORKSPACE_MEDIA_QUOTA_BYTES - used) / (1024 * 1024),
-        ).toFixed(1);
-        throw rpcError(
-          'VALIDATION_ERROR',
-          `Workspace storage limit reached (${quotaMb} MB). ${remainingMb} MB free — delete some media or upgrade.`,
-        );
+      const limitBytes = await this.entitlements.storageLimitBytes(
+        p.workspaceId,
+      );
+      if (limitBytes != null) {
+        const used = await this.workspaceUsage(p.workspaceId);
+        if (used + p.dto.size > limitBytes) {
+          const quotaMb = Math.round(limitBytes / (1024 * 1024));
+          const remainingMb = Math.max(
+            0,
+            (limitBytes - used) / (1024 * 1024),
+          ).toFixed(1);
+          throw rpcError(
+            'PLAN_LIMIT_REACHED',
+            `Workspace storage limit reached (${quotaMb} MB). ${remainingMb} MB free — delete some media or upgrade.`,
+          );
+        }
       }
     }
     const ext = extFromFilename(p.dto.filename);

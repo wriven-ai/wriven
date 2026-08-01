@@ -36,6 +36,8 @@ const {
   refreshTokens,
   passwordResetTokens,
   emailVerificationTokens,
+  plans,
+  subscriptions,
 } = schema;
 
 type UserRow = typeof users.$inferSelect;
@@ -125,6 +127,18 @@ export class AuthService {
           rememberMe: false,
         });
 
+        // Start the workspace on the free plan (workspace = billing unit).
+        const freePlan = await tx.query.plans.findFirst({
+          where: eq(plans.key, 'free'),
+          columns: { id: true },
+        });
+        if (freePlan) {
+          await tx.insert(subscriptions).values({
+            workspaceId: workspace.id,
+            planId: freePlan.id,
+          });
+        }
+
         // No default project — the user creates their first project in the UI.
         return { user, workspace };
       });
@@ -168,6 +182,12 @@ export class AuthService {
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) {
       throw rpcError('INVALID_CREDENTIALS', 'Email or password is incorrect.');
+    }
+    if (user.suspendedAt) {
+      throw rpcError(
+        'FORBIDDEN',
+        'This account has been suspended. Contact support.',
+      );
     }
 
     const rememberMe = dto.rememberMe ?? false;
@@ -224,6 +244,14 @@ export class AuthService {
     });
     if (!user) {
       throw rpcError('INVALID_REFRESH_TOKEN', 'The refresh token is invalid.');
+    }
+    // A suspended account must not be able to mint new access tokens.
+    if (user.suspendedAt) {
+      await this.db
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.userId, user.id));
+      throw rpcError('FORBIDDEN', 'This account has been suspended.');
     }
 
     const refresh = this.tokens.newRefreshToken();
@@ -396,6 +424,17 @@ export class AuthService {
           await tx
             .insert(workspaceMembers)
             .values({ workspaceId: ws.id, userId: u.id, role: 'owner' });
+          // Start the workspace on the free plan.
+          const freePlan = await tx.query.plans.findFirst({
+            where: eq(plans.key, 'free'),
+            columns: { id: true },
+          });
+          if (freePlan) {
+            await tx.insert(subscriptions).values({
+              workspaceId: ws.id,
+              planId: freePlan.id,
+            });
+          }
           // No default project — the user creates their first project in the UI.
           return u;
         });

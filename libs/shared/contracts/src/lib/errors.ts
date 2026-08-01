@@ -15,6 +15,7 @@ export const ERROR_CODES = {
   },
   OAUTH_FAILED: { code: 'OAUTH_FAILED', statusCode: 400 },
   RATE_LIMITED: { code: 'RATE_LIMITED', statusCode: 429 },
+  PLAN_LIMIT_REACHED: { code: 'PLAN_LIMIT_REACHED', statusCode: 403 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;
 

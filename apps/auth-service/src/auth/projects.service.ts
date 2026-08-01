@@ -13,6 +13,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { EntitlementsService } from './entitlements.service';
 import { MembersService } from './members.service';
 
 const { projects, projectMembers, workspaceMembers, users } = schema;
@@ -32,6 +33,7 @@ export class ProjectsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly members: MembersService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   // ── Project CRUD ────────────────────────────────────────────────────────────
@@ -50,6 +52,8 @@ export class ProjectsService {
     const slug = p.dto.slug ?? uniqueSlug(p.dto.name);
     try {
       const result = await this.db.transaction(async (tx) => {
+        // Enforce the plan's project quota (e.g. free = 2) — TOCTOU-safe.
+        await this.entitlements.assertProjectQuotaTx(tx, p.workspaceId);
         const [project] = await tx
           .insert(projects)
           .values({
@@ -218,6 +222,17 @@ export class ProjectsService {
     userId: string,
     role = 'guest',
   ): Promise<void> {
+    // Already a member → no new seat consumed.
+    const existing = await tx.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, userId),
+      ),
+      columns: { id: true },
+    });
+    if (existing) return;
+    // New seat (incl. project-invite guests) — enforce the plan's member quota.
+    await this.entitlements.assertMemberQuotaTx(tx, workspaceId);
     await tx
       .insert(workspaceMembers)
       .values({ workspaceId, userId, role })

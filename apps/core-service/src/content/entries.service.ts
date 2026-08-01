@@ -18,6 +18,7 @@ import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
 import { CachePurgeService } from '../cache/cache-purge.service';
+import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { ContentTypesService } from './content-types.service';
 import { validateEntryData } from './content.validator';
@@ -32,6 +33,7 @@ export class EntriesService {
     private readonly types: ContentTypesService,
     private readonly webhooks: WebhooksService,
     private readonly cache: CachePurgeService,
+    private readonly entitlements: CoreEntitlementsService,
   ) {}
 
   async create(p: {
@@ -40,6 +42,7 @@ export class EntriesService {
     userId: string;
     dto: CreateEntryDto;
   }): Promise<ContentEntryView> {
+    await this.entitlements.assertEntryQuota(p.workspaceId);
     const type = await this.types.requireRow(p.projectId, p.dto.contentTypeId);
     validateEntryData(type.fields as FieldDef[], p.dto.data);
     await this.assertUniqueFields(

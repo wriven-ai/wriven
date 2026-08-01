@@ -273,3 +273,52 @@ export interface CreateWebhookResult {
   webhook: WebhookView;
   secret: string;
 }
+
+// ── Support tickets ───────────────────────────────────────────────────────────
+
+export type SupportStatus = 'open' | 'pending' | 'resolved' | 'closed';
+export type SupportPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type SupportScope =
+  | 'general'
+  | 'project'
+  | 'billing'
+  | 'account'
+  | 'technical';
+
+export interface SupportAttachmentView {
+  id: string;
+  url: string;
+  mime: string | null;
+  sizeBytes: number | null;
+  originalFilename: string | null;
+}
+
+export interface SupportMessageView {
+  id: string;
+  authorType: 'user' | 'admin';
+  authorId: string;
+  body: string;
+  createdAt: string;
+  attachments: SupportAttachmentView[];
+}
+
+export interface SupportTicketRow {
+  id: string;
+  number: number;
+  subject: string;
+  scopeType: SupportScope;
+  scopeProjectId: string | null;
+  status: SupportStatus;
+  priority: SupportPriority;
+  lastReplyAt: string | null;
+  lastReplyBy: 'user' | 'admin' | null;
+  createdAt: string;
+}
+
+export interface SupportTicketDetail extends SupportTicketRow {
+  workspaceId: string;
+  authorId: string;
+  description: string;
+  attachments: SupportAttachmentView[];
+  messages: SupportMessageView[];
+}

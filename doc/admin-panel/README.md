@@ -4,13 +4,40 @@ The **Wriven Admin Panel** — the internal console used by Wriven staff to oper
 the whole SaaS: oversee every tenant, moderate content, manage plans/limits,
 handle abuse, and audit activity.
 
-This folder is the single source of truth for building it:
+This folder is the single source of truth for building it. The build guides are
+split **one file per module**:
 
 | Doc | For | Covers |
 |-----|-----|--------|
 | **README.md** (this) | everyone | What it is, architecture, roles, the two repos |
-| [backend.md](./backend.md) | **the backend agent (this repo)** | Schema, `AdminJwtGuard` + RBAC + audit, cross-tenant RPC, every `/admin/*` endpoint, CORS/cookies for a cross-origin SPA |
-| [frontend.md](./frontend.md) | **the admin-panel frontend agent (separate repo)** | Full SPA build guide: stack, project structure, auth/data layer, every screen, and the design system |
+| [backend/](./backend/) | **the backend agent (this repo)** | Per-module impl spec (see table below) |
+| [frontend/](./frontend/) | **the admin-panel frontend agent (separate repo)** | Per-module SPA build guide (see table below) |
+| [api-contract.md](./api-contract.md) | **the frontend agent** | Concrete `/admin/*` endpoint table (method/path/role/req/resp) + copy-paste TS types & DTOs. Hand this over directly. |
+
+**Backend modules** ([backend/](./backend/)):
+
+| File | Covers |
+|------|--------|
+| [01-overview.md](./backend/01-overview.md) | File layout, env, build order, implementation status |
+| [02-schema.md](./backend/02-schema.md) | `auth_svc` DDL — admin identity, audit, plans, subscriptions, seed |
+| [03-auth.md](./backend/03-auth.md) | Tokens/cookies, cross-origin CORS, `AdminJwtGuard`, RBAC, TOTP |
+| [04-audit.md](./backend/04-audit.md) | `@Audit` decorator + interceptor → `admin_audit_log` |
+| [05-rpc.md](./backend/05-rpc.md) | Cross-tenant `admin.*` TCP message patterns |
+| [06-endpoints.md](./backend/06-endpoints.md) | Full `/admin/*` HTTP endpoint table |
+| [07-tenancy.md](./backend/07-tenancy.md) | Users / workspaces / projects oversight |
+| [08-moderation.md](./backend/08-moderation.md) | Content / media / api-keys / webhooks moderation |
+| [09-plans.md](./backend/09-plans.md) | Plans + subscriptions + plan-limit enforcement |
+| [10-security.md](./backend/10-security.md) | Security checklist |
+
+**Frontend modules** ([frontend/](./frontend/)):
+
+| File | Covers |
+|------|--------|
+| [01-overview.md](./frontend/01-overview.md) | What you're building, screen order, definition of done |
+| [02-stack-structure.md](./frontend/02-stack-structure.md) | Tech stack, project structure, env |
+| [03-data-layer.md](./frontend/03-data-layer.md) | API client, types, auth bootstrap, query conventions, nav |
+| [04-screens.md](./frontend/04-screens.md) | Every screen, detailed spec |
+| [05-design-system.md](./frontend/05-design-system.md) | Wriven brand tokens (light+dark), typography, components |
 
 > **Definition:** a **separate-repo** React + React Router SPA, talking to a new
 > `/admin/*` API surface on the existing gateway, authenticated by a **separate
@@ -59,7 +86,7 @@ Consequences of the **separate repo** (details in the two sub-docs):
 - **Cross-origin auth.** Admin cookies are set by `api.wriven.com` but read by a
   browser on `admin.wriven.com`. Use `SameSite=None; Secure` httpOnly cookies +
   gateway **CORS allowlist** (`ADMIN_PANEL_ORIGIN`) with `credentials: true`, OR a
-  short-lived bearer token held in memory. backend.md picks the cookie path and
+  short-lived bearer token held in memory. backend/03-auth.md picks the cookie path and
   explains both.
 - **Independent deploy.** The SPA ships on its own (Vercel/Netlify/static host).
   The gateway just needs the CORS origin env set.
@@ -84,14 +111,14 @@ enum small now; can split later without touching tenant code.
 
 ## 4. New database tables (summary)
 
-Full DDL in [backend.md §2](./backend.md). All in the `auth_svc` schema:
+Full DDL in [backend/02-schema.md](./backend/02-schema.md). All in the `auth_svc` schema:
 
 - **`admin_users`** — staff identity (email, passwordHash, `role`
   admin|moderator|member, totpSecret, active). Separate from tenant `users`.
 - **`admin_refresh_tokens`** — admin sessions (separate cookies/secret).
 - **`admin_audit_log`** — append-only record of every admin write (mandatory).
-- **`plans`** + **`workspace_plans`** — plan definitions + per-workspace
-  assignment/limits (billing deferred; assignment + display needed now).
+- **`plans`** + **`subscriptions`** — plan definitions + one subscription per
+  workspace (Stripe-ready; created `free` on workspace creation, admin overrides).
 - (optional) **`platform_settings`** — runtime feature flags.
 
 ---
@@ -101,8 +128,8 @@ Full DDL in [backend.md §2](./backend.md). All in the `auth_svc` schema:
 1. **Backend (this repo)** — schema + migration + seed (`admin` + `free` plan);
    `admin/` gateway module: `AdminJwtGuard`, `RolesGuard`, `@Audit` interceptor,
    `/admin/auth/*`; cross-tenant `admin.*` RPC in auth/core; CORS for the SPA
-   origin. → [backend.md](./backend.md).
-2. **Frontend (separate repo)** — Vite + React Router SPA per [frontend.md](./frontend.md),
+   origin. → [backend/](./backend/).
+2. **Frontend (separate repo)** — Vite + React Router SPA per [frontend/](./frontend/),
    wired to `/admin/*`, screens in priority order, design system applied.
 
 When a module or material change lands, update these docs and
@@ -113,7 +140,7 @@ When a module or material change lands, update these docs and
 ## 6. Open decisions (confirm with product)
 
 - **Auth transport:** cross-origin httpOnly cookies (`SameSite=None; Secure`) —
-  **recommended** — vs in-memory bearer token. backend.md assumes cookies.
+  **recommended** — vs in-memory bearer token. backend/03-auth.md assumes cookies.
 - **Admin SPA domain:** `admin.wriven.com` assumed (sets the CORS origin).
 - **Plan enforcement:** v1 = assign + display limits; wiring limits into tenant
   write paths is a follow-up.

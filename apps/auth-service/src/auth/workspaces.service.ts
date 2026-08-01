@@ -12,8 +12,15 @@ import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
 import { MembersService } from './members.service';
 
-const { workspaces, workspaceMembers, projects, projectMembers, users } =
-  schema;
+const {
+  workspaces,
+  workspaceMembers,
+  projects,
+  projectMembers,
+  users,
+  plans,
+  subscriptions,
+} = schema;
 
 type WorkspaceRow = typeof workspaces.$inferSelect;
 
@@ -59,6 +66,17 @@ export class WorkspacesService {
           userId: p.userId,
           role: 'admin',
         });
+        // Start the new workspace on the free plan.
+        const freePlan = await tx.query.plans.findFirst({
+          where: eq(plans.key, 'free'),
+          columns: { id: true },
+        });
+        if (freePlan) {
+          await tx.insert(subscriptions).values({
+            workspaceId: workspace.id,
+            planId: freePlan.id,
+          });
+        }
         return { workspace, project };
       });
       return {

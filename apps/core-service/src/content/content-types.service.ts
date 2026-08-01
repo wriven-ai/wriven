@@ -10,13 +10,17 @@ import type { DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 
 const { contentTypes } = schema;
 type ContentTypeRow = typeof contentTypes.$inferSelect;
 
 @Injectable()
 export class ContentTypesService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly entitlements: CoreEntitlementsService,
+  ) {}
 
   async create(p: {
     workspaceId: string;
@@ -25,6 +29,7 @@ export class ContentTypesService {
     dto: CreateContentTypeDto;
   }): Promise<ContentTypeView> {
     this.assertUniqueKeys(p.dto.fields);
+    await this.entitlements.assertContentTypeQuota(p.workspaceId);
     try {
       const [row] = await this.db
         .insert(contentTypes)

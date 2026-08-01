@@ -2,6 +2,7 @@ import {
   Activity,
   CreditCard,
   LayoutDashboard,
+  LifeBuoy,
   Settings,
   Users,
 } from 'lucide-react';
@@ -51,6 +52,11 @@ export function buildWorkspaceNav(ctx: NavContext): NavGroup | null {
         icon: Settings,
         permission: 'WORKSPACE_SETTINGS_VIEW',
         scope: { workspaceId: workspace.id },
+      },
+      {
+        href: `${base}/support`,
+        label: 'Support',
+        icon: LifeBuoy,
       },
     ] satisfies Gated<NavItem>[],
     ctx.can,

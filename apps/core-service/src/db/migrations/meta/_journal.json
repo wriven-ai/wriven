@@ -43,6 +43,13 @@
       "when": 1782660073062,
       "tag": "0005_smiling_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782819034734,
+      "tag": "0006_tranquil_ultimatum",
+      "breakpoints": true
     }
   ]
 }
