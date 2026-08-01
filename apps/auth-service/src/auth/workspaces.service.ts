@@ -4,6 +4,7 @@ import {
   UpdateWorkspaceDto,
   WorkspaceView,
 } from '@wriven/contracts';
+import type { WorkspaceRole } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq } from 'drizzle-orm';
@@ -168,7 +169,7 @@ export class WorkspacesService {
   private async roleFor(
     workspaceId: string,
     userId: string,
-  ): Promise<string> {
+  ): Promise<WorkspaceRole> {
     const row = await this.db.query.workspaceMembers.findFirst({
       where: and(
         eq(workspaceMembers.workspaceId, workspaceId),
@@ -179,7 +180,7 @@ export class WorkspacesService {
     return row?.role ?? 'member';
   }
 
-  private toView(w: WorkspaceRow, role: string): WorkspaceView {
+  private toView(w: WorkspaceRow, role: WorkspaceRole): WorkspaceView {
     return {
       id: w.id,
       name: w.name,

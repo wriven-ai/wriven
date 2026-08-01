@@ -6,6 +6,8 @@ import {
   GoogleProfile,
   LoginDto,
   LogoutPayload,
+  ProjectMembership,
+  ProjectRole,
   ProjectView,
   RefreshPayload,
   RefreshResult,
@@ -14,6 +16,8 @@ import {
   SessionView,
   UserView,
   VerifyEmailDto,
+  WorkspaceMembership,
+  WorkspaceRole,
   WorkspaceView,
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
@@ -23,6 +27,7 @@ import { durationToMs } from '../common/duration';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { AuthorizationService } from './authorization.service';
 import { InvitationsService } from './invitations.service';
 import { MailService } from './mail.service';
 import { TokenService } from './token.service';
@@ -56,6 +61,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly mail: MailService,
     private readonly invitations: InvitationsService,
+    private readonly authz: AuthorizationService,
   ) {}
 
   /** Claim any pending invitations for a freshly-created account. Best-effort. */
@@ -457,36 +463,46 @@ export class AuthService {
   async validateWorkspaceMember(p: {
     userId: string;
     workspaceId: string;
-  }): Promise<{ workspaceId: string; role: string }> {
-    const row = await this.db.query.workspaceMembers.findFirst({
-      where: and(
-        eq(workspaceMembers.workspaceId, p.workspaceId),
-        eq(workspaceMembers.userId, p.userId),
-      ),
-      columns: { role: true },
+  }): Promise<WorkspaceMembership> {
+    const roles = await this.authz.resolveRoles(p.userId, {
+      workspaceId: p.workspaceId,
     });
-    if (!row) {
+    if (!roles.wsRole) {
       throw rpcError('FORBIDDEN', 'You are not a member of this workspace.');
     }
-    return { workspaceId: p.workspaceId, role: row.role };
+    return {
+      workspaceId: p.workspaceId,
+      role: roles.wsRole,
+      permissions: [...roles.permissions],
+    };
   }
 
-  /** Project membership check (called by the gateway's ProjectGuard). */
+  /**
+   * Project membership check (called by the gateway's ProjectGuard). Access is
+   * granted when the user has an explicit `project_members` row OR is a
+   * workspace owner/admin (the cascade grants them project permissions with no
+   * project row). The returned permission set is already cascade-resolved, so
+   * the gateway no longer needs a workspace-admin bypass.
+   */
   async validateProjectMember(p: {
     userId: string;
     projectId: string;
-  }): Promise<{ projectId: string; role: string }> {
-    const row = await this.db.query.projectMembers.findFirst({
-      where: and(
-        eq(projectMembers.projectId, p.projectId),
-        eq(projectMembers.userId, p.userId),
-      ),
-      columns: { role: true },
+  }): Promise<ProjectMembership> {
+    const roles = await this.authz.resolveRoles(p.userId, {
+      projectId: p.projectId,
     });
-    if (!row) {
-      throw rpcError('FORBIDDEN', 'You are not a member of this project.');
+    const hasAccess =
+      roles.projRole !== null ||
+      roles.wsRole === 'owner' ||
+      roles.wsRole === 'admin';
+    if (!hasAccess) {
+      throw rpcError('FORBIDDEN', 'You do not have access to this project.');
     }
-    return { projectId: p.projectId, role: row.role };
+    return {
+      projectId: p.projectId,
+      role: roles.projRole,
+      permissions: [...roles.permissions],
+    };
   }
 
   // ── Current user ────────────────────────────────────────────────────────────
@@ -641,7 +657,7 @@ export class AuthService {
 
   private async primaryWorkspace(
     userId: string,
-  ): Promise<{ workspace: WorkspaceRow; workspaceRole: string }> {
+  ): Promise<{ workspace: WorkspaceRow; workspaceRole: WorkspaceRole }> {
     const row = await this.db.query.workspaceMembers.findFirst({
       where: eq(workspaceMembers.userId, userId),
       orderBy: workspaceMembers.createdAt,
@@ -665,7 +681,7 @@ export class AuthService {
     };
   }
 
-  private toWorkspaceView(w: WorkspaceRow, role: string): WorkspaceView {
+  private toWorkspaceView(w: WorkspaceRow, role: WorkspaceRole): WorkspaceView {
     return {
       id: w.id,
       name: w.name,
@@ -675,7 +691,7 @@ export class AuthService {
     };
   }
 
-  private toProjectView(p: ProjectRow, role: string): ProjectView {
+  private toProjectView(p: ProjectRow, role: ProjectRole | null): ProjectView {
     return {
       id: p.id,
       workspaceId: p.workspaceId,

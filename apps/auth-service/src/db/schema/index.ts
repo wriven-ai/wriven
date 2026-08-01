@@ -1,3 +1,4 @@
+import type { ProjectRole, WorkspaceRole } from '@wriven/contracts';
 import { relations, sql } from 'drizzle-orm';
 import {
   boolean,
@@ -143,7 +144,7 @@ export const workspaceMembers = authSchema.table(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull().default('member'), // owner | admin | member
+    role: text('role').notNull().default('member').$type<WorkspaceRole>(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -198,7 +199,7 @@ export const projectMembers = authSchema.table(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull().default('viewer'), // admin | editor | viewer
+    role: text('role').notNull().default('viewer').$type<ProjectRole>(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

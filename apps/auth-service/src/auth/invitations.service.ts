@@ -5,6 +5,7 @@ import {
   InvitationScope,
   InvitationView,
 } from '@wriven/contracts';
+import type { ProjectRole, WorkspaceRole } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { createHash, randomBytes } from 'node:crypto';
@@ -250,10 +251,14 @@ export class InvitationsService {
       // existing role (owner/admin/member) is left untouched (setWhere skips it).
       await tx
         .insert(workspaceMembers)
-        .values({ workspaceId: invite.workspaceId, userId, role: invite.role })
+        .values({
+          workspaceId: invite.workspaceId,
+          userId,
+          role: invite.role as WorkspaceRole,
+        })
         .onConflictDoUpdate({
           target: [workspaceMembers.workspaceId, workspaceMembers.userId],
-          set: { role: invite.role },
+          set: { role: invite.role as WorkspaceRole },
           setWhere: eq(workspaceMembers.role, 'guest'),
         });
     } else {
@@ -261,7 +266,11 @@ export class InvitationsService {
       await this.projects.ensureWorkspaceMember(tx, invite.workspaceId, userId);
       await tx
         .insert(projectMembers)
-        .values({ projectId: invite.projectId!, userId, role: invite.role })
+        .values({
+          projectId: invite.projectId!,
+          userId,
+          role: invite.role as ProjectRole,
+        })
         .onConflictDoNothing({
           target: [projectMembers.projectId, projectMembers.userId],
         });

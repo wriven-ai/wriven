@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuthController } from './auth.controller';
+import { AuthorizationService } from './authorization.service';
 import { AuthService } from './auth.service';
 import { CleanupService } from './cleanup.service';
 import { EntitlementsService } from './entitlements.service';
@@ -37,6 +38,7 @@ import { ProjectsService } from './projects.service';
   ],
   providers: [
     AuthService,
+    AuthorizationService,
     TokenService,
     MailService,
     CleanupService,

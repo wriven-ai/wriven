@@ -7,6 +7,7 @@ import {
   UpdateProjectDto,
   UpdateProjectMemberDto,
 } from '@wriven/contracts';
+import type { ProjectRole, WorkspaceRole } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
@@ -220,7 +221,7 @@ export class ProjectsService {
     tx: Tx,
     workspaceId: string,
     userId: string,
-    role = 'guest',
+    role: WorkspaceRole = 'guest',
   ): Promise<void> {
     // Already a member → no new seat consumed.
     const existing = await tx.query.workspaceMembers.findFirst({
@@ -296,7 +297,7 @@ export class ProjectsService {
     userId: string,
     projectId: string,
     allowed: string[],
-  ): Promise<string> {
+  ): Promise<ProjectRole> {
     const row = await this.db.query.projectMembers.findFirst({
       where: and(
         eq(projectMembers.projectId, projectId),
@@ -358,7 +359,7 @@ export class ProjectsService {
     }
   }
 
-  private async roleFor(projectId: string, userId: string): Promise<string> {
+  private async roleFor(projectId: string, userId: string): Promise<ProjectRole | null> {
     const row = await this.db.query.projectMembers.findFirst({
       where: and(
         eq(projectMembers.projectId, projectId),
@@ -369,7 +370,7 @@ export class ProjectsService {
     return row?.role ?? 'viewer';
   }
 
-  private toView(p: ProjectRow, role: string): ProjectView {
+  private toView(p: ProjectRow, role: ProjectRole | null): ProjectView {
     return {
       id: p.id,
       workspaceId: p.workspaceId,
