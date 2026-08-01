@@ -13,6 +13,7 @@ import {
   WORKSPACE_PATTERNS,
   WorkspaceMembership,
 } from '@wriven/contracts';
+import type { Permission } from '@wriven/contracts';
 import type { Request } from 'express';
 import { firstValueFrom } from 'rxjs';
 
@@ -20,6 +21,7 @@ interface ScopedRequest extends Request {
   user?: AuthUser;
   workspaceId?: string;
   workspaceRole?: string;
+  workspacePermissions?: Set<Permission>;
 }
 
 /**
@@ -54,6 +56,7 @@ export class WorkspaceGuard implements CanActivate {
 
     req.workspaceId = membership.workspaceId;
     req.workspaceRole = membership.role;
+    req.workspacePermissions = new Set(membership.permissions);
     return true;
   }
 
