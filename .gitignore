@@ -90,3 +90,6 @@ PROJECT.md
 .gemini
 .cursor
 .commandcode
+
+# Local-only scripts (may contain secrets — never commit)
+publish-sdk.sh
