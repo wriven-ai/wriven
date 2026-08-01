@@ -5,6 +5,8 @@ candid inventory of gaps — not a roadmap promise. Each item: **what** it is,
 **why** it matters, **now** (current state), **effort** (S ≤ days · M ≤ 1–2 wks ·
 L ≤ 1 mo · XL multi-month).
 
+_Last reviewed: after frontend RBAC (specs/13) + backend RBAC fix._
+
 Priority legend:
 - **P0** — blocks charging money / running in production safely. Do first.
 - **P1** — table-stakes; a buyer comparing Wriven to Contentful/Sanity expects it.
@@ -22,9 +24,11 @@ Priority legend:
 
 So the gaps read in context. ✅ = working.
 
-- ✅ **Auth/tenancy** — register/login/refresh/logout, Google OAuth, email verify,
-  password reset, JWT cookies + CSRF; users → workspaces → projects; workspace +
-  project members; invitations.
+- ✅ **Auth/tenancy + RBAC** — register/login/refresh/logout, Google OAuth, email
+  verify, password reset, JWT cookies + CSRF; users → workspaces → projects;
+  workspace + project members; invitations; **typed permission layer + cascade**
+  (specs/12) enforced gateway-side (core routes) + service-side (auth/billing
+  routes), mirrored client-side via `useCan()` (specs/13).
 - ✅ **Content** — user-defined content types (8 field types incl. `reference` +
   `media`), entries (draft/published/archived), revisions + restore, unique-field
   enforcement, server validation.
@@ -42,8 +46,8 @@ So the gaps read in context. ✅ = working.
   types, API keys, webhooks, storage).
 - ✅ **Plans/subscriptions + billing** — free/pro/business, limits + enforcement,
   Stripe Checkout + Billing Portal + webhook → `subscriptions` reconciliation
-  (specs/08, backend done; live e2e pending the frontend billing page + sandbox
-  account config).
+  (specs/08 backend); **frontend billing page** — Checkout redirect, portal link,
+  invoice list (specs/09, 10); live e2e pending only the sandbox account config.
 - 🟡 **Frontend** — tenant dashboard (Next.js) exists; admin-panel SPA in progress
   (separate repo).
 
@@ -61,12 +65,11 @@ So the gaps read in context. ✅ = working.
   Products/Prices + `plans.stripe_*` backfilled on the sandbox; read path +
   Checkout-session creation validated live. Entitlements already read the
   `subscriptions` row, so upgrades/downgrades need zero enforcement changes.
-- **Need:** the **frontend** billing page (Checkout redirect, portal link, replace
-  the mock pricing cards) — separate spec; the sandbox account needs a publishable
-  key + Managed Payments provisioning/disabling before the hosted Checkout page
-  renders; then the live webhook → entitlements e2e. Trials were removed (no trial
-  system); dunning terminal outcome (cancel vs `unpaid`) + cancel-grace policy are
-  open product decisions.
+- **Need:** the sandbox account needs a publishable key + Managed Payments
+  provisioning/disabling before the hosted Checkout page renders; then the live
+  webhook → entitlements e2e (the frontend page + reconciler are built — specs/08,
+  09, 10, 11). Trials were removed (no trial system); dunning terminal outcome
+  (cancel vs `unpaid`) + cancel-grace policy are open product decisions.
 
 ### Usage metering — **L**
 - **What:** measure API requests/month, asset bandwidth, storage **over time** per
@@ -194,9 +197,14 @@ So the gaps read in context. ✅ = working.
 
 ## P2 — Competitive / scale
 
-### Granular RBAC & custom roles — **L**
-- Field-level / content-type-level permissions, custom roles. Now: coarse workspace
-  (owner/admin/member/guest) + project (admin/editor/viewer) roles only.
+### Granular RBAC & custom roles — **M** (seam landed)
+- Field-level / content-type-level permissions, custom roles. Now: a typed
+  `Permission` catalog + role→permission maps + cascade resolver are **shipped**
+  (specs/12 backend, specs/13 frontend) — coarse roles (workspace owner/admin/
+  member/guest + project admin/editor/viewer) drive a permission set every call
+  site checks, not a role string. What remains: per-workspace **custom roles**
+  (the `customRoles` entitlement flag) and **field-level** permissions — both are
+  now a flip on the existing permission seam, not a rewrite.
 
 ### SSO / SAML / SCIM — **L**
 - Enterprise login. Plan model flags `sso` as a Business feature — **not built**.
@@ -255,14 +263,16 @@ So the gaps read in context. ✅ = working.
 
 A pragmatic sequence — ship something chargeable without boiling the ocean:
 
-1. **Make it sellable:** Stripe billing + usage metering + production deploy +
+1. **Make it sellable:** Stripe billing **live e2e** (code is done — needs the
+   sandbox account config + a run) + usage metering + production deploy +
    transactional email. (P0)
 2. **Make it safe:** observability + backups/DR + security hardening (CORS,
    per-key rate limit, secret/dep scanning) + a baseline integration test suite. (P0)
 3. **Make it credible:** publish the SDK, finish the admin SPA, add OpenAPI docs,
    scheduled publishing, full-text search, on-the-fly image transforms. (P1)
 4. **Make it competitive:** GraphQL, localization, environments, richer field
-   types/components, granular RBAC. (P1→P2)
+   types/components, **custom roles + field-level perms** (the RBAC permission seam
+   is already shipped — specs/12, 13; only custom roles + field-level remain). (P1→P2)
 5. **Differentiate:** ship the AI service (the "AI-native" promise), real-time
    collaboration, DAM. (P2)
 
@@ -277,7 +287,7 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 
 | Gap | Priority | Effort | State |
 |-----|----------|--------|-------|
-| Stripe billing | P0 | M | backend done; frontend billing page + sandbox account config + live e2e remain |
+| Stripe billing | P0 | M | backend + frontend page done; sandbox account config + live e2e remain |
 | Usage metering (API/bandwidth) | P0 | L | limits defined, unmeasured |
 | Production deploy + infra | P0 | L | local only |
 | Transactional email at scale | P0 | S | Gmail SMTP (dev) |
@@ -296,5 +306,6 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 | Publish SDK | P1 | S | built, unpublished |
 | Admin panel UI | P1 | L | in progress |
 | SSO/SAML | P2 | L | flag only |
+| Granular RBAC seam | P2 | M | typed perms + cascade shipped (specs/12, 13); custom roles + field-level remain |
 | AI service | P2 | XL | skeleton |
 | Real-time collab | P2 | XL | none |
