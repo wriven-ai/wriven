@@ -34,6 +34,7 @@ import type {
   SupportTicketDetail,
   SupportTicketRow,
   SubscriptionView,
+  UsageView,
   WebhookEvent,
   WebhookView,
   WorkspaceMemberView,
@@ -697,6 +698,11 @@ export const billingApi = {
       body: dto ?? {},
       workspace: true,
     }),
+};
+
+export const usageApi = {
+  /** Current-period workspace usage (Delivery API requests + storage). */
+  getUsage: () => request<UsageView>('/usage', { workspace: true }),
 };
 
 /**

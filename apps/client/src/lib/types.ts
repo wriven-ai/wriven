@@ -398,6 +398,22 @@ export interface PortalSessionView {
   url: string;
 }
 
+/** A billing window. v1 = calendar month, UTC midnight boundaries. */
+export interface UsagePeriod {
+  start: string;
+  end: string;
+}
+
+/**
+ * Current-period workspace usage vs plan limits. `limit: null` = the plan
+ * dimension is unlimited. Backed by `GET /usage` (specs/14).
+ */
+export interface UsageView {
+  period: UsagePeriod;
+  requests: { used: number; limit: number | null };
+  storage: { usedMb: number; limitMb: number | null };
+}
+
 export type InvoiceStatus =
   | 'draft'
   | 'open'
