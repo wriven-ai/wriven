@@ -19,6 +19,8 @@ import type { Response } from 'express';
 import { firstValueFrom } from 'rxjs';
 import { ApiKeyGuard } from '../auth/api-key.guard';
 import { CurrentApiKey } from '../auth/current-api-key.decorator';
+import { UsageBufferService } from '../usage/usage-buffer.service';
+import { UsageEnforceService } from '../usage/usage-enforce.service';
 
 /** Read keys see published only; preview/manage keys also see drafts. */
 const isPreview = (key: ApiKeyResolution): boolean => key.scope !== 'read';
@@ -34,6 +36,8 @@ const isPreview = (key: ApiKeyResolution): boolean => key.scope !== 'read';
 export class DeliveryController {
   constructor(
     @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
+    private readonly usageEnforce: UsageEnforceService,
+    private readonly usageBuffer: UsageBufferService,
   ) {}
 
   @Get('content/:apiId')
@@ -45,6 +49,7 @@ export class DeliveryController {
     @Res({ passthrough: true }) res: Response,
   ) {
     this.assertProject(key, projectId);
+    await this.usageEnforce.assertRequests(key.workspaceId);
     const preview = isPreview(key);
     const result = await firstValueFrom<{ items: Array<{ id: string }> }>(
       this.core.send(CORE_PATTERNS.DELIVERY_LIST, {
@@ -62,6 +67,7 @@ export class DeliveryController {
       ...result.items.map((e) => `entry_${e.id}`),
     ];
     this.setCache(res, preview, tags);
+    this.usageBuffer.bump(key.workspaceId);
     return result;
   }
 
@@ -75,6 +81,7 @@ export class DeliveryController {
     @Res({ passthrough: true }) res: Response,
   ) {
     this.assertProject(key, projectId);
+    await this.usageEnforce.assertRequests(key.workspaceId);
     const preview = isPreview(key);
     const result = await firstValueFrom<{ id: string }>(
       this.core.send(CORE_PATTERNS.DELIVERY_GET, {
@@ -87,6 +94,7 @@ export class DeliveryController {
     );
     const tags = [`proj_${key.projectId}`, `type_${apiId}`, `entry_${result.id}`];
     this.setCache(res, preview, tags);
+    this.usageBuffer.bump(key.workspaceId);
     return result;
   }
 

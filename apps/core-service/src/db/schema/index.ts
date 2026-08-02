@@ -317,6 +317,40 @@ export const supportTicketAttachments = coreSchema.table(
   ],
 );
 
+// ── Usage metering (Delivery API request counter; workspace = billing unit) ─
+
+/**
+ * Per-workspace, per-period Delivery API request counter. One row per
+ * workspace × billing period, incremented atomically
+ * (`ON CONFLICT … request_count + n`). `workspace_id` has no cross-schema FK
+ * (auth_svc boundary — same denormalized pattern as content_entries). The
+ * gateway batches increments off the hot path and flushes via core.usage.record.
+ * See specs/14.
+ */
+export const usageBuckets = coreSchema.table(
+  'usage_buckets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id').notNull(),
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+    requestCount: bigint('request_count', { mode: 'number' })
+      .notNull()
+      .default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex('usage_buckets_workspace_period_uq').on(
+      t.workspaceId,
+      t.periodStart,
+    ),
+    index('usage_buckets_workspace_idx').on(t.workspaceId),
+  ],
+);
+
 // ── Relations (Drizzle relational query API; no DB change) ──────────────────
 
 export const contentTypesRelations = relations(contentTypes, ({ many }) => ({

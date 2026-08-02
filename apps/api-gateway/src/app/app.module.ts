@@ -42,6 +42,7 @@ import { WebhooksController } from '../webhooks/webhooks.controller';
 import { SupportController } from '../support/support.controller';
 import { BillingController } from '../billing/billing.controller';
 import { StripeWebhookController } from '../billing/stripe-webhook.controller';
+import { UsageModule } from '../usage/usage.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -85,6 +86,7 @@ import { AppService } from './app.service';
         }),
       },
     ]),
+    UsageModule,
   ],
   controllers: [
     AppController,

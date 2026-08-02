@@ -119,6 +119,16 @@ export class CoreEntitlementsService {
     return mb == null ? null : mb * 1024 * 1024;
   }
 
+  /**
+   * Effective plan limits for a workspace, or `null` when unresolvable (auth
+   * unreachable, no cache → fail open). Thin public accessor over the cached
+   * resolver so usage display reuses the same fail-open path as enforcement
+   * (specs/14). Does not alter cache/TTL/fail-open behavior.
+   */
+  async effectiveLimits(workspaceId: string): Promise<PlanLimits | null> {
+    return this.limits(workspaceId);
+  }
+
   private assert(used: number, max: number, label: string): void {
     if (used >= max) {
       throw rpcError(

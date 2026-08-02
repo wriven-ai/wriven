@@ -131,6 +131,17 @@ export const BILLING_PATTERNS = {
 } as const;
 
 /**
+ * Usage metering (Delivery API request counter + storage). Owned by
+ * core-service (it owns the metered resources: api_keys, delivery, media).
+ * The gateway batches increments off the hot path and flushes via RECORD; READ
+ * composes the current-period UsageView. See specs/14.
+ */
+export const USAGE_PATTERNS = {
+  RECORD: 'core.usage.record',
+  READ: 'core.usage.read',
+} as const;
+
+/**
  * Platform admin panel. Cross-tenant, god-mode operations. Backed by a separate
  * `admin_users` identity (auth-service) and cross-tenant reads in both services.
  * See doc/admin-panel.
