@@ -58,6 +58,7 @@ Feature design docs live in [`../specs/`](../specs/). Each describes one feature
 | [05 — Invitations](../specs/05-invitations.md) | Pending-invitation token flow, accept-on-signup, project→workspace auto-add, project-list leak fix, member onboarding |
 | [06 — Client SDK](../specs/06-sdk.md) | `@wriven-ai/*` package strategy, dual ESM/CJS publishing foundation, isomorphic typed client design, phased build order |
 | [07 — Embedded Studio](../specs/07-embedded-studio.md) | `@wriven-ai/studio` at the customer's `/wriven` route: cross-origin auth handshake, origin allowlist, editor packaging, distribution |
+| [14 — Usage Metering](../specs/14-usage-metering.md) | Delivery API request counter (`usage_buckets`), batched gateway flush, `GET /usage` + dashboard, soft fail-open overage gate (`USAGE_ENFORCE`) |
 
 > New spec? Run `/create-spec <feature name>` — it drafts the file under `../specs/` with the next number. (Spec numbering is non-contiguous: `02` graduated to `plans/`.)
 
@@ -68,6 +69,7 @@ Execution recipes derived from a spec — ordered steps, files per step, per-ste
 | Plan | Executes spec | Covers |
 |------|---------------|--------|
 | [01 — Model A Build Plan](../plans/01-model-a-build-plan.md) | [01 — Content Delivery & Plans](../specs/01-content-delivery-and-plans.md) | Phased build: api_keys table, token guard, Delivery API, dashboard keys UI, CDN purge, webhooks, preview, plans/metering, media |
+| [07 — Usage Metering](../plans/07-usage-metering.md) | [14 — Usage Metering](../specs/14-usage-metering.md) | Contracts → schema → core usage module → gateway buffer + enforce + `/usage` → frontend widget → docs |
 
 > New plan? Run `/create-plan <spec number or slug>` — it reads the spec + codebase and drafts `../plans/<NN>-<slug>.md`.
 

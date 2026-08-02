@@ -13,7 +13,7 @@ All services connect to **one** Postgres database. Isolation is by **Postgres sc
 | Service | Schema | Tables |
 |---------|--------|--------|
 | auth-service | `auth_svc` | users, refresh_tokens, password_reset_tokens, email_verification_tokens, workspaces, workspace_members, projects, project_members, invitations, plans, subscriptions, stripe_events, admin_users, admin_refresh_tokens, admin_audit_log |
-| core-service | `core_svc` | content_types, content_entries, content_revisions, media_assets |
+| core-service | `core_svc` | content_types, content_entries, content_revisions, media_assets, api_keys, webhooks, support_tickets, support_ticket_messages, support_ticket_attachments, usage_buckets |
 | (migrations journal) | `drizzle` | `__drizzle_migrations` (shared) |
 
 Defined in Drizzle with `pgSchema('auth_svc')` / `pgSchema('core_svc')`. Each service runs migrations scoped to its own schema via `schemaFilter` in its `drizzle.config.ts`.

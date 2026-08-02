@@ -5,7 +5,7 @@ candid inventory of gaps — not a roadmap promise. Each item: **what** it is,
 **why** it matters, **now** (current state), **effort** (S ≤ days · M ≤ 1–2 wks ·
 L ≤ 1 mo · XL multi-month).
 
-_Last reviewed: after frontend RBAC (specs/13) + backend RBAC fix._
+_Last reviewed: after usage metering (specs/14)._
 
 Priority legend:
 - **P0** — blocks charging money / running in production safely. Do first.
@@ -48,6 +48,9 @@ So the gaps read in context. ✅ = working.
   Stripe Checkout + Billing Portal + webhook → `subscriptions` reconciliation
   (specs/08 backend); **frontend billing page** — Checkout redirect, portal link,
   invoice list (specs/09, 10); live e2e pending only the sandbox account config.
+- 🟡 **Usage metering** — Delivery API request counter (`usage_buckets`) +
+  `GET /usage` + dashboard page shipped (specs/14); soft overage gate built but
+  default-off pending live validation; `assetBandwidthGb` still unmeasured.
 - 🟡 **Frontend** — tenant dashboard (Next.js) exists; admin-panel SPA in progress
   (separate repo).
 
@@ -71,16 +74,21 @@ So the gaps read in context. ✅ = working.
   09, 10, 11). Trials were removed (no trial system); dunning terminal outcome
   (cancel vs `unpaid`) + cancel-grace policy are open product decisions.
 
-### Usage metering — **L**
+### Usage metering — **M** (counting + read shipped; live enforcement pending)
 - **What:** measure API requests/month, asset bandwidth, storage **over time** per
   workspace; enforce + display; overage handling.
 - **Why:** plans advertise `apiRequestsPerMonth` / `assetBandwidthGb` but those are
   **never measured or enforced**. Only count-based caps (projects/entries/…) bite.
-- **Now:** limit fields exist in plan JSON; storage is checked at upload; **no
-  request/bandwidth metering** anywhere.
-- **Need:** a metering pipeline (counter per key/workspace per period; e.g.
-  increment in the API-key guard → rollup table or Redis), a usage dashboard, and
-  block/throttle on overage.
+- **Now:** **shipped (specs/14)** — `core_svc.usage_buckets` counts Delivery API
+  requests per workspace per calendar month (gateway batches increments off the
+  hot path → atomic upsert); `core.usage.read` composes a `UsageView`
+  (requests used/limit + storage used/limit from the live media SUM + effective
+  plan limits); `GET /usage` + a real dashboard Usage page (replaced the mock).
+  Overage gate built but **soft + fail-open + default-off** (`USAGE_ENFORCE`).
+- **Need:** validate counters against real staging traffic, then flip
+  `USAGE_ENFORCE=true`. `assetBandwidthGb` is still **unmeasured** (media is
+  R2 keys-only — real egress lives in R2, not the gateway); deferred until an
+  R2/egress integration lands.
 
 ### Production deployment + infra — **L** (user-deferred)
 - **What:** deploy gateway + auth + core (+ ai) to prod; managed Postgres,
@@ -288,7 +296,7 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 | Gap | Priority | Effort | State |
 |-----|----------|--------|-------|
 | Stripe billing | P0 | M | backend + frontend page done; sandbox account config + live e2e remain |
-| Usage metering (API/bandwidth) | P0 | L | limits defined, unmeasured |
+| Usage metering (API/bandwidth) | P0 | M | request counter + `GET /usage` + dashboard shipped (specs/14); enforce gate default-off; bandwidth still unmeasured |
 | Production deploy + infra | P0 | L | local only |
 | Transactional email at scale | P0 | S | Gmail SMTP (dev) |
 | Observability | P0 | M | stdout logs only |

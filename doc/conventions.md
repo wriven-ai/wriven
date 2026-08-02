@@ -31,7 +31,7 @@ Defined in `@wriven/contracts` (`errors.ts`):
 | `INVALID_RESET_TOKEN` | 400 | Reset token bad/expired/used |
 | `INVALID_VERIFICATION_TOKEN` | 400 | Verify token bad/expired/used |
 | `OAUTH_FAILED` | 400 | Google exchange failed |
-| `RATE_LIMITED` | 429 | Too many requests |
+| `RATE_LIMITED` | 429 | Too many requests. Also returned by the Delivery API when a workspace exceeds its monthly `apiRequestsPerMonth` quota and `USAGE_ENFORCE=true` (soft, fail-open usage metering — specs/14) |
 | `PLAN_LIMIT_REACHED` | 403 | Quota exceeded (projects/members/entries/…) |
 | `STRIPE_WEBHOOK_INVALID` | 400 | Stripe webhook signature verification failed |
 | `SUBSCRIPTION_EXISTS` | 409 | Workspace already has a live subscription — use the Billing Portal |

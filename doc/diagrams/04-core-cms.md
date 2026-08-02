@@ -20,5 +20,8 @@ The CMS engine: content modeling, entry lifecycle, the public Delivery API, and 
 ## Media (R2, keys-only)
 Presign → direct PUT to R2 → persist the object **key** (never a URL) in `media_assets` → delivery reconstructs the public URL at read. Per-workspace quota (100 MB) + per-file caps enforced at presign.
 
+## Usage metering (specs/14)
+`usage_buckets` — one row per workspace × calendar month (UTC), `request_count` bigint atomically incremented (`ON CONFLICT … + n`). The gateway counts each Delivery request in-process and flushes a batch every ~15s (`core.usage.record`); it never blocks the hot path. `core.usage.read` composes the current-period `UsageView` = request count + live `media_assets` byte SUM + effective plan limits (via `CoreEntitlementsService`, cached + fail-open). Surfaced at `GET /usage` + the dashboard Usage page. Soft overage gate (`USAGE_ENFORCE`, default off) → `RATE_LIMITED` 429. `assetBandwidthGb` is **not** metered (R2 keys-only — egress lives in R2).
+
 ## Source
 [`04-core-cms.svg`](./04-core-cms.svg) · code: [`apps/core-service/src/`](../../apps/core-service/src/)

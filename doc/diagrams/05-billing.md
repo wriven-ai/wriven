@@ -13,6 +13,9 @@ Stripe events → `POST /webhooks/stripe` (gateway, `rawBody: true`, **no JWT** 
 ## Entitlements
 `EntitlementsService` **reads** the `subscriptions` row → enforces plan limits (projects, members, entries, content types, api keys, webhooks, storage). Because enforcement reads the row, upgrades/downgrades need **zero** code changes — the reconciler rewrites the row.
 
+## Usage metering (specs/14)
+Limits like `apiRequestsPerMonth` / `storageMb` are advertised by the plan but only bite once **measured**. core-service owns the counter (`usage_buckets`) + composes a `UsageView` (requests used + storage SUM + the limits above); the gateway batches Delivery-request increments off the hot path. Read at `GET /usage` + shown on the dashboard Usage page. Soft overage gate (`USAGE_ENFORCE`, default off). See [diagram 09](./09-usage-metering.md). `assetBandwidthGb` stays unmeasured for now.
+
 ## Plans + status
 - `plans` (free/pro/business): limits + features JSON; `stripePriceId` backfilled on the sandbox (+ admin sync).
 - Subscription states: `active / past_due / canceled / paused / incomplete`.

@@ -201,6 +201,21 @@ All `/billing/*` routes are **protected** (JWT) and require `X-Workspace-Id`. `P
 **Public** — no JWT (CSRF guard short-circuits with no access cookie); `@SkipThrottle` so Stripe retries aren't rate-limited. Receives Stripe's raw body + `stripe-signature` header, forwards both to auth-service, which verifies with `STRIPE_WEBHOOK_SECRET` and reconciles (idempotent via `stripe_events`).
 → `{ received: true }` (200). Bad signature → `STRIPE_WEBHOOK_INVALID` 400. Downstream failure → 500 (so Stripe retries). Enabled events: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.paid`, `invoice.payment_failed`.
 
+## Usage (metering)
+
+Current-period Delivery API consumption for the active workspace. **Protected** (JWT) + `X-Workspace-Id`; any workspace member can read.
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/usage` | — | `UsageView` — current-period requests used/limit + storage used/limit |
+
+`UsageView`: `{ period: { start, end }, requests: { used, limit }, storage: { usedMb, limitMb } }` (ISO timestamps; `limit: null` = the plan dimension is unlimited).
+
+- Period is the calendar month (UTC midnight boundaries). `requests.used` counts Delivery API requests authenticated by a `Bearer wrk_…` key (one increment per HTTP request, counted on success); `storage.usedMb` is the live sum of media bytes across the workspace's projects.
+- The gateway batches increments off the hot path and flushes to core-service, so `used` lags real-time by up to the flush interval (~15s).
+- `assetBandwidthGb` is a plan field but is **not** measured yet (media is R2 keys-only; real egress lives in R2).
+- Overages are soft and **fail-open**: when `USAGE_ENFORCE=true` and `requests.used >= limit`, the Delivery API returns `RATE_LIMITED` 429; otherwise metering never blocks delivery. Enforcement is **off by default**.
+
 ---
 
 ## Health

@@ -12,6 +12,7 @@ Visual mental models of the Wriven system. Each entry is an `.svg` (the diagram)
 | 06 | [Webhooks](./06-webhooks.md) | signed dispatch · retry/backoff |
 | 07 | [Admin Panel](./07-admin-panel.md) | platform console · separate RBAC axis |
 | 08 | [Frontend](./08-frontend.md) | cookie auth · URL scope · nav brain · RBAC mirror |
+| 09 | [Usage Metering](./09-usage-metering.md) | Delivery request counter · batched flush · `/usage` read · soft overage gate |
 
 > Start at [00](./00-system-overview.md), then [01](./01-auth-rbac.md) (the RBAC mental model). Numbers skip 03 — the request lifecycle is covered by 01a (backend flow) + 08 (client 401-refresh).
 
