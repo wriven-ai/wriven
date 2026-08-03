@@ -62,7 +62,7 @@ function invoiceStatusClass(status: string): string {
 
 function storageLabel(mb: number | null | undefined): string {
   if (mb == null) return 'Unlimited storage';
-  if (mb >= 1000) return `${mb / 1000} TB storage`;
+  if (mb >= 1024) return `${(mb / 1024).toFixed(mb % 1024 ? 1 : 0)} GB storage`;
   return `${mb} MB storage`;
 }
 
