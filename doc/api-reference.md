@@ -179,16 +179,24 @@ Events: `entry.published` · `entry.unpublished` · `entry.deleted`.
 
 ---
 
+## Plans (public)
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| GET | `/plans` | — | `PlanView[]` — public plan catalog (free/starter/pro: prices, limits, features). **No auth** — powers the marketing `/pricing` page. Same handler as `/billing/plans` (no Stripe ids). |
+
+---
+
 ## Billing (Stripe)
 
 All `/billing/*` routes are **protected** (JWT) and require `X-Workspace-Id`. `POST` routes also require the `X-CSRF-Token` header (double-submit). Plan mutations (checkout/portal) are **owner/admin only** (enforced in auth-service from the forwarded `workspaceRole`).
 
 | Method | Path | Body | → |
 |--------|------|------|---|
-| GET | `/billing/plans` | — | `PlanView[]` (public + active plans: free/pro/business, with prices/limits/features) |
+| GET | `/billing/plans` | — | `PlanView[]` (public + active plans: free/starter/pro, with prices/limits/features) |
 | GET | `/billing/subscription` | — | `SubscriptionView` — the workspace's current plan/status/period |
 | GET | `/billing/invoices` | — | `InvoiceView[]` — last 20 Stripe invoices (number/amount/status/url); `[]` if no customer |
-| POST | `/billing/checkout` | `{ planKey: 'pro'\|'business', billingCycle: 'monthly'\|'yearly', successUrl?, cancelUrl? }` | `{ url, sessionId }` — Stripe Checkout URL (**owner/admin**; free→paid only) |
+| POST | `/billing/checkout` | `{ planKey: 'starter'\|'pro', billingCycle: 'monthly'\|'yearly', successUrl?, cancelUrl? }` | `{ url, sessionId }` — Stripe Checkout URL (**owner/admin**; free→paid only) |
 | POST | `/billing/portal` | `{ returnUrl? }` | `{ url }` — Stripe Billing Portal URL (**owner/admin**) |
 
 `SubscriptionView`: `{ planKey, planName, status, billingCycle, currentPeriodStart, currentPeriodEnd, trialEndsAt, cancelAtPeriodEnd, hasPaymentMethod }` (timestamps ISO or null).

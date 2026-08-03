@@ -17,7 +17,7 @@ Stripe events → `POST /webhooks/stripe` (gateway, `rawBody: true`, **no JWT** 
 Limits like `apiRequestsPerMonth` / `storageMb` are advertised by the plan but only bite once **measured**. core-service owns the counter (`usage_buckets`) + composes a `UsageView` (requests used + storage SUM + the limits above); the gateway batches Delivery-request increments off the hot path. Read at `GET /usage` + shown on the dashboard Usage page. Soft overage gate (`USAGE_ENFORCE`, default off). See [diagram 09](./09-usage-metering.md). `assetBandwidthGb` stays unmeasured for now.
 
 ## Plans + status
-- `plans` (free/pro/business): limits + features JSON; `stripePriceId` backfilled on the sandbox (+ admin sync).
+- `plans` (free/starter/pro @ $0/$10/$18, 10% annual): limits + features JSON, sized to free-tier infra; `business` tier + `sso` removed (specs/15). AI text/image + `revisionsPerEntry` limit fields are forward (enforced when ai-service ships / on every write respectively). `stripePriceId` to be re-linked for the new tiers in the Stripe sandbox setup task.
 - Subscription states: `active / past_due / canceled / paused / incomplete`.
 - Trials removed (no trial system). Managed Payments dunning outcome (cancel vs `unpaid`) is an open product decision.
 

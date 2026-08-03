@@ -44,10 +44,12 @@ So the gaps read in context. ✅ = working.
   audit log, metrics, tenant/content/media/key/webhook moderation, plans CRUD +
   assignment, **plan-limit enforcement** (projects, members, entries, content
   types, API keys, webhooks, storage).
-- ✅ **Plans/subscriptions + billing** — free/pro/business, limits + enforcement,
-  Stripe Checkout + Billing Portal + webhook → `subscriptions` reconciliation
-  (specs/08 backend); **frontend billing page** — Checkout redirect, portal link,
-  invoice list (specs/09, 10); live e2e pending only the sandbox account config.
+- ✅ **Plans/subscriptions + billing** — free/starter/pro @ $0/$10/$18 (10%
+  annual), realistic limits sized to free-tier infra + a revision-retention cap
+  (specs/15); Stripe Checkout + Billing Portal + webhook → `subscriptions`
+  reconciliation (specs/08 backend); **frontend billing page** + **public
+  `/pricing` page** rendered from real plan data (specs/09, 10, 15); live e2e
+  pending only the sandbox account config (new tiers' Stripe Products/Prices).
 - 🟡 **Usage metering** — Delivery API request counter (`usage_buckets`) +
   `GET /usage` + dashboard page shipped (specs/14); soft overage gate built but
   default-off pending live validation; `assetBandwidthGb` still unmeasured.

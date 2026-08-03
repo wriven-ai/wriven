@@ -52,6 +52,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
 | **Stripe billing** (Checkout, Billing Portal, webhook reconcile) | ✅ | backend done (specs/08); live e2e 🟡 deferred to frontend |
+| **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI limit fields added (unenforced — ai-service pending) |
 | **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan()` filled against the shared cascade; nav + action buttons + management routes gated (specs/13) |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
@@ -80,6 +81,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Unique-field enforcement** (`FieldDef.unique`) | ✅ | JSONB value check on create/update; builder has a Unique toggle |
 | **Default content type seeding** | ✅ | seeds a `Post` type on project create (idempotent); builder Unique/Multiple toggles |
 | **Entry revisions API + UI** (list + restore) | ✅ | History drawer; restore records a new revision |
+| **Revision retention** (`revisionsPerEntry`) | ✅ | per-entry cap prunes oldest beyond the plan limit (5/10/15) on every write (specs/15) |
 | **Usage metering** (`usage_buckets`) | 🟡 | Delivery API request counter (batched atomic increment) + `core.usage.read` composes `UsageView` (requests + storage SUM + plan limits) (specs/14). Overage gate built but **default-off** (`USAGE_ENFORCE`); live validation pending |
 
 ## ai-service (FastAPI `:8000`)
