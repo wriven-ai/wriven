@@ -9,6 +9,7 @@
  */
 import * as bcrypt from 'bcrypt';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { eq } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from './schema';
 
@@ -19,8 +20,16 @@ async function main() {
   const client = postgres(url, { prepare: false });
   const db = drizzle(client, { schema });
 
-  // 1. Plans — free / pro / business. Definitions are config (source of truth
-  //    is this seed), so we upsert on `key`. Prices in cents — placeholders.
+  // 1. Plans — free / starter / pro. Definitions are config (source of truth
+  //    is this seed), so we upsert on `key`. Prices in cents. Limits sized to
+  //    free-tier infra (R2 + Supabase) + indie pricing ($0/$10/$18, 10% annual).
+  //    See specs/15. The legacy `business` tier is removed; its row is deleted
+  //    here (FK-restrict will error loudly if any subscription still references
+  //    it — pre-launch none do). The legacy `pro` key is repurposed in place to
+  //    the new top tier; `starter` is new. Stripe price ids are NOT touched by
+  //    the upsert (re-link the new tiers in the Stripe sandbox setup task).
+  await db.delete(schema.plans).where(eq(schema.plans.key, 'business'));
+
   const planDefs = [
     {
       key: 'free',
@@ -32,85 +41,91 @@ async function main() {
       trialDays: 0,
       limits: {
         projects: 2,
-        members: 3,
-        environments: 1,
-        contentTypes: 10,
-        entries: 1000,
+        members: 4,
+        environments: 0,
+        contentTypes: 5,
+        entries: 500,
         locales: 1,
         storageMb: 100,
         assetBandwidthGb: 10,
         apiRequestsPerMonth: 100_000,
-        apiKeys: 3,
+        apiKeys: 2,
         webhooks: 2,
+        revisionsPerEntry: 5,
+        aiTextRequestsPerMonth: 50,
+        aiImageRequestsPerMonth: 5,
       },
       features: {
         scheduledPublishing: false,
         revisionHistory: false,
         customRoles: false,
-        sso: false,
         auditLog: false,
-        previewApi: false,
+        previewApi: true,
         supportTier: 'community',
       },
     },
     {
-      key: 'pro',
-      name: 'Pro',
-      description: 'For growing teams shipping production content.',
+      key: 'starter',
+      name: 'Starter',
+      description: 'For small teams shipping production content.',
       sortOrder: 1,
-      priceMonthly: 2900,
-      priceYearly: 29_000,
+      priceMonthly: 1000,
+      priceYearly: 10_800,
       trialDays: 0,
       limits: {
-        projects: 10,
+        projects: 5,
         members: 10,
-        environments: 3,
-        contentTypes: 50,
-        entries: 50_000,
-        locales: 5,
-        storageMb: 5_000,
-        assetBandwidthGb: 200,
-        apiRequestsPerMonth: 1_000_000,
-        apiKeys: 20,
-        webhooks: 20,
+        environments: 0,
+        contentTypes: 20,
+        entries: 2_000,
+        locales: 1,
+        storageMb: 1_000,
+        assetBandwidthGb: null,
+        apiRequestsPerMonth: 500_000,
+        apiKeys: 10,
+        webhooks: 10,
+        revisionsPerEntry: 10,
+        aiTextRequestsPerMonth: 500,
+        aiImageRequestsPerMonth: 50,
       },
       features: {
-        scheduledPublishing: true,
+        scheduledPublishing: false,
         revisionHistory: true,
         customRoles: false,
-        sso: false,
         auditLog: false,
         previewApi: true,
         supportTier: 'email',
       },
     },
     {
-      key: 'business',
-      name: 'Business',
-      description: 'For scale: high limits, SSO, audit log, priority support.',
+      key: 'pro',
+      name: 'Pro',
+      description: 'For bigger teams: higher limits, more AI, priority support.',
       sortOrder: 2,
-      priceMonthly: 9900,
-      priceYearly: 99_000,
+      priceMonthly: 1800,
+      priceYearly: 16_200,
       trialDays: 0,
       limits: {
-        projects: null, // unlimited
-        members: 50,
-        environments: 10,
-        contentTypes: null,
-        entries: null,
-        locales: 20,
-        storageMb: 50_000,
-        assetBandwidthGb: 1_000,
-        apiRequestsPerMonth: 5_000_000,
-        apiKeys: null,
-        webhooks: null,
+        projects: 15,
+        members: 25,
+        environments: 0,
+        contentTypes: 50,
+        entries: 10_000,
+        locales: 1,
+        storageMb: 5_000,
+        assetBandwidthGb: null,
+        apiRequestsPerMonth: 2_000_000,
+        apiKeys: 25,
+        webhooks: 20,
+        revisionsPerEntry: 15,
+        aiTextRequestsPerMonth: 2_000,
+        aiImageRequestsPerMonth: 200,
       },
       features: {
-        scheduledPublishing: true,
+        scheduledPublishing: false,
         revisionHistory: true,
-        customRoles: true,
-        sso: true,
-        auditLog: true,
+        customRoles: false,
+        auditLog: false,
         previewApi: true,
         supportTier: 'priority',
       },
@@ -136,6 +151,7 @@ async function main() {
       });
   }
   console.log(`✓ plans ensured: ${planDefs.map((p) => p.key).join(', ')}`);
+
 
   // 2. Bootstrap admin (optional — only if env provided).
   const email = process.env.ADMIN_SEED_EMAIL?.trim().toLowerCase();

@@ -36,6 +36,30 @@ export class EntriesService {
     private readonly entitlements: CoreEntitlementsService,
   ) {}
 
+  /**
+   * Prune an entry's revisions to the plan cap: delete the oldest beyond `cap`,
+   * keeping the newest `cap` by version. Runs inside the caller's transaction
+   * so a crash can't leave over-cap revisions. `cap == null` = unlimited → no-op.
+   * specs/15.
+   */
+  private async pruneRevisions(
+    tx: Parameters<Parameters<DrizzleDB<typeof schema>['transaction']>[0]>[0],
+    cap: number | null,
+    entryId: string,
+  ): Promise<void> {
+    if (cap == null) return;
+    await tx.execute(sql`
+      DELETE FROM core_svc.content_revisions
+      WHERE entry_id = ${entryId}
+        AND id NOT IN (
+          SELECT id FROM core_svc.content_revisions
+          WHERE entry_id = ${entryId}
+          ORDER BY version DESC
+          LIMIT ${cap}
+        )
+    `);
+  }
+
   async create(p: {
     workspaceId: string;
     projectId: string;
@@ -58,6 +82,7 @@ export class EntriesService {
     const status = (p.dto.status ?? 'draft') as EntryStatus;
     const publishedAt = status === 'published' ? new Date() : null;
 
+    const revCap = await this.entitlements.revisionsCap(p.workspaceId);
     try {
       const entry = await this.db.transaction(async (tx) => {
         const [row] = await tx
@@ -81,6 +106,7 @@ export class EntriesService {
           status: row.status,
           createdBy: p.userId,
         });
+        await this.pruneRevisions(tx, revCap, row.id);
         return row;
       });
       return this.toView(entry);
@@ -166,6 +192,7 @@ export class EntriesService {
         : entry.publishedAt;
 
     const version = await this.nextVersion(entry.id);
+    const revCap = await this.entitlements.revisionsCap(p.workspaceId);
     try {
       const updated = await this.db.transaction(async (tx) => {
         const [row] = await tx
@@ -186,6 +213,7 @@ export class EntriesService {
           status: row.status,
           createdBy: p.userId,
         });
+        await this.pruneRevisions(tx, revCap, row.id);
         return row;
       });
 
@@ -279,6 +307,7 @@ export class EntriesService {
     if (!rev) throw rpcError('NOT_FOUND', 'Revision not found.');
 
     const version = await this.nextVersion(entry.id);
+    const revCap = await this.entitlements.revisionsCap(p.workspaceId);
     const updated = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .update(contentEntries)
@@ -292,6 +321,7 @@ export class EntriesService {
         status: row.status,
         createdBy: p.userId,
       });
+      await this.pruneRevisions(tx, revCap, row.id);
       return row;
     });
     // A live entry's content changed → refresh caches/consumers.

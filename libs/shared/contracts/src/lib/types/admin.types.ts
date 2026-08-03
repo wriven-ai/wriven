@@ -77,6 +77,12 @@ export interface PlanLimits {
   apiRequestsPerMonth?: number | null;
   apiKeys?: number | null;
   webhooks?: number | null;
+  /** Revisions retained per entry (oldest pruned beyond this); null = unlimited. */
+  revisionsPerEntry?: number | null;
+  /** AI text generations / month (forward — enforced when ai-service ships). */
+  aiTextRequestsPerMonth?: number | null;
+  /** AI image generations / month (forward — enforced when ai-service ships). */
+  aiImageRequestsPerMonth?: number | null;
 }
 
 /** Boolean / enum feature entitlements unlocked by a plan. */
@@ -84,7 +90,6 @@ export interface PlanFeatures {
   scheduledPublishing?: boolean;
   revisionHistory?: boolean;
   customRoles?: boolean;
-  sso?: boolean;
   auditLog?: boolean;
   previewApi?: boolean;
   supportTier?: 'community' | 'email' | 'priority';

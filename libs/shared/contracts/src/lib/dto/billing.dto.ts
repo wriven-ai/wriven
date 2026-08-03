@@ -8,8 +8,8 @@ import type { BillingCycle } from '../types/billing.types';
  */
 export class CreateCheckoutSessionDto {
   @IsString()
-  @IsIn(['pro', 'business'])
-  planKey!: 'pro' | 'business';
+  @IsIn(['starter', 'pro'])
+  planKey!: 'starter' | 'pro';
 
   @IsString()
   @IsIn(['monthly', 'yearly'])

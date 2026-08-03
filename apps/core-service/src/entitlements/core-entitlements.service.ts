@@ -129,6 +129,15 @@ export class CoreEntitlementsService {
     return this.limits(workspaceId);
   }
 
+  /**
+   * Revisions retained per entry (oldest pruned beyond this), or `null` =
+   * unlimited / unresolvable (skip pruning). Fail-open like the rest. specs/15.
+   */
+  async revisionsCap(workspaceId: string): Promise<number | null> {
+    const cap = (await this.limits(workspaceId))?.revisionsPerEntry;
+    return cap == null ? null : cap;
+  }
+
   private assert(used: number, max: number, label: string): void {
     if (used >= max) {
       throw rpcError(

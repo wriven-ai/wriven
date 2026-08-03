@@ -430,7 +430,7 @@ export const adminAuditLog = authSchema.table(
 
 export const plans = authSchema.table('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
-  key: text('key').notNull().unique(), // 'free'|'pro'|'business'
+  key: text('key').notNull().unique(), // 'free'|'starter'|'pro'
   name: text('name').notNull(),
   description: text('description'),
   // Display: ordering + whether to show on the public pricing page.
