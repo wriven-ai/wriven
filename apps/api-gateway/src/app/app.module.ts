@@ -43,7 +43,9 @@ import { SupportController } from '../support/support.controller';
 import { PlansController } from '../plans/plans.controller';
 import { BillingController } from '../billing/billing.controller';
 import { StripeWebhookController } from '../billing/stripe-webhook.controller';
-import { UsageModule } from '../usage/usage.module';
+import { UsageBufferService } from '../usage/usage-buffer.service';
+import { UsageController } from '../usage/usage.controller';
+import { UsageEnforceService } from '../usage/usage-enforce.service';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -87,7 +89,6 @@ import { AppService } from './app.service';
         }),
       },
     ]),
-    UsageModule,
   ],
   controllers: [
     AppController,
@@ -102,6 +103,7 @@ import { AppService } from './app.service';
     WebhooksController,
     SupportController,
     PlansController,
+    UsageController,
     BillingController,
     StripeWebhookController,
     AdminAuthController,
@@ -129,6 +131,8 @@ import { AppService } from './app.service';
     AdminJwtGuard,
     AdminRolesGuard,
     AuditInterceptor,
+    UsageBufferService,
+    UsageEnforceService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
