@@ -340,13 +340,15 @@ export interface PlanLimits {
   apiRequestsPerMonth?: number | null;
   apiKeys?: number | null;
   webhooks?: number | null;
+  revisionsPerEntry?: number | null;
+  aiTextRequestsPerMonth?: number | null;
+  aiImageRequestsPerMonth?: number | null;
 }
 
 export interface PlanFeatures {
   scheduledPublishing?: boolean;
   revisionHistory?: boolean;
   customRoles?: boolean;
-  sso?: boolean;
   auditLog?: boolean;
   previewApi?: boolean;
   supportTier?: 'community' | 'email' | 'priority';
@@ -434,7 +436,7 @@ export interface InvoiceView {
 }
 
 export interface CreateCheckoutInput {
-  planKey: 'pro' | 'business';
+  planKey: 'starter' | 'pro';
   billingCycle: BillingCycle;
   successUrl?: string;
   cancelUrl?: string;

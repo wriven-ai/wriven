@@ -20,7 +20,7 @@ export const BILLING_KEYS = {
   invoices: ['billing', 'invoices'] as const,
 };
 
-/** Public plan catalog (free/pro/business with prices/limits/features). */
+/** Public plan catalog (free/starter/pro with prices/limits/features). */
 export function usePlans() {
   return useQuery({
     queryKey: BILLING_KEYS.plans,

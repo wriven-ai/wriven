@@ -16,7 +16,6 @@ import {
   FileText,
   Globe,
   History,
-  KeyRound,
   Layers,
   LifeBuoy,
   RefreshCw,
@@ -79,7 +78,6 @@ function planFeatures(plan: PlanView): string[] {
     qty(l.contentTypes, 'content types'),
     qty(l.entries, 'entries'),
     storageLabel(l.storageMb),
-    f.sso ? 'SSO / SAML' : null,
     f.auditLog ? 'Audit log' : null,
     f.revisionHistory ? 'Revision history' : null,
     f.scheduledPublishing ? 'Scheduled publishing' : null,
@@ -107,7 +105,6 @@ const FEATURE_ICON_MAP: { match: string; Icon: FeatureIcon }[] = [
   { match: 'storage', Icon: Database },
   { match: 'bandwidth', Icon: Globe },
   { match: 'api request', Icon: Zap },
-  { match: 'sso', Icon: KeyRound },
   { match: 'audit', Icon: ScrollText },
   { match: 'revision', Icon: History },
   { match: 'scheduled', Icon: CalendarClock },
@@ -206,7 +203,7 @@ function BillingInner() {
     if (plan.key === 'free') return;
     setNotice(null);
     checkout.mutate({
-      planKey: plan.key as 'pro' | 'business',
+      planKey: plan.key as 'starter' | 'pro',
       billingCycle: cycle,
       successUrl,
       cancelUrl,

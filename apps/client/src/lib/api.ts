@@ -676,7 +676,7 @@ export const supportApi = {
 };
 
 export const billingApi = {
-  /** Public plan catalog (free/pro/business). */
+  /** Public plan catalog (free/starter/pro). Authed mirror of the public endpoint. */
   listPlans: () => request<PlanView[]>('/billing/plans', { workspace: true }),
   /** The workspace's current subscription (always exists — defaults to free). */
   getSubscription: () =>
@@ -698,6 +698,11 @@ export const billingApi = {
       body: dto ?? {},
       workspace: true,
     }),
+};
+
+/** Public plan catalog — no auth, no workspace header. Powers `/pricing`. */
+export const plansApi = {
+  listPublic: () => request<PlanView[]>('/plans'),
 };
 
 export const usageApi = {
