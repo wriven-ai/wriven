@@ -1,8 +1,11 @@
+import type { ProjectRole, WorkspaceRole } from '@wriven/contracts';
 import { relations, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
   index,
+  integer,
+  jsonb,
   pgSchema,
   text,
   timestamp,
@@ -26,6 +29,8 @@ export const users = authSchema.table(
     providerId: text('provider_id'),
     passwordHash: text('password_hash'),
     emailVerified: boolean('email_verified').notNull().default(false),
+    // Set by a platform admin to block sign-in (moderation). Null = active.
+    suspendedAt: timestamp('suspended_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -111,8 +116,8 @@ export const workspaces = authSchema.table(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    // Globally unique — workspaces are no longer nested under orgs.
-    slug: text('slug').notNull().unique(),
+    // Unique per owner, not globally — each user can have their own "default".
+    slug: text('slug').notNull(),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
@@ -124,6 +129,9 @@ export const workspaces = authSchema.table(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
+  (t) => [
+    uniqueIndex('workspaces_created_by_slug_uq').on(t.createdBy, t.slug),
+  ],
 );
 
 export const workspaceMembers = authSchema.table(
@@ -136,7 +144,7 @@ export const workspaceMembers = authSchema.table(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull().default('member'), // owner | admin | member
+    role: text('role').notNull().default('member').$type<WorkspaceRole>(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -146,7 +154,8 @@ export const workspaceMembers = authSchema.table(
     index('workspace_members_user_id_idx').on(t.userId),
     check(
       'workspace_members_role_check',
-      sql`${t.role} in ('owner', 'admin', 'member')`,
+      // guest = auto-added via a project invite; sees only assigned projects.
+      sql`${t.role} in ('owner', 'admin', 'member', 'guest')`,
     ),
   ],
 );
@@ -190,7 +199,7 @@ export const projectMembers = authSchema.table(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull().default('viewer'), // admin | editor | viewer
+    role: text('role').notNull().default('viewer').$type<ProjectRole>(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -291,3 +300,283 @@ export const projectMembersRelations = relations(
     }),
   }),
 );
+
+// ── Invitations (pending member onboarding) ─────────────────────────────────
+
+/**
+ * A pending invitation to a workspace or project. The raw token is emailed once;
+ * we persist only its sha-256 hash. Single-use, time-limited. See specs/05.
+ */
+export const invitations = authSchema.table(
+  'invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(), // invitee, lowercased
+    scope: text('scope').notNull(), // workspace | project
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id').references(() => projects.id, {
+      onDelete: 'cascade',
+    }),
+    role: text('role').notNull(), // ws: admin|member · proj: admin|editor|viewer
+    tokenHash: text('token_hash').notNull(),
+    status: text('status').notNull().default('pending'),
+    invitedBy: uuid('invited_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    acceptedBy: uuid('accepted_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('invitations_token_hash_uq').on(t.tokenHash),
+    index('invitations_email_idx').on(t.email),
+    index('invitations_workspace_id_idx').on(t.workspaceId),
+    index('invitations_project_id_idx').on(t.projectId),
+    check(
+      'invitations_scope_check',
+      sql`${t.scope} in ('workspace', 'project')`,
+    ),
+    check(
+      'invitations_status_check',
+      sql`${t.status} in ('pending', 'accepted', 'revoked', 'expired')`,
+    ),
+  ],
+);
+
+// ── Admin panel (platform staff — SEPARATE from tenant `users`) ─────────────
+// The admin panel is a separate-repo console operated by Wriven staff. Its
+// identity is fully isolated from tenant users: own table, own sessions, own
+// JWT secret/cookies. See doc/admin-panel.
+
+export const adminUsers = authSchema.table(
+  'admin_users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull().unique(),
+    name: text('name').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    role: text('role').notNull().default('member'), // admin | moderator | member
+    totpSecret: text('totp_secret'), // nullable; TOTP MFA (recommended for admin)
+    active: boolean('active').notNull().default(true),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    check(
+      'admin_users_role_check',
+      sql`${t.role} in ('admin', 'moderator', 'member')`,
+    ),
+  ],
+);
+
+export const adminRefreshTokens = authSchema.table(
+  'admin_refresh_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull(),
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revoked: boolean('revoked').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('admin_refresh_tokens_token_hash_uq').on(t.tokenHash),
+    index('admin_refresh_tokens_admin_user_id_idx').on(t.adminUserId),
+  ],
+);
+
+/** Append-only record of every admin write. Mandatory for accountability. */
+export const adminAuditLog = authSchema.table(
+  'admin_audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'restrict' }),
+    action: text('action').notNull(), // e.g. 'user.suspend', 'apikey.revoke'
+    targetType: text('target_type'), // 'user'|'workspace'|'project'|'entry'|...
+    targetId: text('target_id'),
+    metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+    ip: text('ip'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('admin_audit_log_admin_user_id_idx').on(t.adminUserId),
+    index('admin_audit_log_target_idx').on(t.targetType, t.targetId),
+    index('admin_audit_log_created_at_idx').on(t.createdAt),
+  ],
+);
+
+// ── Plans & per-workspace assignment (billing deferred; limits modelled now) ─
+
+export const plans = authSchema.table('plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(), // 'free'|'starter'|'pro'
+  name: text('name').notNull(),
+  description: text('description'),
+  // Display: ordering + whether to show on the public pricing page.
+  sortOrder: integer('sort_order').notNull().default(0),
+  isPublic: boolean('is_public').notNull().default(true),
+  active: boolean('active').notNull().default(true),
+
+  // Billing (Stripe-ready; all nullable until billing lands). Prices in cents.
+  priceMonthly: integer('price_monthly'),
+  priceYearly: integer('price_yearly'),
+  currency: text('currency').notNull().default('usd'),
+  stripeProductId: text('stripe_product_id'),
+  stripePriceIdMonthly: text('stripe_price_id_monthly'),
+  stripePriceIdYearly: text('stripe_price_id_yearly'),
+  trialDays: integer('trial_days').notNull().default(0),
+
+  // Quotas (numeric; null/absent = unlimited) — see PlanLimits in contracts.
+  // { projects, members, environments, contentTypes, entries, locales,
+  //   storageMb, assetBandwidthGb, apiRequestsPerMonth, apiKeys, webhooks }
+  limits: jsonb('limits').notNull().default(sql`'{}'::jsonb`),
+  // Entitlements (boolean/enum) — see PlanFeatures in contracts.
+  // { scheduledPublishing, revisionHistory, customRoles, sso, auditLog,
+  //   previewApi, supportTier }
+  features: jsonb('features').notNull().default(sql`'{}'::jsonb`),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * A workspace's subscription to a plan. One row per workspace (the billing unit).
+ * Created as `free` when a workspace is created; an admin or the billing flow can
+ * change the plan. Stripe fields are nullable until billing lands. `overrides`
+ * lets an admin bump a single customer's limits without a custom plan.
+ */
+export const subscriptions = authSchema.table(
+  'subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'restrict' }),
+    // active|trialing|past_due|canceled|paused|incomplete
+    status: text('status').notNull().default('active'),
+    billingCycle: text('billing_cycle'), // 'monthly'|'yearly'|null (free)
+    // Stripe linkage (future billing).
+    stripeCustomerId: text('stripe_customer_id'),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    // Timestamp of the last Stripe event applied (event.created) — stale-event guard.
+    stripeEventCreatedAt: timestamp('stripe_event_created_at', {
+      withTimezone: true,
+    }),
+    // Billing period + trial tracking.
+    currentPeriodStart: timestamp('current_period_start', {
+      withTimezone: true,
+    }),
+    currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    canceledAt: timestamp('canceled_at', { withTimezone: true }),
+    // Deferred downgrade (specs/16): when a downgrade is scheduled via a Stripe
+    // Subscription Schedule, this holds the target + the schedule id + the
+    // period-end effective date. Cleared by the reconciler when phase 2 lands.
+    // Shape: { planKey, planName, billingCycle, effectiveAt, scheduleId }.
+    pendingChange: jsonb('pending_change'),
+    // Per-workspace limit overrides (admin bump). Null = use the plan's limits.
+    overrides: jsonb('overrides'),
+    // admin_user id who last changed the plan (no FK across concern).
+    updatedBy: uuid('updated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex('subscriptions_workspace_id_uq').on(t.workspaceId),
+    index('subscriptions_plan_id_idx').on(t.planId),
+    index('subscriptions_status_idx').on(t.status),
+    check(
+      'subscriptions_status_check',
+      sql`${t.status} in ('active','trialing','past_due','canceled','paused','incomplete')`,
+    ),
+  ],
+);
+
+/**
+ * Stripe webhook event log — idempotency + ordering. Stripe delivers events
+ * at-least-once, possibly duplicated or out of order; `event_id` (Stripe's
+ * `evt_…`) is the dedupe key. Payload kept for debug/replay. See specs/08.
+ */
+export const stripeEvents = authSchema.table(
+  'stripe_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    eventId: text('event_id').notNull().unique(),
+    eventType: text('event_type').notNull(),
+    // Stripe's own event.created (unix ts) — orders events for the stale-event guard.
+    eventCreatedAt: timestamp('event_created_at', { withTimezone: true }),
+    payload: jsonb('payload'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index('stripe_events_type_idx').on(t.eventType)],
+);
+
+export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
+  refreshTokens: many(adminRefreshTokens),
+  auditEntries: many(adminAuditLog),
+}));
+
+export const adminRefreshTokensRelations = relations(
+  adminRefreshTokens,
+  ({ one }) => ({
+    admin: one(adminUsers, {
+      fields: [adminRefreshTokens.adminUserId],
+      references: [adminUsers.id],
+    }),
+  }),
+);
+
+export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
+  admin: one(adminUsers, {
+    fields: [adminAuditLog.adminUserId],
+    references: [adminUsers.id],
+  }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [subscriptions.workspaceId],
+    references: [workspaces.id],
+  }),
+  plan: one(plans, {
+    fields: [subscriptions.planId],
+    references: [plans.id],
+  }),
+}));

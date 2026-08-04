@@ -10,10 +10,11 @@ import {
   ERROR_CODES,
   PROJECT_PATTERNS,
   ProjectMembership,
+  ProjectRole,
   SERVICE_TOKENS,
   ServiceError,
-  WORKSPACE_PATTERNS,
 } from '@wriven/contracts';
+import type { Permission } from '@wriven/contracts';
 import type { Request } from 'express';
 import { firstValueFrom } from 'rxjs';
 
@@ -22,14 +23,17 @@ interface ScopedRequest extends Request {
   workspaceId?: string;
   workspaceRole?: string;
   projectId?: string;
-  projectRole?: string;
+  projectRole?: ProjectRole | null;
+  projectPermissions?: Set<Permission>;
 }
 
 /**
  * Validates the `X-Project-Id` header against the user's project membership
- * (via auth-service) before a project-scoped request is forwarded. Grants
- * implicit access when the user is an owner/admin of the project's workspace.
- * Must run after JwtAuthGuard and WorkspaceGuard (needs req.user + req.workspaceId).
+ * (via auth-service) before a project-scoped request is forwarded. The
+ * workspace → project permission cascade — including implicit access for
+ * workspace owners/admins with no `project_members` row — is resolved
+ * auth-service-side, so the returned permission set is already complete and no
+ * gateway bypass is needed. Must run after JwtAuthGuard and WorkspaceGuard.
  */
 @Injectable()
 export class ProjectGuard implements CanActivate {
@@ -48,37 +52,19 @@ export class ProjectGuard implements CanActivate {
       throw { ...ERROR_CODES.UNAUTHORIZED, message: 'Not authenticated.' };
     }
 
-    // Project members get their role validated.
-    try {
-      const membership = await firstValueFrom(
-        this.auth.send<ProjectMembership>(
-          PROJECT_PATTERNS.VALIDATE_PROJECT_MEMBER,
-          { userId: req.user.userId, projectId },
-        ),
-      );
-      req.projectId = membership.projectId;
-      req.projectRole = membership.role;
-      return true;
-    } catch {
-      // Fall through to workspace-admin bypass below.
-    }
+    // auth-service resolves the cascade (incl. workspace owner/admin access
+    // with no project row) and throws FORBIDDEN if the user has no access.
+    const membership = await firstValueFrom(
+      this.auth.send<ProjectMembership>(
+        PROJECT_PATTERNS.VALIDATE_PROJECT_MEMBER,
+        { userId: req.user.userId, projectId },
+      ),
+    );
 
-    // Workspace owner/admin has implicit access to all projects in the workspace.
-    if (req.workspaceId && req.workspaceRole) {
-      const wsMembership = await firstValueFrom(
-        this.auth.send<ProjectMembership>(
-          WORKSPACE_PATTERNS.VALIDATE_WORKSPACE_MEMBER,
-          { userId: req.user.userId, workspaceId: req.workspaceId },
-        ),
-      );
-      if (wsMembership.role === 'owner' || wsMembership.role === 'admin') {
-        req.projectId = projectId;
-        req.projectRole = 'admin';
-        return true;
-      }
-    }
-
-    throw { ...ERROR_CODES.FORBIDDEN, message: 'You do not have access to this project.' };
+    req.projectId = membership.projectId;
+    req.projectRole = membership.role;
+    req.projectPermissions = new Set(membership.permissions);
+    return true;
   }
 
   private error(message: string): ServiceError {

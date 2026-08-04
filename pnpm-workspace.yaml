@@ -2,6 +2,7 @@ packages:
   - 'apps/*'
   - 'libs/*'
   - 'libs/shared/*'
+  - 'packages/*'
 overrides:
   multer: 2.2.0
   form-data: 4.0.6

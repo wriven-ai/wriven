@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 820" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f43f5e"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5eead4"/></marker>
+  </defs>
+  <rect width="1240" height="820" fill="#0b1120"/>
+
+  <text x="620" y="34" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">RBAC — Request Flow</text>
+  <text x="620" y="56" text-anchor="middle" fill="#94a3b8" font-size="12">A project-scoped call (e.g. POST publish entry) walking the gateway guard chain</text>
+
+  <!-- ===== PIPELINE ===== -->
+  <!-- Client -->
+  <g><rect x="20" y="150" width="110" height="90" rx="10" fill="#1e293b" stroke="#6366f1" stroke-width="2"/>
+    <text x="75" y="178" text-anchor="middle" fill="#a5b4fc" font-size="10" font-weight="bold">CLIENT</text>
+    <text x="75" y="202" text-anchor="middle" fill="#e2e8f0" font-weight="bold">request</text>
+    <text x="75" y="220" text-anchor="middle" fill="#64748b" font-size="10">JWT cookie +</text>
+    <text x="75" y="234" text-anchor="middle" fill="#64748b" font-size="10">X-Project-Id</text>
+  </g>
+
+  <!-- JwtAuthGuard -->
+  <g><rect x="160" y="130" width="160" height="130" rx="10" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
+    <text x="240" y="156" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">1 · JwtAuthGuard</text>
+    <text x="240" y="180" text-anchor="middle" fill="#e2e8f0" font-size="11">validate JWT</text>
+    <text x="240" y="200" text-anchor="middle" fill="#94a3b8" font-size="10">locally (no TCP)</text>
+    <text x="240" y="226" text-anchor="middle" fill="#5eead4" font-size="10">→ sets req.user</text>
+    <text x="240" y="246" text-anchor="middle" fill="#64748b" font-size="9">(userId, email)</text>
+  </g>
+
+  <!-- WorkspaceGuard -->
+  <g><rect x="350" y="130" width="180" height="130" rx="10" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
+    <text x="440" y="156" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">2 · WorkspaceGuard</text>
+    <text x="440" y="180" text-anchor="middle" fill="#e2e8f0" font-size="11">X-Workspace-Id</text>
+    <text x="440" y="200" text-anchor="middle" fill="#94a3b8" font-size="10">→ validateWorkspaceMember</text>
+    <text x="440" y="226" text-anchor="middle" fill="#5eead4" font-size="10">→ sets req.workspacePermissions</text>
+    <text x="440" y="246" text-anchor="middle" fill="#fda4af" font-size="9">throws FORBIDDEN if not a member</text>
+  </g>
+
+  <!-- ProjectGuard -->
+  <g><rect x="560" y="130" width="190" height="130" rx="10" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
+    <text x="655" y="156" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">3 · ProjectGuard</text>
+    <text x="655" y="180" text-anchor="middle" fill="#e2e8f0" font-size="11">X-Project-Id</text>
+    <text x="655" y="200" text-anchor="middle" fill="#94a3b8" font-size="10">→ validateProjectMember</text>
+    <text x="655" y="226" text-anchor="middle" fill="#5eead4" font-size="10">→ sets req.projectPermissions</text>
+    <text x="655" y="246" text-anchor="middle" fill="#fda4af" font-size="9">throws FORBIDDEN if no access</text>
+  </g>
+
+  <!-- PermissionGuard -->
+  <g><rect x="780" y="130" width="170" height="130" rx="10" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+    <text x="865" y="156" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="bold">4 · PermissionGuard</text>
+    <text x="865" y="180" text-anchor="middle" fill="#e2e8f0" font-size="11">@RequirePermission</text>
+    <text x="865" y="200" text-anchor="middle" fill="#94a3b8" font-size="10">vs attached perm set</text>
+    <text x="865" y="226" text-anchor="middle" fill="#5eead4" font-size="10">→ allow / deny</text>
+    <text x="865" y="246" text-anchor="middle" fill="#fda4af" font-size="9">throws FORBIDDEN if miss</text>
+  </g>
+
+  <!-- core-service -->
+  <g><rect x="980" y="150" width="140" height="90" rx="10" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+    <text x="1050" y="178" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">core-service</text>
+    <text x="1050" y="202" text-anchor="middle" fill="#e2e8f0" font-size="11">handles request</text>
+    <text x="1050" y="222" text-anchor="middle" fill="#64748b" font-size="10">trusts gateway</text>
+    <text x="1050" y="236" text-anchor="middle" fill="#64748b" font-size="10">no re-check</text>
+  </g>
+
+  <!-- arrows pipeline -->
+  <line x1="130" y1="195" x2="158" y2="195" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="320" y1="195" x2="348" y2="195" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <text x="334" y="188" text-anchor="middle" fill="#5eead4" font-size="9">TCP</text>
+  <line x1="530" y1="195" x2="558" y2="195" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <text x="544" y="188" text-anchor="middle" fill="#5eead4" font-size="9">TCP</text>
+  <line x1="750" y1="195" x2="778" y2="195" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="950" y1="195" x2="978" y2="195" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <text x="964" y="188" text-anchor="middle" fill="#5eead4" font-size="9">TCP</text>
+
+  <!-- ===== auth-service resolveRoles panel ===== -->
+  <g><rect x="350" y="340" width="610" height="250" rx="12" fill="#0f2a2a" stroke="#14b8a6" stroke-opacity="0.5" stroke-dasharray="4 4"/>
+    <text x="655" y="362" text-anchor="middle" fill="#5eead4" font-size="11" font-weight="bold">auth-service · AuthorizationService.resolveRoles(userId, { workspaceId? | projectId? })</text>
+
+    <g><rect x="370" y="378" width="180" height="44" rx="6" fill="#0b1120" stroke="#334155"/>
+      <text x="460" y="397" text-anchor="middle" fill="#e2e8f0" font-size="10">① projects(id, deletedAt=null)</text>
+      <text x="460" y="413" text-anchor="middle" fill="#64748b" font-size="9">→ workspaceId</text></g>
+    <g><rect x="370" y="432" width="180" height="44" rx="6" fill="#0b1120" stroke="#334155"/>
+      <text x="460" y="451" text-anchor="middle" fill="#e2e8f0" font-size="10">② project_members → projRole</text>
+      <text x="460" y="467" text-anchor="middle" fill="#64748b" font-size="9">(null if no row)</text></g>
+    <g><rect x="370" y="486" width="180" height="44" rx="6" fill="#0b1120" stroke="#334155"/>
+      <text x="460" y="505" text-anchor="middle" fill="#e2e8f0" font-size="10">③ workspace_members → wsRole</text>
+      <text x="460" y="521" text-anchor="middle" fill="#64748b" font-size="9">(null if no row)</text></g>
+
+    <g><rect x="580" y="378" width="160" height="100" rx="6" fill="#171433" stroke="#818cf8"/>
+      <text x="660" y="400" text-anchor="middle" fill="#c7d2fe" font-size="10" font-weight="bold">effectivePermissions</text>
+      <text x="660" y="418" text-anchor="middle" fill="#94a3b8" font-size="9">= WORKSPACE_ROLE[wsRole]</text>
+      <text x="660" y="432" text-anchor="middle" fill="#94a3b8" font-size="9">  ∪ PROJECT_ROLE[projRole]</text>
+      <text x="660" y="452" text-anchor="middle" fill="#818cf8" font-size="9">@wriven/contracts</text>
+      <text x="660" y="470" text-anchor="middle" fill="#64748b" font-size="9">(the single cascade fn)</text></g>
+
+    <g><rect x="580" y="490" width="160" height="44" rx="6" fill="#0b1120" stroke="#14b8a6"/>
+      <text x="660" y="509" text-anchor="middle" fill="#5eead4" font-size="10">return</text>
+      <text x="660" y="525" text-anchor="middle" fill="#e2e8f0" font-size="9">{ wsRole, projRole, permissions[] }</text></g>
+
+    <text x="900" y="410" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="bold">CASCADE</text>
+    <text x="900" y="430" text-anchor="middle" fill="#94a3b8" font-size="9">ws owner/admin →</text>
+    <text x="900" y="446" text-anchor="middle" fill="#94a3b8" font-size="9">all project perms,</text>
+    <text x="900" y="462" text-anchor="middle" fill="#94a3b8" font-size="9">NO project_members</text>
+    <text x="900" y="478" text-anchor="middle" fill="#94a3b8" font-size="9">row needed</text>
+    <g><rect x="820" y="494" width="170" height="70" rx="6" fill="#0b1120" stroke="#334155"/>
+      <text x="905" y="514" text-anchor="middle" fill="#fda4af" font-size="10" font-weight="bold">FORBIDDEN (403)</text>
+      <text x="905" y="532" text-anchor="middle" fill="#94a3b8" font-size="9">validateProjectMember:</text>
+      <text x="905" y="548" text-anchor="middle" fill="#94a3b8" font-size="9">no row + not ws owner/admin</text></g>
+  </g>
+
+  <!-- arrows from guards down to resolveRoles panel -->
+  <path d="M440,260 C 440,300 460,320 460,378" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#at)"/>
+  <text x="300" y="300" fill="#5eead4" font-size="9">triggers</text>
+  <path d="M655,260 C 655,300 655,330 655,378" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#at)"/>
+
+  <!-- PermissionGuard reads attached set -->
+  <path d="M865,260 C 865,300 700,360 740,378" fill="none" stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="4 3"/>
+  <text x="820" y="312" fill="#fcd34d" font-size="9">reads req.projectPermissions</text>
+
+  <!-- Footer -->
+  <text x="620" y="640" text-anchor="middle" fill="#64748b" font-size="10">Order matters: Jwt → Workspace → Project → Permission. Each scope guard attaches a cascade-resolved Set&lt;Permission&gt; the next guard reads.</text>
+  <text x="620" y="658" text-anchor="middle" fill="#64748b" font-size="10">Guards 2 &amp; 3 each make ONE TCP call (membership + perms in the same round-trip — no extra hop for RBAC).</text>
+
+  <!-- Legend -->
+  <g transform="translate(20,700)">
+    <rect x="0" y="0" width="320" height="100" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="12" y="20" fill="#94a3b8" font-size="10" font-weight="bold">WHO ENFORCES WHAT</text>
+    <rect x="12" y="30" width="10" height="10" fill="#0c1a33" stroke="#3b82f6"/><text x="28" y="40" fill="#cbd5e1" font-size="10">gateway guard (identity + membership)</text>
+    <rect x="12" y="46" width="10" height="10" fill="#1c1206" stroke="#f59e0b"/><text x="28" y="56" fill="#cbd5e1" font-size="10">gateway guard (permission check)</text>
+    <rect x="12" y="62" width="10" height="10" fill="#0f2a2a" stroke="#14b8a6" stroke-dasharray="2 2"/><text x="28" y="72" fill="#cbd5e1" font-size="10">auth-service resolver (the brain)</text>
+    <rect x="12" y="78" width="10" height="10" fill="#0b1120" stroke="#f43f5e"/><text x="28" y="88" fill="#cbd5e1" font-size="10">FORBIDDEN (403) throw point</text>
+  </g>
+</svg>

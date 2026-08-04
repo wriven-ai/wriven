@@ -6,6 +6,8 @@ import {
   GoogleProfile,
   LoginDto,
   LogoutPayload,
+  ProjectMembership,
+  ProjectRole,
   ProjectView,
   RefreshPayload,
   RefreshResult,
@@ -14,6 +16,8 @@ import {
   SessionView,
   UserView,
   VerifyEmailDto,
+  WorkspaceMembership,
+  WorkspaceRole,
   WorkspaceView,
 } from '@wriven/contracts';
 import { DRIZZLE, DrizzleDB } from '@wriven/database';
@@ -23,6 +27,8 @@ import { durationToMs } from '../common/duration';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
+import { AuthorizationService } from './authorization.service';
+import { InvitationsService } from './invitations.service';
 import { MailService } from './mail.service';
 import { TokenService } from './token.service';
 
@@ -35,6 +41,8 @@ const {
   refreshTokens,
   passwordResetTokens,
   emailVerificationTokens,
+  plans,
+  subscriptions,
 } = schema;
 
 type UserRow = typeof users.$inferSelect;
@@ -52,7 +60,18 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly invitations: InvitationsService,
+    private readonly authz: AuthorizationService,
   ) {}
+
+  /** Claim any pending invitations for a freshly-created account. Best-effort. */
+  private async claimInvites(userId: string, email: string): Promise<void> {
+    try {
+      await this.invitations.claimPending(userId, email);
+    } catch (err) {
+      this.logger.warn(`Invite auto-claim failed for ${email}: ${String(err)}`);
+    }
+  }
 
   // ── Register (single transaction) ─────────────────────────────────────────
 
@@ -76,7 +95,6 @@ export class AuthService {
     let result: {
       user: UserRow;
       workspace: WorkspaceRow;
-      project: ProjectRow;
     };
     try {
       result = await this.db.transaction(async (tx) => {
@@ -108,24 +126,6 @@ export class AuthService {
             role: 'owner',
           });
 
-        const [project] = await tx
-          .insert(projects)
-          .values({
-            workspaceId: workspace.id,
-            name: 'Default Project',
-            slug: 'default',
-            createdBy: user.id,
-          })
-          .returning();
-
-        await tx
-          .insert(projectMembers)
-          .values({
-            projectId: project.id,
-            userId: user.id,
-            role: 'admin',
-          });
-
         await tx.insert(refreshTokens).values({
           tokenHash: refresh.hash,
           userId: user.id,
@@ -133,7 +133,20 @@ export class AuthService {
           rememberMe: false,
         });
 
-        return { user, workspace, project };
+        // Start the workspace on the free plan (workspace = billing unit).
+        const freePlan = await tx.query.plans.findFirst({
+          where: eq(plans.key, 'free'),
+          columns: { id: true },
+        });
+        if (freePlan) {
+          await tx.insert(subscriptions).values({
+            workspaceId: workspace.id,
+            planId: freePlan.id,
+          });
+        }
+
+        // No default project — the user creates their first project in the UI.
+        return { user, workspace };
       });
     } catch (err) {
       // Race: another signup inserted the same email between the check and now.
@@ -148,6 +161,7 @@ export class AuthService {
     }
 
     await this.issueVerificationEmail(result.user.id, result.user.email);
+    await this.claimInvites(result.user.id, result.user.email);
 
     return {
       accessToken: this.tokens.signAccessToken(result.user),
@@ -155,7 +169,6 @@ export class AuthService {
       refreshExpiresAt: refreshExpiresAt.toISOString(),
       user: this.toUserView(result.user),
       workspace: this.toWorkspaceView(result.workspace, 'owner'),
-      project: this.toProjectView(result.project, 'admin'),
     };
   }
 
@@ -176,6 +189,12 @@ export class AuthService {
     if (!ok) {
       throw rpcError('INVALID_CREDENTIALS', 'Email or password is incorrect.');
     }
+    if (user.suspendedAt) {
+      throw rpcError(
+        'FORBIDDEN',
+        'This account has been suspended. Contact support.',
+      );
+    }
 
     const rememberMe = dto.rememberMe ?? false;
     const refresh = this.tokens.newRefreshToken();
@@ -188,7 +207,6 @@ export class AuthService {
     });
 
     const { workspace, workspaceRole } = await this.primaryWorkspace(user.id);
-    const { project, projectRole } = await this.primaryProject(user.id);
 
     return {
       accessToken: this.tokens.signAccessToken(user),
@@ -196,7 +214,6 @@ export class AuthService {
       refreshExpiresAt: refreshExpiresAt.toISOString(),
       user: this.toUserView(user),
       workspace: this.toWorkspaceView(workspace, workspaceRole),
-      project: this.toProjectView(project, projectRole),
     };
   }
 
@@ -233,6 +250,14 @@ export class AuthService {
     });
     if (!user) {
       throw rpcError('INVALID_REFRESH_TOKEN', 'The refresh token is invalid.');
+    }
+    // A suspended account must not be able to mint new access tokens.
+    if (user.suspendedAt) {
+      await this.db
+        .update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.userId, user.id));
+      throw rpcError('FORBIDDEN', 'This account has been suspended.');
     }
 
     const refresh = this.tokens.newRefreshToken();
@@ -405,32 +430,31 @@ export class AuthService {
           await tx
             .insert(workspaceMembers)
             .values({ workspaceId: ws.id, userId: u.id, role: 'owner' });
-          const [project] = await tx
-            .insert(projects)
-            .values({
+          // Start the workspace on the free plan.
+          const freePlan = await tx.query.plans.findFirst({
+            where: eq(plans.key, 'free'),
+            columns: { id: true },
+          });
+          if (freePlan) {
+            await tx.insert(subscriptions).values({
               workspaceId: ws.id,
-              name: 'Default Project',
-              slug: 'default',
-              createdBy: u.id,
-            })
-            .returning();
-          await tx
-            .insert(projectMembers)
-            .values({ projectId: project.id, userId: u.id, role: 'admin' });
+              planId: freePlan.id,
+            });
+          }
+          // No default project — the user creates their first project in the UI.
           return u;
         });
+        await this.claimInvites(user.id, user.email);
       }
     }
 
     const session = await this.startSession(user);
     const { workspace, workspaceRole } = await this.primaryWorkspace(user.id);
-    const { project, projectRole } = await this.primaryProject(user.id);
 
     return {
       ...session,
       user: this.toUserView(user),
       workspace: this.toWorkspaceView(workspace, workspaceRole),
-      project: this.toProjectView(project, projectRole),
     };
   }
 
@@ -439,36 +463,46 @@ export class AuthService {
   async validateWorkspaceMember(p: {
     userId: string;
     workspaceId: string;
-  }): Promise<{ workspaceId: string; role: string }> {
-    const row = await this.db.query.workspaceMembers.findFirst({
-      where: and(
-        eq(workspaceMembers.workspaceId, p.workspaceId),
-        eq(workspaceMembers.userId, p.userId),
-      ),
-      columns: { role: true },
+  }): Promise<WorkspaceMembership> {
+    const roles = await this.authz.resolveRoles(p.userId, {
+      workspaceId: p.workspaceId,
     });
-    if (!row) {
+    if (!roles.wsRole) {
       throw rpcError('FORBIDDEN', 'You are not a member of this workspace.');
     }
-    return { workspaceId: p.workspaceId, role: row.role };
+    return {
+      workspaceId: p.workspaceId,
+      role: roles.wsRole,
+      permissions: [...roles.permissions],
+    };
   }
 
-  /** Project membership check (called by the gateway's ProjectGuard). */
+  /**
+   * Project membership check (called by the gateway's ProjectGuard). Access is
+   * granted when the user has an explicit `project_members` row OR is a
+   * workspace owner/admin (the cascade grants them project permissions with no
+   * project row). The returned permission set is already cascade-resolved, so
+   * the gateway no longer needs a workspace-admin bypass.
+   */
   async validateProjectMember(p: {
     userId: string;
     projectId: string;
-  }): Promise<{ projectId: string; role: string }> {
-    const row = await this.db.query.projectMembers.findFirst({
-      where: and(
-        eq(projectMembers.projectId, p.projectId),
-        eq(projectMembers.userId, p.userId),
-      ),
-      columns: { role: true },
+  }): Promise<ProjectMembership> {
+    const roles = await this.authz.resolveRoles(p.userId, {
+      projectId: p.projectId,
     });
-    if (!row) {
-      throw rpcError('FORBIDDEN', 'You are not a member of this project.');
+    const hasAccess =
+      roles.projRole !== null ||
+      roles.wsRole === 'owner' ||
+      roles.wsRole === 'admin';
+    if (!hasAccess) {
+      throw rpcError('FORBIDDEN', 'You do not have access to this project.');
     }
-    return { projectId: p.projectId, role: row.role };
+    return {
+      projectId: p.projectId,
+      role: roles.projRole,
+      permissions: [...roles.permissions],
+    };
   }
 
   // ── Current user ────────────────────────────────────────────────────────────
@@ -623,7 +657,7 @@ export class AuthService {
 
   private async primaryWorkspace(
     userId: string,
-  ): Promise<{ workspace: WorkspaceRow; workspaceRole: string }> {
+  ): Promise<{ workspace: WorkspaceRow; workspaceRole: WorkspaceRole }> {
     const row = await this.db.query.workspaceMembers.findFirst({
       where: eq(workspaceMembers.userId, userId),
       orderBy: workspaceMembers.createdAt,
@@ -633,20 +667,6 @@ export class AuthService {
       throw rpcError('INTERNAL_ERROR', 'User has no workspace.');
     }
     return { workspace: row.workspace, workspaceRole: row.role };
-  }
-
-  private async primaryProject(
-    userId: string,
-  ): Promise<{ project: ProjectRow; projectRole: string }> {
-    const row = await this.db.query.projectMembers.findFirst({
-      where: eq(projectMembers.userId, userId),
-      orderBy: projectMembers.createdAt,
-      with: { project: true },
-    });
-    if (!row) {
-      throw rpcError('INTERNAL_ERROR', 'User has no project.');
-    }
-    return { project: row.project, projectRole: row.role };
   }
 
   private toUserView(u: UserRow): UserView {
@@ -661,7 +681,7 @@ export class AuthService {
     };
   }
 
-  private toWorkspaceView(w: WorkspaceRow, role: string): WorkspaceView {
+  private toWorkspaceView(w: WorkspaceRow, role: WorkspaceRole): WorkspaceView {
     return {
       id: w.id,
       name: w.name,
@@ -671,7 +691,7 @@ export class AuthService {
     };
   }
 
-  private toProjectView(p: ProjectRow, role: string): ProjectView {
+  private toProjectView(p: ProjectRow, role: ProjectRole | null): ProjectView {
     return {
       id: p.id,
       workspaceId: p.workspaceId,

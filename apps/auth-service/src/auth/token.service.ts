@@ -15,7 +15,7 @@ export class TokenService {
   signAccessToken(user: { id: string; email: string }): string {
     return this.jwt.sign(
       { sub: user.id, email: user.email },
-      { expiresIn: this.config.get<string>('JWT_ACCESS_TTL', '15m') },
+      { expiresIn: durationToMs(this.config.get<string>('JWT_ACCESS_TTL', '15m')) },
     );
   }
 

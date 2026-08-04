@@ -10,6 +10,11 @@
       "import": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./rbac": {
+      "types": "./src/lib/types/rbac.types.ts",
+      "import": "./src/lib/types/rbac.types.ts",
+      "default": "./src/lib/types/rbac.types.ts"
+    },
     "./package.json": "./package.json"
   },
   "nx": {

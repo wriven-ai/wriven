@@ -1,3 +1,5 @@
+import type { ProjectRole, WorkspaceRole } from './rbac.types';
+
 /** Minimal user info embedded in a member record. */
 export interface MemberUser {
   id: string;
@@ -10,7 +12,7 @@ export interface WorkspaceMemberView {
   id: string;
   workspaceId: string;
   userId: string;
-  role: string; // owner | admin | member
+  role: WorkspaceRole;
   createdAt: string;
   user: MemberUser;
 }
@@ -19,7 +21,7 @@ export interface ProjectMemberView {
   id: string;
   projectId: string;
   userId: string;
-  role: string; // admin | editor | viewer
+  role: ProjectRole;
   createdAt: string;
   user: MemberUser;
 }

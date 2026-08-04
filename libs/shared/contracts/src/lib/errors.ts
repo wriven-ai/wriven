@@ -15,6 +15,16 @@ export const ERROR_CODES = {
   },
   OAUTH_FAILED: { code: 'OAUTH_FAILED', statusCode: 400 },
   RATE_LIMITED: { code: 'RATE_LIMITED', statusCode: 429 },
+  PLAN_LIMIT_REACHED: { code: 'PLAN_LIMIT_REACHED', statusCode: 403 },
+  STRIPE_WEBHOOK_INVALID: { code: 'STRIPE_WEBHOOK_INVALID', statusCode: 400 },
+  // Workspace already has a live Stripe subscription — use the Billing Portal to
+  // change plans (proration) instead of starting a second Checkout subscription.
+  SUBSCRIPTION_EXISTS: { code: 'SUBSCRIPTION_EXISTS', statusCode: 409 },
+  // No live paid subscription to change — call createCheckout to subscribe first.
+  SUBSCRIPTION_NOT_FOUND: { code: 'SUBSCRIPTION_NOT_FOUND', statusCode: 404 },
+  // A Stripe call failed mid plan create/retire sync — DB write skipped so the
+  // plan row isn't left half-linked. Retryable.
+  STRIPE_SYNC_FAILED: { code: 'STRIPE_SYNC_FAILED', statusCode: 500 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;
 

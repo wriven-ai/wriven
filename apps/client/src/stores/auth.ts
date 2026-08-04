@@ -1,54 +1,52 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { AuthResult, ProjectView, SessionView, UserView, WorkspaceView } from '../lib/types';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 interface AuthState {
   status: AuthStatus;
-  /** Access token — kept in memory only, never persisted. */
-  accessToken: string | null;
   user: UserView | null;
   workspaces: WorkspaceView[];
   projects: ProjectView[];
-  /** Selected workspace id — persisted (non-sensitive). */
+  /** Active workspace id — a mirror of the URL, kept so the API client can set
+   *  the X-Workspace-Id header. Not persisted: the URL is the source of truth. */
   currentWorkspaceId: string | null;
-  /** Selected project id — persisted (non-sensitive). */
+  /** Active project id — a URL mirror, used for the X-Project-Id header. */
   currentProjectId: string | null;
 
-  setAccessToken: (token: string | null) => void;
   /** Apply login/register result. */
   setAuthResult: (result: AuthResult) => void;
   /** Apply GET /auth/me session (reload restore). */
   setSession: (session: SessionView) => void;
   setWorkspace: (workspaceId: string) => void;
   setProject: (projectId: string) => void;
+  /** Mirror the URL scope into the store (no side effects). Used by route sync. */
+  setCurrentWorkspaceId: (workspaceId: string | null) => void;
+  setCurrentProjectId: (projectId: string | null) => void;
+  /** Append a freshly-created workspace so URL navigation resolves it at once. */
+  addWorkspace: (workspace: WorkspaceView) => void;
   setUnauthenticated: () => void;
   clear: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       status: 'loading',
-      accessToken: null,
       user: null,
       workspaces: [],
       projects: [],
       currentWorkspaceId: null,
       currentProjectId: null,
 
-      setAccessToken: (token) => set({ accessToken: token }),
-
       setAuthResult: (result) =>
         set({
           status: 'authenticated',
-          accessToken: result.accessToken,
           user: result.user,
           workspaces: [result.workspace],
-          projects: [result.project],
+          // No project on signup — the user creates one from the workspace UI.
+          projects: [],
           currentWorkspaceId: result.workspace.id,
-          currentProjectId: result.project.id,
+          currentProjectId: null,
         }),
 
       setSession: (session) => {
@@ -89,10 +87,22 @@ export const useAuthStore = create<AuthState>()(
 
       setProject: (projectId) => set({ currentProjectId: projectId }),
 
+      setCurrentWorkspaceId: (workspaceId) =>
+        set({ currentWorkspaceId: workspaceId }),
+
+      setCurrentProjectId: (projectId) =>
+        set({ currentProjectId: projectId }),
+
+      addWorkspace: (workspace) =>
+        set((state) =>
+          state.workspaces.some((w) => w.id === workspace.id)
+            ? state
+            : { workspaces: [...state.workspaces, workspace] },
+        ),
+
       setUnauthenticated: () =>
         set({
           status: 'unauthenticated',
-          accessToken: null,
           user: null,
           workspaces: [],
           projects: [],
@@ -101,21 +111,11 @@ export const useAuthStore = create<AuthState>()(
       clear: () =>
         set({
           status: 'unauthenticated',
-          accessToken: null,
           user: null,
           workspaces: [],
           projects: [],
           currentWorkspaceId: null,
           currentProjectId: null,
         }),
-    }),
-    {
-      name: 'wriven-auth',
-      // Only the selected ids are persisted; tokens stay in memory.
-      partialize: (state) => ({
-        currentWorkspaceId: state.currentWorkspaceId,
-        currentProjectId: state.currentProjectId,
-      }),
-    },
-  ),
+  }),
 );

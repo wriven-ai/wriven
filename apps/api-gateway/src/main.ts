@@ -7,18 +7,32 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app/app.module';
+import { CsrfGuard } from './auth/csrf.guard';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true exposes req.rawBody (Buffer) so the Stripe webhook route can
+  // verify signatures over the exact bytes Stripe signed. Parsed req.body is
+  // still populated for every other route.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   const globalPrefix = 'api/v1';
-  app.setGlobalPrefix(globalPrefix);
+  // The public Content Delivery API is its own versioned surface mounted at
+  // /v1/projects/:projectId/... (per specs/01 and the @wriven-ai/client SDK) —
+  // separate from the dashboard/management routes under /api/v1. Exclude it from
+  // the global prefix, otherwise the DeliveryController's `v1/projects/...` path
+  // gets doubled to /api/v1/v1/projects/... . Wildcard syntax is path-to-regexp v8.
+  app.setGlobalPrefix(globalPrefix, {
+    exclude: ['v1/projects/*splat'],
+  });
 
   app.use(cookieParser());
   app.enableCors({
     origin: true,
     credentials: true,
   });
+
+  // Double-submit CSRF check for cookie-authenticated, state-changing requests.
+  app.useGlobalGuards(new CsrfGuard());
 
   app.useGlobalPipes(
     new ValidationPipe({

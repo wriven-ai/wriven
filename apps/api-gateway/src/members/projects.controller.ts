@@ -13,6 +13,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import {
   AddProjectMemberDto,
   AuthUser,
+  CORE_PATTERNS,
   CreateProjectDto,
   PROJECT_PATTERNS,
   SERVICE_TOKENS,
@@ -28,23 +29,35 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class ProjectsController {
   constructor(
     @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
+    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   // ── Project CRUD ────────────────────────────────────────────────────────────
 
   @Post('workspaces/:workspaceId/projects')
-  create(
+  async create(
     @CurrentUser() user: AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Body() dto: CreateProjectDto,
   ) {
-    return firstValueFrom(
+    const project = await firstValueFrom<{ id: string }>(
       this.auth.send(PROJECT_PATTERNS.CREATE_PROJECT, {
         callerUserId: user.userId,
         workspaceId,
         dto,
       }),
     );
+    // Seed a starter content type so the new project isn't empty (best-effort).
+    if (project?.id) {
+      void firstValueFrom(
+        this.core.send(CORE_PATTERNS.CONTENT_TYPE_SEED, {
+          workspaceId,
+          projectId: project.id,
+          userId: user.userId,
+        }),
+      ).catch(() => undefined);
+    }
+    return project;
   }
 
   @Get('workspaces/:workspaceId/projects')

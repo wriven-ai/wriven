@@ -1,0 +1,119 @@
+# render.yaml — Wriven backend Blueprint for Render.
+#
+# Connect this repo on Render (Dashboard → New → Blueprint) and Render syncs all
+# three services from this file. On every push it rebuilds what changed.
+#
+# SECRETS: every `sync: false` key is prompted once in the Render dashboard. Never
+# put secret values here and never commit them — this file is safe to commit.
+#
+# Topology:
+#   wriven-gateway  → web service  (public HTTP, port from Render $PORT) → api.wriven.tech
+#   wriven-auth     → pserv         (internal NestJS TCP :5001)
+#   wriven-core     → pserv         (internal NestJS TCP :5002)
+# Database: external Supabase (no Render DB). No Redis — services are brokerless TCP.
+
+services:
+  # ── auth-service (internal TCP microservice) ─────────────────────────────────
+  - type: pserv
+    name: wriven-auth
+    runtime: docker
+    dockerfilePath: ./apps/auth-service/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "5001"
+      - key: HOST
+        value: "0.0.0.0"
+      - fromGroup: wriven-shared
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+  # ── core-service (internal TCP microservice) ─────────────────────────────────
+  - type: pserv
+    name: wriven-core
+    runtime: docker
+    dockerfilePath: ./apps/core-service/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "5002"
+      - key: HOST
+        value: "0.0.0.0"
+      - fromGroup: wriven-shared
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+
+  # ── api-gateway (public HTTP) ─────────────────────────────────────────────────
+  - type: web
+    name: wriven-gateway
+    runtime: docker
+    dockerfilePath: ./apps/api-gateway/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+    domains:
+      - api.wriven.tech
+    envVars:
+      - fromGroup: wriven-shared
+      - key: ADMIN_JWT_SECRET
+        sync: false
+      # Internal TCP hosts of the private services. Default to the service names
+      # (Render routes pserv traffic by name). If a name does not resolve, copy the
+      # exact internal hostname from each pserv's "Connect" tab and paste it here.
+      - key: AUTH_SERVICE_HOST
+        value: wriven-auth
+      - key: AUTH_SERVICE_PORT
+        value: "5001"
+      - key: CORE_SERVICE_HOST
+        value: wriven-core
+      - key: CORE_SERVICE_PORT
+        value: "5002"
+      - key: FRONTEND_URL
+        value: https://wriven.tech
+      - key: USAGE_ENFORCE
+        value: "false"
+
+# ── Shared environment group (attached to all three services) ───────────────────
+envVarGroups:
+  - name: wriven-shared
+    envVars:
+      - key: DATABASE_URL          # Supabase pooled (Transaction mode, port 6543, ?pgbouncer=true)
+        sync: false
+      - key: DIRECT_URL            # Supabase direct (Session mode, port 5432) — for migrations
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: REFRESH_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: NODE_ENV
+        value: production

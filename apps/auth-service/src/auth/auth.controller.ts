@@ -14,10 +14,19 @@ import {
   WORKSPACE_PATTERNS,
 } from '@wriven/contracts';
 import { AuthService } from './auth.service';
+import { EntitlementsService } from './entitlements.service';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
+
+  @MessagePattern(AUTH_PATTERNS.ENTITLEMENTS_RESOLVE)
+  resolveEntitlements(@Payload() payload: { workspaceId: string }) {
+    return this.entitlements.resolve(payload);
+  }
 
   @MessagePattern(AUTH_PATTERNS.REGISTER)
   register(@Payload() dto: RegisterDto) {

@@ -17,6 +17,8 @@ export const AUTH_PATTERNS = {
   VALIDATE_USER: 'auth.validateUser',
   GET_USER_BY_ID: 'auth.getUserById',
   GET_SESSION: 'auth.getSession',
+  // Effective plan limits + usage for a workspace (plan enforcement).
+  ENTITLEMENTS_RESOLVE: 'auth.entitlements.resolve',
 } as const;
 
 /**
@@ -61,6 +63,7 @@ export const CORE_PATTERNS = {
   CONTENT_TYPE_GET: 'core.contentType.get',
   CONTENT_TYPE_UPDATE: 'core.contentType.update',
   CONTENT_TYPE_DELETE: 'core.contentType.delete',
+  CONTENT_TYPE_SEED: 'core.contentType.seedDefaults',
 
   ENTRY_CREATE: 'core.entry.create',
   ENTRY_LIST: 'core.entry.list',
@@ -68,6 +71,138 @@ export const CORE_PATTERNS = {
   ENTRY_UPDATE: 'core.entry.update',
   ENTRY_DELETE: 'core.entry.delete',
   ENTRY_PUBLISH: 'core.entry.publish',
+  ENTRY_REVISIONS: 'core.entry.revisions',
+  ENTRY_REVISION_RESTORE: 'core.entry.revisionRestore',
+
+  // Project-scoped API keys (Delivery API auth — see plans/01).
+  API_KEY_CREATE: 'core.apiKey.create',
+  API_KEY_LIST: 'core.apiKey.list',
+  API_KEY_REVOKE: 'core.apiKey.revoke',
+  API_KEY_RESOLVE: 'core.apiKey.resolve',
+
+  // Public Content Delivery API — published-only reads by content type.
+  DELIVERY_LIST: 'core.delivery.list',
+  DELIVERY_GET: 'core.delivery.get',
+
+  // Media library (R2-backed; presigned direct upload — see specs/03).
+  MEDIA_PRESIGN: 'core.media.presign',
+  MEDIA_CREATE: 'core.media.create',
+  MEDIA_LIST: 'core.media.list',
+  MEDIA_GET: 'core.media.get',
+  MEDIA_DELETE: 'core.media.delete',
+
+  // Outgoing webhooks (publish → signed POST; see plans/01 P6).
+  WEBHOOK_CREATE: 'core.webhook.create',
+  WEBHOOK_LIST: 'core.webhook.list',
+  WEBHOOK_UPDATE: 'core.webhook.update',
+  WEBHOOK_DELETE: 'core.webhook.delete',
+
+  // Support tickets (workspace-level; see doc/support-ticket/backend.md).
+  SUPPORT_PRESIGN: 'core.support.presign',
+  SUPPORT_CREATE: 'core.support.create',
+  SUPPORT_LIST: 'core.support.list',
+  SUPPORT_GET: 'core.support.get',
+  SUPPORT_REPLY: 'core.support.reply',
+  SUPPORT_CLOSE: 'core.support.close',
+} as const;
+
+/** Pending member invitations (workspace + project). Owned by auth-service. */
+export const INVITATION_PATTERNS = {
+  CREATE: 'auth.invitation.create',
+  LIST: 'auth.invitation.list',
+  REVOKE: 'auth.invitation.revoke',
+  RESEND: 'auth.invitation.resend',
+  PREVIEW: 'auth.invitation.preview',
+  ACCEPT: 'auth.invitation.accept',
+} as const;
+
+/**
+ * Billing & subscriptions (Stripe). Owned by auth-service (`auth_svc.plans` /
+ * `subscriptions`). Customer-facing checkout/portal + the inbound Stripe webhook
+ * reconciler. See specs/08.
+ */
+export const BILLING_PATTERNS = {
+  LIST_PLANS: 'auth.billing.listPlans',
+  GET_SUBSCRIPTION: 'auth.billing.getSubscription',
+  LIST_INVOICES: 'auth.billing.listInvoices',
+  CREATE_CHECKOUT: 'auth.billing.createCheckout',
+  CREATE_PORTAL: 'auth.billing.createPortal',
+  SWAP_PLAN: 'auth.billing.swapPlan',
+  STRIPE_WEBHOOK: 'auth.billing.stripeWebhook',
+} as const;
+
+/**
+ * Usage metering (Delivery API request counter + storage). Owned by
+ * core-service (it owns the metered resources: api_keys, delivery, media).
+ * The gateway batches increments off the hot path and flushes via RECORD; READ
+ * composes the current-period UsageView. See specs/14.
+ */
+export const USAGE_PATTERNS = {
+  RECORD: 'core.usage.record',
+  READ: 'core.usage.read',
+} as const;
+
+/**
+ * Platform admin panel. Cross-tenant, god-mode operations. Backed by a separate
+ * `admin_users` identity (auth-service) and cross-tenant reads in both services.
+ * See doc/admin-panel.
+ */
+export const ADMIN_PATTERNS = {
+  // Admin identity & sessions (auth-service)
+  LOGIN: 'admin.auth.login',
+  REFRESH: 'admin.auth.refresh',
+  LOGOUT: 'admin.auth.logout',
+  GET_BY_ID: 'admin.auth.getById',
+
+  // admin_users management
+  ADMINS_LIST: 'admin.admins.list',
+  ADMINS_CREATE: 'admin.admins.create',
+  ADMINS_UPDATE: 'admin.admins.update',
+  ADMINS_DELETE: 'admin.admins.delete',
+
+  // Audit log
+  AUDIT_WRITE: 'admin.audit.write',
+  AUDIT_LIST: 'admin.audit.list',
+
+  // Cross-tenant tenancy (auth-service)
+  USERS_LIST: 'admin.users.list',
+  USERS_GET: 'admin.users.get',
+  USERS_UPDATE: 'admin.users.update', // suspend/reactivate, force-verify
+  USERS_DELETE: 'admin.users.delete',
+  WORKSPACES_LIST: 'admin.workspaces.list',
+  WORKSPACES_GET: 'admin.workspaces.get',
+  WORKSPACES_SET_PLAN: 'admin.workspaces.setPlan',
+  PROJECTS_LIST: 'admin.projects.list',
+  PROJECTS_GET: 'admin.projects.get',
+  PROJECTS_DELETE: 'admin.projects.delete',
+
+  // Plans (definitions — auth-service)
+  PLANS_LIST: 'admin.plans.list',
+  PLANS_CREATE: 'admin.plans.create',
+  PLANS_UPDATE: 'admin.plans.update',
+
+  // Cross-tenant moderation (core-service)
+  CONTENT_LIST: 'admin.content.list',
+  CONTENT_GET: 'admin.content.get',
+  CONTENT_TAKEDOWN: 'admin.content.takedown',
+  MEDIA_LIST: 'admin.media.list',
+  MEDIA_USAGE: 'admin.media.usage',
+  MEDIA_PURGE: 'admin.media.purge',
+  APIKEYS_LIST: 'admin.apiKeys.list',
+  APIKEYS_REVOKE: 'admin.apiKeys.revoke',
+  WEBHOOKS_LIST: 'admin.webhooks.list',
+  WEBHOOKS_DISABLE: 'admin.webhooks.disable',
+
+  // Metrics (auth-side + core-side, merged at the gateway)
+  METRICS_AUTH: 'admin.metrics.auth',
+  METRICS_CONTENT: 'admin.metrics.content',
+
+  // Support tickets (cross-tenant staff management; see doc/support-ticket/backend.md).
+  SUPPORT_LIST: 'admin.support.list',
+  SUPPORT_GET: 'admin.support.get',
+  SUPPORT_REPLY: 'admin.support.reply',
+  SUPPORT_UPDATE: 'admin.support.update',
+  SUPPORT_METRICS: 'admin.support.metrics',
 } as const;
 
 /** Injection tokens for the gateway's TCP ClientProxy instances. */

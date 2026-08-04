@@ -1,6 +1,6 @@
 # Core Service (CMS)
 
-NestJS TCP microservice (`:5002`) owning content. Schema: `core_svc`. Handlers are `@MessagePattern`; HTTP routes are exposed by the gateway under `/api/v1/content/*` (see [API Reference](../06-api-reference.md)).
+NestJS TCP microservice (`:5002`) owning content. Schema: `core_svc`. Handlers are `@MessagePattern`; HTTP routes are exposed by the gateway under `/api/v1/content/*` (see [API Reference](../api-reference.md)).
 
 ## Content model: flexible / headless
 
@@ -13,7 +13,7 @@ This means adding a user-chosen field needs **no migration**, scales without per
 
 ## Schema (`core_svc`)
 
-> All `workspace_id` / `author_id` / `created_by` are plain `uuid` — no FK to `auth_svc` (validated by the gateway). See [Database](../03-database.md).
+> All `workspace_id` / `author_id` / `created_by` are plain `uuid` — no FK to `auth_svc` (validated by the gateway). See [Database](../database.md).
 
 **content_types**
 | column | type | notes |
@@ -42,6 +42,8 @@ This means adding a user-chosen field needs **no migration**, scales without per
 **content_revisions** — `entry_id`→content_entries (cascade), `version` (`unique(entry_id, version)`), `data` jsonb snapshot, `status`, `created_by`, `created_at`. A revision is written on every create and update.
 
 **media_assets** — workspace_id, `r2_key` (object key only; `unique(workspace_id, r2_key)`), `kind` (`image`\|`video`\|`file` CHECK), mime, size_bytes, width, height, alt, original_filename, uploaded_by, created_at, deleted_at.
+
+**usage_buckets** — workspace_id, `period_start` / `period_end` (timestamptz; calendar month, UTC), `request_count` (bigint, default 0), `updated_at`. `unique(workspace_id, period_start)` + index on `workspace_id`. One row per workspace × billing period, atomically incremented (`ON CONFLICT … request_count + n`) by the gateway's batched flush. No FK (auth_svc boundary). See specs/14.
 
 ## Field types (`FieldDef`)
 
@@ -91,6 +93,8 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 ## Message patterns
 
 `core.contentType.{create,list,get,update,delete}` · `core.entry.{create,list,get,update,delete,publish}` · `core.ping`. Defined as `CORE_PATTERNS` in `@wriven/contracts`.
+
+**Usage metering** (`USAGE_PATTERNS`, specs/14): `core.usage.record` (batched atomic increment from the gateway's in-process buffer) · `core.usage.read` (composes the current-period `UsageView`: request count from `usage_buckets` + live media SUM + effective plan limits via `CoreEntitlementsService`). Limits stay in auth-service; core is the usage authority because it owns the metered resources (api_keys, delivery, media).
 
 ## Environment (`apps/core-service/.env`)
 

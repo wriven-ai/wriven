@@ -1,7 +1,13 @@
+# Wriven — Agent Instructions
+
+Wriven's agent instructions live in **[CLAUDE.md](./CLAUDE.md)** — read that file. It covers the project overview, hard rules, and workflow (plus the Nx guidelines).
+
+The maintained reference documentation is under **[doc/](./doc/)** — start at **[doc/README.md](./doc/README.md)**.
+
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
 
-# General Guidelines for working with Nx
+## General Guidelines for working with Nx
 
 - For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies
 - When running tasks (for example build, lint, test, e2e, etc.), always prefer running the task through `nx` (i.e. `nx run`, `nx run-many`, `nx affected`) instead of using the underlying tooling directly
@@ -21,5 +27,3 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
-
-

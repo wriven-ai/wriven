@@ -25,23 +25,24 @@ ALTER TABLE "auth_svc"."workspaces"
 ALTER TABLE "auth_svc"."workspaces"
   ADD COLUMN "updated_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
 
--- ── Make slug globally unique (workspaces are no longer org-scoped) ──────────
+-- ── Slug is unique per owner (each user can have their own "default") ─────────
 DROP INDEX "auth_svc"."workspaces_org_slug_uq";--> statement-breakpoint
-ALTER TABLE "auth_svc"."workspaces"
-  ADD CONSTRAINT "workspaces_slug_unique" UNIQUE ("slug");--> statement-breakpoint
+CREATE UNIQUE INDEX "workspaces_created_by_slug_uq"
+  ON "auth_svc"."workspaces" USING btree ("created_by","slug");--> statement-breakpoint
 
 -- ── Detach workspaces from orgs ──────────────────────────────────────────────
 ALTER TABLE "auth_svc"."workspaces" DROP CONSTRAINT "workspaces_org_id_orgs_id_fk";--> statement-breakpoint
 ALTER TABLE "auth_svc"."workspaces" DROP COLUMN "org_id";--> statement-breakpoint
 
 -- ── Workspace is now top-level tenancy: roles become owner|admin|member ──────
+-- Drop the old check first so the role rewrites below don't violate it.
+ALTER TABLE "auth_svc"."workspace_members" DROP CONSTRAINT "workspace_members_role_check";--> statement-breakpoint
 UPDATE "auth_svc"."workspace_members" SET "role" = 'member'
   WHERE "role" IN ('editor', 'viewer');--> statement-breakpoint
 UPDATE "auth_svc"."workspace_members" wm
 SET "role" = 'owner'
 FROM "auth_svc"."workspaces" w
 WHERE wm.workspace_id = w.id AND wm.user_id = w.created_by;--> statement-breakpoint
-ALTER TABLE "auth_svc"."workspace_members" DROP CONSTRAINT "workspace_members_role_check";--> statement-breakpoint
 ALTER TABLE "auth_svc"."workspace_members" ALTER COLUMN "role" SET DEFAULT 'member';--> statement-breakpoint
 ALTER TABLE "auth_svc"."workspace_members"
   ADD CONSTRAINT "workspace_members_role_check"

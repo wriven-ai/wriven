@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 620" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+  </defs>
+  <rect width="1240" height="620" fill="#0b1120"/>
+
+  <text x="620" y="34" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">RBAC — Enforcement Layers</text>
+  <text x="620" y="56" text-anchor="middle" fill="#94a3b8" font-size="12">Who gates which route, and why it splits (core-service can't enforce; auth-service owns its data)</text>
+
+  <!-- Column 1: core routes -->
+  <g><rect x="30" y="90" width="370" height="290" rx="12" fill="#0c1a33" stroke="#3b82f6" stroke-dasharray="4 4"/>
+    <text x="215" y="114" text-anchor="middle" fill="#93c5fd" font-size="12" font-weight="bold">CORE-SERVICE routes (CMS)</text>
+    <text x="215" y="132" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">→ enforced at the GATEWAY</text>
+    <g font-size="10" fill="#e2e8f0">
+      <text x="50" y="160">content · entries (create/update/publish/delete)</text>
+      <text x="50" y="180">content-types (manage)</text>
+      <text x="50" y="200">media (upload/delete)</text>
+      <text x="50" y="220">webhooks (manage)</text>
+      <text x="50" y="240">api-keys (create/revoke)</text>
+    </g>
+    <g><rect x="50" y="258" width="330" height="100" rx="8" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+      <text x="215" y="280" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">gateway: PermissionGuard</text>
+      <text x="215" y="298" text-anchor="middle" fill="#94a3b8" font-size="10">@RequirePermission(Permission.X)</text>
+      <text x="215" y="316" text-anchor="middle" fill="#94a3b8" font-size="10">runs after ProjectGuard</text>
+      <text x="215" y="338" text-anchor="middle" fill="#fda4af" font-size="10">FORBIDDEN (403) on miss</text></g>
+  </g>
+
+  <!-- Column 2: auth routes -->
+  <g><rect x="430" y="90" width="370" height="290" rx="12" fill="#0f2a2a" stroke="#14b8a6" stroke-dasharray="4 4"/>
+    <text x="615" y="114" text-anchor="middle" fill="#5eead4" font-size="12" font-weight="bold">AUTH-SERVICE routes (tenancy)</text>
+    <text x="615" y="132" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">→ enforced at the SERVICE</text>
+    <g font-size="10" fill="#e2e8f0">
+      <text x="450" y="160">workspaces (update/delete)</text>
+      <text x="450" y="180">projects (CRUD)</text>
+      <text x="450" y="200">members (add/remove/change-role)</text>
+      <text x="450" y="220">invitations (create/revoke)</text>
+      <text x="450" y="240">project members</text>
+    </g>
+    <g><rect x="450" y="258" width="330" height="100" rx="8" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+      <text x="615" y="280" text-anchor="middle" fill="#5eead4" font-size="11" font-weight="bold">auth-service: authorize()</text>
+      <text x="615" y="298" text-anchor="middle" fill="#94a3b8" font-size="10">AuthorizationService.authorize({</text>
+      <text x="615" y="314" text-anchor="middle" fill="#94a3b8" font-size="10"> userId, permission, workspaceId?/projectId? })</text>
+      <text x="615" y="338" text-anchor="middle" fill="#fda4af" font-size="10">FORBIDDEN (403) on miss</text></g>
+  </g>
+
+  <!-- Column 3: billing -->
+  <g><rect x="830" y="90" width="380" height="290" rx="12" fill="#2a0f1a" stroke="#f43f5e" stroke-dasharray="4 4"/>
+    <text x="1020" y="114" text-anchor="middle" fill="#fda4af" font-size="12" font-weight="bold">BILLING</text>
+    <text x="1020" y="132" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">→ enforced at BOTH (defense-in-depth)</text>
+    <g font-size="10" fill="#e2e8f0">
+      <text x="850" y="160">checkout / portal (mutations)</text>
+      <text x="850" y="180">subscription / invoices (reads)</text>
+    </g>
+    <g><rect x="850" y="200" width="340" height="66" rx="8" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+      <text x="1020" y="222" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">gateway: PermissionGuard</text>
+      <text x="1020" y="240" text-anchor="middle" fill="#94a3b8" font-size="10">WORKSPACE_BILLING_MANAGE</text>
+      <text x="1020" y="256" text-anchor="middle" fill="#94a3b8" font-size="10">@RequirePermission on checkout/portal</text></g>
+    <g><rect x="850" y="276" width="340" height="66" rx="8" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+      <text x="1020" y="298" text-anchor="middle" fill="#5eead4" font-size="11" font-weight="bold">auth-service: authorize()</text>
+      <text x="1020" y="316" text-anchor="middle" fill="#94a3b8" font-size="10">re-checks WORKSPACE_BILLING_MANAGE</text>
+      <text x="1020" y="332" text-anchor="middle" fill="#94a3b8" font-size="10">from its own membership data</text></g>
+  </g>
+
+  <!-- WHY box -->
+  <g><rect x="30" y="410" width="1180" height="120" rx="10" fill="#0f172a" stroke="#334155"/>
+    <text x="50" y="434" fill="#94a3b8" font-size="11" font-weight="bold">WHY THE SPLIT</text>
+    <text x="50" y="456" fill="#e2e8f0" font-size="11">• core-service <tspan fill="#fcd34d">cannot enforce</tspan> — hard rule: gateway injects identity, downstream services trust it (no re-validation). So the gateway is core's only gate.</text>
+    <text x="50" y="478" fill="#e2e8f0" font-size="11">• auth-service <tspan fill="#5eead4">owns its data</tspan> (auth_svc) + the resolver brain — it enforces its own routes directly at the service layer. The gateway stays thin for these (JwtAuthGuard + path-param forward).</text>
+    <text x="50" y="500" fill="#e2e8f0" font-size="11">• billing checks at both: the gateway fast-fails; auth-service re-resolves from DB so a direct TCP caller can't bypass.</text>
+    <text x="50" y="520" fill="#64748b" font-size="10">Either layer denying → FORBIDDEN (403). The client useCan() mirrors this for UX; it is never itself the gate.</text>
+  </g>
+
+  <text x="620" y="568" text-anchor="middle" fill="#64748b" font-size="10">Invariants preserved service-side regardless of layer: ≥1 workspace owner, ≥1 project admin, owner-only role-grant/transfer (WORKSPACE_ROLE_ASSIGN).</text>
+</svg>

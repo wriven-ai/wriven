@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 720" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+  </defs>
+  <rect width="1240" height="720" fill="#0b1120"/>
+
+  <text x="620" y="34" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">Admin Panel — Platform Console</text>
+  <text x="620" y="56" text-anchor="middle" fill="#94a3b8" font-size="12">Separate identity (admin_users) + separate RBAC axis (AdminRolesGuard). Orthogonal to tenant RBAC.</text>
+
+  <!-- identity -->
+  <g><rect x="30" y="100" width="200" height="110" rx="8" fill="#2a0f1a" stroke="#f43f5e" stroke-width="2"/>
+    <text x="130" y="124" text-anchor="middle" fill="#fda4af" font-size="11" font-weight="bold">admin_users</text>
+    <line x1="40" y1="132" x2="220" y2="132" stroke="#334155"/>
+    <text x="44" y="152" fill="#e2e8f0" font-size="10">separate from tenant users</text>
+    <text x="44" y="172" fill="#94a3b8" font-size="10">role: super_admin / admin /</text>
+    <text x="44" y="188" fill="#94a3b8" font-size="10">support / viewer</text>
+    <text x="44" y="204" fill="#64748b" font-size="9">TOTP/MFA: schema only (unbuilt)</text></g>
+
+  <!-- guards -->
+  <g><rect x="280" y="100" width="200" height="110" rx="8" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
+    <text x="380" y="124" text-anchor="middle" fill="#93c5fd" font-size="11" font-weight="bold">AdminAuthGuard</text>
+    <line x1="290" y1="132" x2="470" y2="132" stroke="#334155"/>
+    <text x="290" y="152" fill="#94a3b8" font-size="10">separate JWT (admin)</text>
+    <text x="290" y="170" fill="#94a3b8" font-size="10">sets req.adminUser</text>
+    <text x="290" y="190" fill="#64748b" font-size="9">→ AdminRolesGuard reads role</text>
+    <text x="290" y="206" fill="#64748b" font-size="9">via @AdminRoles(...)</text></g>
+
+  <g><rect x="530" y="100" width="200" height="110" rx="8" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+    <text x="630" y="124" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">AdminRolesGuard</text>
+    <line x1="540" y1="132" x2="720" y2="132" stroke="#334155"/>
+    <text x="540" y="152" fill="#94a3b8" font-size="10">@AdminRoles('super_admin')</text>
+    <text x="540" y="170" fill="#94a3b8" font-size="10">mirrors PermissionGuard</text>
+    <text x="540" y="190" fill="#fda4af" font-size="10">FORBIDDEN on role miss</text>
+    <text x="540" y="206" fill="#64748b" font-size="9">(template the tenant guard copied)</text></g>
+
+  <line x1="230" y1="155" x2="278" y2="155" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="480" y1="155" x2="528" y2="155" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- services -->
+  <text x="40" y="252" fill="#fcd34d" font-size="12" font-weight="bold">ADMIN SERVICES (platform scope — cross-tenant)</text>
+  <g font-size="10">
+    <g><rect x="30" y="270" width="170" height="80" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+      <text x="115" y="294" text-anchor="middle" fill="#5eead4" font-weight="bold">tenancy</text>
+      <text x="40" y="316" fill="#94a3b8">workspaces · projects</text>
+      <text x="40" y="332" fill="#94a3b8">users · members</text></g>
+    <g><rect x="220" y="270" width="170" height="80" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+      <text x="305" y="294" text-anchor="middle" fill="#5eead4" font-weight="bold">content moderation</text>
+      <text x="230" y="316" fill="#94a3b8">types · entries · media</text>
+      <text x="230" y="332" fill="#94a3b8">keys · webhooks</text></g>
+    <g><rect x="410" y="270" width="170" height="80" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+      <text x="495" y="294" text-anchor="middle" fill="#5eead4" font-weight="bold">plans</text>
+      <text x="420" y="316" fill="#94a3b8">CRUD + assignment</text>
+      <text x="420" y="332" fill="#94a3b8">+ Stripe sync</text></g>
+    <g><rect x="600" y="270" width="170" height="80" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+      <text x="685" y="294" text-anchor="middle" fill="#5eead4" font-weight="bold">enforcement</text>
+      <text x="610" y="316" fill="#94a3b8">plan-limit caps</text>
+      <text x="610" y="332" fill="#94a3b8">(projects/members/...)</text></g>
+    <g><rect x="790" y="270" width="170" height="80" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+      <text x="875" y="294" text-anchor="middle" fill="#5eead4" font-weight="bold">metrics</text>
+      <text x="800" y="316" fill="#94a3b8">counts / aggregates</text>
+      <text x="800" y="332" fill="#94a3b8">per tenant</text></g>
+    <g><rect x="980" y="270" width="230" height="80" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+      <text x="1095" y="294" text-anchor="middle" fill="#5eead4" font-weight="bold">audit log</text>
+      <text x="990" y="316" fill="#94a3b8">who-changed-what</text>
+      <text x="990" y="332" fill="#94a3b8">(platform-side; tenants have none)</text></g>
+  </g>
+  <line x1="380" y1="210" x2="305" y2="270" stroke="#475569" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <line x1="630" y1="210" x2="875" y2="270" stroke="#475569" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#a)"/>
+
+  <!-- frontend -->
+  <g><rect x="30" y="400" width="380" height="100" rx="8" fill="#1a1a1f" stroke="#64748b" stroke-dasharray="4 4"/>
+    <text x="220" y="424" text-anchor="middle" fill="#cbd5e1" font-size="11" font-weight="bold">Admin frontend</text>
+    <text x="40" y="448" fill="#94a3b8" font-size="10">separate repo (not apps/client)</text>
+    <text x="40" y="468" fill="#94a3b8" font-size="10">talks to the same gateway /admin/* routes</text>
+    <text x="40" y="486" fill="#fda4af" font-size="10">in progress (P1)</text></g>
+
+  <!-- vs tenant -->
+  <g><rect x="450" y="400" width="760" height="100" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="470" y="424" fill="#94a3b8" font-size="11" font-weight="bold">TWO RBAC AXES (don't confuse them)</text>
+    <text x="470" y="448" fill="#e2e8f0" font-size="10"><tspan fill="#fda4af">Platform admin</tspan> — admin_users + AdminRolesGuard + super_admin/admin/support/viewer. Break-glass across ALL tenants.</text>
+    <text x="470" y="468" fill="#e2e8f0" font-size="10"><tspan fill="#5eead4">Tenant RBAC</tspan> — users + workspace_members/project_members + PermissionGuard + roles (see 01-auth-rbac). Scoped to one tenant.</text>
+    <text x="470" y="488" fill="#64748b" font-size="10">Completely independent identity + guard stacks. No isSuperAdmin flag on tenant users by design.</text></g>
+
+  <text x="620" y="540" text-anchor="middle" fill="#64748b" font-size="10">Status: backend done. Frontend in progress (separate repo). TOTP/MFA schema-only.</text>
+</svg>

@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 880" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5eead4"/></marker>
+  </defs>
+  <rect width="1240" height="880" fill="#0b1120"/>
+
+  <text x="620" y="34" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">Frontend — Next.js Client</text>
+  <text x="620" y="56" text-anchor="middle" fill="#94a3b8" font-size="12">apps/client · cookie auth · URL-driven scope · Zustand + TanStack Query · RBAC mirrors the backend</text>
+
+  <!-- ===== AUTH / SESSION ===== -->
+  <text x="40" y="92" fill="#a5b4fc" font-size="12" font-weight="bold">AUTH · cookie-based (no token in JS)</text>
+  <g><rect x="30" y="100" width="150" height="70" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="2"/>
+    <text x="105" y="124" text-anchor="middle" fill="#a5b4fc" font-size="10" font-weight="bold">cookie jar</text>
+    <text x="40" y="146" fill="#94a3b8" font-size="9">httpOnly access +</text>
+    <text x="40" y="162" fill="#94a3b8" font-size="9">refresh (client blind)</text></g>
+
+  <g><rect x="210" y="100" width="170" height="70" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="2"/>
+    <text x="295" y="124" text-anchor="middle" fill="#a5b4fc" font-size="10" font-weight="bold">CSRF (in-memory)</text>
+    <text x="220" y="146" fill="#94a3b8" font-size="9">double-submit token</text>
+    <text x="220" y="162" fill="#94a3b8" font-size="9">→ X-CSRF-Token on writes</text></g>
+
+  <g><rect x="410" y="100" width="200" height="70" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="2"/>
+    <text x="510" y="124" text-anchor="middle" fill="#a5b4fc" font-size="10" font-weight="bold">silent restore</text>
+    <text x="420" y="146" fill="#94a3b8" font-size="9">on mount: /auth/me</text>
+    <text x="420" y="162" fill="#94a3b8" font-size="9">→ refresh on 401 → session</text></g>
+
+  <g><rect x="640" y="100" width="280" height="70" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="2"/>
+    <text x="780" y="122" text-anchor="middle" fill="#a5b4fc" font-size="10" font-weight="bold">401 → refresh → retry (request())</text>
+    <text x="650" y="144" fill="#94a3b8" font-size="9">intercept 401 · rotate once</text>
+    <text x="650" y="160" fill="#94a3b8" font-size="9">(single de-duped refresh) · replay</text></g>
+  <line x1="920" y1="135" x2="978" y2="135" stroke="#475569" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="949" y="128" text-anchor="middle" fill="#5eead4" font-size="9">HTTP</text>
+  <g><rect x="980" y="100" width="120" height="70" rx="8" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
+    <text x="1040" y="124" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">gateway</text>
+    <text x="1040" y="146" text-anchor="middle" fill="#64748b" font-size="9">/api/v1</text>
+    <text x="1040" y="162" text-anchor="middle" fill="#64748b" font-size="9">{success,data}</text></g>
+
+  <line x1="180" y1="135" x2="208" y2="135" stroke="#475569" stroke-width="1.4"/>
+  <line x1="380" y1="135" x2="408" y2="135" stroke="#475569" stroke-width="1.4"/>
+  <line x1="610" y1="135" x2="638" y2="135" stroke="#475569" stroke-width="1.4"/>
+
+  <!-- ===== SCOPE ===== -->
+  <text x="40" y="212" fill="#5eead4" font-size="12" font-weight="bold">SCOPE · URL is the source of truth</text>
+  <g><rect x="30" y="220" width="240" height="80" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="150" y="244" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">URL /w/[wsSlug]/p/[projSlug]/…</text>
+    <text x="40" y="266" fill="#94a3b8" font-size="9">deep-link / refresh / shareable</text>
+    <text x="40" y="282" fill="#94a3b8" font-size="9">multiple tabs = multiple scopes</text></g>
+
+  <g><rect x="300" y="220" width="220" height="80" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="410" y="244" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">use-scope (layout)</text>
+    <text x="310" y="266" fill="#94a3b8" font-size="9">slug → entity → store id</text>
+    <text x="310" y="282" fill="#fcd34d" font-size="9">notFound() on unknown slug</text></g>
+
+  <g><rect x="550" y="220" width="220" height="80" rx="8" fill="#171433" stroke="#818cf8" stroke-width="2"/>
+    <text x="660" y="244" text-anchor="middle" fill="#c7d2fe" font-size="10" font-weight="bold">Zustand store</text>
+    <text x="560" y="266" fill="#94a3b8" font-size="9">session · workspaces[]</text>
+    <text x="560" y="282" fill="#94a3b8" font-size="9">projects[] · currentWs/ProjId</text></g>
+
+  <g><rect x="800" y="220" width="180" height="80" rx="8" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
+    <text x="890" y="244" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">api client (lib/api.ts)</text>
+    <text x="810" y="266" fill="#94a3b8" font-size="9">X-Workspace-Id</text>
+    <text x="810" y="282" fill="#94a3b8" font-size="9">X-Project-Id from store</text></g>
+
+  <line x1="270" y1="260" x2="298" y2="260" stroke="#5eead4" stroke-width="1.6" marker-end="url(#at)"/>
+  <line x1="520" y1="260" x2="548" y2="260" stroke="#5eead4" stroke-width="1.6" marker-end="url(#at)"/>
+  <line x1="770" y1="260" x2="798" y2="260" stroke="#5eead4" stroke-width="1.6" marker-end="url(#at)"/>
+
+  <!-- ===== NAV BRAIN ===== -->
+  <text x="40" y="340" fill="#5eead4" font-size="12" font-weight="bold">NAV BRAIN · pure config in, tree out</text>
+  <g><rect x="30" y="350" width="150" height="70" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="105" y="374" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">use-nav-context</text>
+    <text x="40" y="396" fill="#94a3b8" font-size="9">URL + session + can</text>
+    <text x="40" y="412" fill="#94a3b8" font-size="9">→ NavContext</text></g>
+  <g><rect x="210" y="350" width="150" height="70" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="285" y="374" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">build-nav-tree</text>
+    <text x="220" y="396" fill="#94a3b8" font-size="9">workspace + project</text>
+    <text x="220" y="412" fill="#94a3b8" font-size="9">builders</text></g>
+  <g><rect x="390" y="350" width="130" height="70" rx="8" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+    <text x="455" y="374" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="bold">gate()</text>
+    <text x="400" y="396" fill="#94a3b8" font-size="9">filter by</text>
+    <text x="400" y="412" fill="#94a3b8" font-size="9">Permission</text></g>
+  <g><rect x="550" y="350" width="170" height="70" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="635" y="374" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">NavTreeRenderer</text>
+    <text x="560" y="396" fill="#94a3b8" font-size="9">dumb · shell primitives</text>
+    <text x="560" y="412" fill="#94a3b8" font-size="9">active-state rule</text></g>
+
+  <line x1="180" y1="385" x2="208" y2="385" stroke="#475569" stroke-width="1.4" marker-end="url(#a)"/>
+  <line x1="360" y1="385" x2="388" y2="385" stroke="#475569" stroke-width="1.4" marker-end="url(#a)"/>
+  <line x1="520" y1="385" x2="548" y2="385" stroke="#475569" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- ===== RBAC MIRROR ===== -->
+  <text x="40" y="470" fill="#fcd34d" font-size="12" font-weight="bold">RBAC MIRROR · UX only (backend is the real gate)</text>
+  <g><rect x="30" y="480" width="240" height="110" rx="8" fill="#1c1206" stroke="#f59e0b" stroke-width="2"/>
+    <text x="150" y="504" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="bold">useCan()</text>
+    <line x1="40" y1="512" x2="260" y2="512" stroke="#334155"/>
+    <text x="40" y="532" fill="#94a3b8" font-size="9">reads ws/proj role from URL slug</text>
+    <text x="40" y="548" fill="#94a3b8" font-size="9">(synchronous — no store-id race)</text>
+    <text x="40" y="566" fill="#94a3b8" font-size="9">→ effectivePermissions()</text>
+    <text x="40" y="582" fill="#64748b" font-size="9">same fn as auth-service resolver</text></g>
+
+  <g><rect x="300" y="480" width="220" height="110" rx="8" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
+    <text x="410" y="504" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">from @wriven/contracts/rbac</text>
+    <line x1="310" y1="512" x2="510" y2="512" stroke="#334155"/>
+    <text x="310" y="532" fill="#94a3b8" font-size="9">Permission enum</text>
+    <text x="310" y="548" fill="#94a3b8" font-size="9">role → perm maps</text>
+    <text x="310" y="566" fill="#fcd34d" font-size="9">effectivePermissions (cascade)</text>
+    <text x="310" y="582" fill="#64748b" font-size="9">pure-TS subpath (no DTOs)</text></g>
+
+  <g><rect x="550" y="480" width="200" height="110" rx="8" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+    <text x="650" y="504" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">consumers</text>
+    <line x1="560" y1="512" x2="740" y2="512" stroke="#334155"/>
+    <text x="560" y="532" fill="#94a3b8" font-size="9">nav gate() — hide items</text>
+    <text x="560" y="548" fill="#94a3b8" font-size="9">action buttons (disabled/hide)</text>
+    <text x="560" y="566" fill="#94a3b8" font-size="9">route guards (NoAccess card)</text>
+    <text x="560" y="582" fill="#fda4af" font-size="9">never a security decision</text></g>
+
+  <line x1="270" y1="535" x2="298" y2="535" stroke="#475569" stroke-width="1.4" marker-end="url(#a)"/>
+  <line x1="520" y1="535" x2="548" y2="535" stroke="#5eead4" stroke-width="1.4" marker-end="url(#at)"/>
+
+  <g><rect x="780" y="480" width="430" height="110" rx="8" fill="#0f172a" stroke="#334155"/>
+    <text x="800" y="504" fill="#94a3b8" font-size="11" font-weight="bold">WHY CLIENT RBAC EXISTS</text>
+    <text x="800" y="528" fill="#e2e8f0" font-size="10">Backend PermissionGuard (403) is the gate. The client mirror only hides UI you can't use</text>
+    <text x="800" y="548" fill="#e2e8f0" font-size="10">so users don't see dead buttons/nav. A client "deny" never blocks a real call; a client</text>
+    <text x="800" y="568" fill="#e2e8f0" font-size="10">"allow" never overrides a 403. Shared cascade fn = the two sides can't drift.</text>
+    <text x="800" y="586" fill="#64748b" font-size="9">@wriven/contracts wired as workspace dep + transpilePackages (rbac subpath avoids bundling DTOs).</text></g>
+
+  <!-- footer -->
+  <g><rect x="30" y="630" width="1180" height="110" rx="10" fill="#0f172a" stroke="#334155"/>
+    <text x="50" y="654" fill="#94a3b8" font-size="11" font-weight="bold">STACK &amp; RULES</text>
+    <text x="50" y="676" fill="#e2e8f0" font-size="10">Next.js 16 (App Router) · React 19 · Tailwind v4 · TanStack Query (server) · Zustand (client) · react-hook-form + zod · TipTap · next-themes.</text>
+    <text x="50" y="696" fill="#e2e8f0" font-size="10">Auth fully cookie-based; access+refresh httpOnly, CSRF double-submit in memory. 401→refresh→retry is request()-level.</text>
+    <text x="50" y="716" fill="#e2e8f0" font-size="10">URL drives scope (store mirrors it for headers, not the other way). RequireAuth guards the (dashboard) layout.</text>
+  </g>
+  <text x="620" y="768" text-anchor="middle" fill="#64748b" font-size="10">Deploys to Vercel (frontend only); all backend on the VPS. RBAC + 401-refresh details in doc/frontend/.</text>
+</svg>

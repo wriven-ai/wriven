@@ -5,6 +5,8 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { authApi, configureApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -18,10 +20,9 @@ export function Providers({ children }: { children: ReactNode }) {
   const bootstrapped = useRef(false);
 
   useEffect(() => {
-    // Wire the API client to the auth store (token, workspace, project, auth-failure).
+    // Wire the API client to the auth store (workspace, project, auth-failure).
+    // Tokens live in httpOnly cookies — the client never touches them.
     configureApi({
-      getAccessToken: () => useAuthStore.getState().accessToken,
-      setAccessToken: (token) => useAuthStore.getState().setAccessToken(token),
       getWorkspaceId: () => useAuthStore.getState().currentWorkspaceId,
       getProjectId: () => useAuthStore.getState().currentProjectId,
       onAuthFailure: () => useAuthStore.getState().setUnauthenticated(),
@@ -30,9 +31,9 @@ export function Providers({ children }: { children: ReactNode }) {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
 
-    // Silent session restore: access token lives in memory and is gone after a
-    // reload, but the refresh cookie persists. /auth/me 401s → the client
-    // refreshes via the cookie and retries; success restores the session.
+    // Silent session restore: the access cookie may be expired after a while,
+    // but the refresh cookie persists. /auth/me 401s → the client refreshes via
+    // the cookie and retries; success restores the session.
     void (async () => {
       try {
         const session = await authApi.me();
@@ -44,8 +45,19 @@ export function Providers({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>{children}</TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      storageKey="wriven-theme"
+    >
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          {children}
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

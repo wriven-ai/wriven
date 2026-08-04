@@ -10,13 +10,17 @@ import type { DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
+import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 
 const { contentTypes } = schema;
 type ContentTypeRow = typeof contentTypes.$inferSelect;
 
 @Injectable()
 export class ContentTypesService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
+    private readonly entitlements: CoreEntitlementsService,
+  ) {}
 
   async create(p: {
     workspaceId: string;
@@ -25,6 +29,7 @@ export class ContentTypesService {
     dto: CreateContentTypeDto;
   }): Promise<ContentTypeView> {
     this.assertUniqueKeys(p.dto.fields);
+    await this.entitlements.assertContentTypeQuota(p.workspaceId);
     try {
       const [row] = await this.db
         .insert(contentTypes)
@@ -44,6 +49,41 @@ export class ContentTypesService {
       }
       throw err;
     }
+  }
+
+  /**
+   * Seed a starter content type for a brand-new project so users aren't faced
+   * with an empty workspace. Idempotent — does nothing if the project already
+   * has any content type. Called after project creation.
+   */
+  async seedDefaults(p: {
+    workspaceId: string;
+    projectId: string;
+    userId: string;
+  }): Promise<{ seeded: boolean }> {
+    const existing = await this.db.query.contentTypes.findFirst({
+      where: and(
+        eq(contentTypes.projectId, p.projectId),
+        isNull(contentTypes.deletedAt),
+      ),
+    });
+    if (existing) return { seeded: false };
+
+    const fields: FieldDef[] = [
+      { key: 'title', label: 'Title', type: 'text', required: true },
+      { key: 'body', label: 'Body', type: 'richtext' },
+      { key: 'cover', label: 'Cover image', type: 'media' },
+      { key: 'excerpt', label: 'Excerpt', type: 'text' },
+    ];
+    await this.db.insert(contentTypes).values({
+      workspaceId: p.workspaceId,
+      projectId: p.projectId,
+      name: 'Post',
+      apiId: 'post',
+      fields,
+      createdBy: p.userId,
+    });
+    return { seeded: true };
   }
 
   async list(p: {

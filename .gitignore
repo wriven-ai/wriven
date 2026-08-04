@@ -1,5 +1,8 @@
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
+# secrets — holds npm token in plaintext
+publish-sdk.sh
+
 # compiled output
 dist
 tmp
@@ -90,3 +93,6 @@ PROJECT.md
 .gemini
 .cursor
 .commandcode
+
+# Local-only scripts (may contain secrets — never commit)
+publish-sdk.sh

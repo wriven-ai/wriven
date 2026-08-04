@@ -1,19 +1,27 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   CreateWorkspaceDto,
+  Permission,
   UpdateWorkspaceDto,
   WorkspaceView,
 } from '@wriven/contracts';
+import type { WorkspaceRole } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { slugify, uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
-import { MembersService } from './members.service';
+import { AuthorizationService } from './authorization.service';
 
-const { workspaces, workspaceMembers, projects, projectMembers, users } =
-  schema;
+const {
+  workspaces,
+  workspaceMembers,
+  projects,
+  projectMembers,
+  plans,
+  subscriptions,
+} = schema;
 
 type WorkspaceRow = typeof workspaces.$inferSelect;
 
@@ -21,7 +29,7 @@ type WorkspaceRow = typeof workspaces.$inferSelect;
 export class WorkspacesService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
-    private readonly members: MembersService,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async create(p: {
@@ -59,6 +67,17 @@ export class WorkspacesService {
           userId: p.userId,
           role: 'admin',
         });
+        // Start the new workspace on the free plan.
+        const freePlan = await tx.query.plans.findFirst({
+          where: eq(plans.key, 'free'),
+          columns: { id: true },
+        });
+        if (freePlan) {
+          await tx.insert(subscriptions).values({
+            workspaceId: workspace.id,
+            planId: freePlan.id,
+          });
+        }
         return { workspace, project };
       });
       return {
@@ -78,13 +97,13 @@ export class WorkspacesService {
     callerUserId: string;
     workspaceId: string;
   }): Promise<WorkspaceView> {
-    const role = await this.members.requireWorkspaceRole(
-      p.callerUserId,
-      p.workspaceId,
-      ['owner', 'admin', 'member'],
-    );
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_VIEW,
+      workspaceId: p.workspaceId,
+    });
     const row = await this.requireRow(p.workspaceId);
-    return this.toView(row, role);
+    return this.toView(row, await this.roleFor(p.workspaceId, p.callerUserId));
   }
 
   async list(p: { userId: string }): Promise<WorkspaceView[]> {
@@ -101,11 +120,11 @@ export class WorkspacesService {
     workspaceId: string;
     dto: UpdateWorkspaceDto;
   }): Promise<WorkspaceView> {
-    await this.members.requireWorkspaceRole(
-      p.callerUserId,
-      p.workspaceId,
-      ['owner', 'admin'],
-    );
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_EDIT,
+      workspaceId: p.workspaceId,
+    });
     const set: Partial<WorkspaceRow> = {};
     if (p.dto.name !== undefined) set.name = p.dto.name;
     if (p.dto.slug !== undefined) {
@@ -131,9 +150,11 @@ export class WorkspacesService {
     callerUserId: string;
     workspaceId: string;
   }): Promise<{ success: true }> {
-    await this.members.requireWorkspaceRole(p.callerUserId, p.workspaceId, [
-      'owner',
-    ]);
+    await this.authz.authorize({
+      userId: p.callerUserId,
+      permission: Permission.WORKSPACE_DELETE,
+      workspaceId: p.workspaceId,
+    });
     await this.db.delete(workspaces).where(eq(workspaces.id, p.workspaceId));
     return { success: true };
   }
@@ -151,7 +172,7 @@ export class WorkspacesService {
   private async roleFor(
     workspaceId: string,
     userId: string,
-  ): Promise<string> {
+  ): Promise<WorkspaceRole> {
     const row = await this.db.query.workspaceMembers.findFirst({
       where: and(
         eq(workspaceMembers.workspaceId, workspaceId),
@@ -162,7 +183,7 @@ export class WorkspacesService {
     return row?.role ?? 'member';
   }
 
-  private toView(w: WorkspaceRow, role: string): WorkspaceView {
+  private toView(w: WorkspaceRow, role: WorkspaceRole): WorkspaceView {
     return {
       id: w.id,
       name: w.name,

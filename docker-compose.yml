@@ -1,0 +1,28 @@
+services:
+  # ── Postgres (local dev only — uses Supabase in prod) ─────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: wriven-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wriven
+      POSTGRES_PASSWORD: wriven_dev_password_change_me
+      POSTGRES_DB: wriven
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wriven']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+
+volumes:
+  postgres_data:
+
+networks:
+  wriven-net:
+    driver: bridge

@@ -1,0 +1,1 @@
+ALTER TABLE "auth_svc"."subscriptions" ADD COLUMN "pending_change" jsonb;
