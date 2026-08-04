@@ -41,16 +41,27 @@ browser bundle** (exactly like Contentful/Sanity delivery tokens). See
 
 ---
 
-## The "install Wriven npm" question
+## Install the Wriven SDK
 
-Wriven ships an official SDK (`@wriven-ai/client`, `@wriven-ai/react`). At the time
-this guide was written, **the packages are not yet published to the public npm
-registry**. Therefore the **recommended, always-works path** in this guide is a tiny
-typed `fetch` client (~40 lines, zero dependencies) that talks to the Delivery API
-directly. It is API-compatible with the official SDK, so you can swap to
-`@wriven-ai/client` later with no refactoring.
+Wriven ships an official SDK, **published on npm** (`0.1.0`):
 
-See [05-client-setup.md](./05-client-setup.md) for the full client code.
+```bash
+npm install @wriven-ai/client      # core delivery client (typed, isomorphic, zero-dep)
+npm install @wriven-ai/react        # optional: <WrivenRichText> renderer
+```
+
+```ts
+import { createClient } from '@wriven-ai/client';
+const wriven = createClient({
+  projectId: import.meta.env.VITE_WRIVEN_PROJECT_ID,
+  token: import.meta.env.VITE_WRIVEN_TOKEN, // wrk_live_…
+});
+const posts = await wriven.getEntries('blog_post', { sort: '-publishedAt', limit: 10 });
+```
+
+Prefer the SDK. If you'd rather skip the dependency, [05-client-setup.md](./05-client-setup.md)
+also includes a tiny typed `fetch` helper (~50 lines, zero-dep) with the identical
+API — useful as a no-install fallback or to understand what the SDK does under the hood.
 
 ---
 

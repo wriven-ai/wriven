@@ -59,11 +59,20 @@ Always fall back to `""` for `alt` (never `undefined`) so screen readers stay qu
 
 ## 3. Render `richtext` fields — the `<WrivenRichText>` component
 
-Rich-text values are ProseMirror JSON. Vendor this renderer into your project as
-**`src/components/WrivenRichText.tsx`**. It is the same component shipped by
-`@wriven-ai/react` (dependency-free, safe-link-only, inline images supported).
-When the official package is published you can delete this file and import from
-`@wriven-ai/react` instead.
+Rich-text values are ProseMirror JSON. The easiest path is the published
+`@wriven-ai/react` package:
+
+```bash
+npm install @wriven-ai/react
+```
+```tsx
+import { WrivenRichText } from '@wriven-ai/react';
+<WrivenRichText value={entry.data.body} />
+```
+
+Prefer not to add the dependency? Vendor the same renderer into your project as
+**`src/components/WrivenRichText.tsx`** — it is dependency-free, safe-link-only,
+supports inline images, and is the exact component shipped by `@wriven-ai/react`.
 
 ```tsx
 // src/components/WrivenRichText.tsx

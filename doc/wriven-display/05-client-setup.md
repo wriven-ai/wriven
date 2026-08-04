@@ -1,8 +1,8 @@
 # 05 — Client setup (the "install Wriven npm" step)
 
-## Status of the official packages
+## The official SDK (recommended)
 
-Wriven has an official SDK:
+Wriven's SDK is **published on npm** (`0.1.0`):
 
 | Package | What it does |
 |---------|--------------|
@@ -10,16 +10,31 @@ Wriven has an official SDK:
 | `@wriven-ai/react` | `<WrivenRichText>` renderer for rich-text fields |
 | `@wriven-ai/next` | Next.js webhook + signature verification (not needed for Vite) |
 
-**These are not yet published to the public npm registry** at the time this guide
-was written. So instead of `npm install @wriven-ai/client`, you have two options:
+```bash
+npm install @wriven-ai/client        # core
+npm install @wriven-ai/react          # optional: rich-text renderer
+```
 
-1. **(Recommended) Use the typed `fetch` client below.** It is ~50 lines, zero
-   dependencies, and is **API-compatible with `@wriven-ai/client`** — you can swap
-   to the real package later with no refactoring.
-2. Vendor the official SDK source from the Wriven repo (`packages/client/src/`,
-   `packages/react/src/`) into your project (it is isomorphic and dependency-free).
+```ts
+import { createClient } from '@wriven-ai/client';
+const wriven = createClient({
+  projectId: import.meta.env.VITE_WRIVEN_PROJECT_ID,
+  token: import.meta.env.VITE_WRIVEN_TOKEN,     // wrk_live_…
+});
+const posts = await wriven.getEntries('blog_post', { sort: '-publishedAt', limit: 10 });
+```
 
-This guide uses **option 1** as the default.
+The SDK adds typed responses, retries on 5xx, a request timeout, and a typed
+`WrivenError`. Use it.
+
+---
+
+## The typed `fetch` client (no-dependency alternative)
+
+Prefer to skip the dependency? The helper below is ~50 lines, zero deps, and has
+the **exact same API as `@wriven-ai/client`** (`getEntries` / `getEntry` /
+`QueryOptions` / `WrivenError`) — useful as a no-install fallback, or just to see
+what the SDK does under the hood.
 
 ---
 
@@ -265,7 +280,7 @@ import { WrivenRichText } from '@wriven-ai/react';
 <WrivenRichText value={entry.data.body} />
 ```
 
-Until it's published, use the vendored component in [06-rendering.md](./06-rendering.md)
-(it is the same code).
+Install it with `npm install @wriven-ai/react`. Prefer to skip the dependency?
+The vendored equivalent is in [06-rendering.md](./06-rendering.md) — same code.
 
 Next: [06-rendering.md](./06-rendering.md) — rendering entries, media, and rich text.
