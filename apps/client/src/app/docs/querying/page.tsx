@@ -68,7 +68,7 @@ include=1" \\
         Only published references are expanded; unpublished ones stay as ids.
       </Callout>
 
-      <NextLink href="/docs/preview" title="Preview & Drafts" />
+      <NextLink href="/docs/entries" title="Content & Entries" />
     </article>
   );
 }

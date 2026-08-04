@@ -83,7 +83,7 @@ Authorization: Bearer wrk_live_xxx`}
         ]}
       />
 
-      <NextLink href="/docs/delivery-api" title="Delivery API" />
+      <NextLink href="/docs/content-modeling" title="Content Modeling" />
     </article>
   );
 }
