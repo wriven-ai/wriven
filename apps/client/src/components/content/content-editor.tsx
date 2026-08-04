@@ -32,8 +32,9 @@ import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 
 /**
- * Single-entry editor (create + edit). Three columns: left = settings (publish,
- * slug, structured fields), center = title + body, right = AI co-writer only.
+ * Single-entry editor (create + edit). Center = title + body + structured
+ * fields (media, reference, etc.) inline; right = AI co-writer, shown only when
+ * the content type has a rich-text field. Settings sheet holds the slug.
  * The entries *list* lives on its own page — this view is one document.
  */
 export function ContentEditor({
@@ -141,11 +142,7 @@ export function ContentEditor({
       }
     }
     setFieldErrors(errs);
-    if (Object.keys(errs).length > 0) {
-      // If a hidden (drawer) field is the offender, open the drawer so it's visible.
-      if (settingsFields.some((f) => errs[f.key])) setSettingsOpen(true);
-      return;
-    }
+    if (Object.keys(errs).length > 0) return;
 
     const payload = { data: formData, slug: slug || undefined };
     if (entryId) updateMutation.mutate(payload);
@@ -156,14 +153,16 @@ export function ContentEditor({
   const saveError = createMutation.error || updateMutation.error;
   const status = entry?.status ?? 'draft';
 
-  // Split fields: title + body in the centre, everything else in left settings.
+  // Title + richtext render bare on the writing surface; every other field
+  // (media, reference, number, date, select, boolean) renders inline below.
   const allFields = selectedType?.fields ?? [];
   const titleField = allFields.find((f) => f.type === 'text');
   const bodyFields = allFields.filter((f) => f.type === 'richtext');
   const usedInMain = new Set(
     [titleField?.key, ...bodyFields.map((b) => b.key)].filter(Boolean) as string[],
   );
-  const settingsFields = allFields.filter((f) => !usedInMain.has(f.key));
+  const mainFields = allFields.filter((f) => !usedInMain.has(f.key));
+  const hasRichText = bodyFields.length > 0;
   const hasMain = !!titleField || bodyFields.length > 0;
 
   return (
@@ -209,7 +208,7 @@ export function ContentEditor({
           <button
             onClick={() => setSettingsOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-xs font-mono font-bold"
-            title="Entry settings (slug + fields)"
+            title="Entry settings (slug)"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Settings</span>
@@ -286,7 +285,7 @@ export function ContentEditor({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Center: writing surface */}
-        <div className="lg:col-span-8 space-y-5">
+        <div className={`${hasRichText ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
           <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 sm:p-6 shadow-sm space-y-5">
             {allFields.length === 0 && (
               <p className="text-xs font-mono text-text-muted">
@@ -322,9 +321,24 @@ export function ContentEditor({
               />
             ))}
 
+            {/* Structured fields — media, reference, number, date, select, boolean */}
+            {mainFields.length > 0 && (
+              <div className="space-y-5 border-t border-brand-border pt-5">
+                {mainFields.map((field) => (
+                  <FieldRow
+                    key={field.key}
+                    field={field}
+                    value={formData[field.key]}
+                    onChange={(v) => setField(field.key, v)}
+                    error={fieldErrors[field.key]}
+                  />
+                ))}
+              </div>
+            )}
+
             {!hasMain && allFields.length > 0 && (
               <p className="text-[10px] font-mono text-text-muted">
-                No title or body field — edit this entry&apos;s fields on the left.
+                No title or body field for this content type.
               </p>
             )}
           </div>
@@ -337,7 +351,8 @@ export function ContentEditor({
           )}
         </div>
 
-        {/* Right: AI co-writer only */}
+        {/* Right: AI co-writer — only when the content type has a rich-text body */}
+        {hasRichText && (
         <aside className="lg:col-span-4">
           <div className="bg-brand-surface border border-brand-border rounded-xl shadow-sm flex flex-col sticky top-4">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-brand-border">
@@ -369,9 +384,10 @@ export function ContentEditor({
             </div>
           </div>
         </aside>
+        )}
       </div>
 
-      {/* Settings drawer — slug + structured fields (off the main canvas) */}
+      {/* Settings drawer — slug only */}
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
         <SheetContent
           side="right"
@@ -380,7 +396,7 @@ export function ContentEditor({
           <SheetHeader>
             <SheetTitle className="font-display text-text-primary">Entry settings</SheetTitle>
             <SheetDescription className="font-mono text-2xs text-text-muted">
-              Slug and structured fields for this entry.
+              URL slug for this entry.
             </SheetDescription>
           </SheetHeader>
 
@@ -402,20 +418,6 @@ export function ContentEditor({
               />
             </div>
 
-            {/* Structured fields */}
-            {settingsFields.length > 0 && (
-              <div className="space-y-5 border-t border-brand-border pt-5">
-                {settingsFields.map((field) => (
-                  <FieldRow
-                    key={field.key}
-                    field={field}
-                    value={formData[field.key]}
-                    onChange={(v) => setField(field.key, v)}
-                    error={fieldErrors[field.key]}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         </SheetContent>
       </Sheet>
