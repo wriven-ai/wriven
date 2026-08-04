@@ -7,6 +7,7 @@ import type {
   CheckoutSessionView,
   InvoiceStatus,
   InvoiceView,
+  PendingDowngrade,
   PlanFeatures,
   PlanLimits,
   PlanView,
@@ -22,6 +23,30 @@ const { plans, subscriptions, users } = schema;
 
 const toIso = (d: Date | null | undefined): string | null =>
   d ? d.toISOString() : null;
+
+/**
+ * Map the `pending_change` jsonb row value (includes the internal `scheduleId`)
+ * to the tenant-facing {@link PendingDowngrade} view (which omits it). Returns
+ * null for a missing/malformed row so a bad payload never surfaces to the UI.
+ */
+function toPendingDowngrade(raw: unknown): PendingDowngrade | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const p = raw as Record<string, unknown>;
+  if (
+    typeof p.planKey !== 'string' ||
+    typeof p.planName !== 'string' ||
+    (p.billingCycle !== 'monthly' && p.billingCycle !== 'yearly') ||
+    typeof p.effectiveAt !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    planKey: p.planKey,
+    planName: p.planName,
+    billingCycle: p.billingCycle,
+    effectiveAt: p.effectiveAt,
+  };
+}
 
 function toPlanView(p: typeof plans.$inferSelect): PlanView {
   return {
@@ -79,6 +104,7 @@ export class BillingService {
       currentPeriodEnd: toIso(sub?.currentPeriodEnd ?? null),
       trialEndsAt: toIso(sub?.trialEndsAt ?? null),
       cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
+      pendingDowngrade: toPendingDowngrade(sub?.pendingChange),
       hasPaymentMethod: !!sub?.stripeCustomerId && active,
     };
   }
@@ -220,6 +246,193 @@ export class BillingService {
       return_url: BillingService.safeUrl(input.returnUrl, '/billing'),
     });
     return { url: session.url };
+  }
+
+  /** Change an existing paid subscription's plan/cycle, or schedule
+   *  cancellation down to free. Unlike Checkout, this works on an
+   *  already-subscribed workspace.
+   *  - Upgrade / cycle switch → immediate prorated invoice (`always_invoice`).
+   *  - Downgrade (lower paid tier) → **deferred**: a 2-phase Subscription
+   *    Schedule keeps the current price until period end, then applies the
+   *    lower price at renewal (`proration_behavior: 'none'`). The pending
+   *    target is stored on `pending_change`; the reconciler clears it when
+   *    phase 2 lands (specs/16).
+   *  - Downgrade to free → `cancel_at_period_end` (keeps access until period end).
+   *  - Reactivation (target === current plan while a downgrade is pending) →
+   *    release the schedule + clear `pending_change`.
+   *  Any change other than reactivation first releases a pending schedule (a
+   *  scheduled sub blocks direct `subscriptions.update`). The webhook reconciler
+   *  remains the source of truth for the row — this method only mutates Stripe
+   *  + the `pending_change` hint. */
+  async swapPlan(input: {
+    workspaceId: string;
+    planKey: string;
+    billingCycle: BillingCycle;
+  }): Promise<SubscriptionView> {
+    const current = await this.db.query.subscriptions.findFirst({
+      where: eq(subscriptions.workspaceId, input.workspaceId),
+      columns: {
+        id: true,
+        status: true,
+        stripeSubscriptionId: true,
+        cancelAtPeriodEnd: true,
+        pendingChange: true,
+      },
+      with: { plan: { columns: { key: true, sortOrder: true } } },
+    });
+    if (!current?.stripeSubscriptionId || current.status === 'canceled') {
+      throw rpcError(
+        'SUBSCRIPTION_NOT_FOUND',
+        'This workspace has no active subscription to change. Subscribe first.',
+      );
+    }
+
+    const target = await this.db.query.plans.findFirst({
+      where: eq(plans.key, input.planKey),
+    });
+    if (!target || !target.active) {
+      throw rpcError('NOT_FOUND', `Plan "${input.planKey}" not found.`);
+    }
+
+    const pending = (current.pendingChange ?? null) as {
+      scheduleId?: string;
+    } | null;
+
+    // Reactivation: staying on the current plan — clear whatever is pending
+    // (a scheduled downgrade via Subscription Schedule, and/or a cancel-at-period-
+    // end). No price change → no need to read the line item / billing period.
+    // Mirror the cleared state onto the row so the UI updates without waiting on
+    // the webhook.
+    if (input.planKey === current.plan?.key) {
+      if (pending?.scheduleId) {
+        await this.stripe.subscription_schedules.release(pending.scheduleId);
+      }
+      if (current.cancelAtPeriodEnd) {
+        await this.stripe.subscriptions.update(current.stripeSubscriptionId, {
+          cancel_at_period_end: false,
+        });
+      }
+      if (pending?.scheduleId || current.cancelAtPeriodEnd) {
+        await this.db
+          .update(subscriptions)
+          .set({
+            ...(pending?.scheduleId ? { pendingChange: null } : {}),
+            ...(current.cancelAtPeriodEnd ? { cancelAtPeriodEnd: false } : {}),
+          })
+          .where(eq(subscriptions.id, current.id));
+      }
+      return this.getSubscription(input.workspaceId);
+    }
+
+    // Any other change must first release a pending downgrade's schedule — a
+    // scheduled subscription rejects direct `subscriptions.update`.
+    if (pending?.scheduleId) {
+      await this.stripe.subscription_schedules.release(pending.scheduleId);
+      await this.clearPendingChange(current.id);
+    }
+
+    // Downgrade to free → schedule cancellation at period end. Mirror the flag
+    // onto the row so the card flips to "Canceling" immediately.
+    if (input.planKey === 'free') {
+      await this.stripe.subscriptions.update(current.stripeSubscriptionId, {
+        cancel_at_period_end: true,
+      });
+      await this.db
+        .update(subscriptions)
+        .set({ cancelAtPeriodEnd: true })
+        .where(eq(subscriptions.id, current.id));
+      return this.getSubscription(input.workspaceId);
+    }
+
+    const priceId =
+      input.billingCycle === 'yearly'
+        ? target.stripePriceIdYearly
+        : target.stripePriceIdMonthly;
+    if (!priceId) {
+      throw rpcError(
+        'INTERNAL_ERROR',
+        `Plan "${input.planKey}" is not linked to a Stripe price (${input.billingCycle}). Run the billing setup.`,
+      );
+    }
+
+    const stripeSub = await this.stripe.subscriptions.retrieve(
+      current.stripeSubscriptionId,
+    );
+    const item = stripeSub.items.data[0];
+    const currentPriceId = item?.price?.id;
+    // current_period_end lives on the SubscriptionItem in stripe@22, not on
+    // Subscription (see StripeWebhookService.syncSubscription) — fall back to the
+    // Sub-level field for older API versions.
+    const periodEnd = item?.current_period_end ?? stripeSub.current_period_end;
+    if (!item?.id || !currentPriceId || !periodEnd) {
+      throw rpcError(
+        'INTERNAL_ERROR',
+        'Subscription is missing its line item, price, or billing period.',
+      );
+    }
+
+    const tierDelta = target.sortOrder - (current.plan?.sortOrder ?? 0);
+
+    // Downgrade → defer to period end via a 2-phase schedule (no proration):
+    // phase 1 holds the current price until period end, phase 2 applies the
+    // lower price at renewal. Keeps access through the paid period.
+    if (tierDelta < 0) {
+      const schedule = await this.stripe.subscription_schedules.create({
+        from_subscription: current.stripeSubscriptionId,
+        proration_behavior: 'none',
+        phases: [
+          { items: [{ price: currentPriceId }], end_date: periodEnd },
+          { items: [{ price: priceId }] },
+        ],
+      });
+      await this.db
+        .update(subscriptions)
+        .set({
+          pendingChange: {
+            planKey: target.key,
+            planName: target.name,
+            billingCycle: input.billingCycle,
+            effectiveAt: new Date(periodEnd * 1000).toISOString(),
+            scheduleId: schedule.id,
+          },
+        })
+        .where(eq(subscriptions.id, current.id));
+      return this.getSubscription(input.workspaceId);
+    }
+
+    // Upgrade / cycle switch → immediate prorated update. The price change
+    // succeeded synchronously, so mirror it onto the row now (plan + cycle + clear
+    // any pending cancel) — the webhook reconciler confirms the same state. Lets
+    // the cards + entitlements flip without waiting on webhook delivery.
+    await this.stripe.subscriptions.update(current.stripeSubscriptionId, {
+      items: [{ id: item.id, price: priceId }],
+      proration_behavior: 'always_invoice',
+      cancel_at_period_end: false, // clear any prior scheduled cancellation
+      metadata: {
+        workspaceId: input.workspaceId,
+        planKey: target.key,
+        billingCycle: input.billingCycle,
+      },
+    });
+    await this.db
+      .update(subscriptions)
+      .set({
+        planId: target.id,
+        billingCycle: input.billingCycle,
+        cancelAtPeriodEnd: false,
+      })
+      .where(eq(subscriptions.id, current.id));
+
+    return this.getSubscription(input.workspaceId);
+  }
+
+  /** Clear the `pending_change` hint on a subscription row (after a schedule
+   *  release or a phase-2 flip). */
+  private async clearPendingChange(id: string): Promise<void> {
+    await this.db
+      .update(subscriptions)
+      .set({ pendingChange: null })
+      .where(eq(subscriptions.id, id));
   }
 
   /**

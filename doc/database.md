@@ -95,7 +95,7 @@ Notes:
 - `users`: `unique(email)`, `unique(provider, provider_id)` (OAuth; NULLs distinct so many locals are fine), CHECK `provider in ('local','google')`.
 - `workspace_members.role` / `project_members.role` CHECK constraints; `content_entries.status` CHECK `in ('draft','published','archived')`.
 - `workspaces`: `unique(slug)` (globally unique — top-level tenancy). `projects`: `unique(workspace_id, slug)`. `content_entries`: `unique(project_id, content_type_id, slug)`, GIN index on `data` jsonb.
-- **Billing:** `plans.key` unique; `subscriptions` `uniqueIndex(workspace_id)` (one row per workspace) + `status` CHECK `in ('active','trialing','past_due','canceled','paused','incomplete')`; `stripe_events.event_id` unique (webhook idempotency dedupe) + `event_type` index.
+- **Billing:** `plans.key` unique; `subscriptions` `uniqueIndex(workspace_id)` (one row per workspace) + `status` CHECK `in ('active','trialing','past_due','canceled','paused','incomplete')` + `pending_change` jsonb (deferred-downgrade hint, specs/16; cleared by the reconciler at period end); `stripe_events.event_id` unique (webhook idempotency dedupe) + `event_type` index.
 - `users.updated_at` / workspace / content tables: `$onUpdate` auto-bump.
 
 ## RLS

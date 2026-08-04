@@ -23,6 +23,19 @@ export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 export type BillingCycle = 'monthly' | 'yearly';
 
 /**
+ * A deferred plan downgrade scheduled via a Stripe Subscription Schedule
+ * (specs/16). Populated while the lower-price phase hasn't landed yet; cleared
+ * by the webhook reconciler at period end. `effectiveAt` = the period end when
+ * the downgrade applies.
+ */
+export interface PendingDowngrade {
+  planKey: string;
+  planName: string;
+  billingCycle: BillingCycle;
+  effectiveAt: string; // ISO
+}
+
+/**
  * A workspace's subscription — tenant-facing (`GET /billing/subscription`).
  * Timestamps are ISO strings (nullable until a paid subscription exists).
  */
@@ -35,6 +48,8 @@ export interface SubscriptionView {
   currentPeriodEnd: string | null;
   trialEndsAt: string | null;
   cancelAtPeriodEnd: boolean;
+  /** A downgrade scheduled for period end, or null when none is pending. */
+  pendingDowngrade: PendingDowngrade | null;
   hasPaymentMethod: boolean;
 }
 

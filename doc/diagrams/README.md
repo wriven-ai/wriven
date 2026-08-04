@@ -8,7 +8,7 @@ Visual mental models of the Wriven system. Each entry is an `.svg` (the diagram)
 | 01 | [Auth & RBAC](./01-auth-rbac.md) | request flow · permission cascade · enforcement layers |
 | 02 | [Tenancy Data Model](./02-tenancy-data-model.md) | users → workspaces → projects → members |
 | 04 | [Core-Service (CMS)](./04-core-cms.md) | content model · entry lifecycle · delivery API · media |
-| 05 | [Billing (Stripe)](./05-billing.md) | checkout/portal · webhook reconciler → entitlements |
+| 05 | [Billing (Stripe)](./05-billing.md) | checkout · `/billing/swap` (immediate upgrade / deferred downgrade) · portal · webhook reconciler → entitlements |
 | 06 | [Webhooks](./06-webhooks.md) | signed dispatch · retry/backoff |
 | 07 | [Admin Panel](./07-admin-panel.md) | platform console · separate RBAC axis |
 | 08 | [Frontend](./08-frontend.md) | cookie auth · URL scope · nav brain · RBAC mirror |

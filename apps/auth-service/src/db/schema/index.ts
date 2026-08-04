@@ -499,6 +499,11 @@ export const subscriptions = authSchema.table(
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
     cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
     canceledAt: timestamp('canceled_at', { withTimezone: true }),
+    // Deferred downgrade (specs/16): when a downgrade is scheduled via a Stripe
+    // Subscription Schedule, this holds the target + the schedule id + the
+    // period-end effective date. Cleared by the reconciler when phase 2 lands.
+    // Shape: { planKey, planName, billingCycle, effectiveAt, scheduleId }.
+    pendingChange: jsonb('pending_change'),
     // Per-workspace limit overrides (admin bump). Null = use the plan's limits.
     overrides: jsonb('overrides'),
     // admin_user id who last changed the plan (no FK across concern).

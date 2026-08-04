@@ -1,6 +1,6 @@
 # 05 — Billing (Stripe)
 
-Payments lifecycle: Checkout + Billing Portal for mutations, the webhook reconciler as source of truth, and entitlements that read off the `subscriptions` row.
+Payments lifecycle: Checkout (free→paid), the direct `/billing/swap` mutation (paid→paid changes), + Billing Portal for management — the webhook reconciler as source of truth, and entitlements that read off the `subscriptions` row.
 
 ![Billing flow](./05-billing.svg)
 
@@ -11,7 +11,16 @@ client → `POST /billing/checkout` (gateway `PermissionGuard` = `WORKSPACE_BILL
 Stripe events → `POST /webhooks/stripe` (gateway, `rawBody: true`, **no JWT** — public) → auth-service `StripeWebhookService` verifies the HMAC signature and **idempotently** reconciles the `subscriptions` row (status, period, plan-from-price-id). The gateway never writes subscription state — Stripe events drive it. An event-replay script exists for recovery.
 
 ## Entitlements
-`EntitlementsService` **reads** the `subscriptions` row → enforces plan limits (projects, members, entries, content types, api keys, webhooks, storage). Because enforcement reads the row, upgrades/downgrades need **zero** code changes — the reconciler rewrites the row.
+`EntitlementsService` **reads** the `subscriptions` row → enforces plan limits (projects, members, entries, content types, api keys, webhooks, storage). Because enforcement reads the row, plan changes need **zero** enforcement code — the reconciler rewrites the row (immediately for upgrades/cycle-switches, at period end for deferred downgrades).
+
+## Direct plan changes (`/billing/swap`)
+Checkout only handles free→paid (a second Checkout would create a second sub + double-charge). For an **already-paid** workspace, `POST /billing/swap` mutates the existing Stripe subscription directly (no redirect). All variants only touch Stripe + the `pending_change` hint — the reconciler stays the source of truth (no cron):
+- **Upgrade / cycle switch** → `subscriptions.update`, `proration_behavior: 'always_invoice'` (charge the prorated difference now; access flips immediately).
+- **Downgrade (lower paid tier)** → **deferred** ([specs/16](../../specs/16-deferred-plan-downgrade.md)): a 2-phase **Subscription Schedule** (`proration_behavior: 'none'`) holds the current price until `current_period_end`, then applies the lower price at renewal — the customer keeps access through the paid period. The pending target is stored on `subscriptions.pending_change`; surfaced as `SubscriptionView.pendingDowngrade`. At period end phase 2 lands → `customer.subscription.updated` → the reconciler flips the row + clears `pending_change`.
+- **Cancel → free** → `cancel_at_period_end` (deferred; access until period end).
+- **Reactivate** (target === current plan while a downgrade is pending) → `subscription_schedules.release` + clear `pending_change`.
+
+Any non-reactivation swap first releases a pending schedule (a scheduled sub blocks `subscriptions.update`).
 
 ## Usage metering (specs/14)
 Limits like `apiRequestsPerMonth` / `storageMb` are advertised by the plan but only bite once **measured**. core-service owns the counter (`usage_buckets`) + composes a `UsageView` (requests used + storage SUM + the limits above); the gateway batches Delivery-request increments off the hot path. Read at `GET /usage` + shown on the dashboard Usage page. Soft overage gate (`USAGE_ENFORCE`, default off). See [diagram 09](./09-usage-metering.md). `assetBandwidthGb` stays unmeasured for now.
@@ -22,7 +31,7 @@ Limits like `apiRequestsPerMonth` / `storageMb` are advertised by the plan but o
 - Trials removed (no trial system). Managed Payments dunning outcome (cancel vs `unpaid`) is an open product decision.
 
 ## Status
-Backend done ([specs/08](../../specs/08-stripe-billing.md)). Live e2e pending sandbox account config (publishable key + Managed Payments) + the client billing page.
+Backend done ([specs/08](../../specs/08-stripe-billing.md) + `/billing/swap` + [specs/16](../../specs/16-deferred-plan-downgrade.md) deferred downgrades). Live e2e pending sandbox account config (publishable key + Managed Payments) + the client billing page.
 
 ## Source
 [`05-billing.svg`](./05-billing.svg) · code: [`apps/auth-service/src/billing/`](../../apps/auth-service/src/billing/)

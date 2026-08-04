@@ -4,6 +4,7 @@ import { BILLING_PATTERNS, Permission } from '@wriven/contracts';
 import type {
   CreateCheckoutSessionDto,
   CreatePortalSessionDto,
+  SwapPlanDto,
 } from '@wriven/contracts';
 import { AuthorizationService } from '../auth/authorization.service';
 import { BillingService } from './billing.service';
@@ -73,6 +74,23 @@ export class BillingController {
     return this.billing.createPortal({
       workspaceId: p.workspaceId,
       returnUrl: p.dto.returnUrl,
+    });
+  }
+
+  @MessagePattern(BILLING_PATTERNS.SWAP_PLAN)
+  async swapPlan(
+    @Payload()
+    p: { userId: string; workspaceId: string; dto: SwapPlanDto },
+  ) {
+    await this.authz.authorize({
+      userId: p.userId,
+      permission: Permission.WORKSPACE_BILLING_MANAGE,
+      workspaceId: p.workspaceId,
+    });
+    return this.billing.swapPlan({
+      workspaceId: p.workspaceId,
+      planKey: p.dto.planKey,
+      billingCycle: p.dto.billingCycle,
     });
   }
 

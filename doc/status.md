@@ -51,7 +51,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Workspace member CRUD** (list/add/update/remove, owner-guard) | ✅ | add by email; ≥1 owner |
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
-| **Stripe billing** (Checkout, Billing Portal, webhook reconcile) | ✅ | backend done (specs/08); live e2e 🟡 deferred to frontend |
+| **Stripe billing** (Checkout, Billing Portal, direct plan-swap, webhook reconcile) | ✅ | backend done (specs/08); `/billing/swap` upgrades/cycle-switches immediately (prorated) + **defers downgrades to period end** via Subscription Schedules (specs/16, `pendingDowngrade` on the view) + cancel-to-free; live e2e 🟡 deferred to sandbox config |
 | **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI limit fields added (unenforced — ai-service pending) |
 | **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan()` filled against the shared cascade; nav + action buttons + management routes gated (specs/13) |
 | Token cleanup cron | ✅ | prunes expired tokens daily |

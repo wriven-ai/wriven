@@ -34,7 +34,8 @@ Defined in `@wriven/contracts` (`errors.ts`):
 | `RATE_LIMITED` | 429 | Too many requests. Also returned by the Delivery API when a workspace exceeds its monthly `apiRequestsPerMonth` quota and `USAGE_ENFORCE=true` (soft, fail-open usage metering — specs/14) |
 | `PLAN_LIMIT_REACHED` | 403 | Quota exceeded (projects/members/entries/…) |
 | `STRIPE_WEBHOOK_INVALID` | 400 | Stripe webhook signature verification failed |
-| `SUBSCRIPTION_EXISTS` | 409 | Workspace already has a live subscription — use the Billing Portal |
+| `SUBSCRIPTION_EXISTS` | 409 | Workspace already has a live subscription — use `/billing/swap` or the Portal to change plans |
+| `SUBSCRIPTION_NOT_FOUND` | 404 | No active subscription to swap — use `/billing/checkout` to subscribe first |
 | `INTERNAL_ERROR` | 500 | Unhandled |
 
 Never leak stack traces, internal service names, or DB errors to the client.

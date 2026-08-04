@@ -153,7 +153,11 @@ export class StripeWebhookService {
   ): Promise<void> {
     const existing = await tx.query.subscriptions.findFirst({
       where: eq(subscriptions.stripeSubscriptionId, sub.id),
-      columns: { workspaceId: true, stripeEventCreatedAt: true },
+      columns: {
+        workspaceId: true,
+        stripeEventCreatedAt: true,
+        pendingChange: true,
+      },
     });
     const workspaceId =
       (sub.metadata?.workspaceId as string | undefined) ??
@@ -205,6 +209,15 @@ export class StripeWebhookService {
     const billingCycle =
       price?.recurring?.interval === 'year' ? 'yearly' : 'monthly';
 
+    // If this event lands a deferred downgrade (phase 2 of a Subscription
+    // Schedule), clear the `pending_change` hint — match on the target plan key
+    // stored there so a unrelated price change never clears a real pending one.
+    const pendingHint = (existing?.pendingChange ?? null) as {
+      planKey?: string;
+    } | null;
+    const clearPending =
+      pendingHint?.planKey === plan.key ? { pendingChange: null } : {};
+
     // Guard the write on the subscription id, not just the workspace. A delayed
     // event for an OLD subscription must not stomp a NEWER one that now owns the
     // workspace row — the by-sub-id lookup above can miss that case once the row
@@ -232,6 +245,7 @@ export class StripeWebhookService {
         canceledAt: sub.canceled_at ? new Date(sub.canceled_at * 1000) : null,
         stripeEventCreatedAt: incoming,
         updatedBy: null,
+        ...clearPending,
       })
       .where(
         and(

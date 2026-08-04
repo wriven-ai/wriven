@@ -127,6 +127,7 @@ export const BILLING_PATTERNS = {
   LIST_INVOICES: 'auth.billing.listInvoices',
   CREATE_CHECKOUT: 'auth.billing.createCheckout',
   CREATE_PORTAL: 'auth.billing.createPortal',
+  SWAP_PLAN: 'auth.billing.swapPlan',
   STRIPE_WEBHOOK: 'auth.billing.stripeWebhook',
 } as const;
 

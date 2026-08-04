@@ -189,7 +189,7 @@ Events: `entry.published` · `entry.unpublished` · `entry.deleted`.
 
 ## Billing (Stripe)
 
-All `/billing/*` routes are **protected** (JWT) and require `X-Workspace-Id`. `POST` routes also require the `X-CSRF-Token` header (double-submit). Plan mutations (checkout/portal) are **owner/admin only** (enforced in auth-service from the forwarded `workspaceRole`).
+All `/billing/*` routes are **protected** (JWT) and require `X-Workspace-Id`. `POST` routes also require the `X-CSRF-Token` header (double-submit). Plan mutations (checkout/portal/swap) are **owner/admin only** (enforced in auth-service from the forwarded `workspaceRole`).
 
 | Method | Path | Body | → |
 |--------|------|------|---|
@@ -198,11 +198,12 @@ All `/billing/*` routes are **protected** (JWT) and require `X-Workspace-Id`. `P
 | GET | `/billing/invoices` | — | `InvoiceView[]` — last 20 Stripe invoices (number/amount/status/url); `[]` if no customer |
 | POST | `/billing/checkout` | `{ planKey: 'starter'\|'pro', billingCycle: 'monthly'\|'yearly', successUrl?, cancelUrl? }` | `{ url, sessionId }` — Stripe Checkout URL (**owner/admin**; free→paid only) |
 | POST | `/billing/portal` | `{ returnUrl? }` | `{ url }` — Stripe Billing Portal URL (**owner/admin**) |
+| POST | `/billing/swap` | `{ planKey: 'free'\|'starter'\|'pro', billingCycle: 'monthly'\|'yearly' }` | `SubscriptionView` — change an existing paid sub directly (**owner/admin**). Upgrade/cycle-switch = immediate prorated invoice (`always_invoice`); **downgrade = deferred to period end** via a 2-phase Subscription Schedule (`proration_behavior: none`) — keeps current access until renewal, then drops (exposed as `SubscriptionView.pendingDowngrade`); targeting the current plan while a downgrade is pending cancels it (schedule release); `planKey:'free'` schedules cancellation at period end. The webhook reconciles the row (the returned view may lag it by ~1s). |
 
-`SubscriptionView`: `{ planKey, planName, status, billingCycle, currentPeriodStart, currentPeriodEnd, trialEndsAt, cancelAtPeriodEnd, hasPaymentMethod }` (timestamps ISO or null).
+`SubscriptionView`: `{ planKey, planName, status, billingCycle, currentPeriodStart, currentPeriodEnd, trialEndsAt, cancelAtPeriodEnd, pendingDowngrade, hasPaymentMethod }` (timestamps ISO or null). `pendingDowngrade: { planKey, planName, billingCycle, effectiveAt } | null` — a downgrade scheduled for period end (specs/16).
 
 - Checkout creates a Stripe Customer on first call (idempotent per workspace) + a `subscription`-mode Checkout Session. Redirect URLs are allowlisted to the app origin (`APP_URL`) — cross-origin/malformed values fall back to the default.
-- Errors: `SUBSCRIPTION_EXISTS` 409 (a live subscription already exists — use the Portal to change plans), `NOT_FOUND` 404 (plan/portal-customer missing), `FORBIDDEN` 403 (non owner/admin), `INTERNAL_ERROR` 500 (plan not linked to a Stripe price).
+- Errors: `SUBSCRIPTION_EXISTS` 409 (a live subscription already exists — use the Portal or `/billing/swap` to change plans), `SUBSCRIPTION_NOT_FOUND` 404 (no active subscription to swap — use `/billing/checkout` first), `NOT_FOUND` 404 (plan/portal-customer missing), `FORBIDDEN` 403 (non owner/admin), `INTERNAL_ERROR` 500 (plan not linked to a Stripe price).
 - Completing Checkout fires `checkout.session.completed` → the webhook reconciles the `subscriptions` row (plan from price id, status, period, Stripe ids); entitlements/quotas update automatically (no enforcement call site changes).
 
 ### POST `/webhooks/stripe`

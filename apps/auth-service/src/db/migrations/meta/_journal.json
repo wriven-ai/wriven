@@ -71,6 +71,13 @@
       "when": 1785386542967,
       "tag": "0009_spicy_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785776015670,
+      "tag": "0010_flawless_demogoblin",
+      "breakpoints": true
     }
   ]
 }

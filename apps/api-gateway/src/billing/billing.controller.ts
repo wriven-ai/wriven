@@ -88,4 +88,23 @@ export class BillingController {
       }),
     );
   }
+
+  /** Change an existing subscription's plan/cycle directly (proration), or
+   *  cancel down to free. Unlike /checkout, this works on already-paid
+   *  workspaces. See specs/08. */
+  @Post('swap')
+  @RequirePermission(contracts.Permission.WORKSPACE_BILLING_MANAGE)
+  swapPlan(
+    @CurrentUser() user: contracts.AuthUser,
+    @CurrentWorkspace() workspaceId: string,
+    @Body() dto: contracts.SwapPlanDto,
+  ) {
+    return firstValueFrom(
+      this.auth.send(contracts.BILLING_PATTERNS.SWAP_PLAN, {
+        userId: user.userId,
+        workspaceId,
+        dto,
+      }),
+    );
+  }
 }
