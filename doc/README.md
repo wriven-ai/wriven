@@ -52,6 +52,12 @@ The docs split into three layers:
 |-----|--------|
 | [wriven-display/](./wriven-display/README.md) | Self-contained guide for building a **public read-only frontend** (React + Vite) that displays Wriven content via the Delivery API — credentials, API reference, typed client, rich-text renderer, content-type examples (product/blog/team), full Vite build, troubleshooting. Hand this to an agent building a display site. |
 
+**Operations**
+
+| Doc | Covers |
+|-----|--------|
+| [deployment.md](./deployment.md) | Dev/test deploy runbook: backend on Render (Blueprint `render.yaml`: gateway web service + auth/core private TCP services), frontend on Vercel, DB on Supabase, `wriven.tech` + `api.wriven.tech` same-site domain (no cookie code change), env strategy, custom domains, Google OAuth, smoke test, troubleshooting |
+
 ## Specs
 
 Feature design docs live in [`../specs/`](../specs/). Each describes one feature/area: overview, endpoints, schema, shared contracts, build order, definition of done.
