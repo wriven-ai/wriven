@@ -46,6 +46,12 @@ The docs split into three layers:
 | [frontend/frontend.md](./frontend/frontend.md) | Stack, project structure, cookie auth + CSRF, Zustand/Query state, the API client, scope, guards, env |
 | [frontend/sidebar.md](./frontend/sidebar.md) | Dashboard nav architecture: URL-driven scope, nav-config brain vs shell, builders, active-state rule, RBAC seam |
 
+**Consumer integration**
+
+| Doc | Covers |
+|-----|--------|
+| [wriven-display/](./wriven-display/README.md) | Self-contained guide for building a **public read-only frontend** (React + Vite) that displays Wriven content via the Delivery API — credentials, API reference, typed client, rich-text renderer, content-type examples (product/blog/team), full Vite build, troubleshooting. Hand this to an agent building a display site. |
+
 ## Specs
 
 Feature design docs live in [`../specs/`](../specs/). Each describes one feature/area: overview, endpoints, schema, shared contracts, build order, definition of done.
