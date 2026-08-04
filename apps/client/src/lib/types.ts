@@ -388,7 +388,17 @@ export interface SubscriptionView {
   currentPeriodEnd: string | null;
   trialEndsAt: string | null;
   cancelAtPeriodEnd: boolean;
+  /** A downgrade scheduled for period end, or null when none is pending. */
+  pendingDowngrade: PendingDowngrade | null;
   hasPaymentMethod: boolean;
+}
+
+/** A deferred plan downgrade scheduled via a Stripe Subscription Schedule. */
+export interface PendingDowngrade {
+  planKey: string;
+  planName: string;
+  billingCycle: BillingCycle;
+  effectiveAt: string; // ISO
 }
 
 export interface CheckoutSessionView {
@@ -444,4 +454,11 @@ export interface CreateCheckoutInput {
 
 export interface CreatePortalInput {
   returnUrl?: string;
+}
+
+/** Change an existing subscription's plan/cycle, or cancel down to free.
+ *  `planKey: 'free'` schedules cancellation at period end. */
+export interface SwapPlanInput {
+  planKey: 'free' | 'starter' | 'pro';
+  billingCycle: BillingCycle;
 }

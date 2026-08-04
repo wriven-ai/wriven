@@ -5,6 +5,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { authApi, configureApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -52,7 +53,10 @@ export function Providers({ children }: { children: ReactNode }) {
       storageKey="wriven-theme"
     >
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          {children}
+          <Toaster />
+        </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

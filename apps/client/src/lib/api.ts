@@ -34,6 +34,7 @@ import type {
   SupportTicketDetail,
   SupportTicketRow,
   SubscriptionView,
+  SwapPlanInput,
   UsageView,
   WebhookEvent,
   WebhookView,
@@ -696,6 +697,13 @@ export const billingApi = {
     request<PortalSessionView>('/billing/portal', {
       method: 'POST',
       body: dto ?? {},
+      workspace: true,
+    }),
+  /** Change an existing subscription's plan/cycle (proration), or cancel to free. */
+  swapPlan: (dto: SwapPlanInput) =>
+    request<SubscriptionView>('/billing/swap', {
+      method: 'POST',
+      body: dto,
       workspace: true,
     }),
 };

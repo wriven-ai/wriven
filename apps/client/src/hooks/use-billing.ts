@@ -11,6 +11,8 @@ import type {
   CreatePortalInput,
   CheckoutSessionView,
   PortalSessionView,
+  SubscriptionView,
+  SwapPlanInput,
 } from '@/lib/types';
 
 /** Cache keys for billing server state. */
@@ -61,9 +63,24 @@ export function useCheckout() {
 /** Open the hosted Stripe Billing Portal — browser leaves for Stripe's page. */
 export function usePortal() {
   return useMutation<PortalSessionView, Error, CreatePortalInput | undefined>({
-    mutationFn: (dto) => billingApi.createPortal(dto),
+    mutationFn: billingApi.createPortal,
     onSuccess: (session) => {
       if (session.url) window.location.href = session.url;
+    },
+  });
+}
+
+/** Swap an existing subscription's plan/cycle (or cancel to free) via the
+ *  direct proration endpoint. Stays in-app (no redirect). The webhook is still
+ *  the source of truth, so we invalidate the cache — the flip may land a moment
+ *  later. */
+export function useSwapPlan() {
+  const qc = useQueryClient();
+  return useMutation<SubscriptionView, Error, SwapPlanInput>({
+    mutationFn: billingApi.swapPlan,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: BILLING_KEYS.subscription });
+      qc.invalidateQueries({ queryKey: BILLING_KEYS.invoices });
     },
   });
 }
