@@ -1,12 +1,13 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, Save, Trash2, Users } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Save, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { ApiRequestError, memberApi, workspaceApi } from '@/lib/api';
 import { useCurrentWorkspace } from '@/hooks/use-current-workspace';
+import { useAuthStore } from '@/stores/auth';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
@@ -15,17 +16,14 @@ export default function WorkspaceSettingsPage() {
   const workspace = useCurrentWorkspace();
   const can = useCan();
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const updateWorkspace = useAuthStore((s) => s.updateWorkspace);
   const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (workspace) {
       setName(workspace.name);
-      setSlug(workspace.slug);
     }
   }, [workspace]);
 
@@ -43,17 +41,15 @@ export default function WorkspaceSettingsPage() {
   }, {});
 
   const updateMutation = useMutation({
-    mutationFn: (dto: { name: string; slug: string }) =>
+    mutationFn: (dto: { name: string }) =>
       workspaceApi.update(workspace!.id, dto),
     onSuccess: (updated) => {
-      queryClient.invalidateQueries({ queryKey: ['session'] });
+      // Mirror the new name into the auth store so the nav/header stays in sync
+      // without a full reload. (Slug is immutable from the UI.)
+      updateWorkspace(updated);
       setSaved(true);
       setError(null);
       setTimeout(() => setSaved(false), 2000);
-      // Slug may have changed — keep the URL in sync.
-      if (updated.slug !== workspace!.slug) {
-        router.replace(`/w/${updated.slug}/settings`);
-      }
     },
     onError: (err) =>
       setError(err instanceof ApiRequestError ? err.message : 'Update failed.'),
@@ -70,13 +66,7 @@ export default function WorkspaceSettingsPage() {
     return <p className="font-mono text-xs text-text-muted">Loading…</p>;
   }
 
-  const dirty = name.trim() !== workspace.name || slug.trim() !== workspace.slug;
-
-  const copyId = () => {
-    navigator.clipboard.writeText(workspace.id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  const dirty = name.trim() !== workspace.name;
 
   if (!can(Permission.WORKSPACE_EDIT)) return <NoAccess />;
 
@@ -95,8 +85,8 @@ export default function WorkspaceSettingsPage() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (name.trim() && slug.trim()) {
-            updateMutation.mutate({ name: name.trim(), slug: slug.trim() });
+          if (name.trim()) {
+            updateMutation.mutate({ name: name.trim() });
           }
         }}
         className="space-y-4 rounded-xl border border-brand-border bg-brand-surface p-5"
@@ -110,31 +100,6 @@ export default function WorkspaceSettingsPage() {
             disabled={!isOwner}
             className={inputCls}
           />
-        </Field>
-
-        <Field label="Slug" hint="Used in the URL: /w/<slug>">
-          <input
-            value={slug}
-            onChange={(e) =>
-              setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
-            }
-            disabled={!isOwner}
-            className={inputCls}
-          />
-        </Field>
-
-        <Field label="Workspace ID">
-          <div className="flex items-center gap-2">
-            <input value={workspace.id} disabled className={`${inputCls} text-text-muted`} />
-            <button
-              type="button"
-              onClick={copyId}
-              className="shrink-0 rounded-lg border border-brand-border p-2 text-text-muted hover:text-brand-accent"
-              aria-label="Copy workspace id"
-            >
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            </button>
-          </div>
         </Field>
 
         {error ? (

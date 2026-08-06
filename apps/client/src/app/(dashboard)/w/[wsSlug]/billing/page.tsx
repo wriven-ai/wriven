@@ -353,7 +353,7 @@ function BillingInner() {
               const isYearly = cycle === 'yearly';
               // Annual tab shows the monthly-equivalent ($/mo); the yearly total
               // is billed once per year. Math.round guards non-divisible yearly
-              // prices (current tiers 10800/16200 divide cleanly → 900/1350).
+              // prices (current tiers 10800/19440 divide cleanly → 900/1620).
               const price = isYearly
                 ? Math.round((plan.priceYearly ?? 0) / 12)
                 : plan.priceMonthly;

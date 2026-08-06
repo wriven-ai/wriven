@@ -103,7 +103,7 @@ async function main() {
       description: 'For bigger teams: higher limits, more AI, priority support.',
       sortOrder: 2,
       priceMonthly: 1800,
-      priceYearly: 16_200,
+      priceYearly: 19_440,
       trialDays: 0,
       limits: {
         projects: 15,

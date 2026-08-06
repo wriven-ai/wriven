@@ -25,6 +25,8 @@ interface AuthState {
   setCurrentProjectId: (projectId: string | null) => void;
   /** Append a freshly-created workspace so URL navigation resolves it at once. */
   addWorkspace: (workspace: WorkspaceView) => void;
+  /** Replace a workspace in-place (slug/name edits) so URL sync stays valid. */
+  updateWorkspace: (workspace: WorkspaceView) => void;
   setUnauthenticated: () => void;
   clear: () => void;
 }
@@ -99,6 +101,13 @@ export const useAuthStore = create<AuthState>()(
             ? state
             : { workspaces: [...state.workspaces, workspace] },
         ),
+
+      updateWorkspace: (workspace) =>
+        set((state) => ({
+          workspaces: state.workspaces.map((w) =>
+            w.id === workspace.id ? workspace : w,
+          ),
+        })),
 
       setUnauthenticated: () =>
         set({
