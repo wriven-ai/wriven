@@ -1,12 +1,19 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { UsageBucket, UsageView } from '@wriven/contracts';
+import {
+  EntryStatusCounts,
+  ProjectStatsView,
+  UsageBucket,
+  UsageView,
+  WorkspaceStatsView,
+} from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 
-const { usageBuckets, mediaAssets } = schema;
+const { usageBuckets, mediaAssets, contentEntries, contentTypes, apiKeys, webhooks } =
+  schema;
 
 /**
  * Workspace usage metering. Owns the Delivery API request counter
@@ -102,6 +109,141 @@ export class UsageService {
         and(eq(mediaAssets.workspaceId, workspaceId), isNull(mediaAssets.deletedAt)),
       );
     return Number(row?.total ?? 0);
+  }
+
+  /**
+   * Workspace aggregate stats. Reuses `read()` for requests/storage/period and
+   * adds content/media/key/webhook counts. `projects`/`members` are auth-owned
+   * → returned as 0 here; the gateway overwrites them from auth-service's
+   * `auth.workspace.stats` response. Unmetered dimensions (bandwidth, AI text,
+   * AI image) ship `used: null` with their plan limit. See specs/17.
+   */
+  async workspaceStats(payload: {
+    workspaceId: string;
+  }): Promise<WorkspaceStatsView> {
+    const ws = payload.workspaceId;
+    const usage = await this.read({ workspaceId: ws });
+    const limits = await this.entitlements.effectiveLimits(ws);
+
+    const [entries, contentTypesCount, apiKeysCount, webhooksCount, media] =
+      await Promise.all([
+        this.entryCounts({ workspaceId: ws }),
+        this.db.$count(
+          contentTypes,
+          and(eq(contentTypes.workspaceId, ws), isNull(contentTypes.deletedAt)),
+        ),
+        this.db.$count(
+          apiKeys,
+          and(eq(apiKeys.workspaceId, ws), isNull(apiKeys.revokedAt)),
+        ),
+        this.db.$count(webhooks, eq(webhooks.workspaceId, ws)),
+        this.mediaAggregate({ workspaceId: ws }),
+      ]);
+
+    return {
+      projects: 0, // merged by the gateway from auth-service
+      members: 0, // merged by the gateway from auth-service
+      entries,
+      contentTypes: contentTypesCount,
+      apiKeys: apiKeysCount,
+      webhooks: webhooksCount,
+      media: {
+        count: media.count,
+        usedMb: Math.round(media.bytes / (1024 * 1024)),
+        limitMb: limits?.storageMb ?? null,
+      },
+      apiRequests: usage.requests,
+      period: usage.period,
+      bandwidthGb: { usedGb: null, limitGb: limits?.assetBandwidthGb ?? null },
+      aiText: { used: null, limit: limits?.aiTextRequestsPerMonth ?? null },
+      aiImage: { used: null, limit: limits?.aiImageRequestsPerMonth ?? null },
+    };
+  }
+
+  /**
+   * Project-scoped aggregate (core-only). No requests/bandwidth/AI — those are
+   * workspace-billing-unit dimensions, not project-scoped. See specs/17.
+   */
+  async projectStats(payload: {
+    projectId: string;
+  }): Promise<ProjectStatsView> {
+    const pid = payload.projectId;
+
+    const [entries, contentTypesCount, apiKeysCount, webhooksCount, media] =
+      await Promise.all([
+        this.entryCounts({ projectId: pid }),
+        this.db.$count(
+          contentTypes,
+          and(eq(contentTypes.projectId, pid), isNull(contentTypes.deletedAt)),
+        ),
+        this.db.$count(
+          apiKeys,
+          and(eq(apiKeys.projectId, pid), isNull(apiKeys.revokedAt)),
+        ),
+        this.db.$count(webhooks, eq(webhooks.projectId, pid)),
+        this.mediaAggregate({ projectId: pid }),
+      ]);
+
+    return {
+      entries,
+      contentTypes: contentTypesCount,
+      apiKeys: apiKeysCount,
+      webhooks: webhooksCount,
+      media: {
+        count: media.count,
+        usedMb: Math.round(media.bytes / (1024 * 1024)),
+      },
+    };
+  }
+
+  /**
+   * Non-deleted entry counts grouped by status. `total` = sum of the split
+   * (the `status` check constraint guarantees only draft|published|archived, so
+   * the two reconcile). Scoped by workspace and/or project.
+   */
+  private async entryCounts(opts: {
+    workspaceId?: string;
+    projectId?: string;
+  }): Promise<EntryStatusCounts> {
+    const conds = [isNull(contentEntries.deletedAt)];
+    if (opts.workspaceId)
+      conds.push(eq(contentEntries.workspaceId, opts.workspaceId));
+    if (opts.projectId)
+      conds.push(eq(contentEntries.projectId, opts.projectId));
+
+    const rows = await this.db
+      .select({ status: contentEntries.status, n: sql<number>`count(*)::int` })
+      .from(contentEntries)
+      .where(and(...conds))
+      .groupBy(contentEntries.status);
+
+    const by: Record<string, number> = {};
+    for (const r of rows) by[r.status] = Number(r.n);
+    const published = by['published'] ?? 0;
+    const draft = by['draft'] ?? 0;
+    const archived = by['archived'] ?? 0;
+    return { total: published + draft + archived, published, draft, archived };
+  }
+
+  /** Count + byte sum of live (non-deleted) media, scoped by workspace/project. */
+  private async mediaAggregate(opts: {
+    workspaceId?: string;
+    projectId?: string;
+  }): Promise<{ count: number; bytes: number }> {
+    const conds = [isNull(mediaAssets.deletedAt)];
+    if (opts.workspaceId)
+      conds.push(eq(mediaAssets.workspaceId, opts.workspaceId));
+    if (opts.projectId) conds.push(eq(mediaAssets.projectId, opts.projectId));
+
+    const [row] = await this.db
+      .select({
+        count: sql<number>`count(*)::int`,
+        bytes: sql<string>`coalesce(sum(${mediaAssets.sizeBytes}), 0)`,
+      })
+      .from(mediaAssets)
+      .where(and(...conds));
+
+    return { count: Number(row?.count ?? 0), bytes: Number(row?.bytes ?? 0) };
   }
 }
 

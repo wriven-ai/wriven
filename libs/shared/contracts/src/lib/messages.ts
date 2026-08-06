@@ -36,6 +36,7 @@ export const WORKSPACE_PATTERNS = {
   ADD_MEMBER: 'auth.workspace.addMember',
   UPDATE_MEMBER: 'auth.workspace.updateMember',
   REMOVE_MEMBER: 'auth.workspace.removeMember',
+  STATS: 'auth.workspace.stats',
 } as const;
 
 /**
@@ -140,6 +141,8 @@ export const BILLING_PATTERNS = {
 export const USAGE_PATTERNS = {
   RECORD: 'core.usage.record',
   READ: 'core.usage.read',
+  WORKSPACE_STATS: 'core.usage.workspaceStats',
+  PROJECT_STATS: 'core.usage.projectStats',
 } as const;
 
 /**

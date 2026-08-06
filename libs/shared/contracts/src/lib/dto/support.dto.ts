@@ -12,6 +12,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import {
   SUPPORT_PRIORITIES,
   SUPPORT_SCOPES,
@@ -79,11 +80,13 @@ export class CloseTicketDto {
 
 export class ListTicketsQueryDto {
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -100,11 +103,13 @@ export class ListTicketsQueryDto {
 
 export class AdminTicketListQueryDto {
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)

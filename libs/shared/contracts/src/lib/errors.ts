@@ -22,6 +22,11 @@ export const ERROR_CODES = {
   SUBSCRIPTION_EXISTS: { code: 'SUBSCRIPTION_EXISTS', statusCode: 409 },
   // No live paid subscription to change — call createCheckout to subscribe first.
   SUBSCRIPTION_NOT_FOUND: { code: 'SUBSCRIPTION_NOT_FOUND', statusCode: 404 },
+  // A downgrade is blocked: the workspace holds more of a stock resource
+  // (projects, members, content types, entries, API keys, webhooks, storage)
+  // than the target plan allows. `details` lists each over-limit dimension.
+  // The user must trim below the target limits before downgrading.
+  DOWNGRADE_BLOCKED: { code: 'DOWNGRADE_BLOCKED', statusCode: 409 },
   // A Stripe call failed mid plan create/retire sync — DB write skipped so the
   // plan row isn't left half-linked. Retryable.
   STRIPE_SYNC_FAILED: { code: 'STRIPE_SYNC_FAILED', statusCode: 500 },

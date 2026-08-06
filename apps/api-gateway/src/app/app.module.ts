@@ -44,7 +44,9 @@ import { PlansController } from '../plans/plans.controller';
 import { BillingController } from '../billing/billing.controller';
 import { StripeWebhookController } from '../billing/stripe-webhook.controller';
 import { UsageBufferService } from '../usage/usage-buffer.service';
+import { WorkspaceUsageComposer } from '../billing/workspace-usage.composer';
 import { UsageController } from '../usage/usage.controller';
+import { StatsController } from '../stats/stats.controller';
 import { UsageEnforceService } from '../usage/usage-enforce.service';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -104,6 +106,7 @@ import { AppService } from './app.service';
     SupportController,
     PlansController,
     UsageController,
+    StatsController,
     BillingController,
     StripeWebhookController,
     AdminAuthController,
@@ -133,6 +136,7 @@ import { AppService } from './app.service';
     AuditInterceptor,
     UsageBufferService,
     UsageEnforceService,
+    WorkspaceUsageComposer,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

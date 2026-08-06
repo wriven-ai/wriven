@@ -277,6 +277,7 @@ export class BillingService {
         stripeSubscriptionId: true,
         cancelAtPeriodEnd: true,
         pendingChange: true,
+        billingCycle: true,
       },
       with: { plan: { columns: { key: true, sortOrder: true } } },
     });
@@ -298,12 +299,15 @@ export class BillingService {
       scheduleId?: string;
     } | null;
 
-    // Reactivation: staying on the current plan — clear whatever is pending
-    // (a scheduled downgrade via Subscription Schedule, and/or a cancel-at-period-
+    // Reactivation: same plan AND same cycle — clear whatever is pending (a
+    // scheduled downgrade via Subscription Schedule, and/or a cancel-at-period-
     // end). No price change → no need to read the line item / billing period.
-    // Mirror the cleared state onto the row so the UI updates without waiting on
-    // the webhook.
-    if (input.planKey === current.plan?.key) {
+    // A same-plan cycle change (monthly↔yearly) must NOT short-circuit here; it
+    // falls through to the prorated price update below.
+    if (
+      input.planKey === current.plan?.key &&
+      input.billingCycle === current.billingCycle
+    ) {
       if (pending?.scheduleId) {
         await this.stripe.subscription_schedules.release(pending.scheduleId);
       }

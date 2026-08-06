@@ -32,6 +32,25 @@ export class WorkspacesService {
     private readonly authz: AuthorizationService,
   ) {}
 
+  /**
+   * Workspace tenancy counts (projects + members) for the dashboard aggregate.
+   * Membership is already enforced by the gateway's WorkspaceGuard, so this
+   * trusts the injected `workspaceId` and just counts. Merged with core-service
+   * content/media stats at the gateway. See specs/17.
+   */
+  async stats(p: {
+    workspaceId: string;
+  }): Promise<{ projects: number; members: number }> {
+    const [projectCount, memberCount] = await Promise.all([
+      this.db.$count(projects, eq(projects.workspaceId, p.workspaceId)),
+      this.db.$count(
+        workspaceMembers,
+        eq(workspaceMembers.workspaceId, p.workspaceId),
+      ),
+    ]);
+    return { projects: projectCount, members: memberCount };
+  }
+
   async create(p: {
     userId: string;
     dto: CreateWorkspaceDto;

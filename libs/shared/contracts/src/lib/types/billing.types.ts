@@ -4,6 +4,61 @@
  * `auth_svc.subscriptions` (one row per workspace). See specs/08.
  */
 
+import type { PlanLimits } from './admin.types';
+
+/**
+ * Stock resource dimensions checked before a plan downgrade is allowed. A
+ * downgrade (paid → lower paid, or → Free) is blocked when the workspace's
+ * current usage of any of these exceeds the target plan's limit. Order is the
+ * display order used by the client's blocked-downgrade dialog.
+ *
+ * Flow dimensions (`apiRequestsPerMonth`, `assetBandwidthGb`, AI) are excluded:
+ * they reset each period and cannot be "deleted" to comply. `environments` /
+ * `locales` are excluded too — they have no counter in `WorkspaceStatsView` yet
+ * (`null` limit = don't block). See specs/18 (downgrade guard).
+ */
+export type DowngradeDimension =
+  | 'projects'
+  | 'members'
+  | 'contentTypes'
+  | 'entries'
+  | 'apiKeys'
+  | 'webhooks'
+  | 'storageMb';
+
+/**
+ * One over-limit dimension surfaced in a `DOWNGRADE_BLOCKED` error. `used` is
+ * the workspace's current count (or MB for storage); `limit` is the target
+ * plan's cap on that dimension.
+ */
+export interface DowngradeBlock {
+  dimension: DowngradeDimension;
+  label: string; // human label, e.g. "Content types"
+  used: number;
+  limit: number;
+}
+
+/**
+ * Metadata for each downgrade-checked dimension: the `PlanLimits` field that
+ * holds its cap. `null`/absent on that field = unlimited → never blocks. Kept
+ * in contracts so the gateway guard and the docs share one source of truth for
+ * which dimensions count. (The client mirrors this table — it can't import the
+ * contracts bundle — see `apps/client/src/lib/downgrade.ts`.)
+ */
+export const DOWNGRADE_DIMENSIONS: readonly {
+  dimension: DowngradeDimension;
+  label: string;
+  limitKey: keyof PlanLimits;
+}[] = [
+  { dimension: 'projects', label: 'Projects', limitKey: 'projects' },
+  { dimension: 'members', label: 'Members', limitKey: 'members' },
+  { dimension: 'contentTypes', label: 'Content types', limitKey: 'contentTypes' },
+  { dimension: 'entries', label: 'Entries', limitKey: 'entries' },
+  { dimension: 'apiKeys', label: 'API keys', limitKey: 'apiKeys' },
+  { dimension: 'webhooks', label: 'Webhooks', limitKey: 'webhooks' },
+  { dimension: 'storageMb', label: 'Storage (MB)', limitKey: 'storageMb' },
+];
+
 /**
  * Subscription lifecycle status. Mirrors Stripe's `subscription.status` and is
  * stored on `auth_svc.subscriptions.status` (CHECK-constrained to these values).
