@@ -78,7 +78,7 @@ export function ScopeSwitcher({
         {current?.name ?? placeholder}
       </span>
       {badge ? (
-        <span className="rounded border border-brand-border bg-brand-surface-soft px-1 py-0.5 text-[8px] font-bold tracking-wider text-text-muted uppercase">
+        <span className="rounded border border-brand-border bg-brand-surface-soft px-1 py-0.5 text-xs font-bold tracking-wider text-text-muted uppercase">
           {badge}
         </span>
       ) : null}
@@ -86,7 +86,7 @@ export function ScopeSwitcher({
   );
 
   const nameClass = cn(
-    'flex items-center gap-1.5 font-mono text-2xs text-text-primary transition-all cursor-pointer',
+    'flex items-center gap-1.5 font-mono text-sm text-text-primary transition-all cursor-pointer',
     block
       ? 'flex-1 min-w-0 gap-2 rounded-l-lg px-2.5 py-2 hover:bg-brand-surface-soft'
       : 'rounded-md px-2 py-1 hover:bg-brand-surface-soft border border-transparent hover:border-brand-border',
@@ -133,7 +133,7 @@ export function ScopeSwitcher({
       >
         <div className="max-h-72 overflow-y-auto">
           {items.length === 0 ? (
-            <p className="px-2.5 py-3 text-center font-mono text-2xs text-text-muted">
+            <p className="px-2.5 py-3 text-center font-mono text-sm text-text-muted">
               {emptyText}
             </p>
           ) : (
@@ -144,7 +144,7 @@ export function ScopeSwitcher({
                   key={item.id}
                   onClick={() => pick(item)}
                   className={cn(
-                    'flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-2xs',
+                    'flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-sm',
                     'hover:bg-brand-surface-soft transition-colors cursor-pointer',
                     active && 'bg-brand-surface-soft',
                   )}
@@ -165,7 +165,7 @@ export function ScopeSwitcher({
               setOpen(false);
               onCreate();
             }}
-            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-2xs text-text-secondary hover:bg-brand-surface-soft hover:text-brand-accent transition-colors cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-sm text-text-secondary hover:bg-brand-surface-soft hover:text-brand-accent transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5 shrink-0" />
             {createLabel}

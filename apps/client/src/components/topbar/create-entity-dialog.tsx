@@ -68,7 +68,7 @@ export function CreateEntityDialog({
           </DialogHeader>
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">
+            <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider">
               {label}
             </label>
             <Input
@@ -76,10 +76,10 @@ export function CreateEntityDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={placeholder}
-              className="border-brand-border bg-brand-surface-soft font-mono text-xs text-text-primary"
+              className="border-brand-border bg-brand-surface-soft font-mono text-sm text-text-primary"
             />
             {error ? (
-              <p className="text-[10px] font-mono text-status-error">{error}</p>
+              <p className="text-sm font-mono text-status-error">{error}</p>
             ) : null}
           </div>
 

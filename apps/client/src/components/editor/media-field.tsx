@@ -126,7 +126,7 @@ export function MediaField({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-2xs font-bold text-text-secondary hover:border-brand-accent hover:text-brand-accent transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-sm font-bold text-text-secondary hover:border-brand-accent hover:text-brand-accent transition-colors"
       >
         <Plus className="h-3.5 w-3.5" />
         {selectedIds.length > 0
@@ -142,7 +142,7 @@ export function MediaField({
             <DialogTitle className="font-display text-text-primary">
               Media library
             </DialogTitle>
-            <DialogDescription className="font-mono text-2xs text-text-muted">
+            <DialogDescription className="font-mono text-sm text-text-muted">
               Pick an asset or upload a new one.
             </DialogDescription>
           </DialogHeader>
@@ -151,7 +151,7 @@ export function MediaField({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploadMutation.isPending}
-            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-brand-border py-3 font-mono text-2xs font-bold text-text-secondary hover:border-brand-accent transition-colors disabled:opacity-60"
+            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-brand-border py-3 font-mono text-sm font-bold text-text-secondary hover:border-brand-accent transition-colors disabled:opacity-60"
           >
             {uploadMutation.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -172,7 +172,7 @@ export function MediaField({
 
           <div className="grid max-h-72 grid-cols-3 gap-3 overflow-y-auto sm:grid-cols-4">
             {assets.length === 0 ? (
-              <p className="col-span-full py-6 text-center font-mono text-2xs text-text-muted">
+              <p className="col-span-full py-6 text-center font-mono text-sm text-text-muted">
                 No media yet.
               </p>
             ) : (

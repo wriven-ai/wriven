@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
       <div className="absolute top-6 left-6">
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 text-xs font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
         >
           <ArrowLeft className="w-4 h-4 text-brand-accent" />
           Back to sign in
@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10">
-        <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
+        <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
           Password Recovery
         </span>
         <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight">
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4 sm:px-0">
         <div className="bg-brand-surface py-8 px-6 border border-brand-border-button rounded-xl shadow-2xl neo-shadow-lg sm:px-10 space-y-6">
           {sent ? (
-            <div className="p-5 rounded-lg bg-emerald-500/5 border border-status-success text-xs font-mono text-text-primary text-center space-y-3">
+            <div className="p-5 rounded-lg bg-emerald-500/5 border border-status-success text-sm font-mono text-text-primary text-center space-y-3">
               <MailCheck className="w-8 h-8 mx-auto text-status-success" />
               <strong className="block font-bold">Check your inbox</strong>
               <p className="text-text-secondary font-light leading-relaxed">
@@ -73,13 +73,13 @@ export default function ForgotPasswordPage() {
             <>
               {serverError && (
                 <div
-                  className="p-3 rounded-lg bg-status-error/5 border border-status-error text-[11px] font-mono text-status-error text-center"
+                  className="p-3 rounded-lg bg-status-error/5 border border-status-error text-sm font-mono text-status-error text-center"
                   role="alert"
                 >
                   {serverError}
                 </div>
               )}
-              <p className="text-xs text-text-secondary font-light leading-relaxed">
+              <p className="text-sm text-text-secondary font-light leading-relaxed">
                 Enter your account email and we&apos;ll send you a link to reset
                 your password.
               </p>
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
               >
                 <div>
                   <label
-                    className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                    className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
                     htmlFor="forgot-email"
                   >
                     Account Email
@@ -100,10 +100,10 @@ export default function ForgotPasswordPage() {
                     type="email"
                     placeholder="name@company.com"
                     {...register('email')}
-                    className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                    className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                   />
                   {errors.email && (
-                    <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                    <p className="mt-1.5 text-sm font-mono text-status-error">
                       {errors.email.message}
                     </p>
                   )}
@@ -111,7 +111,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Sending…' : 'Send reset link'}
                 </button>
@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
             </>
           )}
 
-          <p className="text-center text-xs text-text-secondary pt-2 font-light">
+          <p className="text-center text-sm text-text-secondary pt-2 font-light">
             Remembered it?{' '}
             <Link
               href="/login"

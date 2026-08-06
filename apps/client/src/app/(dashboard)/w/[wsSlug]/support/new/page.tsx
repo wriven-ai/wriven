@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ImagePlus, Loader2, Paperclip, RefreshCw, X } from 'lucide-react';
 import { ApiRequestError, supportApi, uploadSupportAttachment } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
-import type { SupportScope } from '@/lib/types';
+import type { SupportScope, SupportTicketDetail } from '@/lib/types';
 import { projectApi } from '@/lib/api';
+import { NewTicketSkeleton } from '@/components/skeleton/support-skeleton';
+import { SuccessModal } from '@/components/ui/success-modal';
 
 const SCOPE_OPTIONS: Array<{ value: SupportScope; label: string }> = [
   { value: 'general', label: 'General' },
@@ -26,6 +28,14 @@ interface AttachmentEntry {
 }
 
 export default function NewTicketPage() {
+  return (
+    <Suspense fallback={<NewTicketSkeleton />}>
+      <NewTicketInner />
+    </Suspense>
+  );
+}
+
+function NewTicketInner() {
   const { wsSlug } = useParams<{ wsSlug: string }>();
   const router = useRouter();
   const { currentWorkspaceId } = useAuth();
@@ -36,6 +46,8 @@ export default function NewTicketPage() {
   const [scopeProjectId, setScopeProjectId] = useState('');
   const [attachments, setAttachments] = useState<AttachmentEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [createdTicket, setCreatedTicket] = useState<SupportTicketDetail | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: projects } = useQuery({
@@ -56,7 +68,8 @@ export default function NewTicketPage() {
       });
     },
     onSuccess: (ticket) => {
-      router.push(`/w/${wsSlug}/support/${ticket.id}`);
+      setCreatedTicket(ticket);
+      setShowSuccess(true);
     },
     onError: (err) => {
       setError(
@@ -125,13 +138,13 @@ export default function NewTicketPage() {
         <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
           Open <span className="font-normal italic text-brand-secondary">Support Ticket</span>
         </h1>
-        <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+        <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
           {`// Describe your issue and we'll respond as soon as possible`}
         </p>
       </div>
 
       {error && (
-        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-2xs font-mono rounded-lg px-4 py-3">
+        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-sm font-mono rounded-lg px-4 py-3">
           {error}
         </div>
       )}
@@ -139,7 +152,7 @@ export default function NewTicketPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Subject */}
         <div>
-          <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="subject">
+          <label className="block text-sm font-mono text-text-secondary mb-1.5" htmlFor="subject">
             Subject <span className="text-status-error">*</span>
           </label>
           <input
@@ -151,14 +164,14 @@ export default function NewTicketPage() {
             minLength={3}
             maxLength={160}
             required
-            className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent"
+            className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent"
           />
-          <p className="text-[9px] font-mono text-text-muted mt-1">{subject.length}/160</p>
+          <p className="text-sm font-mono text-text-muted mt-1">{subject.length}/160</p>
         </div>
 
         {/* Scope */}
         <div>
-          <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="scope">
+          <label className="block text-sm font-mono text-text-secondary mb-1.5" htmlFor="scope">
             Category
           </label>
           <select
@@ -168,7 +181,7 @@ export default function NewTicketPage() {
               setScope(e.target.value as SupportScope);
               setScopeProjectId('');
             }}
-            className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
+            className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
           >
             {SCOPE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -181,7 +194,7 @@ export default function NewTicketPage() {
         {/* Project picker (scope=project) */}
         {scope === 'project' && (
           <div>
-            <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="project">
+            <label className="block text-sm font-mono text-text-secondary mb-1.5" htmlFor="project">
               Project <span className="text-status-error">*</span>
             </label>
             <select
@@ -189,7 +202,7 @@ export default function NewTicketPage() {
               value={scopeProjectId}
               onChange={(e) => setScopeProjectId(e.target.value)}
               required
-              className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
+              className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
             >
               <option value="">Select a project…</option>
               {projects?.map((p) => (
@@ -203,7 +216,7 @@ export default function NewTicketPage() {
 
         {/* Description */}
         <div>
-          <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="description">
+          <label className="block text-sm font-mono text-text-secondary mb-1.5" htmlFor="description">
             Description <span className="text-status-error">*</span>
           </label>
           <textarea
@@ -214,14 +227,14 @@ export default function NewTicketPage() {
             rows={6}
             maxLength={5000}
             required
-            className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent resize-y min-h-[120px]"
+            className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent resize-y min-h-[120px]"
           />
-          <p className="text-[9px] font-mono text-text-muted mt-1">{description.length}/5000</p>
+          <p className="text-sm font-mono text-text-muted mt-1">{description.length}/5000</p>
         </div>
 
         {/* Attachments */}
         <div>
-          <label className="block text-2xs font-mono text-text-secondary mb-1.5">
+          <label className="block text-sm font-mono text-text-secondary mb-1.5">
             Attachments <span className="text-text-muted">(images only, ≤3, ≤5 MB each)</span>
           </label>
 
@@ -244,7 +257,7 @@ export default function NewTicketPage() {
                   )}
                   {a.error && (
                     <div className="absolute inset-0 bg-status-error/80 flex items-center justify-center p-1">
-                      <p className="font-mono text-[8px] text-white text-center leading-tight">{a.error}</p>
+                      <p className="font-mono text-sm text-white text-center leading-tight">{a.error}</p>
                     </div>
                   )}
                   <button
@@ -272,7 +285,7 @@ export default function NewTicketPage() {
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 text-2xs font-mono text-text-secondary border border-brand-border rounded-lg px-3 py-2 hover:border-brand-accent/50 hover:text-text-primary cursor-pointer transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm font-mono text-text-secondary border border-brand-border rounded-lg px-3 py-2 hover:border-brand-accent/50 hover:text-text-primary cursor-pointer transition-colors"
               >
                 <ImagePlus className="w-3.5 h-3.5" />
                 Add image ({3 - attachments.length} remaining)
@@ -286,7 +299,7 @@ export default function NewTicketPage() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white font-mono font-bold text-2xs py-3 px-6 rounded-lg transition-all border border-brand-border-button disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white font-mono font-bold text-sm py-3 px-6 rounded-lg transition-all border border-brand-border-button disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {createMutation.isPending ? (
               <>
@@ -303,12 +316,25 @@ export default function NewTicketPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="text-2xs font-mono text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+            className="text-sm font-mono text-text-muted hover:text-text-primary transition-colors cursor-pointer"
           >
             Cancel
           </button>
         </div>
       </form>
+
+      <SuccessModal
+        open={showSuccess}
+        onOpenChange={setShowSuccess}
+        title="Ticket opened!"
+        description="Your support ticket has been created. Our team will respond as soon as possible."
+        actionLabel="View ticket"
+        onAction={() => {
+          if (createdTicket) {
+            router.push(`/w/${wsSlug}/support/${createdTicket.id}`);
+          }
+        }}
+      />
     </div>
   );
 }

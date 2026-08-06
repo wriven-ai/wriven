@@ -49,7 +49,7 @@ export function NavTreeRenderer({ tree }: { tree: NavTree }) {
       {tree.map((group, gi) => (
         <SidebarGroup key={group.groupLabel || gi}>
           {group.groupLabel ? (
-            <SidebarGroupLabel className="font-mono text-[9px] tracking-widest uppercase">
+            <SidebarGroupLabel className="font-mono text-sm tracking-widest uppercase">
               {group.groupLabel}
             </SidebarGroupLabel>
           ) : null}
@@ -85,7 +85,7 @@ function FlatItem({ item, pathname }: { item: NavItem; pathname: string }) {
         isActive={isActive(item, pathname)}
         tooltip={item.label}
         render={<Link href={item.href} />}
-        className="font-mono text-xs"
+        className="font-mono text-sm"
       >
         {Icon ? <Icon /> : null}
         <span>{item.label}</span>
@@ -118,7 +118,7 @@ function CollapsibleItem({
             <SidebarMenuButton
               isActive={childActive}
               tooltip={item.label}
-              className="font-mono text-xs"
+              className="font-mono text-sm"
             >
               {Icon ? <Icon /> : null}
               <span>{item.label}</span>
@@ -160,7 +160,7 @@ function SubGroup({
   return (
     <>
       {groupLabel ? (
-        <li className="px-2 pt-1.5 pb-0.5 font-mono text-[8px] tracking-widest text-sidebar-foreground/50 uppercase">
+        <li className="px-2 pt-1.5 pb-0.5 font-mono text-sm tracking-widest text-sidebar-foreground/50 uppercase">
           {groupLabel}
         </li>
       ) : null}
@@ -171,7 +171,7 @@ function SubGroup({
             <SidebarMenuSubButton
               isActive={isActive(leaf, pathname)}
               render={<Link href={leaf.href} />}
-              className="font-mono text-xs"
+              className="font-mono text-sm"
             >
               {Icon ? <Icon /> : null}
               <span>{leaf.label}</span>

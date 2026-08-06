@@ -57,7 +57,7 @@ export function DashboardNavbar() {
           <input
             type="text"
             placeholder="Quick Search... (⌘K)"
-            className="bg-transparent border-none text-2xs font-mono outline-hidden w-full placeholder:text-text-muted/65 text-text-primary"
+            className="bg-transparent border-none text-sm font-mono outline-hidden w-full placeholder:text-text-muted/65 text-text-primary"
             disabled
           />
         </div>
@@ -87,7 +87,7 @@ export function DashboardNavbar() {
             onClick={() => setUserMenuOpen((o) => !o)}
             className="flex items-center gap-1.5 hover:bg-brand-surface-soft p-1.5 rounded-lg border border-transparent hover:border-brand-border transition-all cursor-pointer"
           >
-            <div className="w-7 h-7 rounded-md bg-brand-accent text-white font-mono font-bold text-xs flex items-center justify-center">
+            <div className="w-7 h-7 rounded-md bg-brand-accent text-white font-mono font-bold text-sm flex items-center justify-center">
               {(user?.name ?? '?').slice(0, 2).toUpperCase()}
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-text-secondary" />
@@ -107,16 +107,16 @@ export function DashboardNavbar() {
                   className="absolute right-0 mt-2 w-48 bg-brand-surface border border-brand-border rounded-xl shadow-lg z-50 p-2 text-left"
                 >
                   <div className="px-3 py-2 border-b border-brand-border mb-1.5">
-                    <div className="text-2xs font-mono font-bold text-text-primary">
+                    <div className="text-sm font-mono font-bold text-text-primary">
                       {user?.name ?? 'Loading…'}
                     </div>
-                    <div className="text-[10px] font-mono text-text-muted truncate">
+                    <div className="text-sm font-mono text-text-muted truncate">
                       {user?.email ?? ''}
                     </div>
                   </div>
                   <Link
                     href="/"
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono text-text-secondary hover:text-brand-accent hover:bg-brand-surface-soft/80"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-mono text-text-secondary hover:text-brand-accent hover:bg-brand-surface-soft/80"
                     onClick={() => setUserMenuOpen(false)}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />

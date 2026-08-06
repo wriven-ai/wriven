@@ -9,7 +9,7 @@ export default function ProblemStatement() {
       <div className="mx-auto max-w-4xl px-4 sm:px-6 relative z-10" id="problem-statement-inner">
         <div className="space-y-8">
           <div className="text-center space-y-3">
-            <span className="text-[10px] font-mono tracking-widest text-brand-accent font-bold uppercase bg-brand-surface-soft border border-brand-border px-3 py-1.5 rounded-md inline-block">
+            <span className="text-sm font-mono tracking-widest text-brand-accent font-bold uppercase bg-brand-surface-soft border border-brand-border px-3 py-1.5 rounded-md inline-block">
               MANIFEST 01. THE DISCONNECTED GRAPH
             </span>
             <h2 className="font-display font-medium tracking-tight text-text-primary text-3xl sm:text-4xl" id="problem-title">
@@ -32,11 +32,11 @@ export default function ProblemStatement() {
             {/* Right side key prompt outcome */}
             <div className="md:col-span-5 bg-brand-surface-soft border border-brand-border p-5 rounded-lg space-y-4 font-sans">
               <Bookmark className="w-5 h-5 text-brand-accent" />
-              <p className="text-xs text-text-primary leading-relaxed" id="problem-solution-prompt">
+              <p className="text-sm text-text-primary leading-relaxed" id="problem-solution-prompt">
                 &ldquo;Wriven weaves the entire workflow. We believe that structured content models, layout drafting, and integrated copywriters belong on the same physical desktop layout.&rdquo;
               </p>
               <div className="h-[1px] bg-brand-border" />
-              <div className="flex justify-between items-center text-[9px] font-mono text-text-muted">
+              <div className="flex justify-between items-center text-sm font-mono text-text-muted">
                 <span>— THE WRIVEN EDITORIAL COMMITTEE</span>
                 <span>JUNE 2026</span>
               </div>

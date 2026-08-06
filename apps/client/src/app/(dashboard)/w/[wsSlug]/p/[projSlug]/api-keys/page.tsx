@@ -120,7 +120,7 @@ export default function ApiKeysPage() {
             API Access Tokens
           </span>
         </h1>
-        <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+        <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
           {'// Keys that authenticate the Content Delivery API from your site'}
         </p>
       </div>
@@ -129,14 +129,14 @@ export default function ApiKeysPage() {
       <div className="rounded-xl border border-brand-border bg-brand-surface p-4 sm:p-5 space-y-2">
         <div className="flex items-center gap-2">
           <Folder className="h-3.5 w-3.5 text-brand-secondary" />
-          <span className="font-mono text-[11px] font-bold text-text-secondary">Project ID</span>
+          <span className="font-mono text-sm font-bold text-text-secondary">Project ID</span>
         </div>
-        <p className="font-mono text-[10px] text-text-muted leading-relaxed">
+        <p className="font-mono text-sm text-text-muted leading-relaxed">
           Use this in the Delivery API path:{' '}
           <code className="text-text-secondary">/v1/projects/&lt;projectId&gt;/content/…</code>
         </p>
         <div className="flex items-center gap-2">
-          <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-xs text-text-primary">
+          <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-sm text-text-primary">
             {projectId || 'Loading…'}
           </code>
           <button
@@ -157,16 +157,16 @@ export default function ApiKeysPage() {
       {/* One-time token reveal */}
       {newToken ? (
         <div className="space-y-3 rounded-xl border border-brand-accent/40 bg-brand-accent/5 p-5">
-          <h2 className="flex items-center gap-2 font-mono text-xs font-bold text-text-primary">
+          <h2 className="flex items-center gap-2 font-mono text-sm font-bold text-text-primary">
             <TriangleAlert className="h-3.5 w-3.5 text-brand-accent" />
             Copy your token now
           </h2>
-          <p className="font-mono text-[10px] text-text-muted leading-relaxed">
+          <p className="font-mono text-sm text-text-muted leading-relaxed">
             This is the only time the full token is shown. We store only a hash —
             it cannot be retrieved again.
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface px-3 py-2 font-mono text-xs text-brand-secondary font-bold">
+            <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface px-3 py-2 font-mono text-sm text-brand-secondary font-bold">
               {newToken}
             </code>
             <button
@@ -183,7 +183,7 @@ export default function ApiKeysPage() {
           </div>
           <button
             onClick={() => setNewToken(null)}
-            className="font-mono text-2xs font-bold text-brand-accent hover:underline"
+            className="font-mono text-sm font-bold text-brand-accent hover:underline"
           >
             I&apos;ve saved it — dismiss
           </button>
@@ -193,14 +193,14 @@ export default function ApiKeysPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left: create */}
         <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-5">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
+          <span className="text-sm font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
             Commission API Access Token
           </span>
 
           <form onSubmit={createKey} className="space-y-5">
             <div>
               <label
-                className="block text-2xs font-mono text-text-secondary mb-1.5"
+                className="block text-sm font-mono text-text-secondary mb-1.5"
                 htmlFor="api-key-name"
               >
                 Token Application Context
@@ -212,12 +212,12 @@ export default function ApiKeysPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 required
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent h-11"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent h-11"
               />
             </div>
 
             <div>
-              <label className="block text-2xs font-mono text-text-secondary mb-1.5">
+              <label className="block text-sm font-mono text-text-secondary mb-1.5">
                 Authorization Scope
               </label>
               <div className="space-y-2 mt-1.5">
@@ -234,10 +234,10 @@ export default function ApiKeysPage() {
                       className="mt-0.5 text-brand-accent border-brand-border cursor-pointer focus:ring-0"
                     />
                     <div>
-                      <p className="text-2xs font-mono font-bold text-text-primary">
+                      <p className="text-sm font-mono font-bold text-text-primary">
                         {s.label}
                       </p>
-                      <p className="text-[9.5px] text-text-muted font-light mt-0.5 leading-relaxed">
+                      <p className="text-sm text-text-muted font-light mt-0.5 leading-relaxed">
                         {s.desc}
                       </p>
                     </div>
@@ -247,13 +247,13 @@ export default function ApiKeysPage() {
             </div>
 
             {error ? (
-              <p className="font-mono text-[10px] text-status-error">{error}</p>
+              <p className="font-mono text-sm text-status-error">{error}</p>
             ) : null}
 
             <button
               type="submit"
               disabled={createMutation.isPending || !newName.trim() || !canManage}
-              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:opacity-60 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg neo-shadow cursor-pointer transition-all"
+              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:opacity-60 border border-brand-border-button font-mono font-bold text-sm py-3 rounded-lg neo-shadow cursor-pointer transition-all"
             >
               {createMutation.isPending ? (
                 <>
@@ -270,13 +270,13 @@ export default function ApiKeysPage() {
           </form>
 
           <div className="bg-brand-surface border border-brand-border p-4 rounded-xl text-left space-y-2">
-            <div className="flex items-center gap-2 text-[10px] font-mono text-status-warning font-black uppercase">
+            <div className="flex items-center gap-2 text-sm font-mono text-status-warning font-black uppercase">
               <ShieldAlert className="w-4 h-4 text-amber-500" />
               Secure Key Guidelines
             </div>
-            <p className="text-[10.5px] text-text-secondary leading-relaxed font-light">
+            <p className="text-sm text-text-secondary leading-relaxed font-light">
               Store management keys in server environment configs (
-              <code className="font-mono bg-brand-surface-soft border border-brand-border px-1 rounded text-[9.5px]">
+              <code className="font-mono bg-brand-surface-soft border border-brand-border px-1 rounded text-sm">
                 process.env.WRIVEN_TOKEN
               </code>
               ). Never commit them or expose admin keys client-side.
@@ -286,14 +286,14 @@ export default function ApiKeysPage() {
 
         {/* Right: list */}
         <div className="lg:col-span-7 space-y-4">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block px-1 font-bold">
+          <span className="text-sm font-mono tracking-wider text-text-secondary block px-1 font-bold">
             Active Integration Tokens ({keys?.length ?? 0})
           </span>
 
           {isLoading ? (
-            <p className="font-mono text-2xs text-text-muted px-1">Loading…</p>
+            <p className="font-mono text-sm text-text-muted px-1">Loading…</p>
           ) : !keys || keys.length === 0 ? (
-            <p className="font-mono text-2xs text-text-muted px-1">
+            <p className="font-mono text-sm text-text-muted px-1">
               No keys yet. Create one to connect your site.
             </p>
           ) : (
@@ -311,8 +311,8 @@ export default function ApiKeysPage() {
                           {key.name}
                         </h3>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 text-[9px] font-mono text-text-muted leading-none mt-1">
-                        <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1 rounded uppercase font-bold text-[8px]">
+                      <div className="flex flex-wrap gap-1.5 text-sm font-mono text-text-muted leading-none mt-1">
+                        <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1 rounded uppercase font-bold text-sm">
                           {scopeLabel(key.scope)}
                         </span>
                         <span>•</span>
@@ -331,19 +331,19 @@ export default function ApiKeysPage() {
                         }
                       }}
                       disabled={revokeMutation.isPending || !canManage}
-                      className="inline-flex shrink-0 items-center gap-1.5 p-1.5 px-2.5 border border-brand-border text-text-secondary hover:bg-status-error/10 hover:text-status-error hover:border-status-error/30 rounded-lg font-mono text-3xs font-semibold leading-none cursor-pointer transition-colors disabled:opacity-60"
+                      className="inline-flex shrink-0 items-center gap-1.5 p-1.5 px-2.5 border border-brand-border text-text-secondary hover:bg-status-error/10 hover:text-status-error hover:border-status-error/30 rounded-lg font-mono text-sm font-semibold leading-none cursor-pointer transition-colors disabled:opacity-60"
                     >
                       <Trash2 className="w-3 h-3" />
                       Revoke
                     </button>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between border border-brand-border-button bg-brand-surface-soft rounded-lg p-2.5 px-3.5 font-mono text-[10px] text-text-secondary">
+                  <div className="mt-4 flex items-center justify-between border border-brand-border-button bg-brand-surface-soft rounded-lg p-2.5 px-3.5 font-mono text-sm text-text-secondary">
                     <span className="tracking-wide">
                       {key.prefix}
                       <span className="text-text-muted">••••••••••••••••••••</span>
                     </span>
-                    <span className="flex items-center gap-1 text-[9.5px] text-text-muted">
+                    <span className="flex items-center gap-1 text-sm text-text-muted">
                       <Activity className="w-3 h-3" />
                       {key.lastUsedAt
                         ? `used ${new Date(key.lastUsedAt).toLocaleDateString()}`
@@ -357,11 +357,11 @@ export default function ApiKeysPage() {
 
           {/* cURL example */}
           <div className="bg-brand-surface border border-brand-border rounded-xl p-5 text-left">
-            <h4 className="text-xs font-mono font-bold text-text-primary mb-2 flex items-center gap-2">
+            <h4 className="text-sm font-mono font-bold text-text-primary mb-2 flex items-center gap-2">
               <Terminal className="w-4 h-4 text-brand-secondary" />
               Delivery API Example
             </h4>
-            <div className="bg-brand-surface-soft border border-brand-border rounded-lg p-3.5 font-mono text-[10px] text-text-secondary overflow-x-auto select-all leading-relaxed whitespace-pre-wrap">
+            <div className="bg-brand-surface-soft border border-brand-border rounded-lg p-3.5 font-mono text-sm text-text-secondary overflow-x-auto select-all leading-relaxed whitespace-pre-wrap">
               {curlExample}
             </div>
           </div>

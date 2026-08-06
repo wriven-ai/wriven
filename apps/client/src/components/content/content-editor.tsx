@@ -172,7 +172,7 @@ export function ContentEditor({
         <div className="space-y-1">
           <Link
             href={contentBase}
-            className="inline-flex items-center gap-1 text-[10px] font-mono text-text-muted hover:text-brand-accent transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-mono text-text-muted hover:text-brand-accent transition-colors"
           >
             <ArrowLeft className="w-3 h-3" /> Entries
           </Link>
@@ -186,19 +186,19 @@ export function ContentEditor({
 
         <div className="flex items-center gap-2">
           {isDirty && (
-            <span className="text-3xs font-mono text-brand-secondary bg-brand-secondary/10 px-2 py-1 rounded animate-pulse font-bold">
+            <span className="text-sm font-mono text-brand-secondary bg-brand-secondary/10 px-2 py-1 rounded animate-pulse font-bold">
               ● Unsaved
             </span>
           )}
           {entry && (
-            <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${STATUS_COLORS[status as EntryStatus]}`}>
+            <span className={`text-sm font-mono font-bold px-2 py-0.5 rounded border ${STATUS_COLORS[status as EntryStatus]}`}>
               {status.toUpperCase()}
             </span>
           )}
           {entryId && (
             <button
               onClick={() => setHistoryOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-xs font-mono font-bold"
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-sm font-mono font-bold"
               title="Version history"
             >
               <History className="w-3.5 h-3.5" />
@@ -207,7 +207,7 @@ export function ContentEditor({
           )}
           <button
             onClick={() => setSettingsOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-xs font-mono font-bold"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-sm font-mono font-bold"
             title="Entry settings (slug)"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -233,7 +233,7 @@ export function ContentEditor({
                 ? !can(Permission.CONTENT_ENTRY_UPDATE)
                 : !can(Permission.CONTENT_ENTRY_CREATE))
             }
-            className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button px-5 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer neo-shadow"
+            className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button px-5 py-2.5 rounded-lg text-sm font-mono font-bold transition-all cursor-pointer neo-shadow"
           >
             {isSaving ? (
               <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</>
@@ -247,7 +247,7 @@ export function ContentEditor({
             <button
               onClick={() => publishMutation.mutate()}
               disabled={publishMutation.isPending || isDirty}
-              className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 border border-green-700 px-5 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 border border-green-700 px-5 py-2.5 rounded-lg text-sm font-mono font-bold transition-all cursor-pointer"
               title={isDirty ? 'Save first before publishing' : undefined}
             >
               {publishMutation.isPending ? (
@@ -262,7 +262,7 @@ export function ContentEditor({
 
       {/* Timeline strip */}
       {entry && (
-        <div className="bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 shadow-xs font-mono text-[10px] text-text-muted">
+        <div className="bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 shadow-xs font-mono text-sm text-text-muted">
           <span className="flex items-center gap-1.5 text-text-secondary font-bold">
             <Clock className="w-3.5 h-3.5 text-brand-secondary" /> Timeline
           </span>
@@ -288,7 +288,7 @@ export function ContentEditor({
         <div className={`${hasRichText ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
           <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 sm:p-6 shadow-sm space-y-5">
             {allFields.length === 0 && (
-              <p className="text-xs font-mono text-text-muted">
+              <p className="text-sm font-mono text-text-muted">
                 This content type has no fields.{' '}
                 <a href={contentTypesHref} className="text-brand-accent underline">Add fields</a>.
               </p>
@@ -306,7 +306,7 @@ export function ContentEditor({
                   }`}
                 />
                 {fieldErrors[titleField.key] && (
-                  <p className="text-[9px] font-mono text-status-error">{fieldErrors[titleField.key]}</p>
+                  <p className="text-sm font-mono text-status-error">{fieldErrors[titleField.key]}</p>
                 )}
               </div>
             )}
@@ -337,14 +337,14 @@ export function ContentEditor({
             )}
 
             {!hasMain && allFields.length > 0 && (
-              <p className="text-[10px] font-mono text-text-muted">
+              <p className="text-sm font-mono text-text-muted">
                 No title or body field for this content type.
               </p>
             )}
           </div>
 
           {saveError && (
-            <div className="flex items-center gap-2 text-[10px] font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 text-sm font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-3 py-2">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               {(saveError as { error?: { message?: string } })?.error?.message ?? 'Failed to save entry'}
             </div>
@@ -357,11 +357,11 @@ export function ContentEditor({
           <div className="bg-brand-surface border border-brand-border rounded-xl shadow-sm flex flex-col sticky top-4">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-brand-border">
               <Sparkles className="w-4 h-4 text-brand-secondary" />
-              <span className="text-[11px] font-mono font-bold tracking-wider text-text-primary">Wriven Co-Writer</span>
-              <span className="ml-auto text-[9px] font-mono bg-brand-secondary/10 text-brand-secondary px-2 py-0.5 rounded font-bold">AI</span>
+              <span className="text-sm font-mono font-bold tracking-wider text-text-primary">Wriven Co-Writer</span>
+              <span className="ml-auto text-sm font-mono bg-brand-secondary/10 text-brand-secondary px-2 py-0.5 rounded font-bold">AI</span>
             </div>
             <div className="px-5 py-3 bg-brand-surface-soft/60 border-b border-brand-border">
-              <p className="text-[10px] font-mono text-text-muted leading-relaxed">
+              <p className="text-sm font-mono text-text-muted leading-relaxed">
                 AI content generation — coming soon. The AI service is not yet wired.
               </p>
             </div>
@@ -371,12 +371,12 @@ export function ContentEditor({
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 placeholder="e.g. Expand this paragraph with 3 bullet points..."
-                className="w-full min-h-[300px] text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-3 text-text-primary focus:outline-none focus:border-brand-accent leading-relaxed resize-y"
+                className="w-full min-h-[300px] text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-3 text-text-primary focus:outline-none focus:border-brand-accent leading-relaxed resize-y"
               />
               <button
                 type="button"
                 disabled
-                className="w-full inline-flex items-center justify-center gap-2 bg-brand-secondary/40 text-white/60 border border-brand-border-button font-mono font-bold text-xs py-2.5 px-4 rounded-lg cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center gap-2 bg-brand-secondary/40 text-white/60 border border-brand-border-button font-mono font-bold text-sm py-2.5 px-4 rounded-lg cursor-not-allowed"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 Apply Suggestions (unavailable)
@@ -395,7 +395,7 @@ export function ContentEditor({
         >
           <SheetHeader>
             <SheetTitle className="font-display text-text-primary">Entry settings</SheetTitle>
-            <SheetDescription className="font-mono text-2xs text-text-muted">
+            <SheetDescription className="font-mono text-sm text-text-muted">
               URL slug for this entry.
             </SheetDescription>
           </SheetHeader>
@@ -403,7 +403,7 @@ export function ContentEditor({
           <div className="px-4 pb-6 space-y-5">
             {/* Slug */}
             <div className="space-y-2">
-              <label className="block text-[10px] font-mono text-text-muted">
+              <label className="block text-sm font-mono text-text-muted">
                 Slug <span className="text-text-muted/70">— URL key, auto from title if empty</span>
               </label>
               <input
@@ -414,7 +414,7 @@ export function ContentEditor({
                   setIsDirty(true);
                 }}
                 placeholder="my-entry-slug"
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2 text-text-primary focus:outline-none focus:border-brand-accent"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2 text-text-primary focus:outline-none focus:border-brand-accent"
               />
             </div>
 

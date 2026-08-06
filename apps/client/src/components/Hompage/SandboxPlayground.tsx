@@ -102,7 +102,7 @@ export default function SandboxPlayground() {
     <section className="py-20 relative bg-brand-bg border-b border-brand-border" id="sandbox">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-          <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase">
+          <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase">
             Interactive Playground
           </span>
           <h2 className="font-display font-medium tracking-tight text-text-primary text-3xl sm:text-4xl" id="sandbox-headline">
@@ -121,7 +121,7 @@ export default function SandboxPlayground() {
               
               {/* Step 1 Schema Selector */}
               <div>
-                <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-3">1. Target Schema Model</label>
+                <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-3">1. Target Schema Model</label>
                 <div className="grid grid-cols-1 gap-2">
                   {schemas.map((s) => (
                     <button
@@ -135,10 +135,10 @@ export default function SandboxPlayground() {
                       id={`schema-btn-${s.id}`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs uppercase text-text-primary">{s.name}</span>
-                        <span className="text-[9px] font-mono text-brand-accent uppercase font-bold">ID: {s.id}</span>
+                        <span className="font-bold text-sm uppercase text-text-primary">{s.name}</span>
+                        <span className="text-sm font-mono text-brand-accent uppercase font-bold">ID: {s.id}</span>
                       </div>
-                      <span className="block text-[11px] text-text-secondary mt-1 font-light">{s.desc}</span>
+                      <span className="block text-sm text-text-secondary mt-1 font-light">{s.desc}</span>
                     </button>
                   ))}
                 </div>
@@ -146,13 +146,13 @@ export default function SandboxPlayground() {
 
               {/* Step 2 Tone Selector */}
               <div>
-                <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2.5">2. Brand Voice Tone</label>
+                <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2.5">2. Brand Voice Tone</label>
                 <div className="grid grid-cols-3 gap-2">
                   {['Professional', 'Casual', 'Creative'].map((tone) => (
                     <button
                       key={tone}
                       onClick={() => setFieldTone(tone)}
-                      className={`py-2 text-xs font-mono font-bold uppercase rounded border transition-all cursor-pointer ${
+                      className={`py-2 text-sm font-mono font-bold uppercase rounded border transition-all cursor-pointer ${
                         fieldTone === tone 
                         ? 'bg-brand-accent text-white border-brand-border-button'
                         : 'bg-brand-surface-soft text-text-secondary border-brand-border hover:border-brand-border-button'
@@ -167,14 +167,14 @@ export default function SandboxPlayground() {
 
               {/* Step 3 Instruction Notes */}
               <div>
-                <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="sandbox-prompt-text">3. AI Copilot Prompt Instructions</label>
+                <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="sandbox-prompt-text">3. AI Copilot Prompt Instructions</label>
                 <textarea
                   id="sandbox-prompt-text"
                   rows={3}
                   value={promptInput}
                   onChange={(e) => setPromptInput(e.target.value)}
                   placeholder="Prompt to instruct field weaving..."
-                  className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border p-3 text-text-primary placeholder-text-muted focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent leading-relaxed"
+                  className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border p-3 text-text-primary placeholder-text-muted focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent leading-relaxed"
                 />
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function SandboxPlayground() {
               <button
                 onClick={handleWeaveGenerate}
                 disabled={isGenerating}
-                className="w-full inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 text-white rounded-lg neo-shadow cursor-pointer transition-all"
+                className="w-full inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 text-white rounded-lg neo-shadow cursor-pointer transition-all"
                 id="sandbox-generate-btn"
               >
                 <Sparkles className="w-4 h-4 text-white" />
@@ -198,15 +198,15 @@ export default function SandboxPlayground() {
             {/* Visual Draft Paper Sheet */}
             <div className="bg-brand-surface border border-brand-border-button rounded-xl p-6 flex flex-col justify-between relative neo-shadow-lg flex-1">
               <div className="flex items-center justify-between border-b border-brand-border pb-3 mb-4">
-                <span className="text-[10px] font-mono uppercase text-text-primary flex items-center gap-2 font-bold">
+                <span className="text-sm font-mono uppercase text-text-primary flex items-center gap-2 font-bold">
                   <Layers className="w-4 h-4 text-brand-accent" />
                   CMS PREVIEWING SHEET: weaved_draft_content
                 </span>
-                <span className="text-[9px] font-mono text-brand-accent bg-brand-surface-soft border border-brand-border px-1.5 py-0.5 rounded uppercase font-bold">STATE: AUTOSAVED</span>
+                <span className="text-sm font-mono text-brand-accent bg-brand-surface-soft border border-brand-border px-1.5 py-0.5 rounded uppercase font-bold">STATE: AUTOSAVED</span>
               </div>
 
               <div className="text-left flex-grow">
-                <div className="h-full overflow-auto rounded-lg bg-brand-surface-soft/80 p-4 border border-brand-border text-xs font-mono text-text-primary leading-relaxed min-h-[160px] max-h-[220px]">
+                <div className="h-full overflow-auto rounded-lg bg-brand-surface-soft/80 p-4 border border-brand-border text-sm font-mono text-text-primary leading-relaxed min-h-[160px] max-h-[220px]">
                   {isGenerating ? (
                     <div className="space-y-3">
                       <div className="h-2.5 w-1/2 bg-text-muted/15 rounded animate-pulse" />
@@ -224,14 +224,14 @@ export default function SandboxPlayground() {
             {/* API Log Ledger Section */}
             <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 relative overflow-hidden h-[200px] text-left neo-shadow">
               <div className="absolute top-4 right-4 flex gap-2 select-none">
-                <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold tracking-wider bg-brand-surface-soft text-brand-accent border border-brand-border px-2 py-1 rounded">
+                <span className="inline-flex items-center gap-1 text-sm font-mono font-bold tracking-wider bg-brand-surface-soft text-brand-accent border border-brand-border px-2 py-1 rounded">
                   <Code className="w-3 h-3" />
                   GET /api/v1/content
                 </span>
               </div>
               
-              <span className="block text-[9px] font-mono text-text-muted mb-2 uppercase tracking-widest font-bold">{"// SECURE API RESPONSE (JSON)"}</span>
-              <div className="h-[120px] overflow-auto text-[11px] font-mono rounded bg-brand-surface-soft p-3 border border-brand-border" id="json-scroll">
+              <span className="block text-sm font-mono text-text-muted mb-2 uppercase tracking-widest font-bold">{"// SECURE API RESPONSE (JSON)"}</span>
+              <div className="h-[120px] overflow-auto text-sm font-mono rounded bg-brand-surface-soft p-3 border border-brand-border" id="json-scroll">
                 <pre className="whitespace-pre-wrap text-text-primary">{jsonResponse}</pre>
               </div>
             </div>

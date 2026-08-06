@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowLeft,
   CheckCircle,
   ImagePlus,
   Loader2,
@@ -12,23 +14,21 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ApiRequestError, supportApi, uploadSupportAttachment } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import type {
   SupportAttachmentView,
   SupportMessageView,
   SupportScope,
-  SupportStatus,
   SupportTicketDetail,
 } from '@/lib/types';
+import { getStatusColor } from '@/lib/statusColors';
 import { timeAgo } from '@/lib/utils';
-
-const STATUS_STYLE: Record<SupportStatus, string> = {
-  open: 'bg-status-warning/15 text-status-warning border-status-warning/30',
-  pending: 'bg-brand-surface text-text-secondary border-brand-border',
-  resolved: 'bg-status-success/15 text-status-success border-status-success/30',
-  closed: 'bg-brand-surface text-text-muted border-brand-border',
-};
+import {
+  TicketDetailSkeleton,
+} from '@/components/skeleton/support-skeleton';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 
 const SCOPE_LABEL: Record<SupportScope, string> = {
   general: 'General',
@@ -88,7 +88,7 @@ function MessageBubble({
     <div className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
       <div
-        className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 font-mono font-bold text-[9px] ${
+        className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 font-mono font-bold text-sm ${
           isUser
             ? 'bg-brand-accent/15 border-brand-accent/30 text-brand-accent'
             : 'bg-brand-surface border-brand-border text-text-secondary'
@@ -99,15 +99,15 @@ function MessageBubble({
 
       <div className={`flex flex-col gap-1 max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
         <div className={`flex items-center gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
-          <span className="font-mono text-[9px] font-bold text-text-muted">
+          <span className="font-mono text-sm font-bold text-text-muted">
             {isUser ? (isOwn ? 'You' : 'User') : 'Wriven Support'}
           </span>
-          <span className="font-mono text-[9px] text-text-muted">
+          <span className="font-mono text-sm text-text-muted">
             {timeAgo(msg.createdAt)}
           </span>
         </div>
         <div
-          className={`rounded-xl px-4 py-3 text-xs font-mono leading-relaxed ${
+          className={`rounded-xl px-4 py-3 text-sm font-mono leading-relaxed ${
             isOwn
               ? 'bg-brand-accent text-white rounded-br-sm'
               : 'bg-brand-surface border border-brand-border text-text-primary rounded-bl-sm'
@@ -128,7 +128,15 @@ function MessageBubble({
 }
 
 export default function TicketDetailPage() {
-  const { ticketId } = useParams<{ wsSlug: string; ticketId: string }>();
+  return (
+    <Suspense fallback={<TicketDetailSkeleton />}>
+      <TicketDetailInner />
+    </Suspense>
+  );
+}
+
+function TicketDetailInner() {
+  const { wsSlug, ticketId } = useParams<{ wsSlug: string; ticketId: string }>();
   const { currentWorkspaceId, user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -173,6 +181,9 @@ export default function TicketDetailPage() {
     onSuccess: () => {
       setCloseConfirm(false);
       invalidate();
+      toast.success('Ticket closed', {
+        description: 'This ticket has been marked as closed.',
+      });
     },
     onError: (err) => {
       setError(err instanceof ApiRequestError ? err.message : 'Failed to close ticket.');
@@ -225,11 +236,7 @@ export default function TicketDetailPage() {
   const canReply = !isClosed && replyBody.trim().length > 0 && uploadsReady && !replyMutation.isPending;
 
   if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 text-text-muted font-mono text-2xs py-16 justify-center">
-        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading ticket…
-      </div>
-    );
+    return <TicketDetailSkeleton />;
   }
 
   if (!ticket) {
@@ -242,10 +249,21 @@ export default function TicketDetailPage() {
 
   return (
     <div className="space-y-6 text-left max-w-3xl" id="support-detail">
+      {/* Back to all tickets */}
+      <div>
+        <Link
+          href={`/w/${wsSlug}/support`}
+          className="inline-flex items-center gap-1.5 font-mono text-sm text-text-muted hover:text-brand-accent transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          All tickets
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="border-b border-brand-border pb-5">
         <div className="flex items-start gap-3 mb-3">
-          <span className="font-mono text-xs text-text-muted shrink-0 mt-0.5">
+          <span className="font-mono text-sm text-text-muted shrink-0 mt-0.5">
             #{ticket.number}
           </span>
           <h1 className="font-display font-medium text-xl text-text-primary tracking-tight">
@@ -254,67 +272,63 @@ export default function TicketDetailPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${STATUS_STYLE[ticket.status]}`}
+            className={`px-2 py-0.5 rounded text-sm font-mono font-bold uppercase border ${getStatusColor('support', ticket.status)}`}
           >
             {ticket.status}
           </span>
-          <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase border border-brand-border bg-brand-surface text-text-muted">
+          <span className="px-2 py-0.5 rounded text-sm font-mono font-bold uppercase border border-brand-border bg-brand-surface text-text-muted">
             {SCOPE_LABEL[ticket.scopeType]}
           </span>
-          <span className="font-mono text-[10px] text-text-muted">
+          <span className="font-mono text-sm text-text-muted">
             Opened {timeAgo(ticket.createdAt)}
           </span>
 
           {/* Close action */}
-          {isAuthor && !isClosed && !closeConfirm && (
+          {isAuthor && !isClosed && (
             <button
               onClick={() => setCloseConfirm(true)}
-              className="ml-auto text-[10px] font-mono text-text-muted hover:text-status-error transition-colors cursor-pointer flex items-center gap-1"
+              className="ml-auto inline-flex items-center gap-1.5 bg-status-error/10 hover:bg-status-error/20 text-status-error font-mono font-bold text-sm py-2 px-3.5 rounded-lg transition-colors border border-status-error/30 cursor-pointer"
             >
-              <XCircle className="w-3 h-3" /> Close ticket
+              <XCircle className="w-3.5 h-3.5" />
+              Close ticket
             </button>
-          )}
-          {closeConfirm && (
-            <div className="ml-auto flex items-center gap-2">
-              <span className="font-mono text-[10px] text-text-muted">Close this ticket?</span>
-              <button
-                onClick={() => closeMutation.mutate()}
-                disabled={closeMutation.isPending}
-                className="text-[10px] font-mono text-status-error hover:underline cursor-pointer disabled:opacity-50"
-              >
-                {closeMutation.isPending ? 'Closing…' : 'Confirm'}
-              </button>
-              <button
-                onClick={() => setCloseConfirm(false)}
-                className="text-[10px] font-mono text-text-muted hover:text-text-primary cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
           )}
         </div>
       </div>
 
       {error && (
-        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-2xs font-mono rounded-lg px-4 py-3">
+        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-sm font-mono rounded-lg px-4 py-3">
           {error}
         </div>
       )}
+
+      {/* Close ticket confirmation dialog */}
+      <ConfirmationDialog
+        open={closeConfirm}
+        onOpenChange={setCloseConfirm}
+        title="Close this ticket?"
+        description="This ticket will be marked as closed. You won't be able to reply to it after. This action cannot be undone."
+        confirmLabel="Close ticket"
+        cancelLabel="Keep open"
+        variant="danger"
+        loading={closeMutation.isPending}
+        onConfirm={() => closeMutation.mutate()}
+      />
 
       {/* Conversation thread */}
       <div className="space-y-6">
         {/* Opening post (description) */}
         <div className="bg-brand-surface border border-brand-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full bg-brand-accent/15 border border-brand-accent/30 flex items-center justify-center font-mono font-bold text-[9px] text-brand-accent">
+            <div className="w-7 h-7 rounded-full bg-brand-accent/15 border border-brand-accent/30 flex items-center justify-center font-mono font-bold text-sm text-brand-accent">
               U
             </div>
-            <span className="font-mono text-[10px] font-bold text-text-muted">You</span>
-            <span className="font-mono text-[10px] text-text-muted">
+            <span className="font-mono text-sm font-bold text-text-muted">You</span>
+            <span className="font-mono text-sm text-text-muted">
               {timeAgo(ticket.createdAt)}
             </span>
           </div>
-          <p className="font-mono text-xs text-text-primary whitespace-pre-wrap leading-relaxed break-words">
+          <p className="font-mono text-sm text-text-primary whitespace-pre-wrap leading-relaxed break-words">
             {ticket.description}
           </p>
           {ticket.attachments.length > 0 && (
@@ -332,14 +346,14 @@ export default function TicketDetailPage() {
         ))}
 
         {ticket.status === 'resolved' && (
-          <div className="flex items-center gap-2 justify-center py-2 text-status-success font-mono text-xs">
+          <div className="flex items-center gap-2 justify-center py-2 text-status-success font-mono text-sm">
             <CheckCircle className="w-4 h-4" />
             Ticket resolved — reply to reopen
           </div>
         )}
 
         {isClosed && (
-          <div className="text-center py-4 font-mono text-xs text-text-muted bg-brand-surface border border-brand-border rounded-xl">
+          <div className="text-center py-4 font-mono text-sm text-text-muted bg-brand-surface border border-brand-border rounded-xl">
             This ticket is closed.
           </div>
         )}
@@ -348,7 +362,7 @@ export default function TicketDetailPage() {
       {/* Reply box */}
       {!isClosed && (
         <div className="bg-brand-surface border border-brand-border rounded-xl p-5 space-y-4">
-          <span className="text-[11px] font-mono font-bold text-text-secondary tracking-wider">
+          <span className="text-sm font-mono font-bold text-text-secondary tracking-wider">
             Reply
           </span>
           <textarea
@@ -357,7 +371,7 @@ export default function TicketDetailPage() {
             placeholder="Write your reply…"
             rows={4}
             maxLength={10000}
-            className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent resize-y"
+            className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent resize-y mt-2"
           />
 
           {/* Attachment previews */}
@@ -376,7 +390,7 @@ export default function TicketDetailPage() {
                   )}
                   {a.error && (
                     <div className="absolute inset-0 bg-status-error/80 flex items-center justify-center p-1">
-                      <p className="font-mono text-[8px] text-white text-center">{a.error}</p>
+                      <p className="font-mono text-sm text-white text-center">{a.error}</p>
                     </div>
                   )}
                   <button
@@ -414,7 +428,7 @@ export default function TicketDetailPage() {
                 </>
               )}
               {attachments.some((a) => a.uploading) && (
-                <span className="font-mono text-[10px] text-text-muted flex items-center gap-1">
+                <span className="font-mono text-sm text-text-muted flex items-center gap-1">
                   <Loader2 className="w-3 h-3 animate-spin" /> Uploading…
                 </span>
               )}
@@ -425,7 +439,7 @@ export default function TicketDetailPage() {
                 replyMutation.mutate();
               }}
               disabled={!canReply}
-              className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white font-mono font-bold text-2xs py-2.5 px-4 rounded-lg transition-all border border-brand-border-button disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white font-mono font-bold text-sm py-2.5 px-4 rounded-lg transition-all border border-brand-border-button disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {replyMutation.isPending ? (
                 <>

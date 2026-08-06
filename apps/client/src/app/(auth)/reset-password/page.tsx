@@ -15,14 +15,14 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div className="absolute top-6 left-6">
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 text-xs font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
         >
           <ArrowLeft className="w-4 h-4 text-brand-accent" />
           Back to sign in
         </Link>
       </div>
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10">
-        <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
+        <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
           Password Recovery
         </span>
         <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight">
@@ -56,12 +56,12 @@ function ResetForm() {
   if (!token) {
     return (
       <div className="text-center space-y-3">
-        <p className="text-xs font-mono text-status-error">
+        <p className="text-sm font-mono text-status-error">
           This reset link is invalid or incomplete.
         </p>
         <Link
           href="/forgot-password"
-          className="inline-block text-xs text-brand-accent font-semibold hover:underline"
+          className="inline-block text-sm text-brand-accent font-semibold hover:underline"
         >
           Request a new link
         </Link>
@@ -71,7 +71,7 @@ function ResetForm() {
 
   if (done) {
     return (
-      <div className="p-5 rounded-lg bg-emerald-500/5 border border-status-success text-xs font-mono text-text-primary text-center space-y-3">
+      <div className="p-5 rounded-lg bg-emerald-500/5 border border-status-success text-sm font-mono text-text-primary text-center space-y-3">
         <CheckCircle className="w-8 h-8 mx-auto text-status-success" />
         <strong className="block font-bold">Password updated</strong>
         <p className="text-text-secondary font-light leading-relaxed">
@@ -79,7 +79,7 @@ function ResetForm() {
         </p>
         <Link
           href="/login"
-          className="inline-block text-[11px] uppercase tracking-wider font-bold text-white bg-brand-accent hover:bg-brand-accent-hover border border-brand-border-button px-4 py-3 rounded-lg neo-shadow"
+          className="inline-block text-sm uppercase tracking-wider font-bold text-white bg-brand-accent hover:bg-brand-accent-hover border border-brand-border-button px-4 py-3 rounded-lg neo-shadow"
         >
           Go to sign in
         </Link>
@@ -106,7 +106,7 @@ function ResetForm() {
     <>
       {serverError && (
         <div
-          className="p-3 rounded-lg bg-status-error/5 border border-status-error text-[11px] font-mono text-status-error text-center"
+          className="p-3 rounded-lg bg-status-error/5 border border-status-error text-sm font-mono text-status-error text-center"
           role="alert"
         >
           {serverError}
@@ -119,7 +119,7 @@ function ResetForm() {
       >
         <div>
           <label
-            className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+            className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
             htmlFor="reset-password"
           >
             New Password (min 8 characters)
@@ -129,17 +129,17 @@ function ResetForm() {
             type="password"
             placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
             {...register('newPassword')}
-            className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+            className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
           />
           {errors.newPassword && (
-            <p className="mt-1.5 text-[10px] font-mono text-status-error">
+            <p className="mt-1.5 text-sm font-mono text-status-error">
               {errors.newPassword.message}
             </p>
           )}
         </div>
         <div>
           <label
-            className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+            className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
             htmlFor="reset-confirm"
           >
             Confirm Password
@@ -149,10 +149,10 @@ function ResetForm() {
             type="password"
             placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
             {...register('confirmPassword')}
-            className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+            className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
           />
           {errors.confirmPassword && (
-            <p className="mt-1.5 text-[10px] font-mono text-status-error">
+            <p className="mt-1.5 text-sm font-mono text-status-error">
               {errors.confirmPassword.message}
             </p>
           )}
@@ -160,7 +160,7 @@ function ResetForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Updating…' : 'Update password'}
         </button>
@@ -174,7 +174,7 @@ export default function ResetPasswordPage() {
     <Shell>
       <Suspense
         fallback={
-          <p className="text-center text-xs font-mono text-text-muted">
+          <p className="text-center text-sm font-mono text-text-muted">
             Loading…
           </p>
         }

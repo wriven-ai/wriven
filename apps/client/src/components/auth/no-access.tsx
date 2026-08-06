@@ -13,7 +13,7 @@ export function NoAccess() {
       <p className="font-mono text-sm font-bold text-text-secondary">
         You don&apos;t have access to this page
       </p>
-      <p className="font-mono text-xs text-text-muted">
+      <p className="font-mono text-sm text-text-muted">
         Ask a workspace owner or project admin to update your role.
       </p>
     </div>

@@ -4,6 +4,7 @@ import React from 'react';
 import { AlertCircle, Database, Globe, RefreshCw } from 'lucide-react';
 import { useUsage } from '@/hooks/use-usage';
 import type { UsageView } from '@/lib/types';
+import { WorkspaceStatsGrid } from '@/components/workspace/workspace-stats-grid';
 
 export default function UsageStatsPage() {
   const { data, isLoading, isError, refetch, isFetching } = useUsage();
@@ -19,14 +20,14 @@ export default function UsageStatsPage() {
               Consumption
             </span>
           </h1>
-          <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+          <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
             {'// Current billing-period usage against your plan limits'}
           </p>
         </div>
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="inline-flex items-center gap-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-primary px-3 py-1.5 rounded-lg text-2xs font-mono font-bold transition-all cursor-pointer"
+          className="inline-flex items-center gap-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-primary px-3 py-1.5 rounded-lg text-sm font-mono font-bold transition-all cursor-pointer"
         >
           <RefreshCw
             className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-brand-accent' : ''}`}
@@ -40,13 +41,21 @@ export default function UsageStatsPage() {
       ) : isError ? (
         <div className="bg-brand-surface border border-brand-border rounded-xl p-6 flex items-center gap-3 text-text-muted">
           <AlertCircle className="w-4 h-4 text-red-400" />
-          <span className="text-xs font-mono">
+          <span className="text-sm font-mono">
             Couldn&apos;t load usage. Try refreshing.
           </span>
         </div>
       ) : data ? (
         <UsageBody data={data} />
       ) : null}
+
+      {/* Workspace aggregate stats (specs/17). Loads independently. */}
+      <div className="space-y-3 pt-2">
+        <h2 className="text-sm font-mono font-bold tracking-wider text-text-muted uppercase">
+          Workspace Stats
+        </h2>
+        <WorkspaceStatsGrid />
+      </div>
     </div>
   );
 }
@@ -55,7 +64,7 @@ function UsageBody({ data }: { data: UsageView }) {
   const periodLabel = fmtPeriod(data.period.start, data.period.end);
   return (
     <>
-      <p className="text-2xs font-mono text-text-muted -mt-4">
+      <p className="text-sm font-mono text-text-muted -mt-4">
         Billing period: <span className="text-text-secondary">{periodLabel}</span>
       </p>
 
@@ -102,7 +111,7 @@ function UsageCard({
   return (
     <div className="bg-brand-surface border border-brand-border rounded-xl p-5 text-left shadow-xs space-y-3">
       <div className="flex justify-between items-center text-text-muted">
-        <span className="text-[10px] font-mono font-bold tracking-wider">
+        <span className="text-sm font-mono font-bold tracking-wider">
           {label}
         </span>
         {icon}
@@ -111,7 +120,7 @@ function UsageCard({
         <h2 className="text-2xl font-display font-bold text-text-primary tracking-tight leading-none">
           {fmt(used)}
         </h2>
-        <span className="text-[10px] font-mono text-text-muted leading-none">
+        <span className="text-sm font-mono text-text-muted leading-none">
           / {unlimited ? 'Unlimited' : fmt(limit as number)}
         </span>
       </div>
@@ -121,7 +130,7 @@ function UsageCard({
           style={{ width: `${unlimited ? 100 : pct}%` }}
         />
       </div>
-      <p className="text-[9.5px] font-mono text-text-muted">{sublabel}</p>
+      <p className="text-sm font-mono text-text-muted">{sublabel}</p>
     </div>
   );
 }

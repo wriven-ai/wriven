@@ -18,7 +18,7 @@ export default function BottomCta() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3" id="bottom-actions">
           <Link
             href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider px-8 py-4.5 rounded-lg neo-shadow-lg"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider px-8 py-4.5 rounded-lg neo-shadow-lg"
             id="bottom-primary-btn"
           >
             Create your workspace free

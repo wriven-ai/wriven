@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ReactNode, useEffect } from 'react';
 import { useAuthStore } from '../../stores/auth';
+import { WrivenLoader } from '../ui/wriven-loader';
 
 /**
  * Client-side route guard. Wrap protected areas (e.g. the dashboard layout).
@@ -22,8 +23,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (status !== 'authenticated') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-bg text-text-muted font-mono text-xs uppercase tracking-wider">
-        Loading workspace…
+      <div className="min-h-screen flex flex-col items-center justify-center gap-5 bg-brand-bg">
+        <WrivenLoader size="lg" />
+        <p className="text-text-muted font-mono text-sm uppercase tracking-wider">
+          Loading workspace…
+        </p>
       </div>
     );
   }

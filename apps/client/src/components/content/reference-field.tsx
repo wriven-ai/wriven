@@ -63,7 +63,7 @@ export function ReferenceField({
 
   if (!refTypeId) {
     return (
-      <div className="text-[10px] font-mono text-text-muted p-3 border border-dashed border-brand-border rounded-lg">
+      <div className="text-sm font-mono text-text-muted p-3 border border-dashed border-brand-border rounded-lg">
         No target type set — edit this field in the Content Types builder.
       </div>
     );
@@ -99,7 +99,7 @@ export function ReferenceField({
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border bg-brand-surface-soft px-2 py-1 font-mono text-2xs text-text-primary"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border bg-brand-surface-soft px-2 py-1 font-mono text-sm text-text-primary"
               >
                 <Link2 className="h-3 w-3 text-brand-secondary" />
                 {e ? entryTitle(e, targetType) : id.slice(0, 8)}
@@ -120,7 +120,7 @@ export function ReferenceField({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-2xs font-bold text-text-secondary hover:border-brand-accent hover:text-brand-accent transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-sm font-bold text-text-secondary hover:border-brand-accent hover:text-brand-accent transition-colors"
       >
         <Plus className="h-3.5 w-3.5" />
         {selectedIds.length > 0
@@ -136,7 +136,7 @@ export function ReferenceField({
             <DialogTitle className="font-display text-text-primary">
               Link {targetType?.name ?? 'entry'}
             </DialogTitle>
-            <DialogDescription className="font-mono text-2xs text-text-muted">
+            <DialogDescription className="font-mono text-sm text-text-muted">
               Pick an entry to reference.
             </DialogDescription>
           </DialogHeader>
@@ -148,13 +148,13 @@ export function ReferenceField({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by title…"
-              className="w-full bg-transparent font-mono text-xs text-text-primary outline-none placeholder:text-text-muted/60"
+              className="w-full bg-transparent font-mono text-sm text-text-primary outline-none placeholder:text-text-muted/60"
             />
           </div>
 
           <div className="max-h-80 divide-y divide-brand-border overflow-y-auto rounded-lg border border-brand-border">
             {filtered.length === 0 ? (
-              <p className="py-8 text-center font-mono text-2xs text-text-muted">
+              <p className="py-8 text-center font-mono text-sm text-text-muted">
                 {entries.length === 0 ? 'No entries of this type yet.' : 'No matches.'}
               </p>
             ) : (
@@ -172,10 +172,10 @@ export function ReferenceField({
                     <div className="flex items-center gap-2 min-w-0">
                       <FileText className="h-3.5 w-3.5 shrink-0 text-text-muted" />
                       <div className="min-w-0">
-                        <p className="truncate font-mono text-xs font-bold text-text-primary">
+                        <p className="truncate font-mono text-sm font-bold text-text-primary">
                           {entryTitle(e, targetType)}
                         </p>
-                        <p className="truncate font-mono text-[9px] text-text-muted">/{e.slug}</p>
+                        <p className="truncate font-mono text-sm text-text-muted">/{e.slug}</p>
                       </div>
                     </div>
                     {active && <Check className="h-4 w-4 shrink-0 text-brand-accent" />}

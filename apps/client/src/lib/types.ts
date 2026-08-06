@@ -121,6 +121,12 @@ export interface ApiError {
   code: string;
   message: string;
   statusCode: number;
+  /**
+   * Optional structured payload. Today only `DOWNGRADE_BLOCKED` carries it (a
+   * `DowngradeBlock[]` listing over-limit dimensions for the blocked-downgrade
+   * dialog). Absent on every other code.
+   */
+  details?: DowngradeBlock[];
 }
 
 export interface RegisterInput {
@@ -345,6 +351,28 @@ export interface PlanLimits {
   aiImageRequestsPerMonth?: number | null;
 }
 
+/**
+ * Stock resource dimensions checked before a plan downgrade. Mirrors
+ * `@wriven/contracts` DowngradeDimension — the client can't import the contracts
+ * bundle. See `lib/downgrade.ts` for the matching compute helper. specs/18.
+ */
+export type DowngradeDimension =
+  | 'projects'
+  | 'members'
+  | 'contentTypes'
+  | 'entries'
+  | 'apiKeys'
+  | 'webhooks'
+  | 'storageMb';
+
+/** One over-limit dimension returned in a `DOWNGRADE_BLOCKED` error. */
+export interface DowngradeBlock {
+  dimension: DowngradeDimension;
+  label: string;
+  used: number;
+  limit: number;
+}
+
 export interface PlanFeatures {
   scheduledPublishing?: boolean;
   revisionHistory?: boolean;
@@ -424,6 +452,39 @@ export interface UsageView {
   period: UsagePeriod;
   requests: { used: number; limit: number | null };
   storage: { usedMb: number; limitMb: number | null };
+}
+
+/** Entry counts split by status (mirrors @wriven/contracts). */
+export interface EntryStatusCounts {
+  total: number;
+  published: number;
+  draft: number;
+  archived: number;
+}
+
+/** Workspace aggregate stats (mirrors @wriven/contracts). See specs/17. */
+export interface WorkspaceStatsView {
+  projects: number;
+  members: number;
+  entries: EntryStatusCounts;
+  contentTypes: number;
+  apiKeys: number;
+  webhooks: number;
+  media: { count: number; usedMb: number; limitMb: number | null };
+  apiRequests: { used: number; limit: number | null };
+  period: UsagePeriod;
+  bandwidthGb: { usedGb: null; limitGb: number | null };
+  aiText: { used: null; limit: number | null };
+  aiImage: { used: null; limit: number | null };
+}
+
+/** Project-scoped aggregate stats (mirrors @wriven/contracts). See specs/17. */
+export interface ProjectStatsView {
+  entries: EntryStatusCounts;
+  contentTypes: number;
+  apiKeys: number;
+  webhooks: number;
+  media: { count: number; usedMb: number };
 }
 
 export type InvoiceStatus =

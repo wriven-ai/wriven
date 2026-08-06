@@ -70,7 +70,7 @@ const RegisterPage = () => {
         <Link
           href="/"
           aria-label="Back to landing page"
-          className="inline-flex items-center gap-2 text-xs font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
         >
           <ArrowLeft className="w-4 h-4 text-brand-accent" />
           Back to landing
@@ -81,7 +81,7 @@ const RegisterPage = () => {
         className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10"
         id="register-header"
       >
-        <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
+        <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
           Create Workspace
         </span>
         <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight">
@@ -96,7 +96,7 @@ const RegisterPage = () => {
         <div className="bg-brand-surface py-8 px-6 border border-brand-border-button rounded-xl shadow-2xl neo-shadow-lg sm:px-10 space-y-6">
           {serverError && (
             <div
-              className="p-3 rounded-lg bg-status-error/5 border border-status-error text-[11px] font-mono text-status-error text-center"
+              className="p-3 rounded-lg bg-status-error/5 border border-status-error text-sm font-mono text-status-error text-center"
               role="alert"
             >
               {serverError}
@@ -111,7 +111,7 @@ const RegisterPage = () => {
           >
             <div>
               <label
-                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
                 htmlFor="register-name"
               >
                 Full Name *
@@ -121,10 +121,10 @@ const RegisterPage = () => {
                 type="text"
                 placeholder="Sophia Wright"
                 {...register('name')}
-                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
               />
               {errors.name && (
-                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                <p className="mt-1.5 text-sm font-mono text-status-error">
                   {errors.name.message}
                 </p>
               )}
@@ -132,7 +132,7 @@ const RegisterPage = () => {
 
             <div>
               <label
-                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
                 htmlFor="register-email"
               >
                 Work Email *
@@ -142,10 +142,10 @@ const RegisterPage = () => {
                 type="email"
                 placeholder="sophia@wriven.io"
                 {...register('email')}
-                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
               />
               {errors.email && (
-                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                <p className="mt-1.5 text-sm font-mono text-status-error">
                   {errors.email.message}
                 </p>
               )}
@@ -153,7 +153,7 @@ const RegisterPage = () => {
 
             <div>
               <label
-                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
                 htmlFor="register-workspace"
               >
                 Workspace Name *
@@ -163,10 +163,10 @@ const RegisterPage = () => {
                 type="text"
                 placeholder="Acme, Inc."
                 {...register('workspaceName')}
-                className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
               />
               {errors.workspaceName && (
-                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                <p className="mt-1.5 text-sm font-mono text-status-error">
                   {errors.workspaceName.message}
                 </p>
               )}
@@ -174,7 +174,7 @@ const RegisterPage = () => {
 
             <div>
               <label
-                className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
                 htmlFor="register-password"
               >
                 Password (min 8 characters) *
@@ -185,7 +185,7 @@ const RegisterPage = () => {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
                   {...register('password')}
-                  className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 pr-10 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                  className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 pr-10 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                 />
                 <button
                   type="button"
@@ -201,13 +201,13 @@ const RegisterPage = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1.5 text-[10px] font-mono text-status-error">
+                <p className="mt-1.5 text-sm font-mono text-status-error">
                   {errors.password.message}
                 </p>
               )}
             </div>
 
-            <div className="flex flex-col gap-1.5 text-[11px] font-mono text-text-secondary">
+            <div className="flex flex-col gap-1.5 text-sm font-mono text-text-secondary">
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -220,7 +220,7 @@ const RegisterPage = () => {
                 </span>
               </label>
               {errors.agreeTerms && (
-                <p className="text-[10px] font-mono text-status-error">
+                <p className="text-sm font-mono text-status-error">
                   {errors.agreeTerms.message}
                 </p>
               )}
@@ -230,7 +230,7 @@ const RegisterPage = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 id="register-submit-btn"
               >
                 {isSubmitting ? 'Creating workspace…' : 'Create workspace free'}
@@ -245,8 +245,8 @@ const RegisterPage = () => {
             >
               <div className="w-full border-t border-brand-border" />
             </div>
-            <div className="relative flex justify-center text-[10px]">
-              <span className="bg-brand-surface px-3.5 text-text-muted text-xs uppercase tracking-wider font-semibold">
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-brand-surface px-3.5 text-text-muted text-sm uppercase tracking-wider font-semibold">
                 Or join through
               </span>
             </div>
@@ -255,7 +255,7 @@ const RegisterPage = () => {
           <div id="register-sso-options">
             <a
               href={googleAuthUrl}
-              className="w-full inline-flex items-center justify-center gap-2 bg-brand-surface-soft hover:bg-brand-border border border-brand-border-button text-text-primary text-xs font-mono font-bold uppercase tracking-wider py-3.5 px-4 rounded-lg transition-all cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 bg-brand-surface-soft hover:bg-brand-border border border-brand-border-button text-text-primary text-sm font-mono font-bold uppercase tracking-wider py-3.5 px-4 rounded-lg transition-all cursor-pointer"
               id="register-google-sso"
             >
               <svg
@@ -286,7 +286,7 @@ const RegisterPage = () => {
           </div>
 
           <p
-            className="text-center text-xs text-text-secondary pt-2 font-light"
+            className="text-center text-sm text-text-secondary pt-2 font-light"
             id="register-login-link"
           >
             Already have a workspace account?{' '}

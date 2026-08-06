@@ -214,7 +214,7 @@ export default function ContentTypesPage() {
           <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
             Structure & <span className="font-normal italic text-brand-secondary">Content Types</span>
           </h1>
-          <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+          <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
             {'// Configure functional layout models and relational schema attributes'}
           </p>
         </div>
@@ -225,14 +225,14 @@ export default function ContentTypesPage() {
         {/* Left: Create form */}
         <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-5">
           <div className="flex items-center justify-between border-b border-brand-border pb-2.5">
-            <span className="text-[11px] font-mono tracking-wider text-text-secondary font-bold">
+            <span className="text-sm font-mono tracking-wider text-text-secondary font-bold">
               {editingId ? 'Edit Content Layout Model' : 'Assemble Content Layout Model'}
             </span>
             {editingId && (
               <button
                 type="button"
                 onClick={resetForm}
-                className="text-3xs font-mono font-bold text-text-muted hover:text-status-error cursor-pointer"
+                className="text-sm font-mono font-bold text-text-muted hover:text-status-error cursor-pointer"
               >
                 Cancel edit
               </button>
@@ -241,19 +241,19 @@ export default function ContentTypesPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-2xs font-mono text-text-secondary mb-1.5">Schema Name</label>
+              <label className="block text-sm font-mono text-text-secondary mb-1.5">Schema Name</label>
               <input
                 type="text"
                 placeholder="e.g. Blog Articles, Product Specs..."
                 value={typeName}
                 onChange={e => handleNameChange(e.target.value)}
                 required
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent"
               />
             </div>
 
             <div>
-              <label className="block text-2xs font-mono text-text-secondary mb-1.5">
+              <label className="block text-sm font-mono text-text-secondary mb-1.5">
                 API ID{' '}
                 <span className="text-text-muted">
                   {editingId ? '(immutable)' : '(snake_case, auto-derived)'}
@@ -266,36 +266,36 @@ export default function ContentTypesPage() {
                 onChange={e => { setTypeApiId(e.target.value); setApiIdTouched(true); }}
                 required
                 disabled={!!editingId}
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             {/* Field builder */}
             <div className="space-y-3.5 border-t border-brand-border pt-4">
-              <span className="block text-2xs font-mono text-text-secondary font-bold">
+              <span className="block text-sm font-mono text-text-secondary font-bold">
                 Field Specifications ({fields.length})
               </span>
 
               <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
                 {fields.length === 0 && (
-                  <p className="text-[10px] font-mono text-text-muted text-center py-3">No fields yet — add one below</p>
+                  <p className="text-sm font-mono text-text-muted text-center py-3">No fields yet — add one below</p>
                 )}
                 {fields.map(f => (
                   <div
                     key={f._id}
-                    className="flex items-center justify-between bg-brand-surface-soft border border-brand-border px-3 py-2 rounded-lg text-2xs font-mono"
+                    className="flex items-center justify-between bg-brand-surface-soft border border-brand-border px-3 py-2 rounded-lg text-sm font-mono"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <Type className="w-3.5 h-3.5 text-brand-secondary shrink-0" />
                       <strong className="text-text-primary truncate">{f.label}</strong>
-                      <span className="text-text-muted uppercase text-[9px] font-semibold shrink-0">
+                      <span className="text-text-muted uppercase text-sm font-semibold shrink-0">
                         ({f.type}
                         {f.type === 'reference' && f.refTypeId
                           ? ` → ${contentTypes.find(t => t.id === f.refTypeId)?.name ?? '?'}`
                           : ''}
                         {f.multiple ? '[]' : ''})
                       </span>
-                      {f.required && <span className="text-[8px] font-bold text-brand-accent shrink-0">*</span>}
+                      {f.required && <span className="text-sm font-bold text-brand-accent shrink-0">*</span>}
                     </div>
                     <button
                       type="button"
@@ -315,7 +315,7 @@ export default function ContentTypesPage() {
                   placeholder="Label — display name (e.g. Article Title)"
                   value={candLabel}
                   onChange={e => handleCandLabelChange(e.target.value)}
-                  className="w-full text-2xs font-mono bg-brand-surface border border-brand-border rounded p-2 text-text-primary"
+                  className="w-full text-sm font-mono bg-brand-surface border border-brand-border rounded p-2 text-text-primary"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -323,12 +323,12 @@ export default function ContentTypesPage() {
                     placeholder="key (snake_case)"
                     value={candKey}
                     onChange={e => { setCandKey(e.target.value); setCandKeyTouched(true); }}
-                    className="text-2xs font-mono bg-brand-surface border border-brand-border rounded p-2 text-text-primary"
+                    className="text-sm font-mono bg-brand-surface border border-brand-border rounded p-2 text-text-primary"
                   />
                   <select
                     value={candType}
                     onChange={e => setCandType(e.target.value as FieldType)}
-                    className="bg-brand-surface border border-brand-border rounded p-2 text-2xs font-mono text-text-primary outline-hidden cursor-pointer"
+                    className="bg-brand-surface border border-brand-border rounded p-2 text-sm font-mono text-text-primary outline-hidden cursor-pointer"
                   >
                     {FIELD_TYPES.map(([val, label]) => (
                       <option key={val} value={val}>{label}</option>
@@ -342,7 +342,7 @@ export default function ContentTypesPage() {
                     placeholder="Options: draft, published, featured  (comma-separated)"
                     value={candOptions}
                     onChange={e => setCandOptions(e.target.value)}
-                    className="w-full text-2xs font-mono bg-brand-surface border border-brand-border rounded p-2 text-text-primary"
+                    className="w-full text-sm font-mono bg-brand-surface border border-brand-border rounded p-2 text-text-primary"
                   />
                 )}
 
@@ -351,7 +351,7 @@ export default function ContentTypesPage() {
                     <select
                       value={candRefTypeId}
                       onChange={e => setCandRefTypeId(e.target.value)}
-                      className="w-full bg-brand-surface border border-brand-border rounded p-2 text-2xs font-mono text-text-primary outline-hidden cursor-pointer"
+                      className="w-full bg-brand-surface border border-brand-border rounded p-2 text-sm font-mono text-text-primary outline-hidden cursor-pointer"
                     >
                       <option value="">— References which type? —</option>
                       {contentTypes.map(t => (
@@ -359,7 +359,7 @@ export default function ContentTypesPage() {
                       ))}
                     </select>
                     {contentTypes.length === 0 && (
-                      <p className="text-[9px] font-mono text-text-muted">
+                      <p className="text-sm font-mono text-text-muted">
                         Create a content type first to reference it.
                       </p>
                     )}
@@ -368,7 +368,7 @@ export default function ContentTypesPage() {
 
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1.5 font-mono text-[9px] text-text-secondary cursor-pointer select-none">
+                    <label className="flex items-center gap-1.5 font-mono text-sm text-text-secondary cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={candRequired}
@@ -377,7 +377,7 @@ export default function ContentTypesPage() {
                       />
                       Required
                     </label>
-                    <label className="flex items-center gap-1.5 font-mono text-[9px] text-text-secondary cursor-pointer select-none">
+                    <label className="flex items-center gap-1.5 font-mono text-sm text-text-secondary cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={candUnique}
@@ -387,7 +387,7 @@ export default function ContentTypesPage() {
                       Unique
                     </label>
                     {MULTIPLE_CAPABLE.includes(candType) && (
-                      <label className="flex items-center gap-1.5 font-mono text-[9px] text-text-secondary cursor-pointer select-none">
+                      <label className="flex items-center gap-1.5 font-mono text-sm text-text-secondary cursor-pointer select-none">
                         <input
                           type="checkbox"
                           checked={candMultiple}
@@ -407,7 +407,7 @@ export default function ContentTypesPage() {
                       !candKey.trim() ||
                       (candType === 'reference' && !candRefTypeId)
                     }
-                    className="px-3 py-1 border border-dashed border-brand-border hover:border-brand-accent font-mono text-3xs font-bold text-text-secondary hover:text-brand-accent cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-3 py-1 border border-dashed border-brand-border hover:border-brand-accent font-mono text-sm font-bold text-text-secondary hover:text-brand-accent cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     + Add field
                   </button>
@@ -416,7 +416,7 @@ export default function ContentTypesPage() {
             </div>
 
             {errMsg && (
-              <div className="flex items-center gap-2 text-[10px] font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2 text-sm font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-3 py-2">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 {errMsg}
               </div>
@@ -425,7 +425,7 @@ export default function ContentTypesPage() {
             <button
               type="submit"
               disabled={!canManage || !typeName.trim() || !typeApiId.trim() || activeMutation.isPending}
-              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg neo-shadow cursor-pointer transition-all"
+              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-3 rounded-lg neo-shadow cursor-pointer transition-all"
             >
               {activeMutation.isPending ? (
                 <><RefreshCw className="w-4 h-4 animate-spin" /> {editingId ? 'Saving...' : 'Compiling...'}</>
@@ -440,18 +440,18 @@ export default function ContentTypesPage() {
 
         {/* Right: List */}
         <div className="lg:col-span-7 space-y-4">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block px-1 font-bold">
+          <span className="text-sm font-mono tracking-wider text-text-secondary block px-1 font-bold">
             Active Registered Models ({contentTypes.length})
           </span>
 
           {isLoading && (
-            <div className="flex items-center gap-2 text-xs font-mono text-text-muted p-6">
+            <div className="flex items-center gap-2 text-sm font-mono text-text-muted p-6">
               <RefreshCw className="w-4 h-4 animate-spin" /> Loading schemas...
             </div>
           )}
 
           {error && (
-            <div className="flex items-center gap-2 text-[10px] font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-2 text-sm font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-4 py-3">
               <AlertCircle className="w-3.5 h-3.5" /> Failed to load content types
             </div>
           )}
@@ -460,7 +460,7 @@ export default function ContentTypesPage() {
             {!isLoading && !error && contentTypes.length === 0 && (
               <div className="bg-brand-surface border border-brand-border p-8 rounded-xl text-center">
                 <Database className="w-8 h-8 text-text-muted mx-auto mb-3" />
-                <p className="text-xs font-mono text-text-muted">No content types yet. Create your first schema.</p>
+                <p className="text-sm font-mono text-text-muted">No content types yet. Create your first schema.</p>
               </div>
             )}
 
@@ -475,9 +475,9 @@ export default function ContentTypesPage() {
               >
                 <div className="flex justify-between items-start gap-4">
                   <div className="space-y-1 min-w-0">
-                    <span className="text-[9px] font-mono text-brand-secondary font-semibold select-none">Data Model Entry</span>
+                    <span className="text-sm font-mono text-brand-secondary font-semibold select-none">Data Model Entry</span>
                     <h3 className="font-display font-bold text-base text-text-primary tracking-tight leading-none">{type.name}</h3>
-                    <div className="flex items-center gap-1.5 text-3xs font-mono text-text-muted mt-1 leading-none flex-wrap">
+                    <div className="flex items-center gap-1.5 text-sm font-mono text-text-muted mt-1 leading-none flex-wrap">
                       <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1.5 py-0.5 rounded font-bold">
                         id: {type.apiId}
                       </span>
@@ -489,7 +489,7 @@ export default function ContentTypesPage() {
                   <div className="flex gap-1.5 shrink-0">
                     <button
                       onClick={() => setActiveExpand(activeExpand === type.id ? null : type.id)}
-                      className="p-1.5 px-3 border border-brand-border rounded-lg bg-brand-surface hover:bg-brand-surface-soft text-2xs font-mono font-semibold text-text-secondary cursor-pointer leading-none flex items-center gap-1"
+                      className="p-1.5 px-3 border border-brand-border rounded-lg bg-brand-surface hover:bg-brand-surface-soft text-sm font-mono font-semibold text-text-secondary cursor-pointer leading-none flex items-center gap-1"
                     >
                       Fields
                       <ChevronRight
@@ -523,11 +523,11 @@ export default function ContentTypesPage() {
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden border-t border-brand-border pt-4"
                     >
-                      <h4 className="text-[9px] font-mono font-bold text-text-muted uppercase mb-2">Field Specifications:</h4>
+                      <h4 className="text-sm font-mono font-bold text-text-muted uppercase mb-2">Field Specifications:</h4>
                       {type.fields.length === 0 ? (
-                        <p className="text-[10px] font-mono text-text-muted">No fields defined.</p>
+                        <p className="text-sm font-mono text-text-muted">No fields defined.</p>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-2xs font-mono">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm font-mono">
                           {type.fields.map(f => (
                             <div
                               key={f.key}
@@ -536,11 +536,11 @@ export default function ContentTypesPage() {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1">
                                   <span className="font-bold text-text-primary">{f.label}</span>
-                                  {f.required && <span className="text-[8px] text-brand-accent font-bold">*</span>}
+                                  {f.required && <span className="text-sm text-brand-accent font-bold">*</span>}
                                 </div>
-                                <p className="text-[9px] text-text-muted">{f.key}</p>
+                                <p className="text-sm text-text-muted">{f.key}</p>
                               </div>
-                              <span className="text-[9px] text-[#424d45] font-bold uppercase shrink-0">
+                              <span className="text-sm text-[#424d45] font-bold uppercase shrink-0">
                                 [{FIELD_TYPE_LABELS[f.type as FieldType] ?? f.type}]
                               </span>
                             </div>
@@ -555,11 +555,11 @@ export default function ContentTypesPage() {
           </div>
 
           <div className="bg-brand-surface border border-brand-border p-4 sm:p-5 rounded-xl shadow-xs">
-            <h4 className="text-2xs font-mono font-bold text-text-primary uppercase mb-1 flex items-center gap-1.5">
+            <h4 className="text-sm font-mono font-bold text-text-primary uppercase mb-1 flex items-center gap-1.5">
               <Database className="w-4 h-4 text-brand-accent" />
               Dynamic REST inking schemas
             </h4>
-            <p className="text-[11px] text-text-secondary font-light leading-relaxed">
+            <p className="text-sm text-text-secondary font-light leading-relaxed">
               Whenever a schematic model is declared on the Wriven dashboard, our API routers compile separate TypeScript
               typings and deliver REST payloads dynamically. Use structured models to prevent validation errors at fetch times.
             </p>

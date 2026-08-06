@@ -29,7 +29,7 @@ export function SidebarLogout() {
       <button
         onClick={onLogout}
         disabled={pending}
-        className="group-data-[collapsible=icon]:hidden flex w-full items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent px-2.5 py-2 font-mono text-2xs font-bold text-sidebar-foreground transition-colors hover:border-status-error/40 hover:text-status-error disabled:opacity-60"
+        className="group-data-[collapsible=icon]:hidden flex w-full items-center gap-2 rounded-lg border border-brand-secondary/30 bg-brand-secondary/10 px-2.5 py-2 font-mono text-sm font-bold text-brand-secondary transition-colors hover:bg-brand-secondary/20 disabled:opacity-60"
       >
         <LogOut className="h-3.5 w-3.5 shrink-0" />
         {pending ? 'Logging out…' : 'Log out'}

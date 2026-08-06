@@ -10,6 +10,7 @@ import {
   RefreshCw,
   ChevronRight,
   UserPlus,
+  Sparkles,
 } from 'lucide-react';
 
 interface WorkspaceMember {
@@ -140,7 +141,7 @@ export default function WorkspacesPage() {
         <div className="border-b border-brand-border pb-5">
           <button
             onClick={() => setSelectedWorkspace(null)}
-            className="flex items-center gap-1.5 text-2xs font-mono text-text-muted hover:text-brand-accent transition-colors mb-3 cursor-pointer"
+            className="flex items-center gap-1.5 text-sm font-mono text-text-muted hover:text-brand-accent transition-colors mb-3 cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             All Workspaces
@@ -151,17 +152,17 @@ export default function WorkspacesPage() {
                 {selectedWorkspace.name}
               </h1>
               <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-2xs font-mono bg-brand-surface-soft border border-brand-border text-text-secondary px-2 py-0.5 rounded font-bold">
+                <span className="text-sm font-mono bg-brand-surface-soft border border-brand-border text-text-secondary px-2 py-0.5 rounded font-bold">
                   slug: {selectedWorkspace.slug}
                 </span>
-                <span className="text-2xs font-mono text-text-muted">
+                <span className="text-sm font-mono text-text-muted">
                   Created {selectedWorkspace.createdAt}
                 </span>
               </div>
             </div>
             <button
               onClick={() => deleteWorkspace(selectedWorkspace.id)}
-              className="inline-flex items-center gap-1.5 border border-brand-border hover:border-status-error/40 hover:bg-status-error/5 hover:text-status-error text-text-muted font-mono text-2xs px-3 py-2 rounded-lg cursor-pointer transition-all"
+              className="inline-flex items-center gap-1.5 border border-brand-border hover:border-status-error/40 hover:bg-status-error/5 hover:text-status-error text-text-muted font-mono text-sm px-3 py-2 rounded-lg cursor-pointer transition-all"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Delete Workspace
@@ -173,7 +174,7 @@ export default function WorkspacesPage() {
 
           {/* Members list */}
           <div className="lg:col-span-7 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-            <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
+            <span className="text-sm font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
               <Users className="w-4 h-4 text-brand-secondary" />
               Workspace Members ({selectedWorkspace.members.length})
             </span>
@@ -185,16 +186,16 @@ export default function WorkspacesPage() {
                 return (
                   <div key={member.id} className="flex items-center justify-between gap-3 p-3 border border-brand-border bg-brand-surface-soft/30 rounded-xl">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-brand-accent/15 border border-brand-border text-brand-accent font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-brand-accent/15 border border-brand-border text-brand-accent font-mono font-bold text-sm flex items-center justify-center shrink-0">
                         {initials}
                       </div>
                       <div>
-                        <p className="text-2xs font-mono font-bold text-text-primary">{member.name}</p>
-                        <p className="text-[9.5px] font-mono text-text-muted">{member.email}</p>
+                        <p className="text-sm font-mono font-bold text-text-primary">{member.name}</p>
+                        <p className="text-sm font-mono text-text-muted">{member.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-0.5 rounded text-[8px] font-mono font-semibold uppercase">
+                      <span className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-0.5 rounded text-sm font-mono font-semibold uppercase">
                         {member.role}
                       </span>
                       {!isAdmin && (
@@ -215,24 +216,24 @@ export default function WorkspacesPage() {
 
           {/* Add member to workspace */}
           <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-5 shadow-xs space-y-4 sticky top-6">
-            <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
+            <span className="text-sm font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
               <UserPlus className="w-4 h-4 text-brand-secondary" />
               Add to Workspace
             </span>
 
             {availableToAdd.length === 0 ? (
-              <p className="text-2xs font-mono text-text-muted text-center py-4 leading-relaxed">
+              <p className="text-sm font-mono text-text-muted text-center py-4 leading-relaxed">
                 All org members are already in this workspace.
               </p>
             ) : (
               <form onSubmit={addMemberToWorkspace} className="space-y-4">
                 <div>
-                  <label className="block text-2xs font-mono text-text-secondary mb-1.5">Select Org Member</label>
+                  <label className="block text-sm font-mono text-text-secondary mb-1.5">Select Org Member</label>
                   <select
                     value={addMemberId}
                     onChange={(e) => setAddMemberId(e.target.value)}
                     required
-                    className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-none cursor-pointer"
+                    className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-none cursor-pointer"
                   >
                     <option value="">— Select member —</option>
                     {availableToAdd.map(m => (
@@ -242,11 +243,11 @@ export default function WorkspacesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-2xs font-mono text-text-secondary mb-1.5">Workspace Role</label>
+                  <label className="block text-sm font-mono text-text-secondary mb-1.5">Workspace Role</label>
                   <select
                     value={addMemberRole}
                     onChange={(e) => setAddMemberRole(e.target.value as 'Editor' | 'Viewer')}
-                    className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-none cursor-pointer"
+                    className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-none cursor-pointer"
                   >
                     <option value="Editor">Editor — create and edit content</option>
                     <option value="Viewer">Viewer — read-only access</option>
@@ -256,7 +257,7 @@ export default function WorkspacesPage() {
                 <button
                   type="submit"
                   disabled={isAddingMember || !addMemberId}
-                  className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg cursor-pointer transition-all"
+                  className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-3 rounded-lg cursor-pointer transition-all"
                 >
                   {isAddingMember ? (
                     <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Adding...</>
@@ -268,7 +269,7 @@ export default function WorkspacesPage() {
             )}
 
             <div className="pt-2 border-t border-brand-border">
-              <p className="text-[10px] font-mono text-text-muted leading-relaxed">
+              <p className="text-sm font-mono text-text-muted leading-relaxed">
                 Only org members can be added. Invite new members via{' '}
                 <a href="/workspaces" className="text-brand-accent hover:underline">Organization</a>.
               </p>
@@ -285,12 +286,29 @@ export default function WorkspacesPage() {
   return (
     <div className="space-y-8 text-left" id="workspaces-list-view">
 
+      {/* Welcome Banner */}
+      <div className="bg-brand-surface border border-brand-border-button rounded-xl p-6 sm:p-8 shadow-sm relative overflow-hidden" id="workspace-welcome">
+        <div className="relative z-10 max-w-2xl space-y-3">
+          {/* <div className="inline-flex items-center gap-1.5 bg-brand-accent/10 border border-brand-accent/20 px-2.5 py-1 rounded-md text-sm font-mono font-bold text-brand-accent">
+            <Sparkles className="w-3.5 h-3.5" />
+            Wriven Engine — Connected
+          </div> */}
+          <h1 className="font-display font-medium text-2xl sm:text-3xl text-text-primary tracking-tight leading-none">
+            Welcome back, <span className="font-normal italic text-brand-secondary">Anowar.</span>
+          </h1>
+          <p className="text-sm sm:text-sm text-text-secondary font-light leading-relaxed">
+            Your organization manages <span className="font-mono font-semibold text-text-primary">{workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}</span> with isolated content environments. Create a workspace to group related projects together.
+          </p>
+        </div>
+        <div className="absolute right-0 bottom-0 top-0 w-1/3 bg-gradient-to-l from-brand-secondary/5 to-transparent pointer-events-none select-none" />
+      </div>
+
       {/* Page Header */}
       <div className="border-b border-brand-border pb-5">
-        <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
-          Workspaces
-        </h1>
-        <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+        <h2 className="font-display font-medium text-lg sm:text-xl text-text-primary tracking-tight">
+          Your Workspaces
+        </h2>
+        <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
           {"// Organize content across isolated project environments within your org"}
         </p>
       </div>
@@ -300,7 +318,7 @@ export default function WorkspacesPage() {
         {/* Workspace cards */}
         <div className="lg:col-span-8 space-y-4" id="workspaces-list">
           {workspaces.length === 0 ? (
-            <div className="bg-brand-surface border border-brand-border rounded-xl p-12 text-center font-mono text-xs text-text-muted">
+            <div className="bg-brand-surface border border-brand-border rounded-xl p-12 text-center font-mono text-sm text-text-muted">
               No workspaces yet. Create your first one.
             </div>
           ) : (
@@ -316,8 +334,8 @@ export default function WorkspacesPage() {
                       <Layers className="w-4 h-4 text-brand-secondary shrink-0" />
                       <h3 className="font-display font-bold text-base text-text-primary tracking-tight">{ws.name}</h3>
                     </div>
-                    <p className="text-2xs font-mono text-text-secondary leading-relaxed">{ws.description}</p>
-                    <div className="flex items-center gap-3 text-3xs font-mono text-text-muted pt-0.5">
+                    <p className="text-sm font-mono text-text-secondary leading-relaxed">{ws.description}</p>
+                    <div className="flex items-center gap-3 text-sm font-mono text-text-muted pt-0.5">
                       <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1.5 py-0.5 rounded font-bold">
                         slug: {ws.slug}
                       </span>
@@ -339,7 +357,7 @@ export default function WorkspacesPage() {
                     </button>
                     <button
                       onClick={() => setSelectedWorkspace(ws)}
-                      className="inline-flex items-center gap-1.5 border border-brand-border hover:border-brand-accent hover:text-brand-accent text-text-secondary font-mono font-bold text-2xs px-3 py-2 rounded-lg cursor-pointer transition-all"
+                      className="inline-flex items-center gap-1.5 border border-brand-border hover:border-brand-accent hover:text-brand-accent text-text-secondary font-mono font-bold text-sm px-3 py-2 rounded-lg cursor-pointer transition-all"
                     >
                       Open
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -353,14 +371,14 @@ export default function WorkspacesPage() {
 
         {/* Create workspace form */}
         <div className="lg:col-span-4 bg-brand-surface border border-brand-border rounded-xl p-5 shadow-xs space-y-4 sticky top-6">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
+          <span className="text-sm font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
             <Plus className="w-4 h-4 text-brand-secondary" />
             New Workspace
           </span>
 
           <form onSubmit={createWorkspace} className="space-y-4">
             <div>
-              <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="ws-name">
+              <label className="block text-sm font-mono text-text-secondary mb-1.5" htmlFor="ws-name">
                 Workspace Name
               </label>
               <input
@@ -370,12 +388,12 @@ export default function WorkspacesPage() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 required
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2.5 text-text-primary focus:outline-none focus:border-brand-accent"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2.5 text-text-primary focus:outline-none focus:border-brand-accent"
               />
             </div>
 
             <div>
-              <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="ws-desc">
+              <label className="block text-sm font-mono text-text-secondary mb-1.5" htmlFor="ws-desc">
                 Description
               </label>
               <textarea
@@ -384,14 +402,14 @@ export default function WorkspacesPage() {
                 placeholder="What content does this workspace manage?"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2.5 text-text-primary focus:outline-none focus:border-brand-accent resize-none"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2.5 text-text-primary focus:outline-none focus:border-brand-accent resize-none"
               />
             </div>
 
             <button
               type="submit"
               disabled={isCreating || !newName.trim()}
-              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg neo-shadow cursor-pointer transition-all"
+              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-3 rounded-lg neo-shadow cursor-pointer transition-all"
             >
               {isCreating ? (
                 <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Creating...</>

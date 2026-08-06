@@ -48,7 +48,7 @@ export default function Contact() {
             {/* Left Column Information */}
             <div className="lg:col-span-5 flex flex-col justify-between" id="contact-info-pane">
               <div className="space-y-6 text-left">
-                <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase">
+                <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase">
                   Connect with Wriven
                 </span>
                 <h1 className="font-display font-medium text-text-primary text-4xl sm:text-5xl" id="contact-headline">
@@ -64,8 +64,8 @@ export default function Contact() {
                       <Mail className="w-5 h-5 shrink-0" />
                     </div>
                     <div>
-                      <span className="block text-[9px] font-mono text-text-muted uppercase tracking-wider">Email Dispatch</span>
-                      <a href="mailto:support@wriven.io" className="text-xs font-mono font-bold text-text-primary hover:text-brand-accent transition-colors">
+                      <span className="block text-sm font-mono text-text-muted uppercase tracking-wider">Email Dispatch</span>
+                      <a href="mailto:support@wriven.io" className="text-sm font-mono font-bold text-text-primary hover:text-brand-accent transition-colors">
                         support@wriven.io
                       </a>
                     </div>
@@ -76,8 +76,8 @@ export default function Contact() {
                       <Clock className="w-5 h-5 shrink-0" />
                     </div>
                     <div>
-                      <span className="block text-[9px] font-mono text-text-muted uppercase tracking-wider">RESPONSE SLA TIME</span>
-                      <span className="text-xs font-mono font-bold text-text-primary">
+                      <span className="block text-sm font-mono text-text-muted uppercase tracking-wider">RESPONSE SLA TIME</span>
+                      <span className="text-sm font-mono font-bold text-text-primary">
                         Under 2 hours for Pro & Enterprise
                       </span>
                     </div>
@@ -85,7 +85,7 @@ export default function Contact() {
                 </div>
               </div>
 
-              <div className="pt-8 text-xs text-text-muted font-light text-left" id="contact-disclosure">
+              <div className="pt-8 text-sm text-text-muted font-light text-left" id="contact-disclosure">
                 Wriven is fully GDPR/CCPA compliant. All content queries are delivered over authenticated layers.
               </div>
             </div>
@@ -96,28 +96,28 @@ export default function Contact() {
                 <h3 className="font-display font-medium text-lg text-text-primary">Send us a secure message</h3>
                 
                 {submitResult === 'success' && (
-                  <div className="p-4 rounded-lg bg-emerald-500/5 border border-status-success flex items-start gap-3 text-text-primary text-xs font-mono" id="contact-success-banner">
+                  <div className="p-4 rounded-lg bg-emerald-500/5 border border-status-success flex items-start gap-3 text-text-primary text-sm font-mono" id="contact-success-banner">
                     <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-status-success" />
                     <div>
                       <strong className="block font-bold">{"// INQUIRY DISPATCHED SUCCESSFULLY //"}</strong>
-                      <span className="text-[11px] text-text-secondary leading-relaxed">An operations engineer is reviewing your specs and will contact you shortly.</span>
+                      <span className="text-sm text-text-secondary leading-relaxed">An operations engineer is reviewing your specs and will contact you shortly.</span>
                     </div>
                   </div>
                 )}
 
                 {submitResult === 'error' && (
-                  <div className="p-4 rounded-lg bg-red-500/5 border border-status-error flex items-start gap-3 text-status-error text-xs font-mono" id="contact-error-banner">
+                  <div className="p-4 rounded-lg bg-red-500/5 border border-status-error flex items-start gap-3 text-status-error text-sm font-mono" id="contact-error-banner">
                     <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-status-error" />
                     <div>
                       <strong className="block font-bold">{"// REQUIRED FIELDS DEVIATED //"}</strong>
-                      <span className="text-[11px] text-text-secondary leading-relaxed leading-relaxed">Name, Email, and Message must be populated to deliver secure packets.</span>
+                      <span className="text-sm text-text-secondary leading-relaxed leading-relaxed">Name, Email, and Message must be populated to deliver secure packets.</span>
                     </div>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="contact-name">Your Full Name *</label>
+                    <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="contact-name">Your Full Name *</label>
                     <input
                       id="contact-name"
                       type="text"
@@ -125,11 +125,11 @@ export default function Contact() {
                       placeholder="Sophia Wright"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-4 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                      className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-4 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="contact-email">Email Address *</label>
+                    <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="contact-email">Email Address *</label>
                     <input
                       id="contact-email"
                       type="email"
@@ -137,18 +137,18 @@ export default function Contact() {
                       placeholder="sophia@wriven.io"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-4 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                      className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-4 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="contact-subject">Inquiry Channel</label>
+                  <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="contact-subject">Inquiry Channel</label>
                   <select
                     id="contact-subject"
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-4 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary font-bold [&>option]:bg-brand-surface [&>option]:text-text-primary"
+                    className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-4 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary font-bold [&>option]:bg-brand-surface [&>option]:text-text-primary"
                   >
                     <option value="Sales Inquiry">Sales / Custom Quota</option>
                     <option value="Technical Support">Technical Support Desk</option>
@@ -158,7 +158,7 @@ export default function Contact() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="contact-message">How can Wriven help? *</label>
+                  <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2" htmlFor="contact-message">How can Wriven help? *</label>
                   <textarea
                     id="contact-message"
                     required
@@ -166,7 +166,7 @@ export default function Contact() {
                     placeholder="We are looking to migrate active articles..."
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full text-xs font-mono rounded-lg bg-brand-surface-soft border border-brand-border p-4 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary leading-relaxed"
+                    className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border p-4 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary leading-relaxed"
                   />
                 </div>
 
@@ -174,7 +174,7 @@ export default function Contact() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover disabled:bg-gray-400 text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer"
+                    className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover disabled:bg-gray-400 text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer"
                     id="contact-submit-btn"
                   >
                     {isSubmitting ? 'ESTABLISHING HANDSHAKE...' : 'SUBMIT SECURE DISPATCH'}

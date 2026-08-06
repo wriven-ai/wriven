@@ -158,14 +158,14 @@ export default function MediaLibraryPage() {
           <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
             Universal <span className="font-normal italic text-brand-secondary">Media CDN Library</span>
           </h1>
-          <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+          <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
             {'// Upload assets and reference them from media fields'}
           </p>
         </div>
       </div>
 
       {error && (
-        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-2xs font-mono rounded-lg px-4 py-3">
+        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-sm font-mono rounded-lg px-4 py-3">
           {error}
         </div>
       )}
@@ -183,7 +183,7 @@ export default function MediaLibraryPage() {
                 placeholder="Search assets by name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent border-none text-2xs font-mono outline-hidden w-full placeholder:text-text-muted/65 text-text-primary"
+                className="bg-transparent border-none text-sm font-mono outline-hidden w-full placeholder:text-text-muted/65 text-text-primary"
               />
             </div>
 
@@ -249,10 +249,10 @@ export default function MediaLibraryPage() {
                 )}
               </div>
               <div>
-                <p className="text-2xs font-mono font-bold text-text-primary tracking-wide">
+                <p className="text-sm font-mono font-bold text-text-primary tracking-wide">
                   {uploadMutation.isPending ? 'Uploading assets…' : 'Drag and drop assets here'}
                 </p>
-                <p className="text-[10px] font-mono text-text-muted mt-1">
+                <p className="text-sm font-mono text-text-muted mt-1">
                   Or click to browse — images up to 5 MB, other files up to 25 MB
                 </p>
               </div>
@@ -261,11 +261,11 @@ export default function MediaLibraryPage() {
 
           {/* Assets Inventory Display */}
           {isLoading ? (
-            <div className="bg-brand-surface border border-brand-border p-12 text-center rounded-xl font-mono text-xs text-text-muted">
+            <div className="bg-brand-surface border border-brand-border p-12 text-center rounded-xl font-mono text-sm text-text-muted">
               Loading assets…
             </div>
           ) : filteredAssets.length === 0 ? (
-            <div className="bg-brand-surface border border-brand-border p-12 text-center rounded-xl font-mono text-xs text-text-muted">
+            <div className="bg-brand-surface border border-brand-border p-12 text-center rounded-xl font-mono text-sm text-text-muted">
               {assets.length === 0
                 ? 'No media yet — upload your first asset.'
                 : 'No matching assets.'}
@@ -333,12 +333,12 @@ export default function MediaLibraryPage() {
 
                     <div className="p-3 text-left">
                       <p
-                        className="text-[10.5px] font-mono font-bold text-text-primary truncate block"
+                        className="text-sm font-mono font-bold text-text-primary truncate block"
                         title={name}
                       >
                         {name}
                       </p>
-                      <div className="flex justify-between items-center text-[9px] font-mono text-text-muted mt-1 leading-none font-medium">
+                      <div className="flex justify-between items-center text-sm font-mono text-text-muted mt-1 leading-none font-medium">
                         <span>{fmtSize(asset.sizeBytes)}</span>
                         {asset.width && <span>{asset.width}px</span>}
                       </div>
@@ -375,19 +375,19 @@ export default function MediaLibraryPage() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-2xs font-mono font-bold text-text-primary truncate">{name}</p>
-                        <p className="text-[9px] font-mono text-text-muted">
+                        <p className="text-sm font-mono font-bold text-text-primary truncate">{name}</p>
+                        <p className="text-sm font-mono text-text-muted">
                           {asset.mime ?? asset.kind} • {fmtDate(asset.createdAt)}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 shrink-0 text-2xs font-mono">
+                    <div className="flex items-center gap-4 shrink-0 text-sm font-mono">
                       <span className="text-text-secondary">{fmtSize(asset.sizeBytes)}</span>
                       <div className="flex gap-1">
                         <button
                           onClick={(e) => copyText(asset.id, asset.id, e)}
-                          className="p-1 px-1.5 bg-brand-surface border border-brand-border hover:border-brand-accent rounded text-text-secondary hover:text-brand-accent text-[9px] font-bold"
+                          className="p-1 px-1.5 bg-brand-surface border border-brand-border hover:border-brand-accent rounded text-text-secondary hover:text-brand-accent text-sm font-bold"
                         >
                           {copiedId === asset.id ? 'Copied' : 'ID'}
                         </button>
@@ -419,7 +419,7 @@ export default function MediaLibraryPage() {
                 exit={{ opacity: 0, y: 10 }}
                 className="bg-brand-surface border border-brand-border rounded-xl p-5 shadow-sm space-y-4 text-left"
               >
-                <span className="text-[11px] font-mono tracking-wider text-text-secondary border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
+                <span className="text-sm font-mono tracking-wider text-text-secondary border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
                   <Eye className="w-4 h-4 text-brand-secondary" />
                   Asset Insight Metrics
                 </span>
@@ -446,7 +446,7 @@ export default function MediaLibraryPage() {
                   ) : (
                     <div className="h-32 w-full flex flex-col items-center justify-center border border-dashed border-brand-border rounded-lg text-text-secondary space-y-2">
                       <KindIcon kind={selectedAsset.kind} />
-                      <span className="text-[9px] font-mono tracking-wide uppercase">
+                      <span className="text-sm font-mono tracking-wide uppercase">
                         {selectedAsset.kind} file
                       </span>
                     </div>
@@ -454,7 +454,7 @@ export default function MediaLibraryPage() {
                 </div>
 
                 {/* Metrics */}
-                <div className="space-y-3 font-mono text-2xs border-t border-brand-border-button pt-4">
+                <div className="space-y-3 font-mono text-sm border-t border-brand-border-button pt-4">
                   <div className="flex justify-between">
                     <span className="text-text-muted">Asset ID:</span>
                     <strong
@@ -475,7 +475,7 @@ export default function MediaLibraryPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-text-muted">Content-Type:</span>
-                    <strong className="text-text-secondary uppercase text-[10px]">
+                    <strong className="text-text-secondary uppercase text-sm">
                       {selectedAsset.mime ?? selectedAsset.kind}
                     </strong>
                   </div>
@@ -503,21 +503,21 @@ export default function MediaLibraryPage() {
                     href={selectedAsset.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-primary font-mono font-bold text-3xs uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all"
+                    className="w-full inline-flex items-center justify-center gap-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-primary font-mono font-bold text-sm uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all"
                   >
                     Open raw CDN file
                     <ArrowUpRight className="w-3.5 h-3.5" />
                   </a>
                   <button
                     onClick={(e) => copyText(selectedAsset.id, selectedAsset.id, e)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-secondary hover:bg-brand-secondary/90 text-white border border-brand-border-button font-mono font-bold text-3xs uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all"
+                    className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-secondary hover:bg-brand-secondary/90 text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all"
                   >
                     {copiedId === selectedAsset.id ? 'ASSET ID COPIED!' : 'COPY ASSET ID'}
                   </button>
                 </div>
               </motion.div>
             ) : (
-              <div className="bg-brand-surface border border-brand-border rounded-xl p-6 text-center font-mono text-2xs text-text-muted">
+              <div className="bg-brand-surface border border-brand-border rounded-xl p-6 text-center font-mono text-sm text-text-muted">
                 <Info className="w-8 h-8 text-brand-secondary mx-auto mb-2" />
                 Select a media asset to view details and copy its reference ID.
               </div>
@@ -525,12 +525,12 @@ export default function MediaLibraryPage() {
           </AnimatePresence>
 
           {/* Quota banner */}
-          <div className="bg-brand-surface border border-brand-border p-4 rounded-xl shadow-xs text-left mt-4 font-mono text-2xs leading-relaxed">
-            <span className="text-[9px] font-mono tracking-widest text-brand-accent uppercase border-b border-brand-border pb-2 mb-2 font-bold flex items-center gap-1.5">
+          <div className="bg-brand-surface border border-brand-border p-4 rounded-xl shadow-xs text-left mt-4 font-mono text-sm leading-relaxed">
+            <span className="text-sm font-mono tracking-widest text-brand-accent uppercase border-b border-brand-border pb-2 mb-2 font-bold flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-brand-accent" />
               Storage usage
             </span>
-            <div className="flex items-center justify-between text-[11px] mb-1 font-bold">
+            <div className="flex items-center justify-between text-sm mb-1 font-bold">
               <span className="text-text-secondary">
                 {fmtSize(usedBytes)} / 100 MB
               </span>
@@ -570,7 +570,7 @@ export default function MediaLibraryPage() {
               onClick={(e) => e.stopPropagation()}
               className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl cursor-default"
             />
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-black/60 text-white font-mono text-2xs">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-black/60 text-white font-mono text-sm">
               {lightbox.originalFilename ?? lightbox.id}
               {lightbox.width ? ` · ${lightbox.width}×${lightbox.height}` : ''}
             </div>

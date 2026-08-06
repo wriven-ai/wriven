@@ -91,14 +91,14 @@ export default function Header() {
                 <>
                   <button
                     onClick={() => logout()}
-                    className="text-xs font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2 cursor-pointer"
+                    className="text-sm font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2 cursor-pointer"
                     id="header-logout-btn"
                   >
                     Sign Out
                   </button>
                   <Link
                     href="/dashboard"
-                    className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
+                    className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-sm uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
                     id="header-dashboard-btn"
                   >
                     <LayoutDashboard className="w-3.5 h-3.5" />
@@ -109,14 +109,14 @@ export default function Header() {
                 <>
                   <Link
                     href="/login"
-                    className="text-xs font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2"
+                    className="text-sm font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2"
                     id="header-login-btn"
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/register"
-                    className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
+                    className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-sm uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
                     id="header-signup-btn"
                   >
                     Get started free
@@ -168,7 +168,7 @@ export default function Header() {
             <div className="flex flex-col gap-3 pb-2">
               <button
                 onClick={toggleTheme}
-                className="flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors cursor-pointer border border-brand-border bg-brand-surface"
+                className="flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors cursor-pointer border border-brand-border bg-brand-surface"
                 id="mobile-nav-theme-toggle"
               >
                 {isDark ? (
@@ -189,7 +189,7 @@ export default function Header() {
                     <Link
                       href="/dashboard"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 bg-brand-accent text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-3 rounded-lg neo-shadow transition-all"
+                      className="flex items-center justify-center gap-2 bg-brand-accent text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-3 rounded-lg neo-shadow transition-all"
                       id="mobile-nav-dashboard"
                     >
                       <LayoutDashboard className="w-3.5 h-3.5" />
@@ -200,7 +200,7 @@ export default function Header() {
                         setMobileMenuOpen(false);
                         logout();
                       }}
-                      className="block text-center rounded-lg px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors cursor-pointer"
+                      className="block text-center rounded-lg px-3 py-2 text-sm font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors cursor-pointer"
                       id="mobile-nav-logout"
                     >
                       Sign Out
@@ -211,7 +211,7 @@ export default function Header() {
                     <Link
                       href="/login"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block text-center rounded-lg px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors"
+                      className="block text-center rounded-lg px-3 py-2 text-sm font-mono font-bold uppercase tracking-wider text-text-primary hover:bg-brand-surface-soft transition-colors"
                       id="mobile-nav-login"
                     >
                       Sign In
@@ -219,7 +219,7 @@ export default function Header() {
                     <Link
                       href="/register"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 bg-brand-accent text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-3 rounded-lg neo-shadow transition-all"
+                      className="flex items-center justify-center gap-2 bg-brand-accent text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-3 rounded-lg neo-shadow transition-all"
                       id="mobile-nav-signup"
                     >
                       Get started free

@@ -44,8 +44,8 @@ const CONTENT_CLASS = [
   '[&_p]:my-2',
   '[&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2',
   '[&_blockquote]:border-l-2 [&_blockquote]:border-brand-border [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-text-secondary',
-  '[&_code]:rounded [&_code]:bg-brand-surface-soft [&_code]:px-1 [&_code]:font-mono [&_code]:text-[11px]',
-  '[&_pre]:rounded-lg [&_pre]:bg-text-primary [&_pre]:text-brand-surface-soft [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-xs [&_pre]:my-3',
+  '[&_code]:rounded [&_code]:bg-brand-surface-soft [&_code]:px-1 [&_code]:font-mono [&_code]:text-sm',
+  '[&_pre]:rounded-lg [&_pre]:bg-text-primary [&_pre]:text-brand-surface-soft [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-sm [&_pre]:my-3',
   '[&_a]:text-brand-accent [&_a]:underline',
   '[&_.is-editor-empty:first-child::before]:text-text-muted [&_.is-editor-empty:first-child::before]:[content:attr(data-placeholder)] [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0',
 ].join(' ');

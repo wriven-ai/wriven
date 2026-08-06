@@ -45,7 +45,7 @@ export function FieldInput({
   onChange: (v: unknown) => void;
   invalid?: boolean;
 }) {
-  const base = `w-full text-xs font-mono bg-brand-surface-soft border rounded-lg px-3.5 py-2.5 text-text-primary focus:outline-none ${
+  const base = `w-full text-sm font-mono bg-brand-surface-soft border rounded-lg px-3.5 py-2.5 text-text-primary focus:outline-none ${
     invalid
       ? 'border-status-error focus:border-status-error'
       : 'border-brand-border focus:border-brand-accent'
@@ -87,7 +87,7 @@ export function FieldInput({
             onChange={(e) => onChange(e.target.checked)}
             className="rounded border-brand-border text-brand-accent focus:ring-0 cursor-pointer"
           />
-          <span className="text-xs font-mono text-text-secondary">{field.label}</span>
+          <span className="text-sm font-mono text-text-secondary">{field.label}</span>
         </label>
       );
     case 'date':
@@ -151,14 +151,14 @@ export function FieldRow({
   return (
     <div className="space-y-1.5">
       {field.type !== 'boolean' && (
-        <label className="flex items-center gap-1.5 text-2xs font-mono text-text-secondary">
+        <label className="flex items-center gap-1.5 text-sm font-mono text-text-secondary">
           <span className={error ? 'text-status-error font-bold' : undefined}>{field.label}</span>
           {field.required && <span className="text-brand-accent font-bold">*</span>}
-          <span className="text-[9px] text-text-muted uppercase ml-auto">[{field.type}]</span>
+          <span className="text-sm text-text-muted uppercase ml-auto">[{field.type}]</span>
         </label>
       )}
       <FieldInput field={field} value={value} onChange={onChange} invalid={!!error} />
-      {error && <p className="text-[9px] font-mono text-status-error">{error}</p>}
+      {error && <p className="text-sm font-mono text-status-error">{error}</p>}
     </div>
   );
 }

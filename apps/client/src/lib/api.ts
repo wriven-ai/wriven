@@ -36,6 +36,8 @@ import type {
   SubscriptionView,
   SwapPlanInput,
   UsageView,
+  WorkspaceStatsView,
+  ProjectStatsView,
   WebhookEvent,
   WebhookView,
   WorkspaceMemberView,
@@ -716,6 +718,18 @@ export const plansApi = {
 export const usageApi = {
   /** Current-period workspace usage (Delivery API requests + storage). */
   getUsage: () => request<UsageView>('/usage', { workspace: true }),
+};
+
+export const statsApi = {
+  /** Workspace aggregate stats (projects, members, content, usage). See specs/17. */
+  workspaceStats: () =>
+    request<WorkspaceStatsView>('/stats/workspace', { workspace: true }),
+  /** Project-scoped aggregate stats. */
+  projectStats: () =>
+    request<ProjectStatsView>('/stats/project', {
+      workspace: true,
+      project: true,
+    }),
 };
 
 /**

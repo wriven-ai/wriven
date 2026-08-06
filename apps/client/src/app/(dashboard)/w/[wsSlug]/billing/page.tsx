@@ -35,7 +35,9 @@ import {
   useSwapPlan,
 } from '@/hooks/use-billing';
 import { ApiRequestError } from '@/lib/api';
+import { computeDowngradeBlocks } from '@/lib/downgrade';
 import { toast } from 'sonner';
+import { BlockedDowngradeDialog } from '@/components/ui/blocked-downgrade-dialog';
 import { ConfirmationDialog, type ConfirmVariant } from '@/components/ui/confirmation-dialog';
 import { SuccessModal } from '@/components/ui/success-modal';
 import {
@@ -44,7 +46,19 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { BillingCycle, PendingDowngrade, PlanView } from '@/lib/types';
+import { useWorkspaceStats } from '@/hooks/use-workspace-stats';
+import type {
+  BillingCycle,
+  DowngradeBlock,
+  PendingDowngrade,
+  PlanView,
+} from '@/lib/types';
+import {
+  BillingSkeleton,
+  PlanCardSkeleton,
+  BillingSummaryRows,
+  InvoiceRows,
+} from '@/components/skeleton/billing-skeleton';
 
 /** The kind of plan-change a card action represents. Drives confirm/success copy. */
 type PlanActionKind =
@@ -161,6 +175,7 @@ function BillingInner() {
   const plansQuery = usePlans();
   const subQuery = useSubscription();
   const invoicesQuery = useInvoices();
+  const statsQuery = useWorkspaceStats();
   const refreshSubscription = useRefreshSubscription();
 
   const checkout = useCheckout();
@@ -180,6 +195,11 @@ function BillingInner() {
   const [successCtx, setSuccessCtx] = useState<
     { title: string; description: string } | null
   >(null);
+  // Downgrade blocked by over-limit resources — drives the BlockedDowngradeDialog.
+  const [blocked, setBlocked] = useState<{
+    planName: string;
+    blocks: DowngradeBlock[];
+  } | null>(null);
 
   const subscription = subQuery.data;
   const hasPaidSub = !!subscription && subscription.planKey !== 'free';
@@ -232,12 +252,23 @@ function BillingInner() {
     ? confirmContent(pending.kind, pending.plan, pending.cycle)
     : null;
 
-  /** Card clicked → open the confirmation dialog with action-aware copy. */
+  /** Card clicked → open the confirmation dialog with action-aware copy.
+   *  Downgrades are screened first: if the workspace exceeds the target plan's
+   *  stock-resource limits, the BlockedDowngradeDialog opens instead. The
+   *  gateway guard (DOWNGRADE_BLOCKED) is the authoritative backstop — handles
+   *  races, direct API use, and the stats-not-loaded-yet window. */
   const handleSelect = (
     plan: PlanView,
     targetCycle: BillingCycle,
     kind: PlanActionKind,
   ) => {
+    if ((kind === 'downgrade' || kind === 'cancel') && statsQuery.data) {
+      const blocks = computeDowngradeBlocks(statsQuery.data, plan.limits);
+      if (blocks.length > 0) {
+        setBlocked({ planName: plan.name, blocks });
+        return;
+      }
+    }
     setPending({ plan, cycle: targetCycle, kind });
     setStep('confirm');
   };
@@ -269,6 +300,15 @@ function BillingInner() {
         },
         onError: (err) => {
           setStep('idle');
+          // Server-side downgrade guard (race / direct-API / stats-not-loaded).
+          if (
+            err instanceof ApiRequestError &&
+            err.error.code === 'DOWNGRADE_BLOCKED' &&
+            err.error.details
+          ) {
+            setBlocked({ planName: plan.name, blocks: err.error.details });
+            return;
+          }
           toast.error(
             err instanceof ApiRequestError
               ? err.error.message
@@ -296,13 +336,13 @@ function BillingInner() {
               Subscription
             </span>
           </h1>
-          <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+          <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
             {"// Manage your plan, payment method, and Stripe billing"}
           </p>
         </div>
         {subscription && (
           <span
-            className={`text-[10px] font-mono font-bold uppercase tracking-wider border px-3 py-1.5 rounded-lg ${statusBadgeClass(
+             className={`text-xs font-mono font-bold uppercase tracking-wider border px-3 py-1.5 rounded-lg ${statusBadgeClass(
               subscription.status,
             )}`}
           >
@@ -312,7 +352,7 @@ function BillingInner() {
       </div>
 
       {!canManage && (
-        <div className="flex items-center gap-2 rounded-xl border border-brand-border bg-brand-surface p-4 text-2xs font-mono text-text-muted">
+        <div className="flex items-center gap-2 rounded-xl border border-brand-border bg-brand-surface p-4 text-sm font-mono text-text-muted">
           <ShieldCheck className="w-4 h-4 text-brand-secondary shrink-0" />
           Only workspace owners or admins can change the plan. Ask an admin to
           upgrade.
@@ -323,7 +363,7 @@ function BillingInner() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Plan cards */}
         <div className="lg:col-span-8 space-y-5" id="plan-cards">
-          <span className="block text-center text-[11px] font-mono tracking-wider text-text-secondary font-bold">
+          <span className="block text-center text-sm font-mono tracking-wider text-text-secondary font-bold">
             Available Plans
           </span>
 
@@ -334,7 +374,7 @@ function BillingInner() {
                 <button
                   key={c}
                   onClick={() => setCycle(c)}
-                  className={`px-5 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-colors ${
+                   className={`px-5 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-colors ${
                     cycle === c
                       ? 'bg-brand-accent text-white'
                       : 'text-text-muted hover:text-text-secondary'
@@ -347,7 +387,11 @@ function BillingInner() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {plans.map((plan) => {
+            {plansQuery.isLoading
+              ? [0, 1, 2].map((i) => (
+                  <PlanCardSkeleton key={i} highlight={i === 1} />
+                ))
+              : plans.map((plan) => {
               const isCurrent = plan.key === currentPlanKey;
               const highlight = plan.key === 'pro';
               const isYearly = cycle === 'yearly';
@@ -369,8 +413,8 @@ function BillingInner() {
                 >
                   {highlight && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="text-[9px] font-mono font-black uppercase tracking-widest bg-brand-accent text-white px-3 py-1 rounded-full">
-                        Most Popular
+                      <span className="text-[10px] font-mono font-black uppercase tracking-widest bg-brand-accent text-white px-2.5 py-0.5 rounded-full">
+                        Popular
                       </span>
                     </div>
                   )}
@@ -381,7 +425,7 @@ function BillingInner() {
                         {plan.name}
                       </h3>
                       {isCurrent && (
-                        <span className="text-[8px] font-bold font-mono uppercase bg-amber-500/10 border border-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded">
+                         <span className="text-xs font-bold font-mono uppercase bg-amber-500/10 border border-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded">
                           {subscription?.cancelAtPeriodEnd
                             ? 'Canceling'
                             : subscription?.pendingDowngrade
@@ -394,11 +438,11 @@ function BillingInner() {
                       <span className="font-display font-black text-2xl text-text-primary">
                         {formatPrice(price, plan.currency)}
                       </span>
-                      <span className="text-2xs font-mono text-text-muted">
+                      <span className="text-sm font-mono text-text-muted">
                         /mo
                       </span>
                     </div>
-                    <p className="text-[10.5px] text-text-secondary font-light leading-relaxed">
+                    <p className="text-sm text-text-secondary font-light leading-relaxed">
                       {plan.description}
                     </p>
                   </div>
@@ -409,7 +453,7 @@ function BillingInner() {
                       return (
                         <li
                           key={i}
-                          className="flex items-start gap-2 text-2xs font-mono text-text-secondary"
+                          className="flex items-start gap-2 text-sm font-mono text-text-secondary"
                         >
                           <Icon className="w-3.5 h-3.5 text-brand-secondary mt-0.5 shrink-0" />
                           {feature}
@@ -443,13 +487,8 @@ function BillingInner() {
           </div>
 
           {plans.length === 0 && !plansQuery.isLoading && (
-            <div className="text-center py-6 font-mono text-2xs text-text-muted">
+            <div className="text-center py-6 font-mono text-sm text-text-muted">
               No plans available.
-            </div>
-          )}
-          {plansQuery.isLoading && (
-            <div className="text-center py-6 font-mono text-2xs text-text-muted">
-              Loading plans…
             </div>
           )}
         </div>
@@ -457,16 +496,14 @@ function BillingInner() {
         {/* Current billing summary */}
         <div className="lg:col-span-4 space-y-4 sticky top-6">
           <div className="bg-brand-surface border border-brand-border rounded-xl p-5 shadow-xs space-y-4">
-            <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
+            <span className="text-sm font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
               Billing Summary
             </span>
 
             {subQuery.isLoading ? (
-              <div className="text-2xs font-mono text-text-muted">
-                Loading…
-              </div>
+              <BillingSummaryRows />
             ) : subscription ? (
-              <div className="space-y-3 font-mono text-2xs">
+              <div className="space-y-3 font-mono text-sm">
                 <Row label="Plan" value={subscription.planName} />
                 <Row label="Status" value={subscription.status} />
                 <Row
@@ -500,7 +537,7 @@ function BillingInner() {
               <button
                 onClick={onPortal}
                 disabled={portal.isPending}
-                className="w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-2xs py-2.5 rounded-lg border border-brand-border hover:border-brand-accent hover:text-brand-accent text-text-secondary transition-all disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-sm py-2.5 rounded-lg border border-brand-border hover:border-brand-accent hover:text-brand-accent text-text-secondary transition-all disabled:opacity-50"
               >
                 {portal.isPending ? (
                   <>
@@ -514,7 +551,7 @@ function BillingInner() {
               </button>
             )}
 
-            <p className="text-[10px] font-mono text-text-muted text-center">
+            <p className="text-sm font-mono text-text-muted text-center">
               Payments processed securely via Stripe. Card details never touch
               Wriven servers.
             </p>
@@ -526,22 +563,22 @@ function BillingInner() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Payment method */}
         <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
+          <span className="text-sm font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
             <CreditCard className="w-4 h-4 text-brand-secondary" /> Payment Method
           </span>
 
           <div className="bg-brand-surface-soft border border-brand-border rounded-xl p-4 text-center space-y-2">
             <CreditCard className="w-8 h-8 text-text-muted mx-auto" />
             {subscription?.hasPaymentMethod ? (
-              <p className="text-2xs font-mono text-text-secondary font-medium">
+              <p className="text-sm font-mono text-text-secondary font-medium">
                 Card on file — manage it in the Billing Portal.
               </p>
             ) : (
               <>
-                <p className="text-2xs font-mono text-text-secondary font-medium">
+                <p className="text-sm font-mono text-text-secondary font-medium">
                   No payment method on file
                 </p>
-                <p className="text-[10px] font-mono text-text-muted leading-relaxed">
+                <p className="text-sm font-mono text-text-muted leading-relaxed">
                   A card is added when you upgrade, or via the Billing Portal.
                 </p>
               </>
@@ -552,7 +589,7 @@ function BillingInner() {
             <button
               onClick={onPortal}
               disabled={portal.isPending}
-              className="w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-2xs py-2.5 rounded-lg border border-brand-border hover:border-brand-accent hover:text-brand-accent text-text-secondary transition-all disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-sm py-2.5 rounded-lg border border-brand-border hover:border-brand-accent hover:text-brand-accent text-text-secondary transition-all disabled:opacity-50"
             >
               {portal.isPending ? (
                 <>
@@ -567,13 +604,13 @@ function BillingInner() {
           ) : (
             <button
               disabled
-              className="w-full inline-flex items-center justify-center gap-1.5 border border-brand-border text-text-muted font-mono font-bold text-2xs py-2.5 rounded-lg cursor-not-allowed opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 border border-brand-border text-text-muted font-mono font-bold text-sm py-2.5 rounded-lg cursor-not-allowed opacity-50"
             >
               <CreditCard className="w-3.5 h-3.5" /> Add Payment Method
             </button>
           )}
 
-          <p className="text-[10px] font-mono text-text-muted text-center">
+          <p className="text-sm font-mono text-text-muted text-center">
             Payments processed securely via Stripe. Card details never touch
             Wriven servers.
           </p>
@@ -581,15 +618,13 @@ function BillingInner() {
 
         {/* Invoice history */}
         <div className="lg:col-span-7 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
+          <span className="text-sm font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
             Invoice History
           </span>
           {invoicesQuery.isLoading ? (
-            <div className="text-center py-6 font-mono text-2xs text-text-muted">
-              Loading…
-            </div>
+            <InvoiceRows />
           ) : invoices.length === 0 ? (
-            <div className="text-center py-6 font-mono text-2xs text-text-muted">
+            <div className="text-center py-6 font-mono text-sm text-text-muted">
               No invoices yet.
             </div>
           ) : (
@@ -600,19 +635,19 @@ function BillingInner() {
                   className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
                 >
                   <div className="space-y-0.5 min-w-0">
-                    <p className="text-2xs font-mono font-bold text-text-primary truncate">
+                    <p className="text-sm font-mono font-bold text-text-primary truncate">
                       {inv.description ?? `Invoice ${inv.number ?? inv.id}`}
                     </p>
-                    <p className="text-[9.5px] font-mono text-text-muted">
+                    <p className="text-sm font-mono text-text-muted">
                       {inv.number ?? '—'} · {inv.createdAt.slice(0, 10)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-2xs font-mono font-bold text-text-primary">
+                    <span className="text-sm font-mono font-bold text-text-primary">
                       {formatMoney(inv.amountPaid, inv.currency)}
                     </span>
                     <span
-                      className={`text-[8px] font-bold font-mono uppercase px-1.5 py-0.5 rounded border ${invoiceStatusClass(
+                      className={`text-xs font-bold font-mono uppercase px-1.5 py-0.5 rounded border ${invoiceStatusClass(
                         inv.status,
                       )}`}
                     >
@@ -692,6 +727,16 @@ function BillingInner() {
         description={successCtx?.description}
         actionLabel="Done"
       />
+
+      {/* Downgrade blocked by over-limit resources (eager preview or server guard). */}
+      <BlockedDowngradeDialog
+        open={!!blocked}
+        targetPlanName={blocked?.planName ?? ''}
+        blocks={blocked?.blocks ?? []}
+        onOpenChange={(o) => {
+          if (!o) setBlocked(null);
+        }}
+      />
     </div>
   );
 }
@@ -711,11 +756,11 @@ function Row({ label, value }: { label: string; value: string }) {
  *  (downgrade / cycle switch), disabled (current / no-op). */
 function ctaClass(variant: 'accent' | 'secondary' | 'disabled'): string {
   const base =
-    'w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-2xs py-2.5 rounded-lg border transition-all';
+    'w-full inline-flex items-center justify-center gap-1.5 font-mono font-bold text-xs py-2.5 rounded-lg border transition-all';
   if (variant === 'accent')
     return `${base} bg-brand-accent hover:bg-brand-accent-hover text-white border-brand-border-button neo-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`;
   if (variant === 'secondary')
-    return `${base} border-brand-border text-text-secondary hover:border-brand-accent hover:text-brand-accent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`;
+    return `${base} border-brand-accent text-brand-accent hover:bg-brand-accent hover:text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`;
   return `${base} text-text-muted bg-brand-surface-soft border-brand-border cursor-not-allowed`;
 }
 
@@ -744,7 +789,7 @@ function confirmContent(
       return {
         title: `Downgrade to ${plan.name}?`,
         description:
-          'Your plan changes immediately. A prorated credit for unused time on your current plan applies to your next invoice.',
+          'Your plan changes at the end of your current billing period — you keep paid access until then.',
         confirmLabel: 'Downgrade',
         variant: 'neutral',
       };
@@ -797,8 +842,8 @@ function successContent(
       };
     case 'downgrade':
       return {
-        title: 'Plan downgraded',
-        description: `You've switched to ${plan.name}. A prorated credit applies to your next invoice.`,
+        title: 'Downgrade scheduled',
+        description: `Your switch to ${plan.name} takes effect at the end of your current billing period.`,
       };
     case 'cycle-switch':
       return {
@@ -968,21 +1013,5 @@ function PlanCta({
       )}{' '}
       {isUpgrade ? `Upgrade to ${plan.name}` : `Downgrade to ${plan.name}`}
     </button>
-  );
-}
-
-function BillingSkeleton() {
-  return (
-    <div className="space-y-8">
-      <div className="h-8 w-64 bg-brand-surface rounded animate-pulse" />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="h-72 bg-brand-surface border border-brand-border rounded-xl animate-pulse"
-          />
-        ))}
-      </div>
-    </div>
   );
 }
