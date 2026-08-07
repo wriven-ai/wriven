@@ -10,6 +10,7 @@ import {
   RefreshPayload,
   RegisterDto,
   ResetPasswordDto,
+  UpdateProfileDto,
   VerifyEmailDto,
   WORKSPACE_PATTERNS,
 } from '@wriven/contracts';
@@ -66,6 +67,13 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.GET_SESSION)
   getSession(@Payload() payload: { userId: string }) {
     return this.auth.getSession(payload);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.UPDATE_PROFILE)
+  updateProfile(
+    @Payload() payload: { userId: string; dto: UpdateProfileDto },
+  ) {
+    return this.auth.updateProfile(payload);
   }
 
   @MessagePattern(WORKSPACE_PATTERNS.VALIDATE_WORKSPACE_MEMBER)

@@ -74,3 +74,24 @@ export class VerifyEmailDto {
   @MinLength(1)
   token!: string;
 }
+
+/**
+ * Self-service profile update for the authenticated user (`PATCH /users/me`).
+ * Either field is optional; `avatar` accepts an R2 object key (to set) or
+ * `null` (to clear). The handler additionally validates `avatar` is `null`,
+ * an `http(s)://` URL (e.g. a Google avatar), or under the user's own
+ * `avatars/<userId>/` prefix — rejects arbitrary strings / other objects' keys.
+ */
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  avatar?: string | null;
+}

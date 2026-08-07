@@ -11,6 +11,7 @@ import {
 } from '@wriven/contracts';
 import type { ProjectRole, WorkspaceRole } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
+import { resolveAvatarUrl } from '../common/avatar';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
@@ -402,7 +403,7 @@ export class ProjectsService {
         id: r.user.id,
         email: r.user.email,
         name: r.user.name,
-        avatar: r.user.avatar,
+        avatar: resolveAvatarUrl(r.user.avatar),
       },
     };
   }

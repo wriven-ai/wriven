@@ -24,6 +24,7 @@ import { AdminWebhooksController } from '../admin/admin-webhooks.controller';
 import { AdminWorkspacesController } from '../admin/admin-workspaces.controller';
 import { AuditInterceptor } from '../admin/audit.interceptor';
 import { AuthController } from '../auth/auth.controller';
+import { UsersController } from '../users/users.controller';
 import { GoogleStrategy } from '../auth/google.strategy';
 import { ApiKeyGuard } from '../auth/api-key.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -95,6 +96,7 @@ import { AppService } from './app.service';
   controllers: [
     AppController,
     AuthController,
+    UsersController,
     ContentController,
     MediaController,
     DeliveryController,

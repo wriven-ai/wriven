@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -247,4 +249,18 @@ export class ListEntriesQueryDto {
   @Min(1)
   @Max(100)
   limit?: number;
+}
+
+/**
+ * Bulk-delete media assets (`POST /content/media/bulk-delete`). Asset ids are
+ * scoped to the request's project server-side; only matching live rows are
+ * soft-deleted (atomic single `UPDATE … WHERE id IN (…)`) and their R2 objects
+ * cleaned up best-effort. See specs/03 + multi-select.
+ */
+export class DeleteMediaBulkDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  ids!: string[];
 }

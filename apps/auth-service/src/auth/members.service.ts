@@ -6,6 +6,7 @@ import {
   WorkspaceMemberView,
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
+import { resolveAvatarUrl } from '../common/avatar';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
@@ -225,7 +226,7 @@ export class MembersService {
         id: r.user.id,
         email: r.user.email,
         name: r.user.name,
-        avatar: r.user.avatar,
+        avatar: resolveAvatarUrl(r.user.avatar),
       },
     };
   }

@@ -14,6 +14,7 @@ import {
   AuthUser,
   CORE_PATTERNS,
   CreateMediaDto,
+  DeleteMediaBulkDto,
   Permission,
   PresignUploadDto,
   SERVICE_TOKENS,
@@ -110,6 +111,23 @@ export class MediaController {
   ) {
     return firstValueFrom(
       this.core.send(CORE_PATTERNS.MEDIA_DELETE, { workspaceId, projectId, id }),
+    );
+  }
+
+  /** Bulk delete — atomic DB soft-delete (scoped to the project) + R2 cleanup. */
+  @Post('bulk-delete')
+  @RequirePermission(Permission.MEDIA_MANAGE)
+  removeMany(
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+    @Body() dto: DeleteMediaBulkDto,
+  ) {
+    return firstValueFrom(
+      this.core.send(CORE_PATTERNS.MEDIA_DELETE_BULK, {
+        workspaceId,
+        projectId,
+        ids: dto.ids,
+      }),
     );
   }
 }
