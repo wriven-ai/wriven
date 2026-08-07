@@ -10,6 +10,7 @@ import { WebhooksSection } from '@/components/webhooks/webhooks-section';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 
 export default function ProjectSettingsPage() {
   const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
@@ -22,6 +23,7 @@ export default function ProjectSettingsPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (project) setName(project.name);
@@ -121,11 +123,7 @@ export default function ProjectSettingsPage() {
           Deleting a project removes its content types, entries and media. This cannot be undone.
         </p>
         <button
-          onClick={() => {
-            if (confirm(`Delete project "${project.name}"? This cannot be undone.`)) {
-              deleteMutation.mutate();
-            }
-          }}
+          onClick={() => setDeleteOpen(true)}
           disabled={deleteMutation.isPending}
           className="inline-flex items-center gap-2 rounded-lg border border-status-error/40 px-4 py-2 font-mono text-sm font-bold text-status-error transition-colors hover:bg-status-error/10 disabled:opacity-60"
         >
@@ -133,6 +131,18 @@ export default function ProjectSettingsPage() {
           {deleteMutation.isPending ? 'Deleting…' : 'Delete project'}
         </button>
       </div>
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete project "${project.name}"?`}
+        description="Deleting a project removes its content types, entries and media. This cannot be undone."
+        confirmLabel="Delete project"
+        matchText={project.name}
+        loading={deleteMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => deleteMutation.mutate()}
+      />
     </div>
   );
 }

@@ -36,6 +36,7 @@ import type {
   SubscriptionView,
   SwapPlanInput,
   UsageView,
+  UserView,
   WorkspaceStatsView,
   ProjectStatsView,
   WebhookEvent,
@@ -230,6 +231,18 @@ export const authApi = {
     }),
   resendVerification: () =>
     request<{ success: true }>('/auth/resend-verification', { method: 'POST' }),
+  // Self-service profile (specs/18). User-scoped — no workspace header.
+  updateProfile: (dto: { name?: string; avatar?: string | null }) =>
+    request<UserView>('/users/me', { method: 'PATCH', body: dto }),
+  avatarPresign: (dto: {
+    filename: string;
+    contentType: string;
+    size?: number;
+  }) =>
+    request<PresignResult>('/users/me/avatar-presign', {
+      method: 'POST',
+      body: dto,
+    }),
 };
 
 export const contentApi = {
@@ -420,6 +433,13 @@ export const mediaApi = {
       workspace: true,
       project: true,
     }),
+  removeMany: (ids: string[]) =>
+    request<{ success: true; deleted: number }>(`/content/media/bulk-delete`, {
+      method: 'POST',
+      body: { ids },
+      workspace: true,
+      project: true,
+    }),
 };
 
 /** Read intrinsic pixel size of an image File (browser only). */
@@ -500,6 +520,34 @@ export async function uploadMedia(file: File): Promise<MediaView> {
     height,
     originalFilename: file.name,
   });
+}
+
+/**
+ * Upload a profile photo to R2 and return the object key to store on the user
+ * (specs/18). Mirrors {@link uploadMedia} but skips the `media.create` step —
+ * an avatar is not a media-library asset. Image-only, ≤ the image size cap.
+ */
+export async function uploadAvatar(file: File): Promise<string> {
+  const contentType = file.type || 'application/octet-stream';
+  if (!contentType.startsWith('image/')) {
+    throw new Error('Avatar must be an image file.');
+  }
+  if (file.size > MEDIA_MAX_IMAGE_BYTES) {
+    const mb = Math.round(MEDIA_MAX_IMAGE_BYTES / (1024 * 1024));
+    throw new Error(`Avatar is too large. Max ${mb} MB.`);
+  }
+  const { uploadUrl, key } = await authApi.avatarPresign({
+    filename: file.name,
+    contentType,
+    size: file.size,
+  });
+  const put = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': contentType },
+  });
+  if (!put.ok) throw new Error('Upload to storage failed.');
+  return key;
 }
 
 export const workspaceApi = {

@@ -477,13 +477,17 @@ export default function ContentTypesPage() {
                   <div className="space-y-1 min-w-0">
                     <span className="text-sm font-mono text-brand-secondary font-semibold select-none">Data Model Entry</span>
                     <h3 className="font-display font-bold text-base text-text-primary tracking-tight leading-none">{type.name}</h3>
-                    <div className="flex items-center gap-1.5 text-sm font-mono text-text-muted mt-1 leading-none flex-wrap">
-                      <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1.5 py-0.5 rounded font-bold">
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1.5 py-0.5 rounded font-bold text-sm font-mono">
                         id: {type.apiId}
                       </span>
-                      <span>•</span>
-                      <strong className="text-text-secondary">{type.fields.length} Fields</strong>
+                      <span className="text-xs font-mono font-bold text-text-muted uppercase">
+                        {type.fields.length} Field{type.fields.length !== 1 ? 's' : ''}
+                      </span>
                     </div>
+                  </div>
+
+                  <div className="flex gap-1.5 shrink-0">
                   </div>
 
                   <div className="flex gap-1.5 shrink-0">
@@ -511,7 +515,7 @@ export default function ContentTypesPage() {
                       title="Delete Schema"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                     </button>
                   </div>
                 </div>
 

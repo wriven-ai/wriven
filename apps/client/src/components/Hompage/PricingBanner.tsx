@@ -12,7 +12,7 @@ export default function PricingBanner() {
           
           <div className="space-y-4 max-w-2xl" id="pricing-banner-text">
             <span className="text-sm font-mono tracking-widest text-brand-accent font-bold uppercase">
-              [VOLUME_TIERS // TRANSPARENT_PRICING]
+              TRANSPARENT PRICING
             </span>
             <h3 className="font-display font-medium tracking-tight text-text-primary text-2xl sm:text-3xl" id="pricing-banner-title">
               Transparent plans for modern authors

@@ -1,14 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { ReactNode, useState } from 'react';
-import { cn } from '@/lib/utils';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { ReactNode, useState } from 'react';
 
 export type SwitcherItem = { id: string; name: string; slug: string };
 
@@ -16,18 +16,11 @@ type ScopeSwitcherProps = {
   /** Currently active entity, or null when none is selected. */
   current: SwitcherItem | null;
   items: SwitcherItem[];
-  /** Navigate to the picked entity. */
   onSelect: (item: SwitcherItem) => void;
-  /** Open the "create new" dialog. */
   onCreate: () => void;
-  /** Leading glyph in the trigger (e.g. a workspace/project icon). */
   icon?: ReactNode;
-  /** Shown in the trigger when `current` is null. */
   placeholder?: string;
-  /** Small badge after the name (e.g. role / plan). */
   badge?: string;
-  /** Where the NAME part links to (the current entity's overview). Chevron still
-   *  opens the dropdown; name navigates. Falls back to opening the dropdown. */
   titleHref?: string;
   /** 'breadcrumb' = compact (top bar); 'block' = full-width row (sidebar top). */
   variant?: 'breadcrumb' | 'block';
@@ -74,11 +67,13 @@ export function ScopeSwitcher({
           {icon}
         </span>
       ) : null}
-      <span className={cn('truncate font-bold', block ? 'flex-1' : 'max-w-[12rem]')}>
+      <span
+        className={cn('truncate font-bold', block ? 'flex-1' : 'max-w-[12rem]')}
+      >
         {current?.name ?? placeholder}
       </span>
       {badge ? (
-        <span className="rounded border border-brand-border bg-brand-surface-soft px-1 py-0.5 text-xs font-bold tracking-wider text-text-muted uppercase">
+        <span className="inline-flex items-center leading-none shrink-0 rounded border border-brand-border bg-brand-surface-soft px-1 py-0.5 text-[10px] font-bold tracking-wider text-text-secondary dark:text-text-primary uppercase">
           {badge}
         </span>
       ) : null}
@@ -108,7 +103,11 @@ export function ScopeSwitcher({
             {nameInner}
           </Link>
         ) : (
-          <button type="button" onClick={() => setOpen(true)} className={nameClass}>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className={nameClass}
+          >
             {nameInner}
           </button>
         )}
@@ -149,7 +148,9 @@ export function ScopeSwitcher({
                     active && 'bg-brand-surface-soft',
                   )}
                 >
-                  <span className="truncate text-text-primary">{item.name}</span>
+                  <span className="truncate text-text-primary">
+                    {item.name}
+                  </span>
                   {active ? (
                     <Check className="h-3.5 w-3.5 text-brand-accent shrink-0" />
                   ) : null}

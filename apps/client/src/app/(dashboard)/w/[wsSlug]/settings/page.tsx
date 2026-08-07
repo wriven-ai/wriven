@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 
 export default function WorkspaceSettingsPage() {
   const workspace = useCurrentWorkspace();
@@ -19,6 +20,7 @@ export default function WorkspaceSettingsPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (workspace) {
@@ -118,11 +120,7 @@ export default function WorkspaceSettingsPage() {
             Deleting a workspace removes its projects and content. This cannot be undone.
           </p>
           <button
-            onClick={() => {
-              if (confirm(`Delete workspace "${workspace.name}"? This cannot be undone.`)) {
-                deleteMutation.mutate();
-              }
-            }}
+            onClick={() => setDeleteOpen(true)}
             disabled={deleteMutation.isPending}
             className="inline-flex items-center gap-2 rounded-lg border border-status-error/40 px-4 py-2 font-mono text-sm font-bold text-status-error transition-colors hover:bg-status-error/10 disabled:opacity-60"
           >
@@ -131,6 +129,18 @@ export default function WorkspaceSettingsPage() {
           </button>
         </div>
       ) : null}
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete workspace "${workspace.name}"?`}
+        description="Deleting a workspace removes its projects and content. This cannot be undone."
+        confirmLabel="Delete workspace"
+        matchText={workspace.name}
+        loading={deleteMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => deleteMutation.mutate()}
+      />
     </div>
   );
 }

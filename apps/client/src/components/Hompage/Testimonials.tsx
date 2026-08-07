@@ -25,12 +25,12 @@ export default function Testimonials() {
             {/* Technical stats ledger boxes */}
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-brand-border" id="testimonials-stats">
               <div className="p-4 bg-brand-bg border border-brand-border rounded-lg space-y-1">
-                <span className="block font-mono text-sm text-[#0FAF7B] font-bold">{"// LATENCY_DROP"}</span>
+                <span className="block font-mono text-sm text-[#0FAF7B] font-bold">LATENCY DROP</span>
                 <span className="block text-xl font-bold font-display text-text-primary">12ms</span>
                 <span className="block text-sm text-text-muted font-mono leading-relaxed">Average Edge Response</span>
               </div>
               <div className="p-4 bg-brand-bg border border-brand-border rounded-lg space-y-1">
-                <span className="block font-mono text-sm text-brand-secondary font-bold">{"// USER_RATING"}</span>
+                <span className="block font-mono text-sm text-brand-secondary font-bold">USER RATING</span>
                 <span className="block text-xl font-bold font-display text-text-primary">4.9 / 5</span>
                 <span className="block text-sm text-text-muted font-mono leading-relaxed">Across platform reviews</span>
               </div>
@@ -66,7 +66,7 @@ export default function Testimonials() {
                 </div>
                 
                 <span className="inline-flex self-start sm:self-center bg-[#0FAF7B]/5 text-[#15D296] border border-[#0FAF7B]/15 font-mono text-sm font-bold px-2 py-0.5 rounded">
-                  {"// STACK: GATSBY + EDGE"}
+                  STACK: GATSBY + EDGE
                 </span>
               </div>
             </div>
@@ -92,7 +92,7 @@ export default function Testimonials() {
                 </div>
                 
                 <span className="inline-flex self-start sm:self-center bg-brand-secondary/5 text-brand-secondary border border-brand-secondary/15 font-mono text-sm font-bold px-2 py-0.5 rounded">
-                  {"// STACK: NEXT.JS + TAILWIND"}
+                  STACK: NEXT.JS + TAILWIND
                 </span>
               </div>
             </div>
@@ -118,7 +118,7 @@ export default function Testimonials() {
                 </div>
                 
                 <span className="inline-flex self-start sm:self-center bg-[#0FAF7B]/5 text-[#15D296] border border-[#0FAF7B]/15 font-mono text-sm font-bold px-2 py-0.5 rounded">
-                  {"// STACK: ASTRO + CDN"}
+                  STACK: ASTRO + CDN
                 </span>
               </div>
             </div>

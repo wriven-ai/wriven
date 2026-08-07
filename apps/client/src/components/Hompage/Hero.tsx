@@ -8,10 +8,6 @@ import { motion } from 'motion/react';
 export default function Hero() {
   return (
     <section className="relative overflow-hidden pt-16 pb-20 lg:pt-28 lg:pb-36 border-b border-brand-border" id="hero">
-      {/* Subtle Decorative grid markers in corners (Architectural layout aesthetic) */}
-      <div className="absolute top-4 left-4 text-sm font-mono text-text-muted select-none pointer-events-none">[GRID_SYS // LAUNCH_MATRIX]</div>
-      <div className="absolute top-4 right-4 text-sm font-mono text-text-muted select-none pointer-events-none">NODE_COORDS_40.3</div>
-      
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10" id="hero-container">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:items-stretch">
           
@@ -83,7 +79,7 @@ export default function Hero() {
               {/* Item 01 */}
               <div className="border-b border-brand-border pb-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">[NODE_01 // STRUCTURAL_METADATA]</span>
+                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">STRUCTURAL METADATA</span>
                   <span className="h-[1px] bg-brand-border flex-grow" />
                 </div>
                 <div className="text-sm font-light text-text-secondary leading-relaxed">
@@ -94,7 +90,7 @@ export default function Hero() {
               {/* Item 02 */}
               <div className="border-b border-brand-border pb-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">[NODE_02 // SYMMETRIC_GRID_METRIC]</span>
+                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">SYMMETRIC GRID METRIC</span>
                   <span className="h-[1px] bg-brand-border flex-grow" />
                 </div>
                 <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight leading-tight mb-2">
@@ -109,7 +105,7 @@ export default function Hero() {
               {/* Item 03 */}
               <div className="pb-4">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">[NODE_03 // LIVE_EDGE_DEPLOYMENT]</span>
+                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">LIVE EDGE DEPLOYMENT</span>
                   <span className="h-[1px] bg-brand-border flex-grow" />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

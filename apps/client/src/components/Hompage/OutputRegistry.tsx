@@ -46,7 +46,7 @@ export default function OutputRegistry() {
                     <div className="space-y-1 pr-4">
                       <div className="flex items-center gap-3">
                         <span className={`font-mono text-sm ${isActive ? 'text-brand-accent' : 'text-text-muted group-hover:text-text-secondary'}`}>
-                          {"// "}{target.key}
+                          {target.key}
                         </span>
                         <span className={`text-sm font-bold uppercase tracking-wider transition-colors ${isActive ? 'text-brand-accent' : 'text-text-primary group-hover:text-brand-accent'}`}>
                           {target.name}
@@ -80,7 +80,7 @@ export default function OutputRegistry() {
               <div className="flex items-center gap-2">
                 <span className="w-1 h-1 rounded-full bg-brand-secondary" />
                 <span className="font-mono text-sm font-bold text-text-muted uppercase tracking-widest">
-                  {"// LIVE CLIENT OUTPUT SIMULATION"}
+                  LIVE CLIENT OUTPUT SIMULATION
                 </span>
               </div>
               <div className="text-sm font-mono font-bold text-brand-accent bg-brand-accent/5 px-2 py-0.5 rounded border border-brand-accent/10">
@@ -160,7 +160,7 @@ export default function OutputRegistry() {
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-brand-accent font-mono font-bold tracking-wider">{"// COGNITIVE"}</span>
+                        <span className="text-sm text-brand-accent font-mono font-bold tracking-wider">COGNITIVE</span>
                         <Bookmark className="w-3.5 h-3.5 text-text-muted hover:text-brand-accent" />
                       </div>
 
@@ -199,7 +199,7 @@ export default function OutputRegistry() {
                   >
                     <div className="border-b border-brand-border pb-4 space-y-1">
                       <div className="text-sm font-mono text-text-muted font-bold tracking-widest uppercase">
-                        {"// THE CHRONICLER STATIC BLOG"}
+                        THE CHRONICLER STATIC BLOG
                       </div>
                       <h3 className="font-display font-medium text-text-primary text-xl sm:text-2xl tracking-tight leading-tight italic">
                         The Sovereignty of Print Layouts on Screen

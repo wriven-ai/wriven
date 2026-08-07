@@ -27,6 +27,8 @@ interface AuthState {
   addWorkspace: (workspace: WorkspaceView) => void;
   /** Replace a workspace in-place (slug/name edits) so URL sync stays valid. */
   updateWorkspace: (workspace: WorkspaceView) => void;
+  /** Replace the current user in-place (name/avatar edits from /profile). */
+  updateUser: (user: UserView) => void;
   setUnauthenticated: () => void;
   clear: () => void;
 }
@@ -108,6 +110,8 @@ export const useAuthStore = create<AuthState>()(
             w.id === workspace.id ? workspace : w,
           ),
         })),
+
+      updateUser: (user) => set({ user }),
 
       setUnauthenticated: () =>
         set({

@@ -13,9 +13,11 @@ import {
   Moon,
   Search,
   Sun,
+  User,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { WorkspaceSwitcher } from './workspace-switcher';
 import { ProjectSwitcher } from './project-switcher';
 
@@ -87,9 +89,11 @@ export function DashboardNavbar() {
             onClick={() => setUserMenuOpen((o) => !o)}
             className="flex items-center gap-1.5 hover:bg-brand-surface-soft p-1.5 rounded-lg border border-transparent hover:border-brand-border transition-all cursor-pointer"
           >
-            <div className="w-7 h-7 rounded-md bg-brand-accent text-white font-mono font-bold text-sm flex items-center justify-center">
-              {(user?.name ?? '?').slice(0, 2).toUpperCase()}
-            </div>
+            <UserAvatar
+              name={user?.name ?? '?'}
+              src={user?.avatar}
+              size={28}
+            />
             <ChevronDown className="w-3.5 h-3.5 text-text-secondary" />
           </button>
 
@@ -114,6 +118,14 @@ export function DashboardNavbar() {
                       {user?.email ?? ''}
                     </div>
                   </div>
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-mono text-text-secondary hover:text-brand-accent hover:bg-brand-surface-soft/80"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    Profile
+                  </Link>
                   <Link
                     href="/"
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-mono text-text-secondary hover:text-brand-accent hover:bg-brand-surface-soft/80"

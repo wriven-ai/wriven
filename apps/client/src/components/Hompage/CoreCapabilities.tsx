@@ -24,7 +24,7 @@ export default function CoreCapabilities() {
           
           {/* Feature 1 */}
           <div className="space-y-4 text-left" id="feature-card-1">
-            <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">{"// 01 //"}</div>
+            <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">01</div>
             <h3 className="text-sm font-bold font-mono uppercase text-text-primary">Content Drafting</h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
               Generate blog content pages, localized descriptions, meta definitions or specs list items directly on canvas. Invoke the Sparkle shortcut beside any input node for instant workflow integration.
@@ -33,7 +33,7 @@ export default function CoreCapabilities() {
 
           {/* Feature 2 */}
           <div className="space-y-4 text-left md:border-l md:border-brand-border md:pl-10" id="feature-card-2">
-            <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">{"// 02 //"}</div>
+            <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">02</div>
             <h3 className="text-sm font-bold font-mono uppercase text-text-primary">Graphic Automation</h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
               Direct Wriven backend nodes to construct beautifully composed abstract cover layouts or banner structures. High-contrast assets register with corresponding SEO tags instantly.
@@ -42,7 +42,7 @@ export default function CoreCapabilities() {
 
           {/* Feature 3 */}
           <div className="space-y-4 text-left md:border-l md:border-brand-border md:pl-10" id="feature-card-3">
-            <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">{"// 03 //"}</div>
+            <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">03</div>
             <h3 className="text-sm font-bold font-mono uppercase text-text-primary">Secure Edge Delivery</h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
               Fetch structured JSON packages secure at lightning-speed over cached global nodes. Feed content blocks securely to client frameworks, mobile apps or desktop interfaces.

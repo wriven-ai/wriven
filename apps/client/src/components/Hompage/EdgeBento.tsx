@@ -60,7 +60,7 @@ export default function EdgeBento() {
           <div className="lg:col-span-8 flex flex-col justify-between space-y-6" id="bento-cache-rate">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-mono font-bold uppercase text-brand-accent tracking-widest">[TELEMETRY_01 // EDGE_DYNAMICS]</span>
+                <span className="text-sm font-mono font-bold uppercase text-brand-accent tracking-widest">EDGE DYNAMICS</span>
                 <span className="inline-flex items-center gap-1.5 text-sm font-mono font-bold text-green-600 bg-green-500/5 border border-green-500/10 px-2.5 py-0.5 rounded">
                   <Activity className="w-3.5 h-3.5 animate-pulse text-green-600" />
                   LIVE SIGNALING ACTIVE
@@ -117,7 +117,7 @@ export default function EdgeBento() {
           <div className="lg:col-span-4 flex flex-col justify-between space-y-6 lg:border-l lg:border-brand-border lg:pl-10" id="bento-node-pings">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-mono font-bold uppercase text-brand-accent tracking-widest">[TELEMETRY_02 // SERVER_STATUS]</span>
+                <span className="text-sm font-mono font-bold uppercase text-brand-accent tracking-widest">SERVER STATUS</span>
                 <Wifi className="w-4 h-4 text-brand-accent animate-bounce" />
               </div>
 
@@ -131,7 +131,7 @@ export default function EdgeBento() {
                   <div key={node.key} className="flex justify-between items-center py-2.5 border-b border-brand-border last:border-0">
                     <div className="flex items-center gap-2.5">
                       <span className="font-mono text-sm text-brand-accent font-bold">
-                        {"// "}{node.icon}
+                        {node.icon}
                       </span>
                       <span className="text-sm font-bold text-text-primary">{node.city}</span>
                     </div>

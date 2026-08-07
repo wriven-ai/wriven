@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowUpRight,
-  Check,
+  CheckSquare,
   Eye,
   File,
   Film,
@@ -25,6 +25,8 @@ import type { MediaView } from '@/lib/types';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { toast } from 'sonner';
 
 const fmtSize = (bytes: number | null): string => {
   if (!bytes) return '—';
@@ -42,6 +44,9 @@ const fmtDate = (iso: string): string => {
 };
 
 const QUOTA_BYTES = 100 * 1024 * 1024; // per-workspace quota: 100 MB
+// Bulk-delete endpoint caps at 100 ids (DeleteMediaBulkDto @ArrayMaxSize) — cap
+// the selection to match so the request can never exceed it.
+const MAX_SELECTION = 100;
 
 const KindIcon = ({ kind }: { kind: string }) =>
   kind === 'video' ? (
@@ -65,6 +70,11 @@ export default function MediaLibraryPage() {
   const [dragActive, setDragActive] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<MediaView | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MediaView | null>(null);
+  // Multi-select (bulk) state — independent of single-asset detail selection.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey,
@@ -86,6 +96,24 @@ export default function MediaLibraryPage() {
   const removeMutation = useMutation({
     mutationFn: (id: string) => mediaApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onError: (e) =>
+      setError(e instanceof ApiRequestError ? e.message : 'Delete failed.'),
+  });
+
+  const bulkRemoveMutation = useMutation({
+    mutationFn: (ids: string[]) => mediaApi.removeMany(ids),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey });
+      setSelectMode(false);
+      setSelected(new Set());
+      setBulkOpen(false);
+      setError(null);
+      toast.success(
+        `Deleted ${data.deleted} asset${data.deleted === 1 ? '' : 's'}.`,
+      );
+    },
+    onError: (e) =>
+      setError(e instanceof ApiRequestError ? e.message : 'Bulk delete failed.'),
   });
 
   const assets = useMemo<MediaView[]>(() => data?.items ?? [], [data]);
@@ -117,6 +145,50 @@ export default function MediaLibraryPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [lightbox]);
 
+  // ── Multi-select helpers ────────────────────────────────────────────────
+  const toggleSelect = (id: string) => {
+    if (selected.has(id)) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      return;
+    }
+    if (selected.size >= MAX_SELECTION) {
+      toast.error('You can select up to 100 assets at a time.');
+      return;
+    }
+    setSelected((prev) => new Set(prev).add(id));
+  };
+  const selectAll = () => {
+    if (filteredAssets.length > MAX_SELECTION) {
+      toast.message(
+        `Selecting the first ${MAX_SELECTION} of ${filteredAssets.length} assets.`,
+      );
+    }
+    setSelected(
+      new Set(filteredAssets.slice(0, MAX_SELECTION).map((a) => a.id)),
+    );
+  };
+  const clearSelection = () => setSelected(new Set());
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+  const cardClick = (id: string) =>
+    selectMode ? toggleSelect(id) : setSelectedId(id);
+
+  // Esc exits select mode (only while selecting)
+  useEffect(() => {
+    if (!selectMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') exitSelectMode();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectMode]);
+
   const handleFiles = (files: FileList | null) => {
     if (!canManage) return;
     if (files && files.length) uploadMutation.mutate(Array.from(files));
@@ -136,9 +208,15 @@ export default function MediaLibraryPage() {
     handleFiles(e.dataTransfer.files);
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = (asset: MediaView, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Delete this asset?')) removeMutation.mutate(id);
+    setDeleteTarget(asset);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    removeMutation.mutate(deleteTarget.id);
+    setDeleteTarget(null);
   };
 
   const copyText = (text: string, id: string, e?: React.MouseEvent) => {
@@ -188,6 +266,21 @@ export default function MediaLibraryPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {canManage && (
+                <button
+                  onClick={() =>
+                    selectMode ? exitSelectMode() : setSelectMode(true)
+                  }
+                  className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                    selectMode
+                      ? 'border-brand-accent text-brand-accent bg-brand-accent/5'
+                      : 'border-brand-border text-text-secondary hover:bg-brand-surface-soft'
+                  }`}
+                  title={selectMode ? 'Exit selection' : 'Select assets'}
+                >
+                  <CheckSquare className="w-3.5 h-3.5" />
+                </button>
+              )}
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
@@ -212,6 +305,44 @@ export default function MediaLibraryPage() {
               </button>
             </div>
           </div>
+
+          {/* Bulk action bar — visible only in select mode */}
+          {selectMode && (
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-brand-accent/5 border border-brand-accent/20 p-3 rounded-xl">
+              <div className="flex items-center gap-3 text-sm font-mono">
+                <span className="font-bold text-brand-accent">
+                  {selected.size} selected
+                </span>
+                <button
+                  onClick={selectAll}
+                  className="text-text-secondary hover:text-brand-accent"
+                >
+                  Select all
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="text-text-secondary hover:text-brand-accent"
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setBulkOpen(true)}
+                  disabled={selected.size === 0}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-status-error/40 px-3 py-1.5 font-mono text-xs font-bold text-status-error hover:bg-status-error/10 disabled:opacity-40"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete selected
+                </button>
+                <button
+                  onClick={exitSelectMode}
+                  className="rounded-lg border border-brand-border px-3 py-1.5 font-mono text-xs font-bold text-text-secondary hover:bg-brand-surface-soft"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Drag & Drop Upload Zone */}
           <div
@@ -275,19 +406,35 @@ export default function MediaLibraryPage() {
               {filteredAssets.map((asset) => {
                 const isImage = asset.kind === 'image';
                 const isSelected = selectedAsset?.id === asset.id;
+                const isChecked = selected.has(asset.id);
                 const name = asset.originalFilename ?? asset.id;
 
                 return (
                   <div
                     key={asset.id}
-                    onClick={() => setSelectedId(asset.id)}
+                    onClick={() => cardClick(asset.id)}
                     className={`bg-brand-surface border rounded-xl overflow-hidden cursor-pointer transition-all ${
-                      isSelected
-                        ? 'border-brand-accent ring-1 ring-brand-accent'
-                        : 'border-brand-border hover:border-brand-accent/30'
+                      isChecked
+                        ? 'border-brand-accent ring-2 ring-brand-accent'
+                        : isSelected
+                          ? 'border-brand-accent ring-1 ring-brand-accent'
+                          : 'border-brand-border hover:border-brand-accent/30'
                     }`}
                   >
                     <div className="h-28 bg-brand-surface-soft relative flex items-center justify-center overflow-hidden border-b border-brand-border-button">
+                      {selectMode && (
+                        <label
+                          className="absolute top-2 left-2 z-10 size-5 flex items-center justify-center bg-black/40 rounded"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSelect(asset.id)}
+                            className="size-4 accent-brand-accent"
+                          />
+                        </label>
+                      )}
                       {isImage ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={asset.url} alt={name} className="w-full h-full object-cover" />
@@ -308,20 +455,9 @@ export default function MediaLibraryPage() {
                             <Maximize2 className="w-3 h-3" />
                           </button>
                         )}
-                        <button
-                          onClick={(e) => copyText(asset.id, asset.id, e)}
-                          className="p-1 rounded bg-black/50 hover:bg-black/80 text-white transition-colors"
-                          title="Copy asset ID"
-                        >
-                          {copiedId === asset.id ? (
-                            <Check className="w-3 h-3 text-emerald-400" />
-                          ) : (
-                            <Eye className="w-3 h-3" />
-                          )}
-                        </button>
                         {canManage && (
                           <button
-                            onClick={(e) => handleDelete(asset.id, e)}
+                            onClick={(e) => handleDelete(asset, e)}
                             className="p-1 rounded bg-black/50 hover:bg-status-error text-white transition-colors"
                             title="Delete Asset"
                           >
@@ -355,17 +491,31 @@ export default function MediaLibraryPage() {
               {filteredAssets.map((asset) => {
                 const isImage = asset.kind === 'image';
                 const isSelected = selectedAsset?.id === asset.id;
+                const isChecked = selected.has(asset.id);
                 const name = asset.originalFilename ?? asset.id;
 
                 return (
                   <div
                     key={asset.id}
-                    onClick={() => setSelectedId(asset.id)}
+                    onClick={() => cardClick(asset.id)}
                     className={`p-3.5 flex items-center justify-between gap-4 cursor-pointer transition-colors ${
-                      isSelected ? 'bg-brand-accent/5' : 'hover:bg-brand-surface-soft/60'
+                      isChecked
+                        ? 'bg-brand-accent/10 ring-1 ring-brand-accent'
+                        : isSelected
+                          ? 'bg-brand-accent/5'
+                          : 'hover:bg-brand-surface-soft/60'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
+                      {selectMode && (
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelect(asset.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="size-4 accent-brand-accent shrink-0"
+                        />
+                      )}
                       <div className="w-10 h-10 rounded border border-brand-border bg-brand-surface-soft shrink-0 flex items-center justify-center overflow-hidden">
                         {isImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -393,7 +543,7 @@ export default function MediaLibraryPage() {
                         </button>
                         {canManage && (
                           <button
-                            onClick={(e) => handleDelete(asset.id, e)}
+                            onClick={(e) => handleDelete(asset, e)}
                             className="p-1.5 border border-brand-border bg-brand-surface hover:bg-status-error/10 hover:text-status-error text-text-muted rounded"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -577,6 +727,37 @@ export default function MediaLibraryPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Delete warning — asset is removed from the library and R2; content
+          referencing it may break. (specs/18) */}
+      <ConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Delete this asset?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.originalFilename ?? deleteTarget.id}" will be permanently removed from the library. Any content referencing it may break.`
+            : ''
+        }
+        confirmLabel="Delete asset"
+        variant="danger"
+        loading={removeMutation.isPending}
+        lockWhileLoading
+        onConfirm={confirmDelete}
+      />
+
+      {/* Bulk delete warning */}
+      <ConfirmationDialog
+        open={bulkOpen}
+        onOpenChange={(o) => !o && setBulkOpen(false)}
+        title={`Delete ${selected.size} asset${selected.size === 1 ? '' : 's'}?`}
+        description="These assets will be permanently removed from the library. Any content referencing them may break."
+        confirmLabel={`Delete ${selected.size}`}
+        variant="danger"
+        loading={bulkRemoveMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => bulkRemoveMutation.mutate(Array.from(selected))}
+      />
     </div>
   );
 }

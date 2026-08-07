@@ -230,7 +230,7 @@ export default function SandboxPlayground() {
                 </span>
               </div>
               
-              <span className="block text-sm font-mono text-text-muted mb-2 uppercase tracking-widest font-bold">{"// SECURE API RESPONSE (JSON)"}</span>
+              <span className="block text-sm font-mono text-text-muted mb-2 uppercase tracking-widest font-bold">SECURE API RESPONSE (JSON)</span>
               <div className="h-[120px] overflow-auto text-sm font-mono rounded bg-brand-surface-soft p-3 border border-brand-border" id="json-scroll">
                 <pre className="whitespace-pre-wrap text-text-primary">{jsonResponse}</pre>
               </div>

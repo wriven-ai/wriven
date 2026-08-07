@@ -49,7 +49,7 @@ export function NavTreeRenderer({ tree }: { tree: NavTree }) {
       {tree.map((group, gi) => (
         <SidebarGroup key={group.groupLabel || gi}>
           {group.groupLabel ? (
-            <SidebarGroupLabel className="font-mono text-sm tracking-widest uppercase">
+            <SidebarGroupLabel className="font-mono text-xs tracking-widest uppercase">
               {group.groupLabel}
             </SidebarGroupLabel>
           ) : null}
@@ -160,7 +160,7 @@ function SubGroup({
   return (
     <>
       {groupLabel ? (
-        <li className="px-2 pt-1.5 pb-0.5 font-mono text-sm tracking-widest text-sidebar-foreground/50 uppercase">
+        <li className="px-2 pt-1.5 pb-0.5 font-mono text-xs tracking-widest text-sidebar-foreground/50 uppercase">
           {groupLabel}
         </li>
       ) : null}
