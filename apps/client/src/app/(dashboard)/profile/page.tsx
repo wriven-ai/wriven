@@ -1,11 +1,12 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { Camera, Loader2, Save, Trash2 } from 'lucide-react';
+import { BadgeCheck, Camera, CircleAlert, Loader2, Mail, Save, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ApiRequestError, authApi, uploadAvatar } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { toast } from 'sonner';
 
 const inputCls =
   'w-full rounded-lg border border-brand-border bg-brand-surface-soft px-3.5 py-2.5 font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none disabled:opacity-60';
@@ -45,6 +46,15 @@ export default function ProfilePage() {
     },
     onError: (e) =>
       setError(e instanceof ApiRequestError ? e.message : 'Photo update failed.'),
+  });
+
+  // On-demand email verification (specs/18) — signup no longer auto-sends.
+  const resendMutation = useMutation({
+    mutationFn: () => authApi.resendVerification(),
+    onSuccess: () =>
+      toast.success('Verification email sent — check your inbox.'),
+    onError: (e) =>
+      setError(e instanceof ApiRequestError ? e.message : 'Could not send verification email.'),
   });
 
   if (!user) {
@@ -160,16 +170,45 @@ export default function ProfilePage() {
         </div>
       </form>
 
-      {/* Email (read-only) */}
+      {/* Email (read-only) + verification status */}
       <section className="space-y-4 rounded-xl border border-brand-border bg-brand-surface p-6">
-        <h2 className="font-mono text-sm font-bold text-text-primary">
-          Email
-        </h2>
-        <p className="font-mono text-sm text-text-muted">
-          {user.email}
-        </p>
+        <h2 className="font-mono text-sm font-bold text-text-primary">Email</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Mail className="size-4 shrink-0 text-text-muted" />
+            <span className="font-mono text-sm text-text-primary truncate">
+              {user.email}
+            </span>
+            {user.emailVerified ? (
+              <span className="inline-flex items-center gap-1 rounded border border-status-success/40 bg-status-success/10 px-1.5 py-0.5 text-xs font-bold font-mono uppercase text-status-success">
+                <BadgeCheck className="size-3" /> Verified
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded border border-status-error/40 bg-status-error/10 px-1.5 py-0.5 text-xs font-bold font-mono uppercase text-status-error">
+                <CircleAlert className="size-3" /> Unverified
+              </span>
+            )}
+          </div>
+          {!user.emailVerified && (
+            <button
+              type="button"
+              onClick={() => resendMutation.mutate()}
+              disabled={resendMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-accent px-4 py-2 font-mono text-sm font-bold text-white transition-all hover:bg-brand-accent-hover disabled:opacity-60"
+            >
+              {resendMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Mail className="size-3.5" />
+              )}
+              {resendMutation.isPending ? 'Sending…' : 'Verify email'}
+            </button>
+          )}
+        </div>
         <p className="font-mono text-xs text-text-muted">
-          Email changes are not supported yet.
+          {user.emailVerified
+            ? 'Your email is verified.'
+            : 'Verify your email to secure your account. We’ll send a verification link.'}
         </p>
       </section>
     </div>

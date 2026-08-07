@@ -162,7 +162,8 @@ export class AuthService {
       throw err;
     }
 
-    await this.issueVerificationEmail(result.user.id, result.user.email);
+    // No auto verification email on signup (specs/18) — verification is opt-in,
+    // triggered on demand from the profile page via resend-verification.
     await this.claimInvites(result.user.id, result.user.email);
 
     return {

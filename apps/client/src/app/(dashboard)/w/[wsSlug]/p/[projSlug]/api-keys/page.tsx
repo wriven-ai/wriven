@@ -79,7 +79,13 @@ export default function ApiKeysPage() {
 
   const allKeys = keys ?? [];
   const totalPages = Math.max(1, Math.ceil(allKeys.length / PAGE_SIZE));
-  const paginatedKeys = allKeys.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Clamp to a valid page if the list shrank (e.g. after a revoke) so we never
+  // render an empty "page 2 of 1".
+  const safePage = Math.min(page, totalPages);
+  const paginatedKeys = allKeys.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => apiKeyApi.revoke(id),
@@ -275,7 +281,7 @@ export default function ApiKeysPage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <Pagination
-                currentPage={page}
+                currentPage={safePage}
                 totalPages={totalPages}
                 onPageChange={(p) => setPage(p)}
               />

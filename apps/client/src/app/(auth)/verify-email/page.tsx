@@ -1,23 +1,15 @@
 'use client';
 
-import { AlertCircle, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { ApiRequestError, authApi } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth';
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <div className="absolute top-6 left-6">
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-2 text-sm font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 text-brand-accent" />
-          Back to sign in
-        </Link>
-      </div>
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10">
         <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
           Email Verification
@@ -39,8 +31,14 @@ type State = 'verifying' | 'success' | 'error' | 'no-token';
 
 function VerifyInner() {
   const token = useSearchParams().get('token');
+  const router = useRouter();
+  const setSession = useAuthStore((s) => s.setSession);
   const [state, setState] = useState<State>(token ? 'verifying' : 'no-token');
   const [error, setError] = useState<string | null>(null);
+  // True when a session exists post-verify (the new flow: verify from the
+  // profile page while signed in). Drives the "Back to profile" CTA + a one-shot
+  // session refresh so the profile badge flips live on return.
+  const [authed, setAuthed] = useState(false);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -48,7 +46,19 @@ function VerifyInner() {
     ran.current = true; // verify exactly once (StrictMode double-invoke guard)
     authApi
       .verifyEmail(token)
-      .then(() => setState('success'))
+      .then(async () => {
+        setState('success');
+        // Refresh the session once so the profile's "Verified" badge is live.
+        // If this browser isn't signed in (link opened elsewhere), fall back to
+        // the sign-in CTA.
+        try {
+          const session = await authApi.me();
+          setSession(session);
+          setAuthed(true);
+        } catch {
+          setAuthed(false);
+        }
+      })
       .catch((err) => {
         setError(
           err instanceof ApiRequestError
@@ -57,7 +67,7 @@ function VerifyInner() {
         );
         setState('error');
       });
-  }, [token]);
+  }, [token, setSession]);
 
   if (state === 'no-token') {
     return (
@@ -88,14 +98,25 @@ function VerifyInner() {
         <CheckCircle className="w-8 h-8 mx-auto text-status-success" />
         <strong className="block font-bold">Email verified</strong>
         <p className="text-text-secondary font-light leading-relaxed">
-          Your email is confirmed. You can now sign in.
+          {authed
+            ? 'Your email is confirmed.'
+            : 'Your email is confirmed. You can now sign in.'}
         </p>
-        <Link
-          href="/login"
-          className="inline-block text-sm uppercase tracking-wider font-bold text-white bg-brand-accent hover:bg-brand-accent-hover border border-brand-border-button px-4 py-3 rounded-lg neo-shadow"
-        >
-          Go to sign in
-        </Link>
+        {authed ? (
+          <button
+            onClick={() => router.push('/profile')}
+            className="inline-block text-sm uppercase tracking-wider font-bold text-white bg-brand-accent hover:bg-brand-accent-hover border border-brand-border-button px-4 py-3 rounded-lg neo-shadow cursor-pointer"
+          >
+            Back to profile
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            className="inline-block text-sm uppercase tracking-wider font-bold text-white bg-brand-accent hover:bg-brand-accent-hover border border-brand-border-button px-4 py-3 rounded-lg neo-shadow"
+          >
+            Go to sign in
+          </Link>
+        )}
       </div>
     );
   }
