@@ -71,7 +71,7 @@
     "jest": "~30.3.0",
     "jest-environment-node": "~30.3.0",
     "jest-util": "~30.3.0",
-    "nx": "22.7.5",
+    "nx": "23.1.1",
     "postcss": "8.5.15",
     "prettier": "^3.8.1",
     "publint": "^0.3.21",
