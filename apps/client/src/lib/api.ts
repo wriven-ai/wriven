@@ -246,11 +246,26 @@ export const authApi = {
 };
 
 export const contentApi = {
-  listTypes: () =>
-    request<ContentTypeView[]>('/content/types', {
-      workspace: true,
-      project: true,
-    }),
+  listTypes: async (params?: { page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const q = qs.toString();
+    const raw = await request<ContentTypeView[] | Paginated<ContentTypeView>>(
+      `/content/types${q ? `?${q}` : ''}`,
+      { workspace: true, project: true },
+    );
+    // Backend returns a flat array — normalise into the Paginated envelope.
+    if (Array.isArray(raw)) {
+      return {
+        items: raw,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? raw.length,
+        total: raw.length,
+      } as Paginated<ContentTypeView>;
+    }
+    return raw as Paginated<ContentTypeView>;
+  },
   createType: (dto: { name: string; apiId: string; fields: FieldDef[] }) =>
     request<ContentTypeView>('/content/types', {
       method: 'POST',
@@ -412,10 +427,12 @@ export const mediaApi = {
       workspace: true,
       project: true,
     }),
-  list: (params?: { page?: number; limit?: number }) => {
+  list: (params?: { page?: number; limit?: number; search?: string; sort?: 'newest' | 'oldest' | 'name' }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.search) qs.set('search', params.search);
+    if (params?.sort) qs.set('sort', params.sort);
     const q = qs.toString();
     return request<Paginated<MediaView>>(
       `/content/media${q ? `?${q}` : ''}`,

@@ -5,9 +5,18 @@ import { AlertCircle, Database, Globe, RefreshCw } from 'lucide-react';
 import { useUsage } from '@/hooks/use-usage';
 import type { UsageView } from '@/lib/types';
 import { WorkspaceStatsGrid } from '@/components/workspace/workspace-stats-grid';
+import { UsagePageSkeleton } from '@/components/skeleton/usage-skeleton';
 
 export default function UsageStatsPage() {
   const { data, isLoading, isError, refetch, isFetching } = useUsage();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 text-left" id="usage-stats-workspace">
+        <UsagePageSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 text-left" id="usage-stats-workspace">
@@ -36,9 +45,7 @@ export default function UsageStatsPage() {
         </button>
       </div>
 
-      {isLoading ? (
-        <UsageSkeleton />
-      ) : isError ? (
+      {isError ? (
         <div className="bg-brand-surface border border-brand-border rounded-xl p-6 flex items-center gap-3 text-text-muted">
           <AlertCircle className="w-4 h-4 text-red-400" />
           <span className="text-sm font-mono">
@@ -131,19 +138,6 @@ function UsageCard({
         />
       </div>
       <p className="text-sm font-mono text-text-muted">{sublabel}</p>
-    </div>
-  );
-}
-
-function UsageSkeleton() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {[0, 1].map((i) => (
-        <div
-          key={i}
-          className="bg-brand-surface border border-brand-border rounded-xl p-5 h-32 animate-pulse"
-        />
-      ))}
     </div>
   );
 }

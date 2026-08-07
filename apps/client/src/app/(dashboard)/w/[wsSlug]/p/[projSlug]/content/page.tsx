@@ -5,7 +5,7 @@ import {
   Database,
   FileText,
   Plus,
-  RefreshCw,
+  Shapes,
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { contentApi } from '@/lib/api';
 import type { ContentEntryView, ContentTypeView } from '@/lib/types';
 import { STATUS_COLORS } from '@/components/content/fields';
+import { ContentTypeSelectSkeleton, EntryRowsSkeleton } from '@/components/skeleton/content-list-skeleton';
 
 /** Best display title for an entry: first text field value, else slug. */
 function entryTitle(entry: ContentEntryView, type?: ContentTypeView): string {
@@ -30,10 +31,11 @@ export default function ContentListPage() {
 
   const [selectedTypeId, setSelectedTypeId] = useState('');
 
-  const { data: types = [], isLoading: typesLoading } = useQuery({
+  const { data: typesData, isLoading: typesLoading } = useQuery({
     queryKey: ['content-types'],
-    queryFn: contentApi.listTypes,
+    queryFn: () => contentApi.listTypes({ limit: 100 }),
   });
+  const types = typesData?.items ?? [];
   const selectedType = types.find((t) => t.id === selectedTypeId);
 
   useEffect(() => {
@@ -65,14 +67,24 @@ export default function ContentListPage() {
           </p>
         </div>
 
-        {selectedTypeId && (
+        <div className="flex items-center gap-2.5">
           <Link
-            href={`${contentBase}/new?type=${selectedTypeId}`}
-            className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button px-5 py-2.5 rounded-lg text-sm font-mono font-bold transition-all cursor-pointer neo-shadow"
+            href={contentTypesHref}
+            className="inline-flex items-center gap-1.5 border border-brand-border bg-brand-surface hover:bg-brand-surface-soft text-text-secondary hover:text-text-primary px-4 py-2.5 rounded-lg text-sm font-mono font-bold transition-colors cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> New entry
+            <Shapes className="w-3.5 h-3.5" />
+            Content types
           </Link>
-        )}
+
+          {selectedTypeId && (
+            <Link
+              href={`${contentBase}/new?type=${selectedTypeId}`}
+              className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button px-5 py-2.5 rounded-lg text-sm font-mono font-bold transition-all cursor-pointer neo-shadow"
+            >
+              <Plus className="w-3.5 h-3.5" /> New entry
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Content type selector */}
@@ -83,9 +95,7 @@ export default function ContentListPage() {
         </div>
 
         {typesLoading ? (
-          <span className="text-sm font-mono text-text-muted flex items-center gap-1">
-            <RefreshCw className="w-3 h-3 animate-spin" /> Loading...
-          </span>
+          <ContentTypeSelectSkeleton />
         ) : types.length === 0 ? (
           <span className="text-sm font-mono text-text-muted">
             No types yet —{' '}
@@ -127,9 +137,7 @@ export default function ContentListPage() {
           </div>
 
           {entriesLoading ? (
-            <div className="flex items-center gap-2 text-sm font-mono text-text-muted p-6">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading entries...
-            </div>
+            <EntryRowsSkeleton />
           ) : entries.length === 0 ? (
             <div className="p-10 text-center">
               <p className="text-sm font-mono text-text-muted mb-3">No entries yet.</p>

@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowUpRight,
+  Check,
   CheckSquare,
+  Copy,
   Eye,
   File,
   Film,
@@ -19,14 +21,17 @@ import {
   X,
 } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ApiRequestError, mediaApi, uploadMedia } from '@/lib/api';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ApiRequestError, mediaApi, statsApi, uploadMedia } from '@/lib/api';
 import type { MediaView } from '@/lib/types';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { toast } from 'sonner';
+import { MediaGridSkeleton } from '@/components/skeleton/media-library-skeleton';
+import { useUsage } from '@/hooks/use-usage';
+import { Pagination } from '@/components/ui/pagination';
 
 const fmtSize = (bytes: number | null): string => {
   if (!bytes) return '—';
@@ -43,7 +48,6 @@ const fmtDate = (iso: string): string => {
   }
 };
 
-const QUOTA_BYTES = 100 * 1024 * 1024; // per-workspace quota: 100 MB
 // Bulk-delete endpoint caps at 100 ids (DeleteMediaBulkDto @ArrayMaxSize) — cap
 // the selection to match so the request can never exceed it.
 const MAX_SELECTION = 100;
@@ -62,9 +66,18 @@ export default function MediaLibraryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const can = useCan();
   const canManage = can(Permission.MEDIA_MANAGE);
+  const { data: usage } = useUsage();
+  const { data: projStats } = useQuery({
+    queryKey: ['project-stats', projSlug],
+    queryFn: () => statsApi.projectStats(),
+  });
 
+  const PAGE_SIZE = 10;
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'name'>('newest');
+  const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -76,10 +89,33 @@ export default function MediaLibraryPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
 
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { data, isLoading } = useQuery({
-    queryKey,
-    queryFn: () => mediaApi.list({ limit: 60 }),
+    queryKey: [...queryKey, page, searchQuery, sort],
+    queryFn: () => mediaApi.list({ page, limit: PAGE_SIZE, search: searchQuery || undefined, sort }),
   });
+
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const handleSearch = useCallback((value: string) => {
+    setSearchInput(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setSearchQuery(value);
+      setPage(1);
+    }, 350);
+  }, []);
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    setSelectedId(null);
+  };
+  const handleSortChange = (value: 'newest' | 'oldest' | 'name') => {
+    setSort(value);
+    setPage(1);
+    setSelectedId(null);
+  };
 
   const uploadMutation = useMutation({
     mutationFn: async (files: File[]) => {
@@ -88,6 +124,7 @@ export default function MediaLibraryPage() {
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['project-stats', projSlug] });
     },
     onError: (err) =>
       setError(err instanceof ApiRequestError ? err.message : (err as Error).message),
@@ -95,7 +132,10 @@ export default function MediaLibraryPage() {
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => mediaApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['project-stats', projSlug] });
+    },
     onError: (e) =>
       setError(e instanceof ApiRequestError ? e.message : 'Delete failed.'),
   });
@@ -104,6 +144,7 @@ export default function MediaLibraryPage() {
     mutationFn: (ids: string[]) => mediaApi.removeMany(ids),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['project-stats', projSlug] });
       setSelectMode(false);
       setSelected(new Set());
       setBulkOpen(false);
@@ -116,24 +157,17 @@ export default function MediaLibraryPage() {
       setError(e instanceof ApiRequestError ? e.message : 'Bulk delete failed.'),
   });
 
-  const assets = useMemo<MediaView[]>(() => data?.items ?? [], [data]);
-
-  const filteredAssets = useMemo(
-    () =>
-      assets.filter((a) =>
-        (a.originalFilename ?? a.id).toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [assets, searchQuery],
-  );
+  const assets = data?.items ?? [];
 
   const selectedAsset =
-    assets.find((a) => a.id === selectedId) ?? filteredAssets[0] ?? null;
+    assets.find((a) => a.id === selectedId) ?? assets[0] ?? null;
 
-  const usedBytes = useMemo(
-    () => assets.reduce((sum, a) => sum + (a.sizeBytes ?? 0), 0),
-    [assets],
-  );
-  const usedPct = Math.min(100, (usedBytes / QUOTA_BYTES) * 100);
+  // Use project-level stats for storage — a proper SQL SUM across all assets,
+  // not just the current page.
+  const usedBytes = (projStats?.media.usedMb ?? 0) * 1024 * 1024;
+  const storageLimitMb = usage?.storage.limitMb ?? null;
+  const quotaBytes = storageLimitMb ? storageLimitMb * 1024 * 1024 : null;
+  const usedPct = quotaBytes ? Math.min(100, (usedBytes / quotaBytes) * 100) : 0;
 
   // Close lightbox on Escape
   useEffect(() => {
@@ -162,13 +196,13 @@ export default function MediaLibraryPage() {
     setSelected((prev) => new Set(prev).add(id));
   };
   const selectAll = () => {
-    if (filteredAssets.length > MAX_SELECTION) {
+    if (assets.length > MAX_SELECTION) {
       toast.message(
-        `Selecting the first ${MAX_SELECTION} of ${filteredAssets.length} assets.`,
+        `Selecting the first ${MAX_SELECTION} of ${assets.length} assets.`,
       );
     }
     setSelected(
-      new Set(filteredAssets.slice(0, MAX_SELECTION).map((a) => a.id)),
+      new Set(assets.slice(0, MAX_SELECTION).map((a) => a.id)),
     );
   };
   const clearSelection = () => setSelected(new Set());
@@ -224,6 +258,7 @@ export default function MediaLibraryPage() {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+    toast.success('Copied asset ID', { description: text });
   };
 
   if (!canManage) return <NoAccess />;
@@ -234,7 +269,7 @@ export default function MediaLibraryPage() {
       <div className="border-b border-brand-border pb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
-            Universal <span className="font-normal italic text-brand-secondary">Media CDN Library</span>
+            Universal <span className="font-normal italic text-brand-secondary">Media Library</span>
           </h1>
           <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
             {'// Upload assets and reference them from media fields'}
@@ -259,11 +294,21 @@ export default function MediaLibraryPage() {
               <input
                 type="text"
                 placeholder="Search assets by name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="bg-transparent border-none text-sm font-mono outline-hidden w-full placeholder:text-text-muted/65 text-text-primary"
               />
             </div>
+
+            <select
+              value={sort}
+              onChange={(e) => handleSortChange(e.target.value as 'newest' | 'oldest' | 'name')}
+              className="bg-brand-surface-soft border border-brand-border rounded-lg px-2.5 py-1.5 text-sm font-mono text-text-primary outline-hidden cursor-pointer"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name">By name</option>
+            </select>
 
             <div className="flex items-center gap-2">
               {canManage && (
@@ -392,18 +437,16 @@ export default function MediaLibraryPage() {
 
           {/* Assets Inventory Display */}
           {isLoading ? (
+            <MediaGridSkeleton />
+          ) : assets.length === 0 ? (
             <div className="bg-brand-surface border border-brand-border p-12 text-center rounded-xl font-mono text-sm text-text-muted">
-              Loading assets…
-            </div>
-          ) : filteredAssets.length === 0 ? (
-            <div className="bg-brand-surface border border-brand-border p-12 text-center rounded-xl font-mono text-sm text-text-muted">
-              {assets.length === 0
-                ? 'No media yet — upload your first asset.'
-                : 'No matching assets.'}
+              {searchQuery
+                ? `No assets match "${searchQuery}".`
+                : 'No media yet — upload your first asset.'}
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4" id="media-assets-grid">
-              {filteredAssets.map((asset) => {
+              {assets.map((asset) => {
                 const isImage = asset.kind === 'image';
                 const isSelected = selectedAsset?.id === asset.id;
                 const isChecked = selected.has(asset.id);
@@ -488,7 +531,7 @@ export default function MediaLibraryPage() {
               className="bg-brand-surface border border-brand-border rounded-xl divide-y divide-brand-border"
               id="media-assets-list"
             >
-              {filteredAssets.map((asset) => {
+              {assets.map((asset) => {
                 const isImage = asset.kind === 'image';
                 const isSelected = selectedAsset?.id === asset.id;
                 const isChecked = selected.has(asset.id);
@@ -552,9 +595,18 @@ export default function MediaLibraryPage() {
                       </div>
                     </div>
                   </div>
-                );
+                 );
               })}
             </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           )}
         </div>
 
@@ -569,10 +621,23 @@ export default function MediaLibraryPage() {
                 exit={{ opacity: 0, y: 10 }}
                 className="bg-brand-surface border border-brand-border rounded-xl p-5 shadow-sm space-y-4 text-left"
               >
-                <span className="text-sm font-mono tracking-wider text-text-secondary border-b border-brand-border pb-2.5 font-bold flex items-center gap-1.5">
-                  <Eye className="w-4 h-4 text-brand-secondary" />
-                  Asset Insight Metrics
-                </span>
+                 <div className="flex items-center justify-between border-b border-brand-border pb-2.5">
+                   <span className="text-sm font-mono tracking-wider text-text-secondary font-bold flex items-center gap-1.5">
+                     <Eye className="w-4 h-4 text-brand-secondary" />
+                     Asset Insight Metrics
+                   </span>
+                   <button
+                     onClick={(e) => copyText(selectedAsset.id, selectedAsset.id, e)}
+                     className="p-1 rounded hover:bg-brand-surface-soft text-text-muted hover:text-brand-accent transition-colors"
+                     title={copiedId === selectedAsset.id ? 'Copied!' : 'Copy Asset ID'}
+                   >
+                     {copiedId === selectedAsset.id ? (
+                       <Check className="w-3.5 h-3.5 text-emerald-500" />
+                     ) : (
+                       <Copy className="w-3.5 h-3.5" />
+                     )}
+                   </button>
+                 </div>
 
                 {/* Preview (click to fullscreen) */}
                 <div className="border border-brand-border rounded-xl bg-brand-surface-soft p-2.5 overflow-hidden flex items-center justify-center max-h-48 relative group">
@@ -647,24 +712,18 @@ export default function MediaLibraryPage() {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="space-y-2 pt-3 border-t border-brand-border">
-                  <a
-                    href={selectedAsset.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-primary font-mono font-bold text-sm uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all"
-                  >
-                    Open raw CDN file
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </a>
-                  <button
-                    onClick={(e) => copyText(selectedAsset.id, selectedAsset.id, e)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-secondary hover:bg-brand-secondary/90 text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all"
-                  >
-                    {copiedId === selectedAsset.id ? 'ASSET ID COPIED!' : 'COPY ASSET ID'}
-                  </button>
-                </div>
+                 {/* Actions */}
+                 <div className="pt-3 border-t border-brand-border">
+                   <a
+                     href={selectedAsset.url}
+                     target="_blank"
+                     rel="noreferrer"
+                     className="w-full inline-flex items-center justify-center gap-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-primary font-mono font-bold text-sm uppercase tracking-wider py-2.5 rounded-lg cursor-pointer transition-all"
+                   >
+                     Open raw CDN file
+                     <ArrowUpRight className="w-3.5 h-3.5" />
+                   </a>
+                 </div>
               </motion.div>
             ) : (
               <div className="bg-brand-surface border border-brand-border rounded-xl p-6 text-center font-mono text-sm text-text-muted">
@@ -682,9 +741,11 @@ export default function MediaLibraryPage() {
             </span>
             <div className="flex items-center justify-between text-sm mb-1 font-bold">
               <span className="text-text-secondary">
-                {fmtSize(usedBytes)} / 100 MB
+                {fmtSize(usedBytes)} / {storageLimitMb ? (storageLimitMb >= 1024 ? `${(storageLimitMb / 1024).toFixed(1)} GB` : `${storageLimitMb} MB`) : 'Unlimited'}
               </span>
-              <span className="text-brand-accent">{usedPct.toFixed(1)}% Used</span>
+              <span className="text-brand-accent">
+                {usedBytes > 0 && usedPct < 0.1 ? '< 0.1' : usedPct.toFixed(1)}% Used
+              </span>
             </div>
             <div className="w-full h-1.5 bg-brand-surface-soft border border-brand-border rounded-full overflow-hidden">
               <div

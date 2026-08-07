@@ -10,7 +10,6 @@ import {
   RefreshCw,
   ChevronRight,
   UserPlus,
-  Sparkles,
 } from 'lucide-react';
 
 interface WorkspaceMember {

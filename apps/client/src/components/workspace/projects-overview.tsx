@@ -7,6 +7,7 @@ import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
 import { useCreateProject } from '@/hooks/use-create-project';
 import { CreateEntityDialog } from '@/components/topbar/create-entity-dialog';
 import { useAuth } from '@/hooks/useAuth';
+import { ProjectGridSkeleton } from '@/components/skeleton/projects-overview-skeleton';
 
 /**
  * The workspace home: a grid of the current workspace's projects. Shared by
@@ -65,7 +66,7 @@ export function ProjectsOverview() {
       </div>
 
       {isLoading ? (
-        <p className="font-mono text-sm text-text-muted">Loading projects…</p>
+        <ProjectGridSkeleton />
       ) : projects.length === 0 ? (
         <div className="rounded-xl border border-dashed border-brand-border p-10 text-center">
           <p className="font-mono text-sm text-text-muted">

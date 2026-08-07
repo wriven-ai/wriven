@@ -11,6 +11,7 @@ import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { WorkspaceSettingsSkeleton } from '@/components/skeleton/workspace-settings-skeleton';
 
 export default function WorkspaceSettingsPage() {
   const workspace = useCurrentWorkspace();
@@ -53,7 +54,7 @@ export default function WorkspaceSettingsPage() {
   });
 
   if (!workspace) {
-    return <p className="font-mono text-sm text-text-muted">Loading…</p>;
+    return <WorkspaceSettingsSkeleton />;
   }
 
   const dirty = name.trim() !== workspace.name;

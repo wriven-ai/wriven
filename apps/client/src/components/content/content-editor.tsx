@@ -51,10 +51,11 @@ export function ContentEditor({
   const contentBase = `/w/${wsSlug}/p/${projSlug}/content`;
   const contentTypesHref = `/w/${wsSlug}/p/${projSlug}/content-types`;
 
-  const { data: types = [] } = useQuery({
+  const { data: typesData } = useQuery({
     queryKey: ['content-types'],
-    queryFn: contentApi.listTypes,
+    queryFn: () => contentApi.listTypes({ limit: 100 }),
   });
+  const types = typesData?.items ?? [];
 
   const { data: entry } = useQuery({
     queryKey: ['entry', entryId],

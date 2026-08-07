@@ -39,6 +39,7 @@ import { computeDowngradeBlocks } from '@/lib/downgrade';
 import { toast } from 'sonner';
 import { BlockedDowngradeDialog } from '@/components/ui/blocked-downgrade-dialog';
 import { ConfirmationDialog, type ConfirmVariant } from '@/components/ui/confirmation-dialog';
+import { Pagination } from '@/components/ui/pagination';
 import { SuccessModal } from '@/components/ui/success-modal';
 import {
   Dialog,
@@ -205,6 +206,17 @@ function BillingInner() {
   const hasPaidSub = !!subscription && subscription.planKey !== 'free';
   const currentPlanKey = subscription?.planKey ?? 'free';
   const invoices = invoicesQuery.data ?? [];
+
+  // Invoice history pagination — 5 per page.
+  const INVOICES_PER_PAGE = 5;
+  const [invoicePage, setInvoicePage] = useState(1);
+  const invoiceTotalPages = Math.max(1, Math.ceil(invoices.length / INVOICES_PER_PAGE));
+  // Clamp to a valid page if the list shrank (refetch / fewer invoices).
+  const safeInvoicePage = Math.min(invoicePage, invoiceTotalPages);
+  const pagedInvoices = invoices.slice(
+    (safeInvoicePage - 1) * INVOICES_PER_PAGE,
+    safeInvoicePage * INVOICES_PER_PAGE,
+  );
 
   // Redirect URLs must point at the real route (/w/[wsSlug]/billing), not the
   // backend default (APP_URL/billing) which omits the workspace segment.
@@ -628,50 +640,59 @@ function BillingInner() {
               No invoices yet.
             </div>
           ) : (
-            <div className="divide-y divide-brand-border" id="invoice-list">
-              {invoices.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
-                >
-                  <div className="space-y-0.5 min-w-0">
-                    <p className="text-sm font-mono font-bold text-text-primary truncate">
-                      {inv.description ?? `Invoice ${inv.number ?? inv.id}`}
-                    </p>
-                    <p className="text-sm font-mono text-text-muted">
-                      {inv.number ?? '—'} · {inv.createdAt.slice(0, 10)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-mono font-bold text-text-primary">
-                      {formatMoney(inv.amountPaid, inv.currency)}
-                    </span>
-                    <span
-                      className={`text-xs font-bold font-mono uppercase px-1.5 py-0.5 rounded border ${invoiceStatusClass(
-                        inv.status,
-                      )}`}
-                    >
-                      {inv.status}
-                    </span>
-                    {inv.url ? (
-                      <a
-                        href={inv.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="View / download invoice"
-                        className="p-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-muted hover:text-text-primary rounded cursor-pointer transition-colors"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
-                    ) : (
-                      <span className="p-1.5 text-text-muted opacity-30">
-                        <Download className="w-3.5 h-3.5" />
+            <>
+              <div className="divide-y divide-brand-border" id="invoice-list">
+                {pagedInvoices.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <p className="text-sm font-mono font-bold text-text-primary truncate">
+                        {inv.description ?? `Invoice ${inv.number ?? inv.id}`}
+                      </p>
+                      <p className="text-sm font-mono text-text-muted">
+                        {inv.number ?? '—'} · {inv.createdAt.slice(0, 10)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm font-mono font-bold text-text-primary">
+                        {formatMoney(inv.amountPaid, inv.currency)}
                       </span>
-                    )}
+                      <span
+                        className={`text-xs font-bold font-mono uppercase px-1.5 py-0.5 rounded border ${invoiceStatusClass(
+                          inv.status,
+                        )}`}
+                      >
+                        {inv.status}
+                      </span>
+                      {inv.url ? (
+                        <a
+                          href={inv.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View / download invoice"
+                          className="p-1.5 border border-brand-border hover:bg-brand-surface-soft text-text-muted hover:text-primary rounded cursor-pointer transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      ) : (
+                        <span className="p-1.5 text-text-muted opacity-30">
+                          <Download className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              {invoiceTotalPages > 1 && (
+                <Pagination
+                  currentPage={safeInvoicePage}
+                  totalPages={invoiceTotalPages}
+                  onPageChange={setInvoicePage}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

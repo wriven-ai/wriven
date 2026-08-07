@@ -39,10 +39,11 @@ export function ReferenceField({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  const { data: types = [] } = useQuery({
+  const { data: typesData } = useQuery({
     queryKey: ['content-types'],
-    queryFn: contentApi.listTypes,
+    queryFn: () => contentApi.listTypes({ limit: 100 }),
   });
+  const types = typesData?.items ?? [];
   const targetType = types.find((t) => t.id === refTypeId);
 
   const { data: entriesPage } = useQuery({

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Clock, Mail, RefreshCw, Send, Shield, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   ApiRequestError,
   invitationApi,
@@ -17,6 +18,7 @@ import { useWorkspaceProjects } from '@/hooks/use-workspace-projects';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProjectPermissionsTable } from '@/components/auth/permissions-matrix-table';
 import type { InvitationView, ProjectMemberView, ProjectRole } from '@/lib/types';
+
 
 const PROJECT_ROLES: ProjectRole[] = ['admin', 'editor', 'viewer'];
 
@@ -195,11 +197,25 @@ export default function ProjectMembersPage() {
                   Members{members ? ` (${members.length})` : ''}
                 </span>
 
-                {isLoading ? (
-                  <div className="flex items-center gap-2 text-text-muted font-mono text-sm py-6 justify-center">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading members…
-                  </div>
-                ) : !members || members.length === 0 ? (
+                 {isLoading ? (
+                   <div className="space-y-3.5">
+                     {Array.from({ length: 4 }).map((_, i) => (
+                       <div key={i} className="flex items-center justify-between gap-3 p-3 border border-brand-border bg-brand-surface-soft/40 rounded-xl">
+                         <div className="flex items-center gap-3 min-w-0">
+                           <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                           <div className="min-w-0 space-y-1.5">
+                             <Skeleton className="h-3 w-28" />
+                             <Skeleton className="h-2.5 w-40" />
+                           </div>
+                         </div>
+                         <div className="flex items-center gap-2 shrink-0">
+                           <Skeleton className="h-4 w-14 rounded" />
+                           <Skeleton className="h-6 w-6 rounded" />
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 ) : !members || members.length === 0 ? (
                   <p className="text-text-muted font-mono text-sm py-6 text-center">
                     No members yet.
                   </p>

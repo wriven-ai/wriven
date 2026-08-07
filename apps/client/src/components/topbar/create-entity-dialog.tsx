@@ -57,17 +57,17 @@ export function CreateEntityDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border border-brand-border bg-brand-surface text-text-primary ring-0">
+      <DialogContent className="border border-brand-border bg-brand-surface text-text-primary ring-0 sm:max-w-md">
 
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-5">
           <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
+            <DialogTitle className="text-lg">{title}</DialogTitle>
             {description ? (
-              <DialogDescription>{description}</DialogDescription>
+              <DialogDescription className="text-sm">{description}</DialogDescription>
             ) : null}
           </DialogHeader>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider">
               {label}
             </label>
@@ -76,7 +76,7 @@ export function CreateEntityDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={placeholder}
-              className="border-brand-border bg-brand-surface-soft font-mono text-sm text-text-primary"
+              className="h-10 border-brand-border bg-brand-surface-soft font-mono text-sm text-text-primary"
             />
             {error ? (
               <p className="text-sm font-mono text-status-error">{error}</p>
@@ -87,12 +87,12 @@ export function CreateEntityDialog({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="default"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={pending || !name.trim()}>
+            <Button type="submit" size="lg" disabled={pending || !name.trim()}>
               {pending ? 'Creating…' : submitLabel}
             </Button>
           </DialogFooter>

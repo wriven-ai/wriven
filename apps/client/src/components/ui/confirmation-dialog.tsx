@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -34,6 +35,8 @@ export interface ConfirmationDialogProps {
   loading?: boolean;
   /** Blocks dismissal (hides X, ignores overlay/escape) while `loading`. */
   lockWhileLoading?: boolean;
+  /** If provided, fires toast.success(successToast) when the user confirms. */
+  successToast?: string;
   onConfirm: () => void;
 }
 
@@ -59,6 +62,7 @@ export function ConfirmationDialog({
   variant = 'accent',
   loading = false,
   lockWhileLoading = false,
+  successToast,
   onConfirm,
 }: ConfirmationDialogProps) {
   const locked = loading && lockWhileLoading;
@@ -92,7 +96,10 @@ export function ConfirmationDialog({
            </DialogClose>
            <Button
              variant={BUTTON_VARIANT[variant]}
-             onClick={onConfirm}
+             onClick={() => {
+               onConfirm();
+               if (successToast) toast.success(successToast);
+             }}
              disabled={loading}
            >
              {loading && <Loader2 className="size-3.5 animate-spin" />}

@@ -11,6 +11,7 @@ import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { ProjectSettingsSkeleton } from '@/components/skeleton/project-settings-skeleton';
 
 export default function ProjectSettingsPage() {
   const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
@@ -54,7 +55,7 @@ export default function ProjectSettingsPage() {
   });
 
   if (isLoading || !project) {
-    return <p className="font-mono text-sm text-text-muted">Loading…</p>;
+    return <ProjectSettingsSkeleton />;
   }
 
   if (!can(Permission.PROJECT_EDIT)) return <NoAccess />;
@@ -87,17 +88,6 @@ export default function ProjectSettingsPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-lg border border-brand-border bg-brand-surface-soft px-3.5 py-2.5 font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider">
-            Slug
-          </label>
-          <input
-            value={project.slug}
-            disabled
-            className="w-full rounded-lg border border-brand-border bg-brand-surface-soft px-3.5 py-2.5 font-mono text-sm text-text-muted"
           />
         </div>
 
