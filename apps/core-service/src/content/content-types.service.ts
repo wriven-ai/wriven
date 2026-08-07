@@ -3,11 +3,12 @@ import {
   ContentTypeView,
   CreateContentTypeDto,
   FieldDef,
+  Paginated,
   UpdateContentTypeDto,
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
@@ -89,15 +90,23 @@ export class ContentTypesService {
   async list(p: {
     workspaceId: string;
     projectId: string;
-  }): Promise<ContentTypeView[]> {
+    page?: number;
+    limit?: number;
+  }): Promise<Paginated<ContentTypeView>> {
+    const page = p.page ?? 1;
+    const limit = p.limit ?? 10;
+    const where = and(
+      eq(contentTypes.projectId, p.projectId),
+      isNull(contentTypes.deletedAt),
+    );
+    const total = await this.db.$count(contentTypes, where);
     const rows = await this.db.query.contentTypes.findMany({
-      where: and(
-        eq(contentTypes.projectId, p.projectId),
-        isNull(contentTypes.deletedAt),
-      ),
-      orderBy: contentTypes.createdAt,
+      where,
+      orderBy: desc(contentTypes.createdAt),
+      limit,
+      offset: (page - 1) * limit,
     });
-    return rows.map((r) => this.toView(r));
+    return { items: rows.map((r) => this.toView(r)), page, limit, total };
   }
 
   async get(p: {

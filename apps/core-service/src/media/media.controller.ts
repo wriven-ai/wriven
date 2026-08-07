@@ -54,7 +54,14 @@ export class MediaController {
   @MessagePattern(CORE_PATTERNS.MEDIA_LIST)
   list(
     @Payload()
-    p: { workspaceId: string; projectId: string; page?: number; limit?: number },
+    p: {
+      workspaceId: string;
+      projectId: string;
+      page?: number;
+      limit?: number;
+      search?: string;
+      sort?: 'newest' | 'oldest' | 'name';
+    },
   ) {
     return this.media.list(p);
   }

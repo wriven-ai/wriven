@@ -11,7 +11,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
@@ -188,17 +188,35 @@ export class MediaService {
     projectId: string;
     page?: number;
     limit?: number;
+    search?: string;
+    sort?: 'newest' | 'oldest' | 'name';
   }): Promise<Paginated<MediaView>> {
     const page = p.page ?? 1;
     const limit = p.limit ?? 30;
-    const where = and(
+    const filters = [
       eq(mediaAssets.projectId, p.projectId),
       isNull(mediaAssets.deletedAt),
-    );
+    ];
+    if (p.search) {
+      const term = `%${p.search}%`;
+      filters.push(
+        or(
+          ilike(mediaAssets.originalFilename, term),
+          ilike(mediaAssets.r2Key, term),
+        )!,
+      );
+    }
+    const where = and(...filters);
     const total = await this.db.$count(mediaAssets, where);
+    const orderBy =
+      p.sort === 'oldest'
+        ? asc(mediaAssets.createdAt)
+        : p.sort === 'name'
+          ? asc(mediaAssets.originalFilename)
+          : desc(mediaAssets.createdAt);
     const rows = await this.db.query.mediaAssets.findMany({
       where,
-      orderBy: desc(mediaAssets.createdAt),
+      orderBy,
       limit,
       offset: (page - 1) * limit,
     });

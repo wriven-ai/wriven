@@ -64,9 +64,16 @@ export class ContentController {
   listTypes(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_LIST, { workspaceId, projectId }),
+      this.core.send(CORE_PATTERNS.CONTENT_TYPE_LIST, {
+        workspaceId,
+        projectId,
+        page: page ? Number(page) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      }),
     );
   }
 

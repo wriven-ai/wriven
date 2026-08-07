@@ -79,6 +79,8 @@ export class MediaController {
     @CurrentProject() projectId: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('sort') sort?: string,
   ) {
     return firstValueFrom(
       this.core.send(CORE_PATTERNS.MEDIA_LIST, {
@@ -86,6 +88,8 @@ export class MediaController {
         projectId,
         page: page ? Number(page) : undefined,
         limit: limit ? Number(limit) : undefined,
+        search: search || undefined,
+        sort: sort || undefined,
       }),
     );
   }
