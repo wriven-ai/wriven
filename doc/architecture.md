@@ -23,7 +23,9 @@ Architecture
                        PostgreSQL (Supabase, single DB)
                        schemas: auth_svc · core_svc
                                     │
-                  ai-service (FastAPI, HTTP :8000) — planned, called from core over HTTP
+                  ai-service (FastAPI, HTTP :8000) — DEFERRED skeleton.
+                  AI generation runs in core-service now (AiModule, in-process);
+                  when extracted, core → ai-service over HTTP (the only HTTP hop).
 ```
 
 Only `api-gateway` is exposed to the internet. `auth-service` and `core-service` are **pure TCP microservices** (no HTTP server) reachable only on the internal network.
@@ -35,13 +37,13 @@ Only `api-gateway` is exposed to the internet. `auth-service` and `core-service`
 | api-gateway | 5000 | HTTP | public |
 | auth-service | 5001 | TCP | internal |
 | core-service | 5002 | TCP | internal |
-| ai-service | 8000 | HTTP | internal (planned) |
+| ai-service | 8000 | HTTP | internal (deferred — AI gen runs in core for now) |
 
 ## Inter-service communication
 
 - **NestJS ↔ NestJS = TCP** via `@nestjs/microservices` (`ClientProxy` on the gateway, `@MessagePattern` handlers on services). No HTTP/Axios between NestJS services.
-- **ai-service is the only HTTP exception** (Python/FastAPI; TCP not applicable) — called from core-service over HTTP.
-- Message patterns are dot-namespaced constants in `@wriven/contracts` (`messages.ts`): `auth.login`, `core.entry.create`, etc. Never hardcode pattern strings.
+- **AI generation runs in-process inside core-service** (an `AiModule` behind a provider interface) — no service hop today. `ai-service` (FastAPI) is a deferred skeleton; when extracted, **it becomes the only HTTP exception** (Python/FastAPI; TCP not applicable), called from core-service over HTTP. The provider interface means extraction swaps one impl for an HTTP client — callers and the `core.ai.*` message patterns stay unchanged.
+- Message patterns are dot-namespaced constants in `@wriven/contracts` (`messages.ts`): `auth.login`, `core.entry.create`, `core.ai.generate`, etc. Never hardcode pattern strings.
 
 ### Gateway client registration
 

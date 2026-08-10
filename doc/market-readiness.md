@@ -224,9 +224,12 @@ So the gaps read in context. ✅ = working.
   content-history diff UI. Now: none (last-write-wins; revisions stored but no diff
   UI/locking).
 
-### AI service (the "AI-native" promise) — **XL**
-- The product is described as "AI-native content generation"; `apps/ai-service` is a
-  **FastAPI skeleton only** (`main.py` + README). AI authoring/assist/generation is
+### AI generation (the "AI-native" promise) — **L→XL**
+- The product is described as "AI-native content generation". AI generation is being built
+  **inside core-service** (`AiModule` behind a provider interface) to avoid the extra
+  container cost — not as the standalone `apps/ai-service`. That FastAPI app stays a
+  **deferred skeleton** (extraction target): swapping the in-process provider impl for an HTTP
+  client splits it out later with no caller changes. AI authoring/assist/generation is still
   unbuilt. The editor has an AI chat panel UI but no backend.
 
 ### Webhook management depth — **M**
@@ -283,7 +286,7 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 4. **Make it competitive:** GraphQL, localization, environments, richer field
    types/components, **custom roles + field-level perms** (the RBAC permission seam
    is already shipped — specs/12, 13; only custom roles + field-level remain). (P1→P2)
-5. **Differentiate:** ship the AI service (the "AI-native" promise), real-time
+5. **Differentiate:** ship AI generation (the "AI-native" promise — `AiModule` in core, extractable to `ai-service`), real-time
    collaboration, DAM. (P2)
 
 > **Minimum to charge money:** the P0 block. Everything compiles and the CMS works;
@@ -317,5 +320,5 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 | Admin panel UI | P1 | L | in progress |
 | SSO/SAML | P2 | L | flag only |
 | Granular RBAC seam | P2 | M | typed perms + cascade shipped (specs/12, 13); custom roles + field-level remain |
-| AI service | P2 | XL | skeleton |
+| AI generation | P2 | L→XL | unbuilt; will ship in core-service (`AiModule`), extractable to deferred `ai-service` |
 | Real-time collab | P2 | XL | none |

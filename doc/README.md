@@ -2,7 +2,7 @@
 
 Reference documentation for the Wriven backend. Start here.
 
-Wriven is an **AI-native content management and generation SaaS**. The backend is an Nx monorepo of NestJS microservices (plus a Python AI service, not yet built) behind a single public API gateway, with a Next.js frontend.
+Wriven is an **AI-native content management and generation SaaS**. The backend is an Nx monorepo of NestJS microservices behind a single public API gateway, with a Next.js frontend. AI generation runs inside core-service for now (a Python FastAPI service is a deferred skeleton — extraction target).
 
 The docs split into three layers:
 

@@ -17,7 +17,7 @@ implements everything in §4.
 | api-gateway | **Render** | Web Service (public) | Render `$PORT` | the only public HTTP entry → `api.wriven.tech` |
 | auth-service | **Render** | Private Service (`pserv`) | 5001 (TCP) | NestJS microservice, internal only |
 | core-service | **Render** | Private Service (`pserv`) | 5002 (TCP) | NestJS microservice, internal only |
-| ai-service | — | skip for MVP | — | skeleton only; add later if needed |
+| ai-service | — | skip for MVP | — | deferred skeleton; AI generation runs in core-service. Extraction target — add as a `pserv` (HTTP :8000) when split out. |
 | client (Next.js) | **Vercel** | — | — | `apps/client`, → `wriven.tech` |
 | Postgres | **Supabase** | managed | — | shared DB, schema-isolated (`auth_svc`, `core_svc`) |
 

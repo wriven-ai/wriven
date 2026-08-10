@@ -52,7 +52,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
 | **Stripe billing** (Checkout, Billing Portal, direct plan-swap, webhook reconcile) | ✅ | backend done (specs/08); `/billing/swap` upgrades/cycle-switches immediately (prorated) + **defers downgrades to period end** via Subscription Schedules (specs/16, `pendingDowngrade` on the view) + cancel-to-free; live e2e 🟡 deferred to sandbox config |
-| **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI limit fields added (unenforced — ai-service pending) |
+| **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI limit fields added (unenforced — AI gen in core pending) |
 | **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan()` filled against the shared cascade; nav + action buttons + management routes gated (specs/13) |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
@@ -84,13 +84,24 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Revision retention** (`revisionsPerEntry`) | ✅ | per-entry cap prunes oldest beyond the plan limit (5/10/15) on every write (specs/15) |
 | **Usage metering** (`usage_buckets`) | 🟡 | Delivery API request counter (batched atomic increment) + `core.usage.read` composes `UsageView` (requests + storage SUM + plan limits) (specs/14). Overage gate built but **default-off** (`USAGE_ENFORCE`); live validation pending |
 
-## ai-service (FastAPI `:8000`)
+## AI generation (in core-service) / ai-service (FastAPI `:8000` — deferred)
 
-| Item | Status |
-|------|--------|
-| Everything (text/image generation, jobs) | 🔲 Not started |
+AI content generation is built **inside core-service** as a dedicated `AiModule`, behind a provider
+interface (`AiProvider`) — this avoids the extra container/deploy cost of a standalone service today.
+`apps/ai-service` (FastAPI) stays as a deferred skeleton: the extraction target for later. Splitting
+out = swap the in-process provider impl for an HTTP client pointing at `AI_SERVICE_URL`; the
+`core.ai.*` message patterns and gateway callers stay unchanged.
+
+| Item | Status | Notes |
+|------|--------|-------|
+| `AiModule` + `AiProvider` interface (in core-service) | 🔲 | extractable seam first; default impl calls LLM provider |
+| Text generation (`core.ai.generate`) | 🔲 | gateway HTTP route → core TCP → provider |
+| Image generation | 🔲 | later |
+| Plan-limit enforcement (specs/14 metering) | 🔲 | AI limit fields exist, unenforced until this ships |
+| Extract to Python `ai-service` | 🔲 | deferred; swap impl for HTTP client |
 
 > Schema is AI-ready: a future `ai_generations` table references `content_entries.id`; no re-model needed.
+> LLM provider keys (Anthropic/OpenAI) live in **core-service** env only — never gateway/frontend.
 
 ## Frontend (`apps/client`, Next.js 16)
 
@@ -120,5 +131,5 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 
 - Consumer **SDK / npm package** + published Delivery API docs.
 - **Frontend billing page** — Checkout redirect, Billing Portal link, replace the mock pricing page; consumes `/billing/*`. Unblocks the live Stripe e2e (the hosted Checkout page also needs the sandbox account configured: `pk_test_` publishable key + Managed Payments provisioned/disabled).
-- **ai-service**.
+- **AI generation** — ship the `AiModule` in core-service (extractable to the deferred `ai-service` later).
 - Deploy (Docker Compose on VPS) + CI.

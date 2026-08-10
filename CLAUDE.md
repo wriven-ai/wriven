@@ -1,6 +1,6 @@
 # Wriven — Agent Instructions
 
-**Wriven** is an AI-native headless CMS SaaS. Nx + pnpm monorepo: NestJS microservices behind a single HTTP gateway, a Next.js client, and a Python AI service. Frontend deploys to Vercel; all backend services run in Docker on a VPS.
+**Wriven** is an AI-native headless CMS SaaS. Nx + pnpm monorepo: NestJS microservices behind a single HTTP gateway, a Next.js client, and a Python AI service (skeleton, deferred). Frontend deploys to Vercel; all backend services run in Docker on a VPS.
 
 ## Source of truth
 
@@ -22,7 +22,7 @@ If a doc and the code disagree, **the code wins** — fix the doc.
   - `api-gateway` (HTTP `:5000`) — public edge, validates JWT **locally**, validates workspace/project membership, owns no tables.
   - `auth-service` (TCP `:5001`) — identity + tenancy (users, workspaces, projects, members, invitations).
   - `core-service` (TCP `:5002`) — CMS (content types, entries, media, webhooks, delivery API).
-  - `ai-service` (FastAPI `:8000`) — called over **HTTP** from core; the only HTTP exception. All NestJS↔NestJS is TCP.
+  - `ai-service` (FastAPI `:8000`) — **deferred skeleton**. AI content generation runs **inside core-service** for now (an `AiModule` behind a provider interface) to avoid the extra container cost. `apps/ai-service` stays as the extraction target: when split out, it becomes the only NestJS↔non-NestJS HTTP call (called from core over HTTP). All NestJS↔NestJS is TCP.
 - **Gateway injects identity** — after JWT validation it puts `userId` + scope into every TCP payload; downstream services trust it (no re-validation).
 - **Response envelope** — `{ success, data }` / `{ success, error }`. Use error codes from `@wriven/contracts/errors.ts`; never leak stack traces, internal service names, or DB errors.
 - **Message patterns** — dot-namespaced constants from `@wriven/contracts/messages.ts`; never hardcode pattern strings.

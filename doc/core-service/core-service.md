@@ -94,6 +94,8 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 
 `core.contentType.{create,list,get,update,delete}` · `core.entry.{create,list,get,update,delete,publish}` · `core.ping`. Defined as `CORE_PATTERNS` in `@wriven/contracts`.
 
+**AI generation** (planned): `core.ai.generate` (+ stream/job variants) — handler in the `AiModule` calls the injected `AiProvider`. Built in-process now so it can be extracted to `ai-service` later by swapping the provider impl for an HTTP client; the message pattern and gateway callers stay unchanged.
+
 **Usage metering** (`USAGE_PATTERNS`, specs/14): `core.usage.record` (batched atomic increment from the gateway's in-process buffer) · `core.usage.read` (composes the current-period `UsageView`: request count from `usage_buckets` + live media SUM + effective plan limits via `CoreEntitlementsService`). Limits stay in auth-service; core is the usage authority because it owns the metered resources (api_keys, delivery, media).
 
 ## Environment (`apps/core-service/.env`)
@@ -102,8 +104,11 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 PORT=5002
 DATABASE_URL=...   DIRECT_URL=...     # same Supabase DB, core_svc schema
 R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET_NAME=
-AI_SERVICE_URL=http://localhost:8000  # planned
-INTERNAL_SECRET=                       # must match ai-service (planned)
+# AI generation (runs in-process in core-service via AiModule/AiProvider):
+ANTHROPIC_API_KEY=                     # or OPENAI_API_KEY — LLM provider key, core only
+# Used only AFTER extraction to the standalone FastAPI ai-service:
+AI_SERVICE_URL=http://localhost:8000   # deferred — unused while AI gen is in-process
+INTERNAL_SECRET=                       # must match ai-service when extracted
 ```
 
 ## Not yet built
@@ -112,4 +117,4 @@ INTERNAL_SECRET=                       # must match ai-service (planned)
 - **Reference resolution** — stored as ids; no populate/expand.
 - **Unique-field enforcement** — `FieldDef.unique` declared but not enforced (needs a JSONB expression index or query check).
 - **Default content type seeding** on workspace creation.
-- **AI generation** — future `ai_generations` table will reference `content_entries.id`.
+- **AI generation** — `AiModule` + `AiProvider` interface to build next; runs in-process in core-service, extractable to the deferred FastAPI `ai-service`. A future `ai_generations` table will reference `content_entries.id`.
