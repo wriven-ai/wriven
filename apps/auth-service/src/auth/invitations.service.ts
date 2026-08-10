@@ -402,11 +402,17 @@ export class InvitationsService {
     const targetName = row.projectId
       ? await this.projectName(row.projectId)
       : await this.workspaceName(row.workspaceId);
-    await this.mail.sendInvitation(row.email, link, {
-      inviterName: await this.userName(row.invitedBy),
-      targetName,
-      role: row.role,
-    });
+    await this.mail.sendInvitation(
+      row.email,
+      link,
+      {
+        inviterName: await this.userName(row.invitedBy),
+        targetName,
+        role: row.role,
+        scope: row.scope as InvitationScope,
+      },
+      `${INVITE_TTL_DAYS} days`,
+    );
   }
 
   private async requireProject(projectId: string) {
