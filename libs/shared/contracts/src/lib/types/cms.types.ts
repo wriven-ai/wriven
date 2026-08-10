@@ -35,6 +35,8 @@ export interface FieldDef {
   options?: string[];
   /** Target content type id for `reference`. */
   refTypeId?: string;
+  /** Allow AI generation on this field (Tier-1: text|richtext|select). See specs/19. */
+  aiAssist?: boolean;
 }
 
 export type EntryStatus = 'draft' | 'published' | 'archived';

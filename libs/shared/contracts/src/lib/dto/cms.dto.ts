@@ -57,6 +57,10 @@ export class FieldDefDto {
   @IsOptional()
   @IsString()
   refTypeId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  aiAssist?: boolean;
 }
 
 export class CreateContentTypeDto {

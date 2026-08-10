@@ -154,6 +154,14 @@ export const USAGE_PATTERNS = {
 } as const;
 
 /**
+ * AI content generation. Owned by core-service (in-process `AiModule` behind an
+ * `AiProvider` seam — extractable to the deferred `ai-service` later). See specs/19.
+ */
+export const AI_PATTERNS = {
+  GENERATE: 'core.ai.generate',
+} as const;
+
+/**
  * Platform admin panel. Cross-tenant, god-mode operations. Backed by a separate
  * `admin_users` identity (auth-service) and cross-tenant reads in both services.
  * See doc/admin-panel.

@@ -2,6 +2,7 @@ export * from './lib/contracts.module';
 export * from './lib/messages';
 export * from './lib/errors';
 export * from './lib/dto/admin.dto';
+export * from './lib/dto/ai.dto';
 export * from './lib/dto/api-key.dto';
 export * from './lib/dto/auth.dto';
 export * from './lib/dto/cms.dto';
