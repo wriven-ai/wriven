@@ -351,6 +351,48 @@ export const usageBuckets = coreSchema.table(
   ],
 );
 
+// ── AI generation log (metering + audit; workspace = billing unit) ──────────
+
+/**
+ * One row per AI generation. Doubles as the metering source (row-count vs
+ * `aiTextRequestsPerMonth`) and an audit trail with token totals. `status`
+ * flows `pending` (reserved before the provider call) → `succeeded` | `failed`.
+ * Quota reserves against `status IN ('pending','succeeded')`; the `/usage` stat
+ * counts only `succeeded`. `content_type_id` / `entry_id` are plain uuids with no
+ * FK — a generation record survives its target being deleted. See specs/19.
+ */
+export const aiGenerations = coreSchema.table(
+  'ai_generations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
+    contentTypeId: uuid('content_type_id'),
+    entryId: uuid('entry_id'),
+    fieldKey: text('field_key').notNull(),
+    operation: text('operation').notNull(), // generate|expand|shorten|rewrite|tone|summarize|continue
+    model: text('model').notNull(),
+    promptTokens: integer('prompt_tokens'),
+    completionTokens: integer('completion_tokens'),
+    totalTokens: integer('total_tokens'),
+    status: text('status').notNull().default('pending'), // pending|succeeded|failed
+    error: text('error'),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('ai_generations_workspace_created_idx').on(t.workspaceId, t.createdAt),
+    index('ai_generations_entry_id_idx').on(t.entryId),
+    index('ai_generations_project_id_idx').on(t.projectId),
+    check(
+      'ai_generations_status_check',
+      sql`${t.status} in ('pending', 'succeeded', 'failed')`,
+    ),
+  ],
+);
+
 // ── Relations (Drizzle relational query API; no DB change) ──────────────────
 
 export const contentTypesRelations = relations(contentTypes, ({ many }) => ({
