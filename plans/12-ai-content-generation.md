@@ -39,7 +39,7 @@ editor UI — built on an extraction seam so it can move to the deferred `ai-ser
   - `libs/shared/contracts/src/lib/types/cms.types.ts` — add `aiAssist?: boolean` to `FieldDef`.
   - `libs/shared/contracts/src/lib/messages.ts` — add `AI_PATTERNS = { GENERATE: 'core.ai.generate' }`.
   - `libs/shared/contracts/src/lib/errors.ts` — add `AI_GENERATION_FAILED: { code, statusCode: 502 }`
-    and `AI_NOT_CONFIGURED: { code, statusCode: 503 }` (missing `OPENROUTER_API_KEY`, not a boot failure).
+    and `AI_NOT_CONFIGURED: { code, statusCode: 503 }` (missing `AI_API_KEY`, not a boot failure).
   - `libs/shared/contracts/src/index.ts` — barrel `export * from './lib/dto/ai.dto'`.
 - **Shared contracts:** all of the above (this *is* the contracts phase).
 - **Verify:** `pnpm nx typecheck @wriven/contracts` — clean (project name is the package name
@@ -67,15 +67,16 @@ editor UI — built on an extraction seam so it can move to the deferred `ai-ser
 - **Why here** — the feature core; gated on Phase 1 (contracts) + Phase 2 (table).
 - **Files — create:** `apps/core-service/src/ai/`
   - `ai-provider.interface.ts` — `AiProvider.generate(input): Promise<{ text; usage: {promptTokens;completionTokens;totalTokens}; model }>`. **The extraction seam** — no SDK types leak out.
-  - `providers/openrouter.provider.ts` — `@Injectable()` impl using the `openai` SDK:
-    `new OpenAI({ apiKey: OPENROUTER_API_KEY, baseURL: OPENROUTER_BASE_URL, timeout: AI_TIMEOUT_MS,
-    defaultHeaders: { 'HTTP-Referer': AI_REFERER, 'X-OpenRouter-Title': 'Wriven' } })` (current header
-    name; `X-Title` still accepted). Calls `chat.completions.create({ model: AI_MODEL, messages,
-    temperature })` where `temperature` comes from the operation (default `0.7`; `0.2`–`0.3` for
-    `rewrite`/`select`). Returns the **actual** model from `response.model` (may differ from
-    `AI_MODEL` for `openrouter/free`) + `response.usage`. Catches provider errors → rethrow as a typed
-    `AiProviderError` (status, message). If `OPENROUTER_API_KEY` is unset → throws a typed error the
-    service maps to `AI_NOT_CONFIGURED` (503) (never boot-fail). **Only file that imports `openai`**.
+  - `providers/openai-compatible.provider.ts` — `@Injectable()` **generic** OpenAI-compatible
+    provider using the `openai` SDK (works with OpenRouter, OpenAI, Groq, Together, Ollama, …; swapped
+    via env, not code):
+    `new OpenAI({ apiKey: AI_API_KEY, baseURL: AI_BASE_URL, timeout: AI_TIMEOUT_MS,
+    defaultHeaders: <parsed AI_HEADERS JSON> })`. Calls `chat.completions.create({ model: AI_MODEL,
+    messages, temperature })` where `temperature` comes from the operation (default `0.7`; `0.2`–`0.3`
+    for `rewrite`/`select`). Returns the **actual** model from `response.model` (may differ from
+    `AI_MODEL` for routed endpoints like `openrouter/free`) + `response.usage`. Catches provider errors
+    → rethrow as a typed `AiProviderError` (status, message). If `AI_API_KEY` is unset → the service
+    maps to `AI_NOT_CONFIGURED` (503) (never boot-fail). **Only file that imports `openai`**.
   - `ai-prompt.ts` — system prompt + per-`operation` templates (generate/expand/shorten/rewrite/tone/
     summarize/continue) + tone injection + context assembly (content type name, field label, sibling
     field values from the entry when `entryId` given). `select` prompt forces choice from `options[]`.
@@ -83,34 +84,32 @@ editor UI — built on an extraction seam so it can move to the deferred `ai-ser
     fences as **data** in the system prompt and instruct the model to treat entry context as untrusted
     data, never as instructions.
   - `ai.service.ts` — orchestrates: load content type → validate `fieldKey` is Tier-1 + `aiAssist !== false`
-    (else `VALIDATION_ERROR`) → **atomic quota reserve** in one txn: `pg_advisory_xact_lock(hashtext(workspaceId))`
-    → `INSERT` a `pending` `aiGenerations` row → `CoreEntitlementsService.assertAiTextQuota` counts
-    `status IN ('pending','succeeded')` in-period and throws `PLAN_LIMIT_REACHED` (→ rollback + delete
-    pending) if over; returns `{ remaining }` → commit the pending row → assemble `messages[]` (system +
-    `history` + instruction) → `provider.generate` → for `select`, validate `text ∈ options[]`, retry once
-    on miss; **retry-miss → finalize the row `failed` + throw `AI_GENERATION_FAILED` (no quota charge,
-    since failed rows don't count)** → on success finalize `succeeded` + tokens → return `AiGenerateResult`
-    with `remaining`. Never throws raw provider text.
+    (else `VALIDATION_ERROR`) → resolve `limit = CoreEntitlementsService.aiTextLimit(ws)` **outside** any
+    lock → **atomic quota reserve** in one txn: `pg_advisory_xact_lock(hashtext(workspaceId))` → `INSERT`
+    a `pending` `aiGenerations` row → count `status IN ('pending','succeeded')` in-period; if `limit !=
+    null` and count > limit → throw `PLAN_LIMIT_REACHED` (→ rollback discards the pending row) → commit
+    the pending row → assemble `messages[]` (system + `history` + instruction) → `provider.generate` →
+    for `select`, validate `text ∈ options[]`, retry once on miss; **retry-miss → finalize the row `failed`
+    + throw `AI_GENERATION_FAILED` (no quota charge, since failed rows don't count)** → on success finalize
+    `succeeded` + tokens → return `AiGenerateResult` with `remaining`. Never throws raw provider text.
   - `ai.controller.ts` — `@MessagePattern(AI_PATTERNS.GENERATE)` handler; pulls `workspaceId/projectId/
     userId/dto` from payload; delegates to `AiService`.
-  - `ai.module.ts` — `imports: [CoreEntitlementsModule, DatabaseModule]`, `providers: [AiService,
-    { provide: 'AI_PROVIDER', useClass: OpenRouterAiProvider }]`, `controllers: [AiController]`.
+  - `ai.module.ts` — `imports: [CoreEntitlementsModule]`, `providers: [AiService,
+    { provide: AI_PROVIDER, useClass: OpenAiCompatibleProvider }]`, `controllers: [AiController]`.
 - **Files — modify:**
   - `apps/core-service/src/app/app.module.ts` — add `AiModule` to `imports: [...]`.
-  - `apps/core-service/src/entitlements/core-entitlements.service.ts` — add `aiGenerations` to the
-    `schema` destructure, then `async assertAiTextQuota(workspaceId: string): Promise<{ remaining: number | null }>`
-    mirroring `assertEntryQuota`: resolve `limits(workspaceId)?.aiTextRequestsPerMonth`; if `null` →
-    `{ remaining: null }` (unmetered); else count `ai_generations` rows in the current calendar month
-    with `status IN ('pending','succeeded')` (reservation-aware — the caller has already inserted its
-    `pending` row under `pg_advisory_xact_lock` in the same txn); if count > limit → throw
-    `rpcError('PLAN_LIMIT_REACHED', …)`; else `{ remaining: limit - (count - 1) }` (exclude the just-inserted
-    pending row from remaining). **Hard-enforce** — do not adopt the fail-open write policy.
-  - `apps/core-service/src/usage/usage.service.ts` — in `read()` (UsageView composition), set
-    `aiText.used` = in-period count of `ai_generations` with `status='succeeded'`, and `aiText.limit`
-    from the resolved `aiTextRequestsPerMonth`. Single source of truth — no `usage_buckets` write.
-  - `apps/core-service/.env` + `apps/core-service/.env.example` — add `OPENROUTER_API_KEY`,
-    `OPENROUTER_BASE_URL=https://openrouter.ai/api/v1`, `AI_MODEL=openrouter/free`,
-    `AI_TIMEOUT_MS=30000`, `AI_REFERER=https://wriven.tech`.
+  - `apps/core-service/src/entitlements/core-entitlements.service.ts` — add
+    `aiTextLimit(workspaceId): Promise<number | null>` mirroring `revisionsCap` (returns the cached
+    `aiTextRequestsPerMonth`, fail-open). No count here — the atomic reserve + count live in `AiService`
+    so the auth round-trip stays outside the advisory lock.
+  - `apps/core-service/src/usage/usage.service.ts` — add `aiGenerations` to the schema destructure; in
+    `workspaceStats()` (NOT `read()` — `UsageView` has no `aiText` field; the stat lives on
+    `WorkspaceStatsView`) set `aiText.used` = in-period count of `ai_generations` with `status='succeeded'`
+    + `aiText.limit` from the resolved `aiTextRequestsPerMonth`. Single source of truth — no
+    `usage_buckets` write. (Also widen `WorkspaceStatsView.aiText.used` from `null` to `number | null`.)
+  - `apps/core-service/.env` + `apps/core-service/.env.example` — add `AI_API_KEY`,
+    `AI_BASE_URL=https://openrouter.ai/api/v1`, `AI_MODEL=openrouter/free`,
+    `AI_TIMEOUT_MS=30000`, `AI_HEADERS=` (optional JSON of extra provider headers).
 - **Shared contracts:** consumes `AI_PATTERNS`, `AiGenerateDto`, `AiGenerateResult`,
   `ERROR_CODES.AI_GENERATION_FAILED` (Phase 1).
 - **Verify:**
@@ -132,7 +131,7 @@ editor UI — built on an extraction seam so it can move to the deferred `ai-ser
   - `apps/api-gateway/src/content/ai-burst.guard.ts` — per-workspace sliding-window throttle (~10 req/min,
     in-memory map keyed by `workspaceId`) applied only to the AI route. Over the window →
     `RATE_LIMITED` (429). The monthly quota stops long-term abuse; this stops one workspace exhausting
-    the shared `OPENROUTER_API_KEY`'s ~20 RPM and degrading AI platform-wide. (In-memory is fine —
+    the shared `AI_API_KEY`'s ~20 RPM and degrading AI platform-wide. (In-memory is fine —
     single gateway instance; revisit if horizontally scaled.)
 - **Files — modify:** `apps/api-gateway/src/app/app.module.ts` — add `AiController` to the
   `controllers: [...]` array (gateway has no per-feature modules; all controllers register here, like
@@ -149,7 +148,7 @@ editor UI — built on an extraction seam so it can move to the deferred `ai-ser
 - **Files — create:** none.
 - **Files — modify:** none.
 - **Shared contracts:** none.
-- **Verify:** run `pnpm dev:core` + `pnpm dev:gateway` with a real `OPENROUTER_API_KEY`. With a valid
+- **Verify:** run `pnpm dev:core` + `pnpm dev:gateway` with a real `AI_API_KEY`. With a valid
   access token + `X-Workspace-Id` + `X-Project-Id`:
   - `POST /api/v1/content/ai/generate` `{ contentTypeId, fieldKey:<richtext field>, operation:'generate' }`
     → `200 { success:true, data:{ text, model, usage, remaining } }`.
@@ -157,7 +156,7 @@ editor UI — built on an extraction seam so it can move to the deferred `ai-ser
   - `select` field: returned `text ∈ options[]`; force a miss (options the model won't emit) → retry →
     still missing → `502 AI_GENERATION_FAILED`, a `failed` row, **no** quota charge.
   - Burst throttle: 11th call in a minute from one workspace → `429 RATE_LIMITED`.
-  - Unconfigured: unset `OPENROUTER_API_KEY`, restart core → route returns `503 AI_NOT_CONFIGURED`,
+  - Unconfigured: unset `AI_API_KEY`, restart core → route returns `503 AI_NOT_CONFIGURED`,
     core still boots, non-AI routes fine.
   - Quota: lower `aiTextRequestsPerMonth` for the test workspace below current usage → next call →
     `403 { success:false, error:{ code:'PLAN_LIMIT_REACHED' } }`, **no** provider call (no new row).
@@ -206,7 +205,7 @@ editor UI — built on an extraction seam so it can move to the deferred `ai-ser
 
 ## Risks / open questions
 
-- **Shared-key rate limit.** All users share one `OPENROUTER_API_KEY`; the free pool caps at ~20 req/min
+- **Shared-key rate limit.** All users share one `AI_API_KEY`; the free pool caps at ~20 req/min
   + 50–1000/day at the **key** level. Under load the upstream 429 can bite before the per-user 50 does.
   Mitigation in-plan: per-workspace burst throttle (~10/min → `RATE_LIMITED`) caps one workspace's blast
   radius, and upstream 429 maps to `AI_GENERATION_FAILED` (502). Real fix later: move `AI_MODEL` to a
@@ -217,10 +216,10 @@ editor UI — built on an extraction seam so it can move to the deferred `ai-ser
 - **`select` reliability.** Free models can't do structured output → prompt + validate + one retry.
   If miss-rate is high in smoke, tighten the prompt or pin a stronger `:free` model for `select` only.
 - **Hard vs soft quota.** Plan hard-enforces `aiTextRequestsPerMonth` (403 before the provider call).
-  If free-tier friction is too high at launch, switch `assertAiTextQuota` to soft (warn, allow) — but
+  If free-tier friction is too high at launch, switch the reserve to soft (warn, allow) — but
   that risks cost; keep hard unless explicitly changed.
 - **Token-based limits deferred.** Schema stores token totals; enforcement stays request-count
-  (`aiTextRequestsPerMonth`). Switching to token-based is a later change to `assertAiTextQuota` only.
+  (`aiTextRequestsPerMonth`). Switching to token-based is a later change to `AiService.reserveQuota` only.
 - **Timeout vs long gens.** 30s `AI_TIMEOUT_MS` may clip long richtext generations on slow free models.
   Tune up if smoke shows truncation; phase-2 streaming removes the bound.
 

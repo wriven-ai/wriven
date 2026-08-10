@@ -108,7 +108,7 @@ If the retry still misses → `AI_GENERATION_FAILED` (502), the row is marked `f
 is charged**.
 
 Error responses: `PLAN_LIMIT_REACHED` (403, over monthly quota — atomic, before the provider call),
-`RATE_LIMITED` (429, per-workspace burst throttle), `AI_NOT_CONFIGURED` (503, `OPENROUTER_API_KEY`
+`RATE_LIMITED` (429, per-workspace burst throttle), `AI_NOT_CONFIGURED` (503, `AI_API_KEY`
 missing), `AI_GENERATION_FAILED` (502, provider error / timeout / upstream 429 / `select` retry-miss),
 `VALIDATION_ERROR` (422, non-Tier-1 field or `aiAssist:false`).
 
@@ -134,7 +134,7 @@ New/changed in `libs/shared/contracts/src/lib`:
   ```ts
   // The LLM provider call failed (upstream error, timeout, bad response, upstream rate limit).
   AI_GENERATION_FAILED: { code: 'AI_GENERATION_FAILED', statusCode: 502 },
-  // AI provider is not configured (OPENROUTER_API_KEY missing). Returned, not a boot failure.
+  // AI provider is not configured (AI_API_KEY missing). Returned, not a boot failure.
   AI_NOT_CONFIGURED: { code: 'AI_NOT_CONFIGURED', statusCode: 503 },
   ```
   Quota exhaustion reuses `PLAN_LIMIT_REACHED` (403); the per-workspace burst throttle reuses
@@ -198,19 +198,20 @@ Migration: `pnpm db:core:generate` then `pnpm db:core:migrate` (Drizzle, `core_s
     `operation` → prompt template, post-process (`select` validation/retry, trim).
   - `ai-provider.interface.ts` — `AiProvider { generate(input): Promise<{text; usage; model}> }`.
     The extraction seam — swapping impl for an HTTP client to `ai-service` later changes nothing else.
-  - `providers/openrouter.provider.ts` — `openai` SDK client (`baseURL: OPENROUTER_BASE_URL`,
-    `apiKey`, `defaultHeaders: { 'HTTP-Referer', 'X-Title' }`, explicit `timeout` ~30s). Calls
-    `chat.completions.create({ model: AI_MODEL, messages, ... })`, reads `response.usage`.
+  - `providers/openai-compatible.provider.ts` — a **generic** OpenAI-compatible provider using the
+    `openai` SDK (works with OpenRouter, OpenAI, Groq, Together, Ollama, …; swapped via env, not code).
+    `new OpenAI({ apiKey: AI_API_KEY, baseURL: AI_BASE_URL, timeout: AI_TIMEOUT_MS, defaultHeaders: <parsed AI_HEADERS JSON> })`;
+    calls `chat.completions.create({ model: AI_MODEL, messages, ... })`, reads `response.usage` + `response.model`.
   - `ai-prompt.ts` — system prompt + per-operation templates + tone injection.
 - **Modify** `apps/core-service/src/app/app.module.ts` — import `AiModule`.
 - **Modify** `apps/core-service/src/db/schema/index.ts` — add `aiGenerations` table.
 - **Modify** `apps/core-service/src/entitlements/core-entitlements.service.ts` — add
-  `assertAiTextQuota(workspaceId): Promise<{ remaining: number | null }>` mirroring `assertEntryQuota`:
-  resolve `aiTextRequestsPerMonth` (cached), count `ai_generations` rows this billing period, throw
-  `PLAN_LIMIT_REACHED` when over. **Hard-enforce** — fail-open does not apply (each call costs tokens).
-- **Modify** `apps/core-service/.env` / `.env.example` — add `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`
+  `aiTextLimit(workspaceId): Promise<number | null>` (mirrors `revisionsCap`) — returns the plan's
+  `aiTextRequestsPerMonth` (cached, fail-open). The atomic reserve (advisory lock + pending row +
+  count vs limit) lives in `AiService` so the auth round-trip never extends the lock hold.
+- **Modify** `apps/core-service/.env` / `.env.example` — add `AI_API_KEY`, `AI_BASE_URL`
   (default `https://openrouter.ai/api/v1`), `AI_MODEL` (default `openrouter/free`), `AI_TIMEOUT_MS`
-  (default 30000), `AI_REFERER` (default app URL).
+  (default 30000), `AI_HEADERS` (optional JSON of extra provider headers).
 
 ### api-gateway
 - **Create** `apps/api-gateway/src/content/ai.controller.ts` — `POST /content/ai/generate`,
@@ -254,7 +255,7 @@ Migration: `pnpm db:core:generate` then `pnpm db:core:migrate` (Drizzle, `core_s
 - `apps/core-service/src/ai/ai.controller.ts`
 - `apps/core-service/src/ai/ai.service.ts`
 - `apps/core-service/src/ai/ai-provider.interface.ts`
-- `apps/core-service/src/ai/providers/openrouter.provider.ts`
+- `apps/core-service/src/ai/providers/openai-compatible.provider.ts`
 - `apps/core-service/src/ai/ai-prompt.ts`
 - `apps/api-gateway/src/content/ai.controller.ts`
 - `apps/client/src/features/content/ai/useAiGenerate.ts`
@@ -298,15 +299,16 @@ Base:
   Conventional Commits with no body.
 
 Feature-specific:
-- **Provider keys are core-service-only.** `OPENROUTER_API_KEY` never appears in the gateway or
+- **Provider keys are core-service-only.** `AI_API_KEY` never appears in the gateway or
   client env, and is never sent to the browser.
-- **Fail-closed if AI is unconfigured, but never boot-fail.** Missing `OPENROUTER_API_KEY` → the
+- **Fail-closed if AI is unconfigured, but never boot-fail.** Missing `AI_API_KEY` → the
   `/content/ai/generate` route returns `AI_NOT_CONFIGURED` (503); core-service still boots and all
   non-AI features keep working.
 - **Explicit SDK timeout.** Set `timeout` on the `openai` client (~30s). Never rely on the 10-min
   default — it hangs the TCP handler.
-- **OpenRouter headers.** Send `HTTP-Referer` + `X-OpenRouter-Title` (current name; `X-Title` still
-  accepted) for attribution/rankings.
+- **Provider headers are generic.** The provider is OpenAI-compatible (OpenRouter, OpenAI, Groq, …);
+  any provider-specific headers (e.g. OpenRouter attribution) come from the optional `AI_HEADERS` JSON
+  env — no provider name baked into code.
 - **Atomic quota — it costs money.** Count-then-compare is non-atomic: concurrent calls can both
   pass and both hit the provider. Reserve atomically: `pg_advisory_xact_lock(hashtext(workspace_id))`
   → insert a `pending` `ai_generations` row → count `status IN ('pending','succeeded')` in-period →
@@ -314,7 +316,7 @@ Feature-specific:
   the row to `succeeded`/`failed`. Hard-enforce, unlike the soft delivery-requests gate.
 - **Burst throttle (protects the shared key).** A per-workspace sliding window (~10 req/min) on the
   gateway route → `RATE_LIMITED` (429). The monthly quota stops long-term abuse; this stops one
-  workspace exhausting the shared `OPENROUTER_API_KEY`'s ~20 RPM and degrading AI for every user.
+  workspace exhausting the shared `AI_API_KEY`'s ~20 RPM and degrading AI for every user.
 - **No structured-output reliance on free models.** `select` constraint = prompt + validate against
   `options[]` + one retry. **If the retry still misses → `AI_GENERATION_FAILED` (502), row marked
   `failed`, no quota charge** (don't bill for unconstrainable output). Do not use
@@ -331,7 +333,7 @@ Feature-specific:
 - **Single source of truth for the `aiText` stat.** The `/usage` dashboard `aiText.used` is the
   in-period count of `ai_generations` (`status='succeeded'`) — no `usage_buckets` double-write.
 - **Extraction-ready seam.** All LLM access goes through `AiProvider`. No direct SDK calls outside
-  `providers/openrouter.provider.ts`. Future `ai-service` split = swap that one file for an HTTP client.
+  `providers/openai-compatible.provider.ts`. Future `ai-service` split = swap that one file for an HTTP client.
 - **Chat Completions API.** Use Chat Completions (widest compatibility across the models behind
   OpenRouter), not OpenAI's Responses API.
 
@@ -343,7 +345,7 @@ Feature-specific:
 - [ ] `pnpm db:core:generate` + `pnpm db:core:migrate` — `ai_generations` table exists in `core_svc`.
 - [ ] `AI_PATTERNS.GENERATE`, `AI_GENERATION_FAILED`, `FieldDef.aiAssist`, `AiGenerateDto` exported
       from `@wriven/contracts`.
-- [ ] Manual smoke (core + gateway running with a real `OPENROUTER_API_KEY`):
+- [ ] Manual smoke (core + gateway running with a real `AI_API_KEY`):
       `POST /api/v1/content/ai/generate` with `{ contentTypeId, fieldKey, operation:'generate' }`
       on a `richtext` field returns `{ text, model, usage, remaining }` in the success envelope.
 - [ ] Multi-turn: a second call with `history` (first user+assistant) + `instruction:"shorten"`
@@ -353,7 +355,7 @@ Feature-specific:
       the period returns `{ success:false, error:{ code:'PLAN_LIMIT_REACHED', statusCode:403 } }`
       and **no** provider call is made. Quota check is atomic (pending row + `pg_advisory_xact_lock`).
 - [ ] Burst throttle: > ~10 calls/min from one workspace → `RATE_LIMITED` (429).
-- [ ] Unconfigured: with `OPENROUTER_API_KEY` unset, the route returns `AI_NOT_CONFIGURED` (503) and
+- [ ] Unconfigured: with `AI_API_KEY` unset, the route returns `AI_NOT_CONFIGURED` (503) and
       core-service still boots.
 - [ ] `select` retry-miss: returns `AI_GENERATION_FAILED` (502), a `failed` row, and **no** quota charge.
 - [ ] `/usage` dashboard: `aiText.used` reflects the in-period succeeded `ai_generations` count.

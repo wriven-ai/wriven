@@ -36,7 +36,7 @@ export interface WorkspaceStatsView {
   period: { start: string; end: string }; // current calendar month (UTC)
   // forward-compatible — unmetered today; `used` null until metering lands
   bandwidthGb: { usedGb: null; limitGb: number | null };
-  aiText: { used: null; limit: number | null };
+  aiText: { used: number | null; limit: number | null };
   aiImage: { used: null; limit: number | null };
 }
 

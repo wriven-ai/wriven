@@ -12,8 +12,15 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 
-const { usageBuckets, mediaAssets, contentEntries, contentTypes, apiKeys, webhooks } =
-  schema;
+const {
+  usageBuckets,
+  mediaAssets,
+  contentEntries,
+  contentTypes,
+  apiKeys,
+  webhooks,
+  aiGenerations,
+} = schema;
 
 /**
  * Workspace usage metering. Owns the Delivery API request counter
@@ -111,6 +118,18 @@ export class UsageService {
     return Number(row?.total ?? 0);
   }
 
+  /** Succeeded AI text generations this billing period — the `aiText.used` stat. specs/19. */
+  private async aiTextUsed(workspaceId: string): Promise<number> {
+    return this.db.$count(
+      aiGenerations,
+      and(
+        eq(aiGenerations.workspaceId, workspaceId),
+        eq(aiGenerations.status, 'succeeded'),
+        sql`${aiGenerations.createdAt} >= date_trunc('month', now())`,
+      ),
+    );
+  }
+
   /**
    * Workspace aggregate stats. Reuses `read()` for requests/storage/period and
    * adds content/media/key/webhook counts. `projects`/`members` are auth-owned
@@ -125,7 +144,7 @@ export class UsageService {
     const usage = await this.read({ workspaceId: ws });
     const limits = await this.entitlements.effectiveLimits(ws);
 
-    const [entries, contentTypesCount, apiKeysCount, webhooksCount, media] =
+    const [entries, contentTypesCount, apiKeysCount, webhooksCount, media, aiTextCount] =
       await Promise.all([
         this.entryCounts({ workspaceId: ws }),
         this.db.$count(
@@ -138,6 +157,7 @@ export class UsageService {
         ),
         this.db.$count(webhooks, eq(webhooks.workspaceId, ws)),
         this.mediaAggregate({ workspaceId: ws }),
+        this.aiTextUsed(ws),
       ]);
 
     return {
@@ -155,7 +175,7 @@ export class UsageService {
       apiRequests: usage.requests,
       period: usage.period,
       bandwidthGb: { usedGb: null, limitGb: limits?.assetBandwidthGb ?? null },
-      aiText: { used: null, limit: limits?.aiTextRequestsPerMonth ?? null },
+      aiText: { used: aiTextCount, limit: limits?.aiTextRequestsPerMonth ?? null },
       aiImage: { used: null, limit: limits?.aiImageRequestsPerMonth ?? null },
     };
   }

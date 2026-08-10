@@ -138,6 +138,17 @@ export class CoreEntitlementsService {
     return cap == null ? null : cap;
   }
 
+  /**
+   * AI text-generation requests allowed per month, or `null` = unlimited /
+   * unresolvable (fail-open). Enforcement (count vs `ai_generations`) lives in
+   * `AiService` inside an atomic advisory-lock transaction so concurrent
+   * requests can't both pass. specs/19.
+   */
+  async aiTextLimit(workspaceId: string): Promise<number | null> {
+    const limit = (await this.limits(workspaceId))?.aiTextRequestsPerMonth;
+    return limit == null ? null : limit;
+  }
+
   private assert(used: number, max: number, label: string): void {
     if (used >= max) {
       throw rpcError(
