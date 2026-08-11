@@ -33,6 +33,7 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { ApiKeysController } from '../api-keys/api-keys.controller';
+import { AiController } from '../content/ai.controller';
 import { ContentController } from '../content/content.controller';
 import { MediaController } from '../content/media.controller';
 import { DeliveryController } from '../delivery/delivery.controller';
@@ -97,6 +98,7 @@ import { AppService } from './app.service';
     AppController,
     AuthController,
     UsersController,
+    AiController,
     ContentController,
     MediaController,
     DeliveryController,
