@@ -45,6 +45,8 @@ This means adding a user-chosen field needs **no migration**, scales without per
 
 **usage_buckets** — workspace_id, `period_start` / `period_end` (timestamptz; calendar month, UTC), `request_count` (bigint, default 0), `updated_at`. `unique(workspace_id, period_start)` + index on `workspace_id`. One row per workspace × billing period, atomically incremented (`ON CONFLICT … request_count + n`) by the gateway's batched flush. No FK (auth_svc boundary). See specs/14.
 
+**ai_generations** — workspace_id, project_id, `content_type_id` / `entry_id` (nullable, plain uuid — no FK, so a record survives its target being deleted), `field_key`, `operation`, `model`, `prompt_tokens` / `completion_tokens` / `total_tokens` (nullable int), `status` (`pending`|`succeeded`|`failed`, default `pending`), `error`, `created_by`, `created_at`. Indexes `(workspace_id, created_at)` + `(entry_id)` + `(project_id)`. One row per generation — meters usage (row-count of `pending`+`succeeded` vs `aiTextRequestsPerMonth`, reserved atomically via `pg_advisory_xact_lock`) + audits + stores token totals. See specs/19.
+
 ## Field types (`FieldDef`)
 
 Defined in `@wriven/contracts` (`cms.types.ts` / `cms.dto.ts`):
@@ -94,7 +96,7 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 
 `core.contentType.{create,list,get,update,delete}` · `core.entry.{create,list,get,update,delete,publish}` · `core.ping`. Defined as `CORE_PATTERNS` in `@wriven/contracts`.
 
-**AI generation** (planned): `core.ai.generate` (+ stream/job variants) — handler in the `AiModule` calls the injected `AiProvider`. Built in-process now so it can be extracted to `ai-service` later by swapping the provider impl for an HTTP client; the message pattern and gateway callers stay unchanged.
+**AI generation** (`AI_PATTERNS`, specs/19): `core.ai.generate` — the `AiModule` handler calls the injected `AiProvider` (generic OpenAI-compatible impl: any OpenAI-compat endpoint via env). Runs in-process so it can be extracted to `ai-service` later by swapping the provider impl for an HTTP client; the pattern + gateway callers stay unchanged.
 
 **Usage metering** (`USAGE_PATTERNS`, specs/14): `core.usage.record` (batched atomic increment from the gateway's in-process buffer) · `core.usage.read` (composes the current-period `UsageView`: request count from `usage_buckets` + live media SUM + effective plan limits via `CoreEntitlementsService`). Limits stay in auth-service; core is the usage authority because it owns the metered resources (api_keys, delivery, media).
 
@@ -104,8 +106,12 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 PORT=5002
 DATABASE_URL=...   DIRECT_URL=...     # same Supabase DB, core_svc schema
 R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET_NAME=
-# AI generation (runs in-process in core-service via AiModule/AiProvider):
-ANTHROPIC_API_KEY=                     # or OPENAI_API_KEY — LLM provider key, core only
+# AI content generation (in-process AiModule; generic OpenAI-compatible Chat Completions):
+AI_API_KEY=                            # provider key (OpenRouter/OpenAI/Groq…), core only
+AI_BASE_URL=https://openrouter.ai/api/v1
+AI_MODEL=openrouter/free
+AI_TIMEOUT_MS=30000
+AI_HEADERS=                            # optional JSON of extra provider headers
 # Used only AFTER extraction to the standalone FastAPI ai-service:
 AI_SERVICE_URL=http://localhost:8000   # deferred — unused while AI gen is in-process
 INTERNAL_SECRET=                       # must match ai-service when extracted
@@ -113,8 +119,6 @@ INTERNAL_SECRET=                       # must match ai-service when extracted
 
 ## Not yet built
 
-- **Media upload** — `media_assets` exists; needs R2 presign/upload endpoints + ImageKit URL building.
-- **Reference resolution** — stored as ids; no populate/expand.
-- **Unique-field enforcement** — `FieldDef.unique` declared but not enforced (needs a JSONB expression index or query check).
-- **Default content type seeding** on workspace creation.
-- **AI generation** — `AiModule` + `AiProvider` interface to build next; runs in-process in core-service, extractable to the deferred FastAPI `ai-service`. A future `ai_generations` table will reference `content_entries.id`.
+- **AI image generation** — Tier-1 text/richtext/select generation shipped (specs/19); image gen deferred (different model/cost).
+- **Per-field `aiAssist` builder toggle** — `FieldDef.aiAssist` is enforced server-side; the content-type builder UI toggle is pending.
+- **Extraction to `ai-service`** — the `AiProvider` seam keeps this a later one-file swap (provider impl → HTTP client).

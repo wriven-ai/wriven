@@ -2,7 +2,7 @@ Current Scope & Status
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webhook reconciler committed; live e2e pending frontend._
+_Last reviewed: after AI content generation (specs/19) — Tier-1 text/richtext/select generation + Co-Writer panel shipped; image gen deferred._
 
 ---
 
@@ -52,7 +52,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
 | **Stripe billing** (Checkout, Billing Portal, direct plan-swap, webhook reconcile) | ✅ | backend done (specs/08); `/billing/swap` upgrades/cycle-switches immediately (prorated) + **defers downgrades to period end** via Subscription Schedules (specs/16, `pendingDowngrade` on the view) + cancel-to-free; live e2e 🟡 deferred to sandbox config |
-| **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI limit fields added (unenforced — AI gen in core pending) |
+| **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI text limit fields enforced (specs/19) |
 | **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan()` filled against the shared cascade; nav + action buttons + management routes gated (specs/13) |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
@@ -94,14 +94,16 @@ out = swap the in-process provider impl for an HTTP client pointing at `AI_SERVI
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `AiModule` + `AiProvider` interface (in core-service) | 🔲 | extractable seam first; default impl calls LLM provider |
-| Text generation (`core.ai.generate`) | 🔲 | gateway HTTP route → core TCP → provider |
-| Image generation | 🔲 | later |
-| Plan-limit enforcement (specs/14 metering) | 🔲 | AI limit fields exist, unenforced until this ships |
-| Extract to Python `ai-service` | 🔲 | deferred; swap impl for HTTP client |
+| `AiModule` + generic `AiProvider` (OpenAI-compatible) | ✅ | `openai` SDK → any OpenAI-compat endpoint (OpenRouter/OpenAI/Groq…), env-swapped |
+| Text generation (`core.ai.generate`) — Tier 1 (text/richtext/select) | ✅ | gateway → core → provider; multi-turn; `select` validated + retried; specs/19 |
+| Co-Writer panel (apps/client) | ✅ | field/operation selectors, preview, apply; richtext emits semantic HTML → ProseMirror JSON |
+| Plan-limit enforcement | ✅ | hard-enforce `aiTextRequestsPerMonth` (advisory-lock atomic reserve); `aiText.used` wired in `/stats` |
+| Image generation | 🔲 | later (different model/cost) |
+| Per-field `aiAssist` builder toggle | 🔲 | backend supports `FieldDef.aiAssist`; content-type builder UI toggle pending |
+| Extract to Python `ai-service` | 🔲 | deferred; swap provider impl for an HTTP client |
 
-> Schema is AI-ready: a future `ai_generations` table references `content_entries.id`; no re-model needed.
-> LLM provider keys (Anthropic/OpenAI) live in **core-service** env only — never gateway/frontend.
+> `ai_generations` meters usage (row-count vs the plan limit), audits each generation, and stores token totals.
+> Provider key (`AI_API_KEY`) lives in **core-service** env only — never gateway/frontend.
 
 ## Frontend (`apps/client`, Next.js 16)
 
@@ -131,5 +133,5 @@ out = swap the in-process provider impl for an HTTP client pointing at `AI_SERVI
 
 - Consumer **SDK / npm package** + published Delivery API docs.
 - **Frontend billing page** — Checkout redirect, Billing Portal link, replace the mock pricing page; consumes `/billing/*`. Unblocks the live Stripe e2e (the hosted Checkout page also needs the sandbox account configured: `pk_test_` publishable key + Managed Payments provisioned/disabled).
-- **AI generation** — ship the `AiModule` in core-service (extractable to the deferred `ai-service` later).
+- **AI generation** — Tier 1 shipped (specs/19); image gen + per-field `aiAssist` builder toggle remain.
 - Deploy (Docker Compose on VPS) + CI.
