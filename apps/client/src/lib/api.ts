@@ -360,6 +360,40 @@ export const contentApi = {
     ),
 };
 
+export const aiApi = {
+  generate: (dto: {
+    contentTypeId: string;
+    entryId?: string;
+    fieldKey: string;
+    operation:
+      | 'generate'
+      | 'expand'
+      | 'shorten'
+      | 'rewrite'
+      | 'tone'
+      | 'summarize'
+      | 'continue';
+    instruction?: string;
+    tone?: string;
+    history?: { role: 'user' | 'assistant'; content: string }[];
+  }) =>
+    request<{
+      text: string;
+      model: string;
+      usage: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+      };
+      remaining: number | null;
+    }>('/content/ai/generate', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+      project: true,
+    }),
+};
+
 export const apiKeyApi = {
   list: () =>
     request<ApiKeyView[]>('/api-keys', { workspace: true, project: true }),

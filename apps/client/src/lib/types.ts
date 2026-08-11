@@ -165,6 +165,8 @@ export interface FieldDef {
   multiple?: boolean;
   options?: string[];
   refTypeId?: string;
+  /** Allow AI generation on this field (text|richtext|select). */
+  aiAssist?: boolean;
 }
 
 export interface ContentTypeView {

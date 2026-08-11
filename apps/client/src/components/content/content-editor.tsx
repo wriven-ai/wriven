@@ -11,7 +11,6 @@ import {
   Save,
   Send,
   SlidersHorizontal,
-  Sparkles,
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -27,6 +26,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { FieldRow, isFieldEmpty, STATUS_COLORS } from './fields';
+import { AiPanel } from './ai-panel';
 import { RevisionsDrawer } from './revisions-drawer';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
@@ -71,7 +71,6 @@ export function ContentEditor({
   const [isDirty, setIsDirty] = useState(false);
   const [saveOk, setSaveOk] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [aiPrompt, setAiPrompt] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -163,8 +162,13 @@ export function ContentEditor({
     [titleField?.key, ...bodyFields.map((b) => b.key)].filter(Boolean) as string[],
   );
   const mainFields = allFields.filter((f) => !usedInMain.has(f.key));
-  const hasRichText = bodyFields.length > 0;
   const hasMain = !!titleField || bodyFields.length > 0;
+  // Show the Co-Writer when there is at least one AI-eligible field.
+  const hasAiTarget = allFields.some(
+    (f) =>
+      (f.type === 'text' || f.type === 'richtext' || f.type === 'select') &&
+      f.aiAssist !== false,
+  );
 
   return (
     <div className="space-y-6 text-left">
@@ -286,7 +290,7 @@ export function ContentEditor({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Center: writing surface */}
-        <div className={`${hasRichText ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
+        <div className={`${hasAiTarget ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
           <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 sm:p-6 shadow-sm space-y-5">
             {allFields.length === 0 && (
               <p className="text-sm font-mono text-text-muted">
@@ -352,39 +356,14 @@ export function ContentEditor({
           )}
         </div>
 
-        {/* Right: AI co-writer — only when the content type has a rich-text body */}
-        {hasRichText && (
-        <aside className="lg:col-span-4">
-          <div className="bg-brand-surface border border-brand-border rounded-xl shadow-sm flex flex-col sticky top-4">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-brand-border">
-              <Sparkles className="w-4 h-4 text-brand-secondary" />
-              <span className="text-sm font-mono font-bold tracking-wider text-text-primary">Wriven Co-Writer</span>
-              <span className="ml-auto text-sm font-mono bg-brand-secondary/10 text-brand-secondary px-2 py-0.5 rounded font-bold">AI</span>
-            </div>
-            <div className="px-5 py-3 bg-brand-surface-soft/60 border-b border-brand-border">
-              <p className="text-sm font-mono text-text-muted leading-relaxed">
-                AI content generation — coming soon. The AI service is not yet wired.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 p-5">
-              <textarea
-                rows={12}
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="e.g. Expand this paragraph with 3 bullet points..."
-                className="w-full min-h-[300px] text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-3 text-text-primary focus:outline-none focus:border-brand-accent leading-relaxed resize-y"
-              />
-              <button
-                type="button"
-                disabled
-                className="w-full inline-flex items-center justify-center gap-2 bg-brand-secondary/40 text-white/60 border border-brand-border-button font-mono font-bold text-sm py-2.5 px-4 rounded-lg cursor-not-allowed"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Apply Suggestions (unavailable)
-              </button>
-            </div>
-          </div>
-        </aside>
+        {/* Right: AI Co-Writer — shown when there's an AI-eligible field */}
+        {hasAiTarget && (
+          <AiPanel
+            contentTypeId={activeTypeId}
+            entryId={entryId}
+            fields={allFields}
+            setField={setField}
+          />
         )}
       </div>
 

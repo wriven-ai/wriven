@@ -1,6 +1,7 @@
 'use client';
 
 import Placeholder from '@tiptap/extension-placeholder';
+import Link from '@tiptap/extension-link';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -70,6 +71,9 @@ export function RichTextEditor({
     immediatelyRender: false, // avoid SSR hydration mismatch in Next.js
     extensions: [
       StarterKit,
+      Link.configure({
+        HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' },
+      }),
       MediaImage,
       Placeholder.configure({ placeholder: placeholder ?? 'Write…' }),
     ],
