@@ -1,8 +1,8 @@
 /**
  * The AI provider seam. All LLM access in core-service goes through this
- * interface — the OpenRouter impl lives in `providers/openrouter.provider.ts`.
- * Swapping it for an HTTP client pointing at the deferred FastAPI `ai-service`
- * is the entire extraction cost (no caller changes). See specs/19.
+ * interface — the concrete impl is `providers/openai-compatible.provider.ts`.
+ * Swapping it for an HTTP client (e.g. a future standalone `ai-service`) is the
+ * only change needed; callers are untouched.
  */
 
 /** A chat message in the shape the provider expects. */

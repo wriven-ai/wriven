@@ -9,8 +9,8 @@ import { OpenAiCompatibleProvider } from './providers/openai-compatible.provider
  * AI content generation. The provider is injected behind the `AiProvider` seam.
  * `OpenAiCompatibleProvider` talks Chat Completions and works with any
  * OpenAI-compatible endpoint (OpenRouter, OpenAI, Groq, …) — swapped via env, not
- * code. Extraction to the deferred `ai-service` swaps this one file for an HTTP
- * client. DB (DRIZZLE) + ConfigService are globally available. See specs/19.
+ * code. Extraction to a standalone `ai-service` later swaps this one file for an
+ * HTTP client. DB (DRIZZLE) + ConfigService are globally available.
  */
 @Module({
   imports: [CoreEntitlementsModule],

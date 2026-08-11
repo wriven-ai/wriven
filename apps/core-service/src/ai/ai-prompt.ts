@@ -10,7 +10,7 @@ import type { AiChatMessage } from './ai-provider.interface';
  *     retried upstream (free models can't be trusted with structured output).
  *
  * Operations are single-shot; multi-turn refinement is the client sending prior
- * turns as `history` (the model sees the running conversation). See specs/19.
+ * turns as `history` (the model sees the running conversation).
  */
 
 export interface PromptContext {

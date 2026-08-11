@@ -22,7 +22,7 @@ import {
  *
  * The `openai` SDK is imported **only here**, keeping the {@link AiProvider} seam
  * clean — extraction to the deferred `ai-service` swaps this one file for an HTTP
- * client. See specs/19.
+ * client.
  *
  * Uses Chat Completions (not OpenAI's Responses API) for widest compatibility.
  */

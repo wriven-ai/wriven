@@ -12,7 +12,8 @@ import {
 
 /**
  * AI content generation contracts. The provider call lives in core-service behind
- * an `AiProvider` seam (extractable to the deferred `ai-service`). See specs/19.
+ * an `AiProvider` seam — a future standalone `ai-service` can replace it without
+ * touching callers.
  */
 
 /** Operations the generator supports (Tier-1 fields: text | richtext | select). */

@@ -155,7 +155,8 @@ export const USAGE_PATTERNS = {
 
 /**
  * AI content generation. Owned by core-service (in-process `AiModule` behind an
- * `AiProvider` seam — extractable to the deferred `ai-service` later). See specs/19.
+ * `AiProvider` seam — a future standalone `ai-service` can replace the impl
+ * without changing these patterns).
  */
 export const AI_PATTERNS = {
   GENERATE: 'core.ai.generate',

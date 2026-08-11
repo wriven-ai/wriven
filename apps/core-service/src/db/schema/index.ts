@@ -359,7 +359,7 @@ export const usageBuckets = coreSchema.table(
  * flows `pending` (reserved before the provider call) → `succeeded` | `failed`.
  * Quota reserves against `status IN ('pending','succeeded')`; the `/usage` stat
  * counts only `succeeded`. `content_type_id` / `entry_id` are plain uuids with no
- * FK — a generation record survives its target being deleted. See specs/19.
+ * FK — a generation record survives its target being deleted.
  */
 export const aiGenerations = coreSchema.table(
   'ai_generations',

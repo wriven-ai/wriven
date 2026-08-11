@@ -31,10 +31,10 @@ export const ERROR_CODES = {
   // plan row isn't left half-linked. Retryable.
   STRIPE_SYNC_FAILED: { code: 'STRIPE_SYNC_FAILED', statusCode: 500 },
   // The LLM provider call failed (upstream error, timeout, bad response, upstream
-  // rate limit, or a `select` retry-miss). See specs/19.
+  // rate limit, or a `select` retry-miss).
   AI_GENERATION_FAILED: { code: 'AI_GENERATION_FAILED', statusCode: 502 },
-  // AI is not configured (OPENROUTER_API_KEY missing). Returned on the route, not a
-  // boot failure — core-service stays up. See specs/19.
+  // AI is not configured (AI_API_KEY missing). Returned on the route, not a boot
+  // failure — core-service stays up.
   AI_NOT_CONFIGURED: { code: 'AI_NOT_CONFIGURED', statusCode: 503 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;

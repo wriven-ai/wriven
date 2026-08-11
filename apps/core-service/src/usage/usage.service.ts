@@ -118,7 +118,7 @@ export class UsageService {
     return Number(row?.total ?? 0);
   }
 
-  /** Succeeded AI text generations this billing period — the `aiText.used` stat. specs/19. */
+  /** Succeeded AI text generations this billing period — the `aiText.used` stat. */
   private async aiTextUsed(workspaceId: string): Promise<number> {
     return this.db.$count(
       aiGenerations,

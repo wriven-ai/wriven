@@ -14,7 +14,7 @@ import {
  *
  * In-memory — fine for a single gateway instance; revisit if horizontally
  * scaled (move to Redis). Must run AFTER `WorkspaceGuard` so `req.workspaceId`
- * is set. See specs/19.
+ * is set.
  */
 @Injectable()
 export class AiBurstGuard implements CanActivate {
