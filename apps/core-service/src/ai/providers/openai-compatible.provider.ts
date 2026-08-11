@@ -10,15 +10,8 @@ import {
 
 /**
  * Generic OpenAI-compatible provider. Talks the Chat Completions API shape, so it
- * works with **any** compatible endpoint — OpenRouter, OpenAI direct, Groq,
- * Together, local Ollama, etc. Swap provider by changing env, **no code change**:
- *
- *   AI_API_KEY   — the provider's key (sk-or-…, sk-…, etc.)
- *   AI_BASE_URL  — any Chat Completions endpoint (https://openrouter.ai/api/v1, …)
- *   AI_MODEL     — any model the endpoint serves
- *   AI_TIMEOUT_MS — request timeout (default 30s; overrides the SDK's 10-min default)
- *   AI_HEADERS   — optional JSON of extra headers for provider-specific needs
- *                  (e.g. OpenRouter attribution: {"HTTP-Referer":"…","X-Title":"…"})
+ * works with **any** compatible endpoint 
+
  *
  * The `openai` SDK is imported **only here**, keeping the {@link AiProvider} seam
  * clean — extraction to the deferred `ai-service` swaps this one file for an HTTP
@@ -38,7 +31,8 @@ export class OpenAiCompatibleProvider implements AiProvider {
     this.client = key
       ? new OpenAI({
           apiKey: key,
-          baseURL: cfg.get<string>('AI_BASE_URL') ?? 'https://openrouter.ai/api/v1',
+          baseURL:
+            cfg.get<string>('AI_BASE_URL') ?? 'https://openrouter.ai/api/v1',
           timeout: cfg.get<number>('AI_TIMEOUT_MS') ?? 30_000,
           defaultHeaders: parseHeaders(cfg.get<string>('AI_HEADERS')),
         })

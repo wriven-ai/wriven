@@ -55,7 +55,7 @@ function systemPrompt(ctx: PromptContext): string {
       ? `Respond with EXACTLY ONE of these options and nothing else: ${(ctx.options ?? []).join(', ')}.`
       : `Output ONLY the field content — no preamble, no headings, no "Here is…", no explanations.`,
     ctx.fieldType === 'richtext'
-      ? 'Format as rich text (HTML or markdown) suitable for a document body.'
+      ? 'Format as semantic HTML using only these tags: h2, h3, p, ul, ol, li, blockquote, a, strong, em, code. Do NOT use markdown, do NOT wrap in a code fence, do NOT emit <html>/<body>/<h1>.'
       : '',
     'Keep it accurate and concise. If unsure, prefer a short, safe answer.',
     // Prompt-injection mitigation:

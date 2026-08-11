@@ -22,7 +22,7 @@ import { AiBurstGuard } from './ai-burst.guard';
  * AI content generation HTTP edge. Forwards to core-service's
  * `core.ai.generate` (AiModule) — AI runs in-process in core, not at the
  * gateway. Scoped like other content routes (JWT + workspace + project +
- * permission) plus the per-workspace {@link AiBurstGuard}. See specs/19.
+ * permission) plus the per-workspace {@link AiBurstGuard}.
  */
 @Controller('content/ai')
 @UseGuards(
