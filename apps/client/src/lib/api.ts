@@ -105,6 +105,8 @@ interface RequestOptions {
   workspace?: boolean;
   /** Attach the X-Project-Id header. */
   project?: boolean;
+  /** Abort only this browser request; server-side work may already be running. */
+  signal?: AbortSignal;
 }
 
 // De-dupe concurrent refreshes so a burst of 401s triggers one refresh call.
@@ -146,6 +148,7 @@ async function request<T>(
     auth = true,
     workspace = false,
     project = false,
+    signal,
   } = opts;
   const headers: Record<string, string> = {};
   if (process.env.NEXT_PUBLIC_USE_NGROK === 'true')
@@ -171,6 +174,7 @@ async function request<T>(
     headers,
     credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal,
   });
 
   // Expired access cookie → refresh once, then retry the original request.
@@ -314,6 +318,7 @@ export const contentApi = {
     slug?: string;
     status?: string;
     data: Record<string, unknown>;
+    aiGenerationIds?: string[];
   }) =>
     request<ContentEntryView>('/content/entries', {
       method: 'POST',
@@ -328,7 +333,7 @@ export const contentApi = {
     }),
   updateEntry: (
     id: string,
-    dto: { slug?: string; status?: string; data?: Record<string, unknown> },
+    dto: { slug?: string; status?: string; data?: Record<string, unknown>; aiGenerationIds?: string[] },
   ) =>
     request<ContentEntryView>(`/content/entries/${id}`, {
       method: 'PATCH',
@@ -362,6 +367,7 @@ export const contentApi = {
 
 export const aiApi = {
   generate: (dto: {
+    requestId: string;
     contentTypeId: string;
     entryId?: string;
     fieldKey: string;
@@ -374,10 +380,12 @@ export const aiApi = {
       | 'summarize'
       | 'continue';
     instruction?: string;
+    sourceContent?: string;
     tone?: string;
     history?: { role: 'user' | 'assistant'; content: string }[];
-  }) =>
+  }, signal?: AbortSignal) =>
     request<{
+      generationId: string;
       text: string;
       model: string;
       usage: {
@@ -391,6 +399,7 @@ export const aiApi = {
       body: dto,
       workspace: true,
       project: true,
+      signal,
     }),
 };
 

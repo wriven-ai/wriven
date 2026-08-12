@@ -23,9 +23,9 @@ Architecture
                        PostgreSQL (Supabase, single DB)
                        schemas: auth_svc · core_svc
                                     │
-                  ai-service (FastAPI, HTTP :8000) — DEFERRED skeleton.
-                  AI generation runs in core-service now (AiModule, in-process);
-                  when extracted, core → ai-service over HTTP (the only HTTP hop).
+                  ai-service (FastAPI, HTTP :8000) — AI content generation.
+                  core-service → ai-service over HTTP (the only HTTP hop);
+                  prompt build + select retry live in Python, quota/audit in core.
 ```
 
 Only `api-gateway` is exposed to the internet. `auth-service` and `core-service` are **pure TCP microservices** (no HTTP server) reachable only on the internal network.
@@ -37,12 +37,12 @@ Only `api-gateway` is exposed to the internet. `auth-service` and `core-service`
 | api-gateway | 5000 | HTTP | public |
 | auth-service | 5001 | TCP | internal |
 | core-service | 5002 | TCP | internal |
-| ai-service | 8000 | HTTP | internal (deferred — AI gen runs in core for now) |
+| ai-service | 8000 | HTTP | internal |
 
 ## Inter-service communication
 
 - **NestJS ↔ NestJS = TCP** via `@nestjs/microservices` (`ClientProxy` on the gateway, `@MessagePattern` handlers on services). No HTTP/Axios between NestJS services.
-- **AI generation runs in-process inside core-service** (an `AiModule` behind a provider interface) — no service hop today. `ai-service` (FastAPI) is a deferred skeleton; when extracted, **it becomes the only HTTP exception** (Python/FastAPI; TCP not applicable), called from core-service over HTTP. The provider interface means extraction swaps one impl for an HTTP client — callers and the `core.ai.*` message patterns stay unchanged.
+- **AI generation runs in `ai-service`** (Python/FastAPI, HTTP :8000) — **the only HTTP exception** (Python/FastAPI; TCP not applicable), called from core-service over HTTP behind an `AiClient` seam. Prompt building, temperature, and `select` validation/retry live in Python; core-service keeps the DB-bound work (quota reserve, audit row, field validation). The provider key (`AI_API_KEY`) lives only in ai-service env; core holds `AI_SERVICE_URL` + `INTERNAL_SECRET`. The `core.ai.*` message patterns + gateway callers are unchanged.
 - Message patterns are dot-namespaced constants in `@wriven/contracts` (`messages.ts`): `auth.login`, `core.entry.create`, `core.ai.generate`, etc. Never hardcode pattern strings.
 
 ### Gateway client registration

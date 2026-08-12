@@ -6,7 +6,6 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: true,
-  treeshake: true,
   target: 'es2022',
   external: ['react'],
   outExtension({ format }) {

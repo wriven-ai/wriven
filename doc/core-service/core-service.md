@@ -45,7 +45,7 @@ This means adding a user-chosen field needs **no migration**, scales without per
 
 **usage_buckets** — workspace_id, `period_start` / `period_end` (timestamptz; calendar month, UTC), `request_count` (bigint, default 0), `updated_at`. `unique(workspace_id, period_start)` + index on `workspace_id`. One row per workspace × billing period, atomically incremented (`ON CONFLICT … request_count + n`) by the gateway's batched flush. No FK (auth_svc boundary). See specs/14.
 
-**ai_generations** — workspace_id, project_id, `content_type_id` / `entry_id` (nullable, plain uuid — no FK, so a record survives its target being deleted), `field_key`, `operation`, `model`, `prompt_tokens` / `completion_tokens` / `total_tokens` (nullable int), `status` (`pending`|`succeeded`|`failed`, default `pending`), `error`, `created_by`, `created_at`. Indexes `(workspace_id, created_at)` + `(entry_id)` + `(project_id)`. One row per generation — meters usage (row-count of `pending`+`succeeded` vs `aiTextRequestsPerMonth`, reserved atomically via `pg_advisory_xact_lock`) + audits + stores token totals. See specs/19.
+**ai_generations** — workspace_id, project_id, `content_type_id` / `entry_id` (nullable, plain uuid — no FK, so a record survives its target being deleted), target `field_key`/`operation`, a user-scoped `idempotency_key` plus request hash, persisted `output`, model/token totals, prompt version, latency, attempt count, provider request id, finish reason, optional known cost, optional applied revision, `status` (`pending`|`succeeded`|`failed`), error and completion time. `output` and `request_hash` are redacted after the configured retention period; operational metadata remains. On an explicit AI apply followed by Save, core verifies ownership/scope and links the row to the immutable revision. Indexes include `(workspace_id, created_at)`, `(entry_id)`, `(project_id)`, and unique `(workspace_id, created_by, idempotency_key)`. One row per generation — quota reservation, audit trail, safe response replay, and the durable record a future worker queue will use.
 
 ## Field types (`FieldDef`)
 
@@ -96,7 +96,7 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 
 `core.contentType.{create,list,get,update,delete}` · `core.entry.{create,list,get,update,delete,publish}` · `core.ping`. Defined as `CORE_PATTERNS` in `@wriven/contracts`.
 
-**AI generation** (`AI_PATTERNS`, specs/19): `core.ai.generate` — the `AiModule` handler calls the injected `AiProvider` (generic OpenAI-compatible impl: any OpenAI-compat endpoint via env). Runs in-process so it can be extracted to `ai-service` later by swapping the provider impl for an HTTP client; the pattern + gateway callers stay unchanged.
+**AI generation** (`AI_PATTERNS`, specs/19 + specs/20): `core.ai.generate` — the `AiModule` handler builds the context payload, reserves quota, and calls the injected `AiClient` (an HTTP client to the standalone `ai-service`). Prompt build, temperature, and `select` retry live in ai-service; the pattern + gateway callers stay unchanged.
 
 **Usage metering** (`USAGE_PATTERNS`, specs/14): `core.usage.record` (batched atomic increment from the gateway's in-process buffer) · `core.usage.read` (composes the current-period `UsageView`: request count from `usage_buckets` + live media SUM + effective plan limits via `CoreEntitlementsService`). Limits stay in auth-service; core is the usage authority because it owns the metered resources (api_keys, delivery, media).
 
@@ -106,19 +106,18 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 PORT=5002
 DATABASE_URL=...   DIRECT_URL=...     # same Supabase DB, core_svc schema
 R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET_NAME=
-# AI content generation (in-process AiModule; generic OpenAI-compatible Chat Completions):
-AI_API_KEY=                            # provider key (OpenRouter/OpenAI/Groq…), core only
-AI_BASE_URL=https://openrouter.ai/api/v1
-AI_MODEL=openrouter/free
-AI_TIMEOUT_MS=30000
-AI_HEADERS=                            # optional JSON of extra provider headers
-# Used only AFTER extraction to the standalone FastAPI ai-service:
-AI_SERVICE_URL=http://localhost:8000   # deferred — unused while AI gen is in-process
-INTERNAL_SECRET=                       # must match ai-service when extracted
+# AI content generation — runs in ai-service (Python/FastAPI); core calls it over HTTP.
+# Provider key (AI_API_KEY etc.) lives in ai-service env, NOT here.
+AI_SERVICE_TIMEOUT_MS=35000            # HTTP hop; longer than ai-service provider timeout
+AI_SERVICE_URL=http://localhost:8000   # standalone ai-service
+INTERNAL_SECRET=                       # must match ai-service INTERNAL_SECRET (authenticates the hop)
+AI_AUDIT_RETENTION_DAYS=30             # redact AI output/request hash after this period
+# Optional configured-model prices, micro-USD / 1M tokens. Set both or neither.
+AI_INPUT_COST_MICROUSD_PER_MILLION_TOKENS=
+AI_OUTPUT_COST_MICROUSD_PER_MILLION_TOKENS=
 ```
 
 ## Not yet built
 
-- **AI image generation** — Tier-1 text/richtext/select generation shipped (specs/19); image gen deferred (different model/cost).
-- **Per-field `aiAssist` builder toggle** — `FieldDef.aiAssist` is enforced server-side; the content-type builder UI toggle is pending.
-- **Extraction to `ai-service`** — the `AiProvider` seam keeps this a later one-file swap (provider impl → HTTP client).
+- **AI image generation** — Tier-1 text/richtext/select generation shipped (specs/19, now running in ai-service via specs/20); image gen deferred (different model/cost).
+- **AI image generation** requires its own asset lifecycle, moderation, R2 provenance, and separate job/queue policy; it is intentionally not a variant of text generation.

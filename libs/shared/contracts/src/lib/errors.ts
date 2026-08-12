@@ -36,6 +36,14 @@ export const ERROR_CODES = {
   // AI is not configured (AI_API_KEY missing). Returned on the route, not a boot
   // failure — core-service stays up.
   AI_NOT_CONFIGURED: { code: 'AI_NOT_CONFIGURED', statusCode: 503 },
+  // AI usage is a paid resource: do not submit a provider request when the
+  // workspace allowance cannot be verified.
+  AI_QUOTA_UNAVAILABLE: { code: 'AI_QUOTA_UNAVAILABLE', statusCode: 503 },
+  // The same idempotency key is already executing. Reuse the key only for a
+  // safe retry of the same request; start a new generation with a new key.
+  AI_GENERATION_IN_PROGRESS: { code: 'AI_GENERATION_IN_PROGRESS', statusCode: 409 },
+  // A client accidentally attached one idempotency key to two different inputs.
+  IDEMPOTENCY_KEY_REUSED: { code: 'IDEMPOTENCY_KEY_REUSED', statusCode: 409 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;
 

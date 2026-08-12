@@ -20,8 +20,9 @@ import { AiBurstGuard } from './ai-burst.guard';
 
 /**
  * AI content generation HTTP edge. Forwards to core-service's
- * `core.ai.generate` (AiModule) — AI runs in-process in core, not at the
- * gateway. Scoped like other content routes (JWT + workspace + project +
+ * `core.ai.generate` (AiModule). Core owns scope, policy, quota, and audit;
+ * it delegates prompt assembly and provider calls to the internal Python
+ * ai-service. Scoped like other content routes (JWT + workspace + project +
  * permission) plus the per-workspace {@link AiBurstGuard}.
  */
 @Controller('content/ai')
@@ -38,7 +39,7 @@ export class AiController {
   ) {}
 
   @Post('generate')
-  @RequirePermission(Permission.CONTENT_ENTRY_UPDATE)
+  @RequirePermission(Permission.AI_GENERATE)
   generate(
     @CurrentUser() user: AuthUser,
     @CurrentWorkspace() workspaceId: string,

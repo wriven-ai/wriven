@@ -359,7 +359,9 @@ export const usageBuckets = coreSchema.table(
  * flows `pending` (reserved before the provider call) → `succeeded` | `failed`.
  * Quota reserves against `status IN ('pending','succeeded')`; the `/usage` stat
  * counts only `succeeded`. `content_type_id` / `entry_id` are plain uuids with no
- * FK — a generation record survives its target being deleted.
+ * FK — a generation record survives its target being deleted. The idempotency key
+ * and persisted output make this row the durable hand-off record for the future
+ * worker queue; no separate job table needs to replace it later.
  */
 export const aiGenerations = coreSchema.table(
   'ai_generations',
@@ -371,12 +373,27 @@ export const aiGenerations = coreSchema.table(
     entryId: uuid('entry_id'),
     fieldKey: text('field_key').notNull(),
     operation: text('operation').notNull(), // generate|expand|shorten|rewrite|tone|summarize|continue
+    idempotencyKey: uuid('idempotency_key').notNull().defaultRandom(),
+    /** SHA-256 of the stable request payload; prevents accidental key reuse. */
+    requestHash: text('request_hash'),
     model: text('model').notNull(),
     promptTokens: integer('prompt_tokens'),
     completionTokens: integer('completion_tokens'),
     totalTokens: integer('total_tokens'),
+    /** Generated content kept only long enough to replay an idempotent request. */
+    output: text('output'),
+    promptVersion: text('prompt_version').notNull().default('text-v1'),
+    latencyMs: integer('latency_ms'),
+    attemptCount: integer('attempt_count').notNull().default(1),
+    providerRequestId: text('provider_request_id'),
+    finishReason: text('finish_reason'),
+    /** Known provider spend in USD × 1,000,000; null when pricing is unavailable. */
+    costMicrousd: integer('cost_microusd'),
+    /** Plain uuid: audit survives revision pruning and entry deletion. */
+    appliedRevisionId: uuid('applied_revision_id'),
     status: text('status').notNull().default('pending'), // pending|succeeded|failed
     error: text('error'),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
     createdBy: uuid('created_by').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -386,6 +403,11 @@ export const aiGenerations = coreSchema.table(
     index('ai_generations_workspace_created_idx').on(t.workspaceId, t.createdAt),
     index('ai_generations_entry_id_idx').on(t.entryId),
     index('ai_generations_project_id_idx').on(t.projectId),
+    uniqueIndex('ai_generations_workspace_creator_idempotency_uq').on(
+      t.workspaceId,
+      t.createdBy,
+      t.idempotencyKey,
+    ),
     check(
       'ai_generations_status_check',
       sql`${t.status} in ('pending', 'succeeded', 'failed')`,

@@ -224,13 +224,13 @@ So the gaps read in context. ✅ = working.
   content-history diff UI. Now: none (last-write-wins; revisions stored but no diff
   UI/locking).
 
-### AI generation (the "AI-native" promise) — **L→XL**
-- The product is described as "AI-native content generation". AI generation is being built
-  **inside core-service** (`AiModule` behind a provider interface) to avoid the extra
-  container cost — not as the standalone `apps/ai-service`. That FastAPI app stays a
-  **deferred skeleton** (extraction target): swapping the in-process provider impl for an HTTP
-  client splits it out later with no caller changes. AI authoring/assist/generation is still
-  unbuilt. The editor has an AI chat panel UI but no backend.
+### AI generation (the "AI-native" promise) — **M** (Tier-1 shipped)
+- Tier-1 text/richtext/select generation shipped (specs/19) and was extracted to the standalone
+  Python `ai-service` (specs/20): prompt build, temperature, and `select` retry run in ai-service;
+  core-service calls it over HTTP behind an `AiClient` seam (the only NestJS↔non-NestJS hop). The
+  Co-Writer panel is live in the editor, and the content-type builder can enable AI per field and
+  restrict text actions. **Remaining:** image generation and richer assist (RAG over `reference`
+  fields).
 
 ### Webhook management depth — **M**
 - Delivery logs + retry history UI, more event types, signature docs, test-send.
@@ -320,5 +320,5 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 | Admin panel UI | P1 | L | in progress |
 | SSO/SAML | P2 | L | flag only |
 | Granular RBAC seam | P2 | M | typed perms + cascade shipped (specs/12, 13); custom roles + field-level remain |
-| AI generation | P2 | L→XL | unbuilt; will ship in core-service (`AiModule`), extractable to deferred `ai-service` |
+| AI generation | P2 | L→XL | Tier-1 text/richtext/select shipped (specs/19) + extracted to ai-service (specs/20); image gen + RAG remain |
 | Real-time collab | P2 | XL | none |

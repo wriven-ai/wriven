@@ -154,6 +154,16 @@ export type FieldType =
   | 'select'
   | 'reference';
 
+/** Text-AI actions. Mirrors `@wriven/contracts` without importing decorators client-side. */
+export type AiOperation =
+  | 'generate'
+  | 'expand'
+  | 'shorten'
+  | 'rewrite'
+  | 'tone'
+  | 'summarize'
+  | 'continue';
+
 export type EntryStatus = 'draft' | 'published' | 'archived';
 
 export interface FieldDef {
@@ -167,6 +177,12 @@ export interface FieldDef {
   refTypeId?: string;
   /** Allow AI generation on this field (text|richtext|select). */
   aiAssist?: boolean;
+  /** Allowed text-AI actions. Omitted preserves the legacy all-actions behavior. */
+  aiOperations?: AiOperation[];
+  /** Sensitive data is never sent to the AI provider. */
+  aiPrivate?: boolean;
+  /** Explicit sibling-field allowlist for this target's AI prompt context. */
+  aiContextFields?: string[];
 }
 
 export interface ContentTypeView {

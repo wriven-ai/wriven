@@ -154,9 +154,9 @@ export const USAGE_PATTERNS = {
 } as const;
 
 /**
- * AI content generation. Owned by core-service (in-process `AiModule` behind an
- * `AiProvider` seam — a future standalone `ai-service` can replace the impl
- * without changing these patterns).
+ * AI content generation. Core-service owns scope, policy, quota, and audit;
+ * it calls the standalone Python ai-service through its internal `AiClient`.
+ * The stable message pattern keeps the gateway and clients transport-agnostic.
  */
 export const AI_PATTERNS = {
   GENERATE: 'core.ai.generate',

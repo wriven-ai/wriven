@@ -2,7 +2,7 @@
 
 Reference documentation for the Wriven backend. Start here.
 
-Wriven is an **AI-native content management and generation SaaS**. The backend is an Nx monorepo of NestJS microservices behind a single public API gateway, with a Next.js frontend. AI generation runs inside core-service for now (a Python FastAPI service is a deferred skeleton — extraction target).
+Wriven is an **AI-native content management and generation SaaS**. The backend is an Nx monorepo of NestJS microservices behind a single public API gateway, with a Next.js frontend, and a Python FastAPI `ai-service` for content generation (called from core-service over HTTP).
 
 The docs split into three layers:
 
@@ -21,6 +21,7 @@ The docs split into three layers:
 | [Database](./database.md) | Drizzle ORM, single shared Postgres DB, schema isolation, migrations workflow |
 | [API Reference](./api-reference.md) | Every gateway endpoint: method, auth, headers, body, responses |
 | [Conventions](./conventions.md) | Response envelope, error codes, rate limits, env, commands, commit style |
+| [AI Governance](./ai-governance.md) | AI data controls, retention, billing/retry policy, and monitoring |
 | [Support Tickets](./support-ticket/README.md) | Workspace-level support ticketing: subject + description + ≤3 images + scope dropdown, threaded user↔staff conversation, status/priority. Separate plans: [backend](./support-ticket/backend.md) · [client](./support-ticket/client.md) · [admin-panel](./support-ticket/admin-panel.md) |
 
 **Status & planning**

@@ -11,6 +11,7 @@ import {
   Save,
   Send,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -33,8 +34,8 @@ import { Permission } from '@wriven/contracts/rbac';
 
 /**
  * Single-entry editor (create + edit). Center = title + body + structured
- * fields (media, reference, etc.) inline; right = AI co-writer, shown only when
- * the content type has a rich-text field. Settings sheet holds the slug.
+ * fields (media, reference, etc.) inline; desktop = AI co-writer for configured
+ * Tier-1 fields, while mobile opens it as a bottom sheet. Settings holds the slug.
  * The entries *list* lives on its own page — this view is one document.
  */
 export function ContentEditor({
@@ -73,6 +74,8 @@ export function ContentEditor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [appliedGenerationIds, setAppliedGenerationIds] = useState<string[]>([]);
 
   // Populate when an existing entry loads.
   useEffect(() => {
@@ -81,6 +84,7 @@ export function ContentEditor({
       setSlug(entry.slug ?? '');
       setIsDirty(false);
       setFieldErrors({});
+      setAppliedGenerationIds([]);
     }
   }, [entry]);
 
@@ -96,21 +100,23 @@ export function ContentEditor({
   };
 
   const createMutation = useMutation({
-    mutationFn: (dto: { data: Record<string, unknown>; slug?: string }) =>
+    mutationFn: (dto: { data: Record<string, unknown>; slug?: string; aiGenerationIds?: string[] }) =>
       contentApi.createEntry({ contentTypeId: activeTypeId, ...dto }),
     onSuccess: (created) => {
       qc.setQueryData(['entry', created.id], created);
       qc.invalidateQueries({ queryKey: ['entries'] });
+      setAppliedGenerationIds([]);
       router.replace(`${contentBase}/${created.id}`);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (dto: { data: Record<string, unknown>; slug?: string }) =>
+    mutationFn: (dto: { data: Record<string, unknown>; slug?: string; aiGenerationIds?: string[] }) =>
       contentApi.updateEntry(entryId as string, dto),
     onSuccess: () => {
       setIsDirty(false);
       setSaveOk(true);
+      setAppliedGenerationIds([]);
       setTimeout(() => setSaveOk(false), 2000);
       qc.invalidateQueries({ queryKey: ['entries'] });
       qc.invalidateQueries({ queryKey: ['entry', entryId] });
@@ -144,7 +150,11 @@ export function ContentEditor({
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    const payload = { data: formData, slug: slug || undefined };
+    const payload = {
+      data: formData,
+      slug: slug || undefined,
+      aiGenerationIds: appliedGenerationIds.length ? appliedGenerationIds : undefined,
+    };
     if (entryId) updateMutation.mutate(payload);
     else createMutation.mutate(payload);
   };
@@ -164,9 +174,11 @@ export function ContentEditor({
   const mainFields = allFields.filter((f) => !usedInMain.has(f.key));
   const hasMain = !!titleField || bodyFields.length > 0;
   // Show the Co-Writer when there is at least one AI-eligible field.
-  const hasAiTarget = allFields.some(
+  const hasAiTarget = can(Permission.AI_GENERATE) && allFields.some(
     (f) =>
       (f.type === 'text' || f.type === 'richtext' || f.type === 'select') &&
+      !f.multiple &&
+      !f.aiPrivate &&
       f.aiAssist !== false,
   );
 
@@ -218,6 +230,15 @@ export function ContentEditor({
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Settings</span>
           </button>
+          {hasAiTarget && (
+            <button
+              onClick={() => setAiOpen(true)}
+              className="lg:hidden inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-secondary/40 rounded-lg text-brand-secondary hover:text-brand-accent hover:border-brand-accent/60 transition-colors cursor-pointer text-sm font-mono font-bold"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              AI
+            </button>
+          )}
           {entryId && can(Permission.CONTENT_ENTRY_DELETE) && (
             <button
               onClick={() => {
@@ -358,14 +379,50 @@ export function ContentEditor({
 
         {/* Right: AI Co-Writer — shown when there's an AI-eligible field */}
         {hasAiTarget && (
+          <div className="hidden lg:contents">
           <AiPanel
             contentTypeId={activeTypeId}
             entryId={entryId}
             fields={allFields}
+            fieldValues={formData}
             setField={setField}
+            onApplied={(generationId) =>
+              setAppliedGenerationIds((current) =>
+                current.includes(generationId) ? current : [...current, generationId],
+              )
+            }
+            onUnapplied={(generationId) =>
+              setAppliedGenerationIds((current) => current.filter((id) => id !== generationId))
+            }
           />
+          </div>
         )}
       </div>
+
+      {hasAiTarget && (
+        <Sheet open={aiOpen} onOpenChange={setAiOpen}>
+          <SheetContent
+            side="bottom"
+            className="lg:hidden bg-brand-surface border-brand-border max-h-[90vh] overflow-y-auto p-0"
+          >
+            <AiPanel
+              contentTypeId={activeTypeId}
+              entryId={entryId}
+              fields={allFields}
+              fieldValues={formData}
+              setField={setField}
+              onApplied={(generationId) =>
+                setAppliedGenerationIds((current) =>
+                  current.includes(generationId) ? current : [...current, generationId],
+                )
+              }
+              onUnapplied={(generationId) =>
+                setAppliedGenerationIds((current) => current.filter((id) => id !== generationId))
+              }
+            />
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Settings drawer — slug only */}
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>

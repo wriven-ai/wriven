@@ -13,7 +13,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE, dbError } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, desc, eq, isNull, max, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, max, ne, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
 import * as schema from '../db/schema';
@@ -23,7 +23,7 @@ import { WebhooksService } from '../webhooks/webhooks.service';
 import { ContentTypesService } from './content-types.service';
 import { validateEntryData } from './content.validator';
 
-const { contentEntries, contentRevisions } = schema;
+const { aiGenerations, contentEntries, contentRevisions } = schema;
 type EntryRow = typeof contentEntries.$inferSelect;
 
 @Injectable()
@@ -99,12 +99,21 @@ export class EntriesService {
             publishedAt,
           })
           .returning();
-        await tx.insert(contentRevisions).values({
+        const [revision] = await tx.insert(contentRevisions).values({
           entryId: row.id,
           version: 1,
           data: row.data,
           status: row.status,
           createdBy: p.userId,
+        }).returning({ id: contentRevisions.id });
+        await this.linkAiGenerationsToRevision(tx, {
+          workspaceId: p.workspaceId,
+          projectId: p.projectId,
+          contentTypeId: type.id,
+          entryId: row.id,
+          userId: p.userId,
+          revisionId: revision.id,
+          generationIds: p.dto.aiGenerationIds,
         });
         await this.pruneRevisions(tx, revCap, row.id);
         return row;
@@ -207,12 +216,21 @@ export class EntriesService {
           })
           .where(eq(contentEntries.id, entry.id))
           .returning();
-        await tx.insert(contentRevisions).values({
+        const [revision] = await tx.insert(contentRevisions).values({
           entryId: row.id,
           version,
           data: row.data,
           status: row.status,
           createdBy: p.userId,
+        }).returning({ id: contentRevisions.id });
+        await this.linkAiGenerationsToRevision(tx, {
+          workspaceId: p.workspaceId,
+          projectId: p.projectId,
+          contentTypeId: entry.contentTypeId,
+          entryId: row.id,
+          userId: p.userId,
+          revisionId: revision.id,
+          generationIds: p.dto.aiGenerationIds,
         });
         await this.pruneRevisions(tx, revCap, row.id);
         return row;
@@ -422,6 +440,59 @@ export class EntriesService {
       .from(contentRevisions)
       .where(eq(contentRevisions.entryId, entryId));
     return (v ?? 0) + 1;
+  }
+
+  /**
+   * Attach deliberately applied, successful generations to the immutable
+   * content revision that persisted them. The browser cannot forge provenance:
+   * every generation must belong to the caller, workspace/project/type, and
+   * this entry (or be an unbound draft generated while the entry was new).
+   */
+  private async linkAiGenerationsToRevision(
+    tx: Parameters<Parameters<DrizzleDB<typeof schema>['transaction']>[0]>[0],
+    p: {
+      workspaceId: string;
+      projectId: string;
+      contentTypeId: string;
+      entryId: string;
+      userId: string;
+      revisionId: string;
+      generationIds?: string[];
+    },
+  ): Promise<void> {
+    const ids = [...new Set(p.generationIds ?? [])];
+    if (ids.length === 0) return;
+    const rows = await tx
+      .select({
+        id: aiGenerations.id,
+        entryId: aiGenerations.entryId,
+        appliedRevisionId: aiGenerations.appliedRevisionId,
+      })
+      .from(aiGenerations)
+      .where(
+        and(
+          inArray(aiGenerations.id, ids),
+          eq(aiGenerations.workspaceId, p.workspaceId),
+          eq(aiGenerations.projectId, p.projectId),
+          eq(aiGenerations.contentTypeId, p.contentTypeId),
+          eq(aiGenerations.createdBy, p.userId),
+          eq(aiGenerations.status, 'succeeded'),
+        ),
+      );
+    if (
+      rows.length !== ids.length ||
+      rows.some(
+        (row) =>
+          (row.entryId !== null && row.entryId !== p.entryId) ||
+          row.appliedRevisionId !== null,
+      )
+    ) {
+      throw rpcError('VALIDATION_ERROR', 'One or more AI drafts cannot be applied to this entry.');
+    }
+    await tx
+      .update(aiGenerations)
+      .set({ entryId: p.entryId, appliedRevisionId: p.revisionId })
+      .where(inArray(aiGenerations.id, ids));
   }
 
   /** Slug from the first text field value, else the type name — with a suffix. */

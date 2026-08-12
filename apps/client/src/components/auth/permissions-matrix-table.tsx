@@ -162,6 +162,12 @@ const PROJECT_PERMISSION_ROWS: PermissionRow[] = [
     description: 'Permanently remove content entries',
   },
   {
+    category: 'Content Schema & Entries',
+    key: Permission.AI_GENERATE,
+    label: 'Use AI Co-Writer',
+    description: 'Generate and refine AI-assisted content drafts',
+  },
+  {
     category: 'Assets & Developers',
     key: Permission.MEDIA_MANAGE,
     label: 'Manage Media Library',

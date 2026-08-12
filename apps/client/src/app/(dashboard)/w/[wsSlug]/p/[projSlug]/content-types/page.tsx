@@ -11,11 +11,12 @@ import {
   Search,
   Trash2,
   Pencil,
+  Sparkles,
   Type,
   AlertCircle,
 } from 'lucide-react';
 import { contentApi } from '@/lib/api';
-import type { ContentTypeView, FieldDef, FieldType } from '@/lib/types';
+import type { AiOperation, ContentTypeView, FieldDef, FieldType } from '@/lib/types';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
@@ -57,10 +58,45 @@ interface DraftField {
   options: string;
   multiple: boolean;
   refTypeId: string;
+  aiAssist: boolean;
+  aiOperations: AiOperation[];
+  aiPrivate: boolean;
+  aiContextFields: string[];
 }
 
 /** Field types that can hold an array of values. */
 const MULTIPLE_CAPABLE: FieldType[] = ['media', 'reference', 'select'];
+const AI_ASSIST_CAPABLE: FieldType[] = ['text', 'richtext', 'select'];
+const AI_OPERATION_OPTIONS: { key: AiOperation; label: string }[] = [
+  { key: 'generate', label: 'Generate' },
+  { key: 'expand', label: 'Expand' },
+  { key: 'shorten', label: 'Shorten' },
+  { key: 'rewrite', label: 'Rewrite' },
+  { key: 'tone', label: 'Tone' },
+  { key: 'summarize', label: 'Summarize' },
+  { key: 'continue', label: 'Continue' },
+];
+
+function supportsAiAssist(type: FieldType, multiple = false): boolean {
+  return AI_ASSIST_CAPABLE.includes(type) && !multiple;
+}
+
+function defaultAiOperations(type: FieldType): AiOperation[] {
+  // A select can only receive a single allowed value; refinement actions are
+  // meaningful for prose fields, not an enum choice.
+  return type === 'select'
+    ? ['generate']
+    : AI_OPERATION_OPTIONS.map((operation) => operation.key);
+}
+
+function parseSelectOptions(raw: string): string[] {
+  return raw.split(',').map((option) => option.trim()).filter(Boolean);
+}
+
+function hasValidSelectOptions(raw: string): boolean {
+  const options = parseSelectOptions(raw);
+  return options.length > 0 && new Set(options).size === options.length;
+}
 
 export default function ContentTypesPage() {
   const qc = useQueryClient();
@@ -144,6 +180,12 @@ export default function ContentTypesPage() {
   const [candOptions, setCandOptions] = useState('');
   const [candMultiple, setCandMultiple] = useState(false);
   const [candRefTypeId, setCandRefTypeId] = useState('');
+  const [candAiAssist, setCandAiAssist] = useState(true);
+  const [candAiOperations, setCandAiOperations] = useState<AiOperation[]>(
+    defaultAiOperations('text'),
+  );
+  const [candAiPrivate, setCandAiPrivate] = useState(false);
+  const [candAiContextFields, setCandAiContextFields] = useState<string[]>([]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -160,6 +202,10 @@ export default function ContentTypesPage() {
     setCandOptions('');
     setCandMultiple(false);
     setCandRefTypeId('');
+    setCandAiAssist(true);
+    setCandAiOperations(defaultAiOperations('text'));
+    setCandAiPrivate(false);
+    setCandAiContextFields([]);
   };
 
   const startEdit = (type: ContentTypeView) => {
@@ -178,6 +224,16 @@ export default function ContentTypesPage() {
         options: Array.isArray(f.options) ? f.options.join(', ') : '',
         multiple: !!f.multiple,
         refTypeId: f.refTypeId ?? '',
+        aiAssist: !f.aiPrivate && supportsAiAssist(f.type as FieldType, !!f.multiple)
+          ? f.aiAssist !== false
+          : false,
+        aiOperations: !f.aiPrivate && supportsAiAssist(f.type as FieldType, !!f.multiple)
+          ? f.aiOperations?.length
+            ? f.aiOperations
+            : defaultAiOperations(f.type as FieldType)
+          : [],
+        aiPrivate: !!f.aiPrivate,
+        aiContextFields: f.aiContextFields ?? [],
       })),
     );
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -196,6 +252,7 @@ export default function ContentTypesPage() {
   const addField = () => {
     if (!candLabel.trim() || !candKey.trim()) return;
     if (candType === 'reference' && !candRefTypeId) return; // need a target type
+    if (candType === 'select' && !hasValidSelectOptions(candOptions)) return;
     setFields(prev => [
       ...prev,
       {
@@ -208,6 +265,10 @@ export default function ContentTypesPage() {
         options: candOptions,
         multiple: MULTIPLE_CAPABLE.includes(candType) ? candMultiple : false,
         refTypeId: candType === 'reference' ? candRefTypeId : '',
+        aiAssist: !candAiPrivate && supportsAiAssist(candType, candMultiple) ? candAiAssist : false,
+        aiOperations: !candAiPrivate && supportsAiAssist(candType, candMultiple) ? candAiOperations : [],
+        aiPrivate: candAiPrivate,
+        aiContextFields: candAiPrivate ? [] : candAiContextFields,
       },
     ]);
     setCandLabel('');
@@ -219,13 +280,29 @@ export default function ContentTypesPage() {
     setCandOptions('');
     setCandMultiple(false);
     setCandRefTypeId('');
+    setCandAiAssist(true);
+    setCandAiOperations(defaultAiOperations('text'));
+    setCandAiPrivate(false);
+    setCandAiContextFields([]);
   };
 
   const removeField = (id: string) => setFields(prev => prev.filter(f => f._id !== id));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!typeName.trim() || !typeApiId.trim()) return;
+    if (
+      !typeName.trim() ||
+      !typeApiId.trim() ||
+      fields.some(
+        (field) =>
+          supportsAiAssist(field.type, field.multiple) &&
+          !field.aiPrivate &&
+          field.aiAssist &&
+          field.aiOperations.length === 0,
+      )
+    ) {
+      return;
+    }
     const dtoFields: FieldDef[] = fields.map(f => ({
       key: f.key,
       label: f.label,
@@ -235,7 +312,18 @@ export default function ContentTypesPage() {
       ...(f.multiple && MULTIPLE_CAPABLE.includes(f.type) ? { multiple: true } : {}),
       ...(f.type === 'reference' && f.refTypeId ? { refTypeId: f.refTypeId } : {}),
       ...(f.type === 'select' && f.options
-        ? { options: f.options.split(',').map(s => s.trim()).filter(Boolean) }
+        ? { options: parseSelectOptions(f.options) }
+        : {}),
+      ...(f.aiPrivate
+        ? { aiPrivate: true, aiAssist: false }
+        : supportsAiAssist(f.type, f.multiple)
+          ? { aiAssist: f.aiAssist }
+          : {}),
+      ...(!f.aiPrivate && supportsAiAssist(f.type, f.multiple) && f.aiOperations.length
+        ? { aiOperations: f.aiOperations }
+        : {}),
+      ...(!f.aiPrivate && f.aiAssist && f.aiContextFields.length
+        ? { aiContextFields: f.aiContextFields }
         : {}),
     }));
     if (editingId) {
@@ -246,6 +334,13 @@ export default function ContentTypesPage() {
   };
 
   const activeMutation = editingId ? updateMutation : createMutation;
+  const hasInvalidAiPolicy = fields.some(
+    (field) =>
+      !field.aiPrivate &&
+      supportsAiAssist(field.type, field.multiple) &&
+      field.aiAssist &&
+      field.aiOperations.length === 0,
+  );
   const errMsg = activeMutation.error
     ? ((activeMutation.error as any)?.error?.message ??
         `Failed to ${editingId ? 'update' : 'create'} content type`)
@@ -329,7 +424,7 @@ export default function ContentTypesPage() {
                 {fields.map(f => (
                   <div
                     key={f._id}
-                    className="flex items-center justify-between bg-brand-surface-soft border border-brand-border px-3 py-2 rounded-lg text-sm font-mono"
+                    className="flex flex-wrap items-center justify-between bg-brand-surface-soft border border-brand-border px-3 py-2 rounded-lg text-sm font-mono"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <Type className="w-3.5 h-3.5 text-brand-secondary shrink-0" />
@@ -343,13 +438,156 @@ export default function ContentTypesPage() {
                       </span>
                       {f.required && <span className="text-sm font-bold text-brand-accent shrink-0">*</span>}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeField(f._id)}
-                      className="text-text-muted hover:text-status-error cursor-pointer ml-2 shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-2 ml-2 shrink-0">
+                      <button
+                        type="button"
+                        aria-pressed={f.aiPrivate}
+                        onClick={() =>
+                          setFields((prev) => {
+                            const becomesPrivate = !f.aiPrivate;
+                            return prev.map((item) => {
+                              if (item._id === f._id) {
+                                return {
+                                  ...item,
+                                  aiPrivate: becomesPrivate,
+                                  aiAssist: becomesPrivate ? false : item.aiAssist,
+                                  aiOperations: becomesPrivate ? [] : item.aiOperations,
+                                  aiContextFields: becomesPrivate ? [] : item.aiContextFields,
+                                };
+                              }
+                              return becomesPrivate
+                                ? {
+                                    ...item,
+                                    aiContextFields: item.aiContextFields.filter(
+                                      (key) => key !== f.key,
+                                    ),
+                                  }
+                                : item;
+                            });
+                          })
+                        }
+                        className={`text-xs font-bold transition-colors cursor-pointer ${
+                          f.aiPrivate
+                            ? 'text-status-error hover:text-status-error/80'
+                            : 'text-text-muted hover:text-text-secondary'
+                        }`}
+                        title={
+                          f.aiPrivate
+                            ? 'Allow this field to be considered for AI policy'
+                            : 'Mark as sensitive: never send it to AI'
+                        }
+                      >
+                        {f.aiPrivate ? 'Sensitive' : 'Mark sensitive'}
+                      </button>
+                      {supportsAiAssist(f.type, f.multiple) && !f.aiPrivate && (
+                        <button
+                          type="button"
+                          aria-pressed={f.aiAssist}
+                          onClick={() =>
+                            setFields((prev) =>
+                              prev.map((item) =>
+                                item._id === f._id ? { ...item, aiAssist: !item.aiAssist } : item,
+                              ),
+                            )
+                          }
+                          className={`inline-flex items-center gap-1 text-xs font-bold transition-colors cursor-pointer ${
+                            f.aiAssist
+                              ? 'text-brand-secondary hover:text-brand-accent'
+                              : 'text-text-muted hover:text-text-secondary'
+                          }`}
+                          title={f.aiAssist ? 'Disable AI for this field' : 'Enable AI for this field'}
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          AI {f.aiAssist ? 'on' : 'off'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeField(f._id)}
+                        className="text-text-muted hover:text-status-error cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {supportsAiAssist(f.type, f.multiple) && !f.aiPrivate && f.aiAssist && (
+                      <fieldset className="w-full mt-2 pt-2 border-t border-brand-border">
+                        <legend className="text-xs font-mono uppercase tracking-wider text-text-muted">
+                          Allowed AI actions
+                        </legend>
+                        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1.5">
+                          {AI_OPERATION_OPTIONS.map((option) => (
+                            <label
+                              key={option.key}
+                              className="flex items-center gap-1.5 font-mono text-xs text-text-secondary cursor-pointer select-none"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={f.aiOperations.includes(option.key)}
+                                onChange={e =>
+                                  setFields((prev) =>
+                                    prev.map((item) =>
+                                      item._id !== f._id
+                                        ? item
+                                        : {
+                                            ...item,
+                                            aiOperations: e.target.checked
+                                              ? [...item.aiOperations, option.key]
+                                              : item.aiOperations.filter(
+                                                  (operation) => operation !== option.key,
+                                                ),
+                                          },
+                                    ),
+                                  )
+                                }
+                                className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                              />
+                              {option.label}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-brand-border/70">
+                          <p className="text-xs font-mono uppercase tracking-wider text-text-muted">
+                            Allowed entry context <span className="normal-case">— optional</span>
+                          </p>
+                          <p className="mt-1 text-xs font-mono text-text-muted">
+                            Only checked sibling fields are sent with this target. Sensitive fields are excluded.
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1.5">
+                            {fields
+                              .filter((source) => source._id !== f._id && !source.aiPrivate)
+                              .map((source) => (
+                                <label
+                                  key={source._id}
+                                  className="flex items-center gap-1.5 font-mono text-xs text-text-secondary cursor-pointer select-none"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={f.aiContextFields.includes(source.key)}
+                                    onChange={(e) =>
+                                      setFields((prev) =>
+                                        prev.map((item) =>
+                                          item._id !== f._id
+                                            ? item
+                                            : {
+                                                ...item,
+                                                aiContextFields: e.target.checked
+                                                  ? [...item.aiContextFields, source.key]
+                                                  : item.aiContextFields.filter(
+                                                      (key) => key !== source.key,
+                                                    ),
+                                              },
+                                        ),
+                                      )
+                                    }
+                                    className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                                  />
+                                  {source.label}
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      </fieldset>
+                    )}
                   </div>
                 ))}
               </div>
@@ -373,7 +611,20 @@ export default function ContentTypesPage() {
                   />
                   <select
                     value={candType}
-                    onChange={e => setCandType(e.target.value as FieldType)}
+                    onChange={e => {
+                      const nextType = e.target.value as FieldType;
+                      const nextMultiple = MULTIPLE_CAPABLE.includes(nextType)
+                        ? candMultiple
+                        : false;
+                      setCandType(nextType);
+                      if (!MULTIPLE_CAPABLE.includes(nextType)) setCandMultiple(false);
+                      if (supportsAiAssist(nextType, nextMultiple) && !candAiPrivate) {
+                        setCandAiOperations(defaultAiOperations(nextType));
+                      } else {
+                        setCandAiAssist(false);
+                        setCandAiOperations([]);
+                      }
+                    }}
                     className="bg-brand-surface border border-brand-border rounded p-2 text-sm font-mono text-text-primary outline-hidden cursor-pointer"
                   >
                     {FIELD_TYPES.map(([val, label]) => (
@@ -413,7 +664,7 @@ export default function ContentTypesPage() {
                 )}
 
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
                     <label className="flex items-center gap-1.5 font-mono text-sm text-text-secondary cursor-pointer select-none">
                       <input
                         type="checkbox"
@@ -437,11 +688,105 @@ export default function ContentTypesPage() {
                         <input
                           type="checkbox"
                           checked={candMultiple}
-                          onChange={e => setCandMultiple(e.target.checked)}
+                          onChange={e => {
+                            setCandMultiple(e.target.checked);
+                            if (supportsAiAssist(candType, e.target.checked) && !candAiPrivate) {
+                              setCandAiOperations(defaultAiOperations(candType));
+                            } else {
+                              setCandAiAssist(false);
+                              setCandAiOperations([]);
+                            }
+                          }}
                           className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
                         />
                         Multiple
                       </label>
+                    )}
+                    <label className="flex items-center gap-1.5 font-mono text-sm text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={candAiPrivate}
+                        onChange={e => {
+                          setCandAiPrivate(e.target.checked);
+                          if (e.target.checked) {
+                            setCandAiAssist(false);
+                            setCandAiOperations([]);
+                            setCandAiContextFields([]);
+                          }
+                        }}
+                        className="rounded border-brand-border text-status-error cursor-pointer focus:ring-0"
+                      />
+                      Sensitive — never send to AI
+                    </label>
+                    {supportsAiAssist(candType, candMultiple) && (
+                      <label className="flex items-center gap-1.5 font-mono text-sm text-text-secondary cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={candAiAssist}
+                          disabled={candAiPrivate}
+                          onChange={e => setCandAiAssist(e.target.checked)}
+                          className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                        />
+                        Enable AI
+                      </label>
+                    )}
+                    {supportsAiAssist(candType, candMultiple) && !candAiPrivate && candAiAssist && (
+                      <fieldset className="basis-full border-t border-brand-border pt-2 mt-1">
+                        <legend className="text-xs font-mono uppercase tracking-wider text-text-muted">
+                          Allowed AI actions
+                        </legend>
+                        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1.5">
+                          {AI_OPERATION_OPTIONS.map((option) => (
+                            <label
+                              key={option.key}
+                              className="flex items-center gap-1.5 font-mono text-xs text-text-secondary cursor-pointer select-none"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={candAiOperations.includes(option.key)}
+                                onChange={e =>
+                                  setCandAiOperations((current) =>
+                                    e.target.checked
+                                      ? [...current, option.key]
+                                      : current.filter((operation) => operation !== option.key),
+                                  )
+                                }
+                                className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                              />
+                              {option.label}
+                            </label>
+                          ))}
+                        </div>
+                        {fields.some((field) => !field.aiPrivate) && (
+                          <div className="mt-3 pt-2 border-t border-brand-border/70">
+                            <p className="text-xs font-mono uppercase tracking-wider text-text-muted">
+                              Allowed entry context <span className="normal-case">— optional</span>
+                            </p>
+                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1.5">
+                              {fields.filter((field) => !field.aiPrivate).map((source) => (
+                                <label
+                                  key={source._id}
+                                  className="flex items-center gap-1.5 font-mono text-xs text-text-secondary cursor-pointer select-none"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={candAiContextFields.includes(source.key)}
+                                    onChange={e =>
+                                      setCandAiContextFields((current) =>
+                                        e.target.checked
+                                          ? [...current, source.key]
+                                          : current.filter((key) => key !== source.key),
+                                      )
+                                    }
+                                    className="rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                                  />
+                                  {source.label}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </fieldset>
                     )}
                   </div>
                   <button
@@ -451,7 +796,11 @@ export default function ContentTypesPage() {
                       !canManage ||
                       !candLabel.trim() ||
                       !candKey.trim() ||
-                      (candType === 'reference' && !candRefTypeId)
+                      (candType === 'reference' && !candRefTypeId) ||
+                      (candType === 'select' && !hasValidSelectOptions(candOptions)) ||
+                      (supportsAiAssist(candType, candMultiple) &&
+                        candAiAssist &&
+                        candAiOperations.length === 0)
                     }
                     className="px-3 py-1 border border-dashed border-brand-border hover:border-brand-accent font-mono text-sm font-bold text-text-secondary hover:text-brand-accent cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -470,7 +819,13 @@ export default function ContentTypesPage() {
 
             <button
               type="submit"
-              disabled={!canManage || !typeName.trim() || !typeApiId.trim() || activeMutation.isPending}
+              disabled={
+                !canManage ||
+                !typeName.trim() ||
+                !typeApiId.trim() ||
+                hasInvalidAiPolicy ||
+                activeMutation.isPending
+              }
               className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-3 rounded-lg neo-shadow cursor-pointer transition-all"
             >
               {activeMutation.isPending ? (

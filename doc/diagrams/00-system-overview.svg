@@ -72,7 +72,7 @@
   <g>
     <rect x="500" y="360" width="220" height="60" rx="10" fill="#1a1a1f" stroke="#64748b" stroke-width="2" stroke-dasharray="3 3"/>
     <text x="610" y="384" text-anchor="middle" fill="#cbd5e1" font-weight="bold">ai-service · HTTP :8000</text>
-    <text x="610" y="404" text-anchor="middle" fill="#64748b" font-size="10">deferred — AI gen runs in core</text>
+    <text x="610" y="404" text-anchor="middle" fill="#64748b" font-size="10">AI content generation (Python/FastAPI)</text>
   </g>
 
   <!-- Node: Postgres -->
@@ -139,7 +139,7 @@
 
   <!-- core -> ai (HTTP, the exception) -->
   <line x1="610" y1="340" x2="610" y2="358" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="660" y="354" fill="#fda4af" font-size="10">HTTP (deferred — on extract)</text>
+  <text x="660" y="354" fill="#fda4af" font-size="10">HTTP (core → ai-service)</text>
 
   <!-- Stripe -.-> Gateway webhook -->
   <path d="M1050,150 C 900,400 500,420 360,292" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrowDash)"/>

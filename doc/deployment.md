@@ -17,7 +17,7 @@ implements everything in §4.
 | api-gateway | **Render** | Web Service (public) | Render `$PORT` | the only public HTTP entry → `api.wriven.tech` |
 | auth-service | **Render** | Private Service (`pserv`) | 5001 (TCP) | NestJS microservice, internal only |
 | core-service | **Render** | Private Service (`pserv`) | 5002 (TCP) | NestJS microservice, internal only |
-| ai-service | — | skip for MVP | — | deferred skeleton; AI generation runs in core-service. Extraction target — add as a `pserv` (HTTP :8000) when split out. |
+| ai-service | **Render** | Private Service (`pserv`) | 8000 (HTTP) | FastAPI (Python); AI content generation. core-service → ai-service over HTTP (`AI_SERVICE_URL`), the only NestJS↔non-NestJS hop. Provider key (`AI_API_KEY`) lives here only. |
 | client (Next.js) | **Vercel** | — | — | `apps/client`, → `wriven.tech` |
 | Postgres | **Supabase** | managed | — | shared DB, schema-isolated (`auth_svc`, `core_svc`) |
 
@@ -237,8 +237,9 @@ type → publish an entry → confirm the dashboard works end to end.
 
 ## 13. Cost / plan notes
 
-- **Render:** 3 × `starter` (~$7/mo each) ≈ $21/mo. Avoid the free web tier for the
-  gateway (it sleeps → cold starts + missed Stripe webhooks). pserv has no free tier.
+- **Render:** 4 × `starter` (~$7/mo each) ≈ $28/mo (gateway + auth + core + ai-service).
+  Avoid the free web tier for the gateway (it sleeps → cold starts + missed Stripe
+  webhooks). pserv has no free tier.
 - **Vercel:** hobby (free) is fine for dev.
 - **Supabase:** free tier is fine to start; watch DB size + egress.
 - **Cloudflare R2:** free tier covers storage + generous egress.

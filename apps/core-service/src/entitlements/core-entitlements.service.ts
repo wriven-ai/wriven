@@ -139,13 +139,20 @@ export class CoreEntitlementsService {
   }
 
   /**
-   * AI text-generation requests allowed per month, or `null` = unlimited /
-   * unresolvable (fail-open). Enforcement (count vs `ai_generations`) lives in
-   * `AiService` inside an atomic advisory-lock transaction so concurrent
-   * requests can't both pass.
+   * AI text-generation requests allowed per month, or `null` = unlimited.
+   * Unlike ordinary CMS writes, generation has direct provider cost: if no
+   * current or stale entitlement snapshot is available, fail closed before the
+   * request reaches the provider.
    */
   async aiTextLimit(workspaceId: string): Promise<number | null> {
-    const limit = (await this.limits(workspaceId))?.aiTextRequestsPerMonth;
+    const limits = await this.limits(workspaceId);
+    if (!limits) {
+      throw rpcError(
+        'AI_QUOTA_UNAVAILABLE',
+        'AI usage could not be verified. Please try again shortly.',
+      );
+    }
+    const limit = limits.aiTextRequestsPerMonth;
     return limit == null ? null : limit;
   }
 

@@ -9,6 +9,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -18,6 +19,8 @@ import {
 } from 'class-validator';
 import { FIELD_TYPES } from '../types/cms.types';
 import type { FieldType } from '../types/cms.types';
+import { AI_OPERATIONS } from './ai.dto';
+import type { AiOperation } from './ai.dto';
 
 const API_ID = /^[a-z][a-z0-9_]*$/;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -51,7 +54,9 @@ export class FieldDefDto {
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(100)
   @IsString({ each: true })
+  @MaxLength(120, { each: true })
   options?: string[];
 
   @IsOptional()
@@ -61,6 +66,26 @@ export class FieldDefDto {
   @IsOptional()
   @IsBoolean()
   aiAssist?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(AI_OPERATIONS.length)
+  @IsIn(AI_OPERATIONS, { each: true })
+  aiOperations?: AiOperation[];
+
+  /** Marks a field as sensitive: it cannot be a target or AI context source. */
+  @IsOptional()
+  @IsBoolean()
+  aiPrivate?: boolean;
+
+  /** Explicit sibling-field allowlist for an AI-enabled field's prompt context. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @Matches(API_ID, { each: true, message: 'AI context field keys must be snake_case' })
+  aiContextFields?: string[];
 }
 
 export class CreateContentTypeDto {
@@ -111,6 +136,13 @@ export class CreateEntryDto {
   /** Field values keyed by FieldDef.key — validated against the type's fields. */
   @IsObject()
   data!: Record<string, unknown>;
+
+  /** Successful AI drafts explicitly applied before this first revision was saved. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('4', { each: true })
+  aiGenerationIds?: string[];
 }
 
 export class UpdateEntryDto {
@@ -127,6 +159,13 @@ export class UpdateEntryDto {
   @IsOptional()
   @IsObject()
   data?: Record<string, unknown>;
+
+  /** Successful AI drafts explicitly applied before this revision was saved. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('4', { each: true })
+  aiGenerationIds?: string[];
 }
 
 /** Query params for the public Content Delivery API. */

@@ -1,6 +1,6 @@
 [project]
 name = "ai-service"
-version = "0.1.0"
+version = "0.2.0"
 description = "Wriven AI service for content generation"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -8,7 +8,9 @@ dependencies = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.4.0",
+    "pydantic-settings>=2.0.0",
     "python-dotenv>=1.0.0",
+    "openai>=1.40.0",
 ]
 
 [build-system]

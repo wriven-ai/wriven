@@ -5,6 +5,7 @@ import {
   FieldDef,
   Paginated,
   UpdateContentTypeDto,
+  AI_OPERATIONS,
 } from '@wriven/contracts';
 import { DRIZZLE, dbError } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
@@ -15,6 +16,8 @@ import { CoreEntitlementsService } from '../entitlements/core-entitlements.servi
 
 const { contentTypes } = schema;
 type ContentTypeRow = typeof contentTypes.$inferSelect;
+const AI_ASSIST_FIELD_TYPES = new Set<FieldDef['type']>(['text', 'richtext', 'select']);
+const AI_OPERATION_SET = new Set(AI_OPERATIONS);
 
 @Injectable()
 export class ContentTypesService {
@@ -30,6 +33,7 @@ export class ContentTypesService {
     dto: CreateContentTypeDto;
   }): Promise<ContentTypeView> {
     this.assertUniqueKeys(p.dto.fields);
+    this.assertFieldPolicies(p.dto.fields);
     await this.entitlements.assertContentTypeQuota(p.workspaceId);
     try {
       const [row] = await this.db
@@ -125,7 +129,10 @@ export class ContentTypesService {
     dto: UpdateContentTypeDto;
   }): Promise<ContentTypeView> {
     await this.requireRow(p.projectId, p.id);
-    if (p.dto.fields) this.assertUniqueKeys(p.dto.fields);
+    if (p.dto.fields) {
+      this.assertUniqueKeys(p.dto.fields);
+      this.assertFieldPolicies(p.dto.fields);
+    }
     const [row] = await this.db
       .update(contentTypes)
       .set({
@@ -172,6 +179,105 @@ export class ContentTypesService {
         throw rpcError('VALIDATION_ERROR', `Duplicate field key "${f.key}".`);
       }
       keys.add(f.key);
+    }
+  }
+
+  /** Validate field combinations whose meaning cannot be expressed per property. */
+  private assertFieldPolicies(fields: FieldDef[]): void {
+    const fieldsByKey = new Map(fields.map((field) => [field.key, field]));
+    for (const field of fields) {
+      if (field.type === 'select') {
+        const rawOptions = field.options ?? [];
+        const options = rawOptions.map((option) => option.trim());
+        if (
+          options.length === 0 ||
+          options.some((option, index) => !option || option !== rawOptions[index]) ||
+          new Set(options).size !== options.length
+        ) {
+          throw rpcError(
+            'VALIDATION_ERROR',
+            `Select field "${field.key}" requires unique, non-empty options.`,
+          );
+        }
+      } else if (field.options?.length) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          `Only select fields can define options ("${field.key}").`,
+        );
+      }
+
+      // The current output contract produces one scalar value. A multi-select
+      // needs a dedicated multi-value/suggestions operation, not a string that
+      // happens to be assigned into an array field.
+      if (
+        field.aiAssist === true &&
+        (!AI_ASSIST_FIELD_TYPES.has(field.type) || field.multiple)
+      ) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          `AI assist is only supported for text, richtext, and single-value select fields ("${field.key}").`,
+        );
+      }
+      if (
+        (field.aiOperations && field.aiOperations.length === 0) ||
+        field.aiOperations?.some((operation) => !AI_OPERATION_SET.has(operation)) ||
+        (field.aiOperations && new Set(field.aiOperations).size !== field.aiOperations.length)
+      ) {
+        throw rpcError('VALIDATION_ERROR', `AI actions for "${field.key}" are invalid.`);
+      }
+      if (
+        field.aiOperations?.length &&
+        (!AI_ASSIST_FIELD_TYPES.has(field.type) || field.multiple)
+      ) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          `AI actions can only be configured for text, richtext, and single-value select fields ("${field.key}").`,
+        );
+      }
+      if (
+        field.type === 'select' &&
+        field.aiOperations?.some((operation) => operation !== 'generate')
+      ) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          `A select field only supports the generate AI action ("${field.key}").`,
+        );
+      }
+
+      if (
+        field.aiPrivate &&
+        (field.aiAssist === true || field.aiOperations?.length || field.aiContextFields?.length)
+      ) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          `Sensitive field "${field.key}" cannot enable AI or use AI context.`,
+        );
+      }
+
+      if (field.aiContextFields?.length) {
+        if (!AI_ASSIST_FIELD_TYPES.has(field.type) || field.multiple || field.aiAssist === false) {
+          throw rpcError(
+            'VALIDATION_ERROR',
+            `Only AI-enabled scalar text, richtext, or select fields can configure AI context ("${field.key}").`,
+          );
+        }
+        const contextKeys = new Set(field.aiContextFields);
+        if (contextKeys.size !== field.aiContextFields.length || contextKeys.has(field.key)) {
+          throw rpcError(
+            'VALIDATION_ERROR',
+            `AI context for "${field.key}" must contain unique sibling fields.`,
+          );
+        }
+        for (const contextKey of contextKeys) {
+          const contextField = fieldsByKey.get(contextKey);
+          if (!contextField || contextField.aiPrivate) {
+            throw rpcError(
+              'VALIDATION_ERROR',
+              `AI context for "${field.key}" cannot include unknown or sensitive field "${contextKey}".`,
+            );
+          }
+        }
+      }
     }
   }
 

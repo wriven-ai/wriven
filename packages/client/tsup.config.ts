@@ -6,7 +6,6 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: true,
-  treeshake: true,
   target: 'es2022',
   // .mjs / .cjs so runtimes pick the right module by extension; per-format .d.ts.
   outExtension({ format }) {

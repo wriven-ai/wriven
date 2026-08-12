@@ -26,8 +26,8 @@ const MARK_TAG: Record<string, string> = {
   code: 'code',
 };
 
-// Allow only safe link schemes — blocks javascript:/data: XSS from authored hrefs.
-const SAFE_HREF = /^(https?:|mailto:|tel:|\/|#|\.|[\w-]+$)/i;
+// Allow only safe link schemes and paths — blocks javascript:/data: XSS from authored hrefs.
+const SAFE_HREF = /^(https?:|mailto:|tel:|\/|#|\.{1,2}\/)/i;
 function safeHref(href: unknown): string {
   const value = String(href ?? '').trim();
   return SAFE_HREF.test(value) ? value : '#';
@@ -75,7 +75,7 @@ function renderNode(
     case 'paragraph':
       return createElement('p', { key }, ...renderChildren(node, components));
     case 'heading': {
-      const level = Number(node.attrs?.level ?? 2);
+      const level = Math.min(6, Math.max(1, Number(node.attrs?.level ?? 2)));
       return createElement(`h${level}`, { key }, ...renderChildren(node, components));
     }
     case 'bulletList':

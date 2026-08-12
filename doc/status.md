@@ -2,7 +2,7 @@ Current Scope & Status
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after AI content generation (specs/19) — Tier-1 text/richtext/select generation + Co-Writer panel shipped; image gen deferred._
+_Last reviewed: after AI extraction to ai-service (specs/20) — Tier-1 generation now runs in the Python ai-service (core calls it over HTTP); image gen still deferred._
 
 ---
 
@@ -84,26 +84,27 @@ _Last reviewed: after AI content generation (specs/19) — Tier-1 text/richtext/
 | **Revision retention** (`revisionsPerEntry`) | ✅ | per-entry cap prunes oldest beyond the plan limit (5/10/15) on every write (specs/15) |
 | **Usage metering** (`usage_buckets`) | 🟡 | Delivery API request counter (batched atomic increment) + `core.usage.read` composes `UsageView` (requests + storage SUM + plan limits) (specs/14). Overage gate built but **default-off** (`USAGE_ENFORCE`); live validation pending |
 
-## AI generation (in core-service) / ai-service (FastAPI `:8000` — deferred)
+## AI generation — ai-service (FastAPI `:8000`) + core-service metering
 
-AI content generation is built **inside core-service** as a dedicated `AiModule`, behind a provider
-interface (`AiProvider`) — this avoids the extra container/deploy cost of a standalone service today.
-`apps/ai-service` (FastAPI) stays as a deferred skeleton: the extraction target for later. Splitting
-out = swap the in-process provider impl for an HTTP client pointing at `AI_SERVICE_URL`; the
-`core.ai.*` message patterns and gateway callers stay unchanged.
+AI content generation runs in the standalone Python `ai-service`: prompt building, temperature, and
+`select` option validation/retry live there. core-service owns the DB-bound work — quota reserve
+(advisory lock), the `ai_generations` audit row, field/Tier-1 validation — and calls ai-service over
+HTTP behind an `AiClient` seam (`AI_SERVICE_URL` + `INTERNAL_SECRET`). The `core.ai.*` message
+patterns and gateway callers are unchanged (specs/19 built the seam; specs/20 extracted it).
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `AiModule` + generic `AiProvider` (OpenAI-compatible) | ✅ | `openai` SDK → any OpenAI-compat endpoint (OpenRouter/OpenAI/Groq…), env-swapped |
-| Text generation (`core.ai.generate`) — Tier 1 (text/richtext/select) | ✅ | gateway → core → provider; multi-turn; `select` validated + retried; specs/19 |
-| Co-Writer panel (apps/client) | ✅ | field/operation selectors, preview, apply; richtext emits semantic HTML → ProseMirror JSON |
-| Plan-limit enforcement | ✅ | hard-enforce `aiTextRequestsPerMonth` (advisory-lock atomic reserve); `aiText.used` wired in `/stats` |
+| `ai-service` generation endpoint (`POST /generate`) | ✅ | FastAPI; prompt build + temperature + `select` retry; `openai` SDK → any OpenAI-compat endpoint (env-swapped) |
+| core → ai-service HTTP client (`AiClient` seam) | ✅ | axios; `X-Internal-Secret` auth; code-allowlist error mapping (specs/20) |
+| Text generation (`core.ai.generate`) — Tier 1 (text/richtext/select) | ✅ | gateway → core → ai-service; scoped entry context, current draft sent for refinements; single-value `select` validated + retried |
+| Co-Writer panel (apps/client) | ✅ | field-bound drafts/history, refine-before-apply, diff/regeneration comparison, replace/append/prepend, undo, and a mobile bottom sheet; richtext emits semantic HTML → ProseMirror JSON |
+| Plan-limit enforcement | ✅ | hard-enforce `aiTextRequestsPerMonth` (advisory-lock atomic reserve in core); stale reservations reclaimed; entitlement failure fails closed |
 | Image generation | 🔲 | later (different model/cost) |
-| Per-field `aiAssist` builder toggle | 🔲 | backend supports `FieldDef.aiAssist`; content-type builder UI toggle pending |
-| Extract to Python `ai-service` | 🔲 | deferred; swap provider impl for an HTTP client |
+| Per-field AI policy + privacy | ✅ | builder controls `aiAssist`, allowed actions, sensitive fields, and opt-in sibling-context allowlists; server enforces scope before any provider call |
+| AI reliability / audit | ✅ | idempotency keys, persisted replay, revision provenance, bounded audit redaction, token/context/output budgets, correlation IDs, readiness and private metrics |
 
-> `ai_generations` meters usage (row-count vs the plan limit), audits each generation, and stores token totals.
-> Provider key (`AI_API_KEY`) lives in **core-service** env only — never gateway/frontend.
+> `ai_generations` meters usage (row-count vs the plan limit), audits each generation, persists an idempotent successful output until retention redaction, links explicitly applied drafts to the saved revision, and stores provider/latency metadata alongside token totals.
+> Provider key (`AI_API_KEY`) lives in **ai-service** env only — never gateway/core/frontend.
 
 ## Frontend (`apps/client`, Next.js 16)
 
@@ -133,5 +134,5 @@ out = swap the in-process provider impl for an HTTP client pointing at `AI_SERVI
 
 - Consumer **SDK / npm package** + published Delivery API docs.
 - **Frontend billing page** — Checkout redirect, Billing Portal link, replace the mock pricing page; consumes `/billing/*`. Unblocks the live Stripe e2e (the hosted Checkout page also needs the sandbox account configured: `pk_test_` publishable key + Managed Payments provisioned/disabled).
-- **AI generation** — Tier 1 shipped (specs/19); image gen + per-field `aiAssist` builder toggle remain.
+- **AI generation** — Tier 1 shipped (specs/19 + specs/20); image generation and reference-field RAG remain.
 - Deploy (Docker Compose on VPS) + CI.

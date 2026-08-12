@@ -1,23 +1,26 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { CoreEntitlementsModule } from '../entitlements/core-entitlements.module';
-import { AI_PROVIDER } from './ai-provider.interface';
+import { AI_CLIENT } from './ai-client.interface';
+import { AiAuditRetentionService } from './ai-audit-retention.service';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
-import { OpenAiCompatibleProvider } from './providers/openai-compatible.provider';
+import { AiServiceClient } from './ai-service.client';
 
 /**
- * AI content generation. The provider is injected behind the `AiProvider` seam.
- * `OpenAiCompatibleProvider` talks Chat Completions and works with any
- * OpenAI-compatible endpoint (OpenRouter, OpenAI, Groq, …) — swapped via env, not
- * code. Extraction to a standalone `ai-service` later swaps this one file for an
- * HTTP client. DB (DRIZZLE) + ConfigService are globally available.
+ * AI content generation. The LLM client is injected behind the `AiClient` seam;
+ * `AiServiceClient` is an HTTP client to the standalone Python `ai-service`
+ * (`${AI_SERVICE_URL}/generate`). Prompt building, temperature, and `select`
+ * validation/retry live in Python — core only assembles context + meters usage.
+ * DB (DRIZZLE) + ConfigService are globally available.
  */
 @Module({
-  imports: [CoreEntitlementsModule],
+  imports: [ScheduleModule.forRoot(), CoreEntitlementsModule],
   controllers: [AiController],
   providers: [
     AiService,
-    { provide: AI_PROVIDER, useClass: OpenAiCompatibleProvider },
+    AiAuditRetentionService,
+    { provide: AI_CLIENT, useClass: AiServiceClient },
   ],
 })
 export class AiModule {}
