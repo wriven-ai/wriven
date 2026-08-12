@@ -8,15 +8,27 @@ export const loginSchema = z.object({
 
 export type LoginValues = z.infer<typeof loginSchema>;
 
-export const registerSchema = z.object({
-  name: z.string().min(1, 'Full name is required'),
-  email: z.string().email('Enter a valid work email address'),
-  workspaceName: z.string().min(1, 'Workspace name is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  agreeTerms: z.boolean().refine((value) => value === true, {
-    message: 'You must agree to Wriven’s privacy policy and terms.',
-  }),
-});
+export const registerSchema = z
+  .object({
+    name: z.string().min(1, 'Full name is required'),
+    email: z.string().email('Enter a valid work email address'),
+    workspaceName: z.string().min(1, 'Workspace name is required'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(
+        /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>])/,
+        'Password must include a capital letter and a special character',
+      ),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+    agreeTerms: z.boolean().refine((value) => value === true, {
+      message: 'You must agree to Wriven\'s privacy policy and terms.',
+    }),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export type RegisterValues = z.infer<typeof registerSchema>;
 
@@ -28,7 +40,13 @@ export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z
   .object({
-    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    newPassword: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(
+        /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>])/,
+        'Password must include a capital letter and a special character',
+      ),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
   .refine((v) => v.newPassword === v.confirmPassword, {

@@ -4,9 +4,14 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
+
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+const PASSWORD_MESSAGE =
+  'Password must be at least 8 characters with one uppercase letter and one special character';
 
 export class RegisterDto {
   @IsString()
@@ -24,6 +29,7 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   password!: string;
 
   @IsOptional()
@@ -66,6 +72,7 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   newPassword!: string;
 }
 

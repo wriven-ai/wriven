@@ -14,6 +14,7 @@ const RegisterPage = () => {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const {
     register,
@@ -27,6 +28,7 @@ const RegisterPage = () => {
       email: '',
       workspaceName: '',
       password: '',
+      confirmPassword: '',
       agreeTerms: false,
     },
   });
@@ -78,7 +80,7 @@ const RegisterPage = () => {
       </div>
 
       <div
-        className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10"
+        className="sm:mx-auto sm:w-full sm:max-w-3xl text-center space-y-4 relative z-10"
         id="register-header"
       >
         <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
@@ -90,7 +92,7 @@ const RegisterPage = () => {
       </div>
 
       <div
-        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4 sm:px-0"
+        className="mt-8 sm:mx-auto sm:w-full sm:max-w-3xl relative z-10 px-4 sm:px-0"
         id="register-card-container"
       >
         <div className="bg-brand-surface py-8 px-6 border border-brand-border-button rounded-xl shadow-2xl neo-shadow-lg sm:px-10 space-y-6">
@@ -109,102 +111,136 @@ const RegisterPage = () => {
             id="register-credentials-form"
             noValidate
           >
-            <div>
-              <label
-                className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                htmlFor="register-name"
-              >
-                Full Name *
-              </label>
-              <input
-                id="register-name"
-                type="text"
-                placeholder="Sophia Wright"
-                {...register('name')}
-                className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-              />
-              {errors.name && (
-                <p className="mt-1.5 text-sm font-mono text-status-error">
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                htmlFor="register-email"
-              >
-                Work Email *
-              </label>
-              <input
-                id="register-email"
-                type="email"
-                placeholder="sophia@wriven.io"
-                {...register('email')}
-                className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-              />
-              {errors.email && (
-                <p className="mt-1.5 text-sm font-mono text-status-error">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                htmlFor="register-workspace"
-              >
-                Workspace Name *
-              </label>
-              <input
-                id="register-workspace"
-                type="text"
-                placeholder="Acme, Inc."
-                {...register('workspaceName')}
-                className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-              />
-              {errors.workspaceName && (
-                <p className="mt-1.5 text-sm font-mono text-status-error">
-                  {errors.workspaceName.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
-                htmlFor="register-password"
-              >
-                Password (min 8 characters) *
-              </label>
-              <div className="relative">
-                <input
-                  id="register-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                  {...register('password')}
-                  className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 pr-10 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <label
+                  className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                  htmlFor="register-name"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
+                  Full Name *
+                </label>
+                <input
+                  id="register-name"
+                  type="text"
+                  {...register('name')}
+                  className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                />
+                {errors.name && (
+                  <p className="mt-1.5 text-sm font-mono text-status-error">
+                    {errors.name.message}
+                  </p>
+                )}
               </div>
-              {errors.password && (
-                <p className="mt-1.5 text-sm font-mono text-status-error">
-                  {errors.password.message}
-                </p>
-              )}
+
+              <div>
+                <label
+                  className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                  htmlFor="register-email"
+                >
+                  Email *
+                </label>
+                <input
+                  id="register-email"
+                  type="email"
+                  {...register('email')}
+                  className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                />
+                {errors.email && (
+                  <p className="mt-1.5 text-sm font-mono text-status-error">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="lg:col-span-2">
+                <label
+                  className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                  htmlFor="register-workspace"
+                >
+                  Workspace Name *
+                </label>
+                <input
+                  id="register-workspace"
+                  type="text"
+                  {...register('workspaceName')}
+                  className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                />
+                {errors.workspaceName && (
+                  <p className="mt-1.5 text-sm font-mono text-status-error">
+                    {errors.workspaceName.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                  htmlFor="register-password"
+                >
+                  Password (min 8 characters) *
+                </label>
+                <div className="relative">
+                  <input
+                    id="register-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                    {...register('password')}
+                    className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 pr-10 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-1.5 text-sm font-mono text-status-error">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
+                  htmlFor="register-confirm-password"
+                >
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <input
+                    id="register-confirm-password"
+                    type={showConfirm ? 'text' : 'password'}
+                    placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                    {...register('confirmPassword')}
+                    className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-3.5 py-3 pr-10 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
+                    aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirm ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="mt-1.5 text-sm font-mono text-status-error">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5 text-sm font-mono text-text-secondary">
@@ -233,7 +269,7 @@ const RegisterPage = () => {
                 className="w-full inline-flex items-center justify-center bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 rounded-lg neo-shadow transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 id="register-submit-btn"
               >
-                {isSubmitting ? 'Creating workspace…' : 'Create workspace free'}
+                {isSubmitting ? 'Creating Workspace…' : 'Create Workspace'}
               </button>
             </div>
           </form>
@@ -247,7 +283,7 @@ const RegisterPage = () => {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="bg-brand-surface px-3.5 text-text-muted text-sm uppercase tracking-wider font-semibold">
-                Or join through
+                Or
               </span>
             </div>
           </div>
@@ -289,7 +325,7 @@ const RegisterPage = () => {
             className="text-center text-sm text-text-secondary pt-2 font-light"
             id="register-login-link"
           >
-            Already have a workspace account?{' '}
+            Already have an account?{' '}
             <Link
               href="/login"
               className="text-brand-accent font-semibold hover:underline"
