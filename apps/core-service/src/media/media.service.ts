@@ -9,7 +9,7 @@ import {
   PresignResult,
   PresignUploadDto,
 } from '@wriven/contracts';
-import { DRIZZLE } from '@wriven/database';
+import { DRIZZLE, dbError } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
@@ -176,7 +176,8 @@ export class MediaService {
         .returning();
       return this.toView(row);
     } catch (err) {
-      if ((err as { code?: string }).code === '23505') {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      if (dbError(err)?.code === '23505') {
         throw rpcError('CONFLICT', 'That file has already been uploaded.');
       }
       throw err;

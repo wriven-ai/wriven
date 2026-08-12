@@ -6,7 +6,7 @@ import {
   WorkspaceView,
 } from '@wriven/contracts';
 import type { WorkspaceRole } from '@wriven/contracts';
-import { DRIZZLE } from '@wriven/database';
+import { DRIZZLE, dbError } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
@@ -104,8 +104,9 @@ export class WorkspacesService {
         project: { id: result.project.id },
       };
     } catch (err) {
-      const e = err as { code?: string; constraint_name?: string };
-      if (e?.code === '23505' && e.constraint_name?.includes('slug')) {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      const e = dbError(err);
+      if (e?.code === '23505' && e.constraint.includes('slug')) {
         throw rpcError('CONFLICT', 'A workspace with that slug already exists.');
       }
       throw err;
@@ -157,8 +158,9 @@ export class WorkspacesService {
         .returning();
       return this.toView(row, await this.roleFor(p.workspaceId, p.callerUserId));
     } catch (err) {
-      const e = err as { code?: string; constraint_name?: string };
-      if (e?.code === '23505' && e.constraint_name?.includes('slug')) {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      const e = dbError(err);
+      if (e?.code === '23505' && e.constraint.includes('slug')) {
         throw rpcError('CONFLICT', 'A workspace with that slug already exists.');
       }
       throw err;

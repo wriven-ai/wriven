@@ -6,7 +6,7 @@ import {
   Paginated,
   UpdateContentTypeDto,
 } from '@wriven/contracts';
-import { DRIZZLE } from '@wriven/database';
+import { DRIZZLE, dbError } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
@@ -45,7 +45,8 @@ export class ContentTypesService {
         .returning();
       return this.toView(row);
     } catch (err) {
-      if ((err as { code?: string }).code === '23505') {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      if (dbError(err)?.code === '23505') {
         throw rpcError('CONFLICT', `A content type "${p.dto.apiId}" already exists.`);
       }
       throw err;

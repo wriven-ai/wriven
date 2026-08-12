@@ -21,7 +21,7 @@ import {
   WorkspaceRole,
   WorkspaceView,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, DrizzleDB, dbError } from '@wriven/database';
 import * as bcrypt from 'bcrypt';
 import { and, eq } from 'drizzle-orm';
 import { resolveAvatarUrl } from '../common/avatar';
@@ -152,8 +152,9 @@ export class AuthService {
       });
     } catch (err) {
       // Race: another signup inserted the same email between the check and now.
-      const e = err as { code?: string; constraint_name?: string };
-      if (e?.code === '23505' && e.constraint_name?.includes('email')) {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      const e = dbError(err);
+      if (e?.code === '23505' && e.constraint.includes('email')) {
         throw rpcError(
           'EMAIL_ALREADY_EXISTS',
           'An account with this email already exists.',
