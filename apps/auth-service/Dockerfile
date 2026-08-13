@@ -10,6 +10,9 @@ RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
 
 # Copy package files (for dependency caching)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Root TS + Nx configs: tsconfig.app.json extends tsconfig.base.json; nx build
+# reads nx.json. Without these, webpack/ts-loader throws TS5083.
+COPY tsconfig.base.json nx.json ./
 COPY apps/auth-service/package.json ./apps/auth-service/
 COPY libs/*/package.json ./libs/*/
 
