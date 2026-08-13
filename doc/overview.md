@@ -14,8 +14,8 @@ Wriven is an **AI-native content management and generation SaaS platform**. AI i
 | Frontend | Next.js 16, React 19, Tailwind CSS **v4** | `apps/client`, deploys to Vercel |
 | API Gateway | NestJS 11 (HTTP) | Single public entry point |
 | Auth Service | NestJS 11 (TCP microservice) | Identity, sessions, tenancy |
-| Core Service | NestJS 11 (TCP microservice) | CMS: content types, entries, media |
-| AI Service | FastAPI (Python) | Not yet built; HTTP, not TCP |
+| Core Service | NestJS 11 (TCP microservice) | CMS: content types, entries, media, AI quota/audit (calls ai-service over HTTP) |
+| AI Service | FastAPI (Python) | Content generation (prompt build + `select` retry); core → ai-service over HTTP |
 | ORM | Drizzle ORM (`drizzle-orm` + `drizzle-kit`) | postgres.js driver |
 | Database | PostgreSQL (Supabase) | Single shared DB, schema-isolated per service |
 | Object storage | Cloudflare R2 | Store object **keys** only, never URLs |
@@ -35,7 +35,7 @@ wriven/
 │   ├── api-gateway/     # NestJS — public HTTP edge
 │   ├── auth-service/    # NestJS — TCP microservice
 │   ├── core-service/    # NestJS — TCP microservice (CMS)
-│   └── ai-service/      # FastAPI (planned)
+│   └── ai-service/      # FastAPI — AI content generation (core → ai-service over HTTP)
 ├── libs/shared/
 │   ├── contracts/       # @wriven/contracts — DTOs, types, message patterns, error codes
 │   ├── database/        # @wriven/database — Drizzle client factory + DI module

@@ -26,6 +26,26 @@ export interface UsageView {
   period: UsagePeriod;
   requests: { used: number; limit: number | null };
   storage: { usedMb: number; limitMb: number | null };
+  ai: AiUsageStats;
+}
+
+/**
+ * AI generation usage for the current period. See specs/21.
+ *
+ * Note the deliberate status split, which must not be "simplified":
+ * - `requests.used` counts **succeeded** generations only — the billed unit.
+ * - `tokens` and `cost` sum **succeeded + failed** — a failed provider call
+ *   still burns tokens, so its spend is real and reported.
+ *
+ * `cost.complete` is false when at least one in-period generation used a model
+ * with no known price (`unpricedGenerations > 0`); the UI then hides or flags
+ * the dollar figure rather than showing a confidently-wrong number. `microusd`
+ * is the sum of the *known* costs regardless.
+ */
+export interface AiUsageStats {
+  requests: { used: number; limit: number | null };
+  tokens: { prompt: number; completion: number; total: number };
+  cost: { microusd: number; complete: boolean; unpricedGenerations: number };
 }
 
 /**

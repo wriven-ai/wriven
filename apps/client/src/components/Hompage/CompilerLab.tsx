@@ -21,7 +21,7 @@ export default function CompilerLab() {
     <section className="py-20 lg:py-28 bg-brand-surface relative overflow-hidden border-b border-brand-border" id="compiler-lab">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-left space-y-4 max-w-3xl mb-8">
-          <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase">
+          <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase">
             Edge Compiler pipeline
           </span>
           <h2 className="font-display font-medium tracking-tight text-text-primary text-3xl sm:text-4xl">
@@ -48,12 +48,12 @@ export default function CompilerLab() {
               >
                 <div className={`h-[2px] w-full mb-3.5 transition-colors duration-300 ${isActive ? 'bg-brand-accent' : 'bg-brand-border group-hover:bg-brand-border-button'}`} />
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className={`text-xs font-mono font-bold tracking-wider ${isActive ? 'text-brand-accent' : 'text-text-primary'}`}>
+                  <span className={`text-sm font-mono font-bold tracking-wider ${isActive ? 'text-brand-accent' : 'text-text-primary'}`}>
                     {step.title}
                   </span>
                   {isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-ping" />}
                 </div>
-                <p className="text-2xs text-text-secondary leading-normal font-light">{step.desc}</p>
+                <p className="text-sm text-text-secondary leading-normal font-light">{step.desc}</p>
               </button>
             );
           })}
@@ -62,19 +62,19 @@ export default function CompilerLab() {
         {/* Status Reports */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-10 text-left">
           <div className="lg:col-span-4 space-y-4">
-            <div className="flex items-center gap-2 text-[9px] font-mono font-bold text-text-muted uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-sm font-mono font-bold text-text-muted uppercase tracking-wider">
               <Terminal className="w-3.5 h-3.5 text-brand-accent" />
               Wriven Dev-Agent Logs
             </div>
-            <div className="text-xs font-light text-text-secondary leading-relaxed">
+            <div className="text-sm font-light text-text-secondary leading-relaxed">
               Every asset, draft, and configuration undergoes our high-performance inking compilation pipeline to serve pristine, schema-compliant JSON payloads.
             </div>
             
             <div className="flex items-center gap-2 pt-2">
-              <span className="text-2xs font-mono text-text-muted">Autoplay Switch:</span>
+              <span className="text-sm font-mono text-text-muted">Autoplay Switch:</span>
               <button 
                 onClick={() => setLabAutoPlay(!labAutoPlay)}
-                className="px-2.5 py-1 rounded bg-brand-surface-soft border border-brand-border text-2xs font-mono text-text-primary hover:border-brand-accent transition-all cursor-pointer font-bold"
+                className="px-2.5 py-1 rounded bg-brand-surface-soft border border-brand-border text-sm font-mono text-text-primary hover:border-brand-accent transition-all cursor-pointer font-bold"
               >
                 {labAutoPlay ? "⏸ PAUSE LOOP" : "▶ RESUME"}
               </button>
@@ -92,15 +92,15 @@ export default function CompilerLab() {
                   transition={{ duration: 0.25 }}
                   className="space-y-4"
                 >
-                  <span className="text-brand-accent font-mono text-xs font-bold block">$ wriven-cli ingest --source=draft_7020</span>
-                  <div className="text-xs text-text-secondary font-mono leading-relaxed space-y-1">
+                  <span className="text-brand-accent font-mono text-sm font-bold block">$ wriven-cli ingest --source=draft_7020</span>
+                  <div className="text-sm text-text-secondary font-mono leading-relaxed space-y-1">
                     <div>Analyzing layout models of blog entry template...</div>
                     <div className="text-green-600 font-bold flex items-center gap-1.5 pt-1">
                       <Check className="w-3.5 h-3.5 text-brand-accent stroke-[3]" /> Checked markdown layout rules successfully
                     </div>
                   </div>
                   
-                  <div className="text-text-primary font-mono whitespace-pre-wrap leading-relaxed border border-brand-border bg-brand-surface-soft p-4 rounded-lg text-2xs overflow-x-auto">
+                  <div className="text-text-primary font-mono whitespace-pre-wrap leading-relaxed border border-brand-border bg-brand-surface-soft p-4 rounded-lg text-sm overflow-x-auto">
 {`{
   "title": "Ingested draft titled 'Sovereign Headless Aesthetics'",
   "author_id": "usr_9921",
@@ -120,22 +120,22 @@ export default function CompilerLab() {
                   transition={{ duration: 0.25 }}
                   className="space-y-4"
                 >
-                  <span className="text-brand-accent font-mono text-xs font-bold block">$ wriven-cli compile --algorithm=weaver-v2</span>
-                  <div className="text-xs text-text-secondary font-mono leading-relaxed space-y-3">
+                  <span className="text-brand-accent font-mono text-sm font-bold block">$ wriven-cli compile --algorithm=weaver-v2</span>
+                  <div className="text-sm text-text-secondary font-mono leading-relaxed space-y-3">
                     <div className="flex items-center gap-2">
                       <RefreshCw className="w-3.5 h-3.5 text-brand-accent animate-spin" />
                       <span>Parsing keywords & compiling layout configurations...</span>
                     </div>
                     <div>
                       <span className="text-text-muted">Injected tags:</span>
-                      <span className="text-text-primary px-1.5 py-0.5 ml-1.5 bg-brand-surface-soft border border-brand-border rounded text-2xs">#Aesthetics</span>
-                      <span className="text-text-primary px-1.5 py-0.5 ml-1.5 bg-brand-surface-soft border border-brand-border rounded text-2xs">#Headless</span>
+                      <span className="text-text-primary px-1.5 py-0.5 ml-1.5 bg-brand-surface-soft border border-brand-border rounded text-sm">#Aesthetics</span>
+                      <span className="text-text-primary px-1.5 py-0.5 ml-1.5 bg-brand-surface-soft border border-brand-border rounded text-sm">#Headless</span>
                     </div>
                     <div className="text-amber-600 font-bold flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Synthesizing inline copywriting tone to Casual
                     </div>
                   </div>
-                  <div className="bg-brand-surface-soft p-4 border border-brand-border rounded-lg text-2xs font-mono text-text-secondary">
+                  <div className="bg-brand-surface-soft p-4 border border-brand-border rounded-lg text-sm font-mono text-text-secondary">
                     [COMPILER SUCCESS] Layout model weaved with optimum metadata tags.
                   </div>
                 </motion.div>
@@ -150,13 +150,13 @@ export default function CompilerLab() {
                   transition={{ duration: 0.25 }}
                   className="space-y-4"
                 >
-                  <span className="text-brand-accent font-mono text-xs font-bold block">$ wriven-cli serve --edge-flush</span>
-                  <div className="text-xs text-text-secondary font-mono leading-relaxed">
+                  <span className="text-brand-accent font-mono text-sm font-bold block">$ wriven-cli serve --edge-flush</span>
+                  <div className="text-sm text-text-secondary font-mono leading-relaxed">
                     <div className="text-green-600 font-bold flex items-center gap-1.5">
                       <Check className="w-4 h-4 text-green-600 stroke-[3]" /> Route compiled & published globally
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-2xs font-mono border-t border-brand-border pt-4 text-text-secondary">
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm font-mono border-t border-brand-border pt-4 text-text-secondary">
                     <div>Edge Node Push Key:</div>
                     <div className="text-text-primary font-bold">cdn_tokyo_hnd_3</div>
                     <div>Flush duration:</div>
@@ -164,7 +164,7 @@ export default function CompilerLab() {
                     <div>Query payload:</div>
                     <div className="text-brand-accent font-bold">GET /api/v1/posts/sovereign</div>
                   </div>
-                  <div className="text-2xs bg-brand-surface-soft text-text-primary p-4 border border-brand-border rounded-lg overflow-x-auto font-mono">
+                  <div className="text-sm bg-brand-surface-soft text-text-primary p-4 border border-brand-border rounded-lg overflow-x-auto font-mono">
                     {"{\"cached\": true, \"age\": \"0s\", \"payload\": {\"title\": \"Sovereign Headless\"}}"}
                   </div>
                 </motion.div>

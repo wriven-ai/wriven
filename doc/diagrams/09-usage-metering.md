@@ -15,6 +15,7 @@ Plans advertise `apiRequestsPerMonth` / `storageMb` but those only bite once **m
 - `UsageService.read` composes the `UsageView`:
   - **requests.used** ← `usage_buckets.request_count` for the current period.
   - **storage.usedMb** ← live `Σ media_assets.size_bytes` (point-in-time, not metered over time).
+  - **ai** ← `AiUsageStats` from `ai_generations` (specs/21): `requests.used` (succeeded), `tokens` + `cost` (succeeded **and** failed), `cost.complete` honesty flag.
   - **limits** ← `auth.entitlements.resolve` (`plans.limits ⊕ subscriptions.overrides`), cached 30s + fail-open.
 - Period = calendar month, UTC midnight boundaries. The dashboard Usage page (`/w/[ws]/usage`) renders the two bars.
 

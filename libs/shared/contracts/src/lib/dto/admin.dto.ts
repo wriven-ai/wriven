@@ -6,12 +6,17 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
 import { SUBSCRIPTION_STATUSES, type SubscriptionStatus } from '../types/billing.types';
+
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+const PASSWORD_MESSAGE =
+  'Password must be at least 8 characters with one uppercase letter and one special character';
 
 const ADMIN_ROLES = ['admin', 'moderator', 'member'] as const;
 
@@ -43,6 +48,7 @@ export class CreateAdminDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   password!: string;
 
   @IsIn(ADMIN_ROLES)

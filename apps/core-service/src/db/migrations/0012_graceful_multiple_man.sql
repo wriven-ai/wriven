@@ -1,0 +1,2 @@
+ALTER TABLE "core_svc"."ai_generations" ALTER COLUMN "prompt_version" SET DEFAULT 'text-v2';--> statement-breakpoint
+CREATE INDEX "ai_profiles_workspace_id_idx" ON "core_svc"."ai_profiles" USING btree ("workspace_id");

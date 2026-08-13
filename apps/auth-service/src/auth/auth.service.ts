@@ -14,15 +14,17 @@ import {
   RegisterDto,
   ResetPasswordDto,
   SessionView,
+  UpdateProfileDto,
   UserView,
   VerifyEmailDto,
   WorkspaceMembership,
   WorkspaceRole,
   WorkspaceView,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, DrizzleDB, dbError } from '@wriven/database';
 import * as bcrypt from 'bcrypt';
 import { and, eq } from 'drizzle-orm';
+import { resolveAvatarUrl } from '../common/avatar';
 import { durationToMs } from '../common/duration';
 import { rpcError } from '../common/rpc-error';
 import { uniqueSlug } from '../common/slug';
@@ -150,8 +152,9 @@ export class AuthService {
       });
     } catch (err) {
       // Race: another signup inserted the same email between the check and now.
-      const e = err as { code?: string; constraint_name?: string };
-      if (e?.code === '23505' && e.constraint_name?.includes('email')) {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      const e = dbError(err);
+      if (e?.code === '23505' && e.constraint.includes('email')) {
         throw rpcError(
           'EMAIL_ALREADY_EXISTS',
           'An account with this email already exists.',
@@ -160,7 +163,8 @@ export class AuthService {
       throw err;
     }
 
-    await this.issueVerificationEmail(result.user.id, result.user.email);
+    // No auto verification email on signup (specs/18) — verification is opt-in,
+    // triggered on demand from the profile page via resend-verification.
     await this.claimInvites(result.user.id, result.user.email);
 
     return {
@@ -517,6 +521,58 @@ export class AuthService {
     return this.toUserView(user);
   }
 
+  /**
+   * Self-service profile update (specs/18): `name` and/or `avatar`. `avatar`
+   * must be `null` (clear), an `http(s)` URL (e.g. Google), or an R2 key under
+   * this user's own `avatars/<userId>/` prefix (the prefix `presignAvatar`
+   * mints) — rejects arbitrary strings / keys pointing at other objects.
+   *
+   * Returns the updated user plus the **raw prior avatar value** (DB key or
+   * external URL) when the avatar changed, so the gateway can best-effort
+   * delete the orphaned R2 object. Null/empty otherwise.
+   */
+  async updateProfile(payload: {
+    userId: string;
+    dto: UpdateProfileDto;
+  }): Promise<{ user: UserView; previousAvatarKey: string | null }> {
+    const { userId, dto } = payload;
+    const existing = await this.db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+    if (!existing) throw rpcError('NOT_FOUND', 'User not found.');
+
+    const patch: Partial<Pick<UserRow, 'name' | 'avatar'>> = {};
+    if (dto.name != null) patch.name = dto.name;
+    let previousAvatarKey: string | null = null;
+    if (dto.avatar !== undefined) {
+      this.assertValidAvatar(dto.avatar, userId);
+      patch.avatar = dto.avatar; // null clears; key/URL stored verbatim
+      previousAvatarKey = existing.avatar; // raw DB value (key or Google URL)
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return { user: this.toUserView(existing), previousAvatarKey: null }; // no-op
+    }
+    const [updated] = await this.db
+      .update(users)
+      .set(patch)
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) throw rpcError('NOT_FOUND', 'User not found.');
+    return { user: this.toUserView(updated), previousAvatarKey };
+  }
+
+  /** Validate an incoming avatar value for {@link updateProfile}. */
+  private assertValidAvatar(avatar: string | null, userId: string): void {
+    if (avatar == null) return; // clearing the photo
+    if (/^https?:\/\//i.test(avatar)) return; // external URL (Google)
+    if (avatar.startsWith(`avatars/${userId}/`)) return; // own R2 key
+    throw rpcError(
+      'VALIDATION_ERROR',
+      'Invalid avatar. Upload a new photo or clear it.',
+    );
+  }
+
   /** Full session context for restoring client state after a reload. */
   async getSession(payload: { userId: string }): Promise<SessionView> {
     const [user, workspaces, projects] = await Promise.all([
@@ -674,7 +730,7 @@ export class AuthService {
       id: u.id,
       email: u.email,
       name: u.name,
-      avatar: u.avatar,
+      avatar: resolveAvatarUrl(u.avatar),
       provider: u.provider,
       emailVerified: u.emailVerified,
       createdAt: u.createdAt.toISOString(),

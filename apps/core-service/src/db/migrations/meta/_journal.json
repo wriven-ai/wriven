@@ -57,6 +57,41 @@
       "when": 1785665991168,
       "tag": "0007_huge_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786379166791,
+      "tag": "0008_futuristic_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786466131393,
+      "tag": "0009_condemned_luminals",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786557177013,
+      "tag": "0010_living_namora",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786558723626,
+      "tag": "0011_stormy_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786594014064,
+      "tag": "0012_graceful_multiple_man",
+      "breakpoints": true
     }
   ]
 }

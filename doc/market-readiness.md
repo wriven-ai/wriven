@@ -224,10 +224,16 @@ So the gaps read in context. ✅ = working.
   content-history diff UI. Now: none (last-write-wins; revisions stored but no diff
   UI/locking).
 
-### AI service (the "AI-native" promise) — **XL**
-- The product is described as "AI-native content generation"; `apps/ai-service` is a
-  **FastAPI skeleton only** (`main.py` + README). AI authoring/assist/generation is
-  unbuilt. The editor has an AI chat panel UI but no backend.
+### AI generation (the "AI-native" promise) — **M** (text shipped, image + RAG pending)
+- Text generation shipped and redesigned in specs/21 (supersedes specs/19 + 20): a typed
+  `AiOutput` (`scalar` \| `record`) covering single-field generate/refine **and** whole-entry
+  `compose`, a Generate/Refine author model (per-operation tuning kept server-side), a
+  per-project AI voice profile (brand voice/glossary/language), and token/cost accounting on
+  `/usage` (priced from the returned model; `*:free → 0`). Prompt build, temperature, and
+  `select`/`compose` validate-and-repair run in the standalone Python `ai-service`, called over
+  HTTP behind an `AiClient` seam (the only NestJS↔non-NestJS hop). The Co-Writer panel is live.
+  **Remaining:** streaming, embeddings/RAG grounding over `reference` fields, async job queue
+  (bulk/translate), and image generation.
 
 ### Webhook management depth — **M**
 - Delivery logs + retry history UI, more event types, signature docs, test-send.
@@ -283,7 +289,7 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 4. **Make it competitive:** GraphQL, localization, environments, richer field
    types/components, **custom roles + field-level perms** (the RBAC permission seam
    is already shipped — specs/12, 13; only custom roles + field-level remain). (P1→P2)
-5. **Differentiate:** ship the AI service (the "AI-native" promise), real-time
+5. **Differentiate:** ship AI generation (the "AI-native" promise — `AiModule` in core, extractable to `ai-service`), real-time
    collaboration, DAM. (P2)
 
 > **Minimum to charge money:** the P0 block. Everything compiles and the CMS works;
@@ -317,5 +323,5 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 | Admin panel UI | P1 | L | in progress |
 | SSO/SAML | P2 | L | flag only |
 | Granular RBAC seam | P2 | M | typed perms + cascade shipped (specs/12, 13); custom roles + field-level remain |
-| AI service | P2 | XL | skeleton |
+| AI generation | P2 | L→XL | Redesigned + shipped (specs/21): typed `AiOutput`, whole-entry compose, Generate/Refine model, AI voice profile, token/cost accounting; streaming + RAG + image gen remain |
 | Real-time collab | P2 | XL | none |

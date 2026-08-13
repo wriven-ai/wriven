@@ -5,7 +5,7 @@ import {
   Database,
   FileText,
   Plus,
-  RefreshCw,
+  Shapes,
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { contentApi } from '@/lib/api';
 import type { ContentEntryView, ContentTypeView } from '@/lib/types';
 import { STATUS_COLORS } from '@/components/content/fields';
+import { ContentTypeSelectSkeleton, EntryRowsSkeleton } from '@/components/skeleton/content-list-skeleton';
 
 /** Best display title for an entry: first text field value, else slug. */
 function entryTitle(entry: ContentEntryView, type?: ContentTypeView): string {
@@ -30,10 +31,11 @@ export default function ContentListPage() {
 
   const [selectedTypeId, setSelectedTypeId] = useState('');
 
-  const { data: types = [], isLoading: typesLoading } = useQuery({
+  const { data: typesData, isLoading: typesLoading } = useQuery({
     queryKey: ['content-types'],
-    queryFn: contentApi.listTypes,
+    queryFn: () => contentApi.listTypes({ limit: 100 }),
   });
+  const types = typesData?.items ?? [];
   const selectedType = types.find((t) => t.id === selectedTypeId);
 
   useEffect(() => {
@@ -60,34 +62,42 @@ export default function ContentListPage() {
           <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
             Headless <span className="font-normal italic text-brand-secondary">Content</span>
           </h1>
-          <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+          <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
             {'// Browse, create, and manage entries per content type'}
           </p>
         </div>
 
-        {selectedTypeId && (
+        <div className="flex items-center gap-2.5">
           <Link
-            href={`${contentBase}/new?type=${selectedTypeId}`}
-            className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button px-5 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer neo-shadow"
+            href={contentTypesHref}
+            className="inline-flex items-center gap-1.5 border border-brand-border bg-brand-surface hover:bg-brand-surface-soft text-text-secondary hover:text-text-primary px-4 py-2.5 rounded-lg text-sm font-mono font-bold transition-colors cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> New entry
+            <Shapes className="w-3.5 h-3.5" />
+            Content types
           </Link>
-        )}
+
+          {selectedTypeId && (
+            <Link
+              href={`${contentBase}/new?type=${selectedTypeId}`}
+              className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button px-5 py-2.5 rounded-lg text-sm font-mono font-bold transition-all cursor-pointer neo-shadow"
+            >
+              <Plus className="w-3.5 h-3.5" /> New entry
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Content type selector */}
       <div className="bg-brand-surface border border-brand-border rounded-xl p-4 flex flex-wrap items-center gap-3 shadow-xs">
-        <div className="flex items-center gap-2 font-mono text-2xs text-text-secondary">
+        <div className="flex items-center gap-2 font-mono text-sm text-text-secondary">
           <Database className="w-4 h-4 text-brand-secondary shrink-0" />
           <span>Content type:</span>
         </div>
 
         {typesLoading ? (
-          <span className="text-2xs font-mono text-text-muted flex items-center gap-1">
-            <RefreshCw className="w-3 h-3 animate-spin" /> Loading...
-          </span>
+          <ContentTypeSelectSkeleton />
         ) : types.length === 0 ? (
-          <span className="text-2xs font-mono text-text-muted">
+          <span className="text-sm font-mono text-text-muted">
             No types yet —{' '}
             <a href={contentTypesHref} className="text-brand-accent underline">create one</a>
           </span>
@@ -95,7 +105,7 @@ export default function ContentListPage() {
           <select
             value={selectedTypeId}
             onChange={(e) => setSelectedTypeId(e.target.value)}
-            className="bg-brand-surface-soft border border-brand-border rounded px-2.5 py-1.5 text-xs font-mono text-text-primary outline-hidden font-bold cursor-pointer"
+            className="bg-brand-surface-soft border border-brand-border rounded px-2.5 py-1.5 text-sm font-mono text-text-primary outline-hidden font-bold cursor-pointer"
           >
             {types.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
@@ -104,7 +114,7 @@ export default function ContentListPage() {
         )}
 
         {selectedTypeId && (
-          <span className="ml-auto text-[10px] font-mono text-text-muted">
+          <span className="ml-auto text-sm font-mono text-text-muted">
             {entriesPage?.total ?? 0} entries
           </span>
         )}
@@ -114,12 +124,12 @@ export default function ContentListPage() {
       {!selectedTypeId ? (
         <div className="bg-brand-surface border border-brand-border p-12 rounded-xl text-center">
           <FileText className="w-10 h-10 text-text-muted mx-auto mb-3" />
-          <p className="text-xs font-mono text-text-muted">Select a content type to see its entries.</p>
+          <p className="text-sm font-mono text-text-muted">Select a content type to see its entries.</p>
         </div>
       ) : (
         <div className="bg-brand-surface border border-brand-border rounded-xl shadow-xs overflow-hidden">
           {/* Table header */}
-          <div className="hidden sm:grid grid-cols-12 gap-3 px-4 py-2.5 border-b border-brand-border bg-brand-surface-soft/40 font-mono text-[9px] font-bold uppercase tracking-wider text-text-muted">
+          <div className="hidden sm:grid grid-cols-12 gap-3 px-4 py-2.5 border-b border-brand-border bg-brand-surface-soft/40 font-mono text-sm font-bold uppercase tracking-wider text-text-muted">
             <span className="col-span-6">Title</span>
             <span className="col-span-2">Status</span>
             <span className="col-span-3">Updated</span>
@@ -127,15 +137,13 @@ export default function ContentListPage() {
           </div>
 
           {entriesLoading ? (
-            <div className="flex items-center gap-2 text-[10px] font-mono text-text-muted p-6">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading entries...
-            </div>
+            <EntryRowsSkeleton />
           ) : entries.length === 0 ? (
             <div className="p-10 text-center">
-              <p className="text-xs font-mono text-text-muted mb-3">No entries yet.</p>
+              <p className="text-sm font-mono text-text-muted mb-3">No entries yet.</p>
               <Link
                 href={`${contentBase}/new?type=${selectedTypeId}`}
-                className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-brand-accent hover:text-brand-accent-hover"
+                className="inline-flex items-center gap-1.5 text-sm font-mono font-bold text-brand-accent hover:text-brand-accent-hover"
               >
                 <Plus className="w-3 h-3" /> Create the first entry
               </Link>
@@ -149,17 +157,17 @@ export default function ContentListPage() {
                   className="grid grid-cols-12 gap-3 px-4 py-3 items-center hover:bg-brand-surface-soft/60 transition-colors group"
                 >
                   <div className="col-span-12 sm:col-span-6 min-w-0">
-                    <p className="text-xs font-mono font-bold text-text-primary truncate">
+                    <p className="text-sm font-mono font-bold text-text-primary truncate">
                       {entryTitle(entry, selectedType)}
                     </p>
-                    <p className="text-[9px] font-mono text-text-muted truncate">/{entry.slug}</p>
+                    <p className="text-sm font-mono text-text-muted truncate">/{entry.slug}</p>
                   </div>
                   <div className="col-span-6 sm:col-span-2">
-                    <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${STATUS_COLORS[entry.status]}`}>
+                    <span className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded border ${STATUS_COLORS[entry.status]}`}>
                       {entry.status.toUpperCase()}
                     </span>
                   </div>
-                  <div className="col-span-5 sm:col-span-3 text-[10px] font-mono text-text-muted">
+                  <div className="col-span-5 sm:col-span-3 text-sm font-mono text-text-muted">
                     {new Date(entry.updatedAt).toLocaleDateString()}
                   </div>
                   <div className="col-span-1 flex justify-end">

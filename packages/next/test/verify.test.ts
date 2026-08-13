@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { verifyWrivenSignature } from '../src/verify';
+import { verifyWrivenSignature } from '../src/index';
 
 const sign = (secret: string, ts: string, body: string) =>
   'sha256=' + createHmac('sha256', secret).update(`${ts}.${body}`).digest('hex');

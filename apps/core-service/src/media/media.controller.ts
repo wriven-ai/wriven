@@ -24,6 +24,20 @@ export class MediaController {
     return this.media.presign(p);
   }
 
+  /** Profile photo presign (specs/18) — no media_assets row, user-scoped. */
+  @MessagePattern(CORE_PATTERNS.AVATAR_PRESIGN)
+  presignAvatar(
+    @Payload() p: { userId: string; dto: PresignUploadDto },
+  ) {
+    return this.media.presignAvatar(p);
+  }
+
+  /** Best-effort orphan cleanup on avatar change/remove (specs/18). */
+  @MessagePattern(CORE_PATTERNS.AVATAR_DELETE)
+  deleteAvatar(@Payload() p: { key: string }) {
+    return this.media.deleteAvatar(p);
+  }
+
   @MessagePattern(CORE_PATTERNS.MEDIA_CREATE)
   create(
     @Payload()
@@ -40,7 +54,14 @@ export class MediaController {
   @MessagePattern(CORE_PATTERNS.MEDIA_LIST)
   list(
     @Payload()
-    p: { workspaceId: string; projectId: string; page?: number; limit?: number },
+    p: {
+      workspaceId: string;
+      projectId: string;
+      page?: number;
+      limit?: number;
+      search?: string;
+      sort?: 'newest' | 'oldest' | 'name';
+    },
   ) {
     return this.media.list(p);
   }
@@ -57,5 +78,12 @@ export class MediaController {
     @Payload() p: { workspaceId: string; projectId: string; id: string },
   ) {
     return this.media.remove(p);
+  }
+
+  @MessagePattern(CORE_PATTERNS.MEDIA_DELETE_BULK)
+  removeMany(
+    @Payload() p: { workspaceId: string; projectId: string; ids: string[] },
+  ) {
+    return this.media.removeMany(p);
   }
 }

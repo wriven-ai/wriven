@@ -80,7 +80,7 @@ export function MediaPickerDialog({
       <DialogContent className="bg-brand-surface border-brand-border text-text-primary max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-display text-text-primary">{title}</DialogTitle>
-          <DialogDescription className="font-mono text-2xs text-text-muted">
+          <DialogDescription className="font-mono text-sm text-text-muted">
             {description}
           </DialogDescription>
         </DialogHeader>
@@ -89,7 +89,7 @@ export function MediaPickerDialog({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploadMutation.isPending}
-          className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-brand-border py-3 font-mono text-2xs font-bold text-text-secondary hover:border-brand-accent transition-colors disabled:opacity-60"
+          className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-brand-border py-3 font-mono text-sm font-bold text-text-secondary hover:border-brand-accent transition-colors disabled:opacity-60"
         >
           {uploadMutation.isPending ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -111,7 +111,7 @@ export function MediaPickerDialog({
 
         <div className="grid max-h-72 grid-cols-3 gap-3 overflow-y-auto sm:grid-cols-4">
           {assets.length === 0 ? (
-            <p className="col-span-full py-6 text-center font-mono text-2xs text-text-muted">
+            <p className="col-span-full py-6 text-center font-mono text-sm text-text-muted">
               No media yet.
             </p>
           ) : (

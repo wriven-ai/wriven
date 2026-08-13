@@ -32,6 +32,11 @@ function buildQuery(query?: QueryOptions): string {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Extended fetch init that includes Next.js-specific cache control options. */
+interface FetchInit extends RequestInit {
+  next?: { revalidate?: number | false; tags?: string[] };
+}
+
 /**
  * Create a Wriven delivery client. Isomorphic (Node 18+, browsers, edge) and
  * dependency-free. A `wrk_preview_…` token automatically returns drafts.
@@ -61,13 +66,13 @@ export function createClient(options: ClientOptions): WrivenClient {
       if (query?.signal?.aborted) controller.abort();
       else query?.signal?.addEventListener('abort', onAbort, { once: true });
       try {
-        const res = await doFetch(url, {
+        const fetchOptions: FetchInit = {
           headers,
           signal: controller.signal,
-          ...(query?.cache ? { cache: query.cache } : {}),
-          // Next.js fetch extension — ignored by other runtimes.
-          ...(query?.next ? ({ next: query.next } as RequestInit) : {}),
-        });
+        };
+        if (query?.cache) fetchOptions.cache = query.cache;
+        if (query?.next) fetchOptions.next = query.next;
+        const res = await doFetch(url, fetchOptions as RequestInit);
         const body = await res.json().catch(() => null);
 
         if (!res.ok || (body && body.success === false)) {

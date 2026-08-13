@@ -31,7 +31,7 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-bg text-text-muted font-mono text-xs uppercase tracking-wider">
+    <div className="min-h-screen flex items-center justify-center bg-brand-bg text-text-muted font-mono text-sm uppercase tracking-wider">
       Signing you in…
     </div>
   );

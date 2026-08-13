@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -7,6 +9,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -49,12 +52,27 @@ export class FieldDefDto {
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(100)
   @IsString({ each: true })
+  @MaxLength(120, { each: true })
   options?: string[];
 
   @IsOptional()
   @IsString()
   refTypeId?: string;
+
+  /** Marks a field as sensitive: it cannot be a target or AI context source. */
+  @IsOptional()
+  @IsBoolean()
+  aiPrivate?: boolean;
+
+  /** Explicit sibling-field allowlist for an AI-enabled field's prompt context. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  @Matches(API_ID, { each: true, message: 'AI context field keys must be snake_case' })
+  aiContextFields?: string[];
 }
 
 export class CreateContentTypeDto {
@@ -105,6 +123,13 @@ export class CreateEntryDto {
   /** Field values keyed by FieldDef.key — validated against the type's fields. */
   @IsObject()
   data!: Record<string, unknown>;
+
+  /** Successful AI drafts explicitly applied before this first revision was saved. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('4', { each: true })
+  aiGenerationIds?: string[];
 }
 
 export class UpdateEntryDto {
@@ -121,6 +146,13 @@ export class UpdateEntryDto {
   @IsOptional()
   @IsObject()
   data?: Record<string, unknown>;
+
+  /** Successful AI drafts explicitly applied before this revision was saved. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('4', { each: true })
+  aiGenerationIds?: string[];
 }
 
 /** Query params for the public Content Delivery API. */
@@ -247,4 +279,18 @@ export class ListEntriesQueryDto {
   @Min(1)
   @Max(100)
   limit?: number;
+}
+
+/**
+ * Bulk-delete media assets (`POST /content/media/bulk-delete`). Asset ids are
+ * scoped to the request's project server-side; only matching live rows are
+ * soft-deleted (atomic single `UPDATE … WHERE id IN (…)`) and their R2 objects
+ * cleaned up best-effort. See specs/03 + multi-select.
+ */
+export class DeleteMediaBulkDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  ids!: string[];
 }

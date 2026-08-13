@@ -44,7 +44,7 @@ export function MediaImageView({ node, deleteNode, selected }: NodeViewProps) {
         ) : (
           <div className="flex h-40 w-full flex-col items-center justify-center gap-1 text-text-muted">
             <ImageOff className="h-6 w-6" />
-            <span className="font-mono text-[10px]">Image not found</span>
+            <span className="font-mono text-sm">Image not found</span>
           </div>
         )}
 
@@ -60,7 +60,7 @@ export function MediaImageView({ node, deleteNode, selected }: NodeViewProps) {
       </div>
 
       {(alt || asset?.alt) && (
-        <p className="border-t border-brand-border px-3 py-1.5 text-center font-mono text-[10px] text-text-muted">
+        <p className="border-t border-brand-border px-3 py-1.5 text-center font-mono text-sm text-text-muted">
           {alt || asset?.alt}
         </p>
       )}

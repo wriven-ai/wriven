@@ -78,6 +78,19 @@ User ──< workspace_members >── Workspace ──< projects ── project
 - `GET /auth/google` → redirect to Google. `GET /auth/google/callback` → gateway exchanges code for profile, sends it over TCP (`auth.googleLogin`), sets refresh cookie, redirects to `${CLIENT_ORIGIN}/auth/callback#access_token=…` (token in URL fragment).
 - `googleLogin` resolution: find by `provider_id` → else link to existing local account by email (sets `provider_id`, `email_verified=true`) → else full signup transaction (`provider: 'google'`, verified).
 
+### Mail templates
+
+All outbound mail is rendered from typed templates in
+[`apps/auth-service/src/mail/templates/`](../apps/auth-service/src/mail/templates/)
+— one file per email (`password-reset`, `invitation`, `verification`) plus a
+shared `layout.ts` holding the Wriven brand palette (emerald/eggshell tokens
+from the tenant `global.css`), an `escapeHtml` helper, and the bulletproof
+email shell (table layout, inline styles, Outlook VML CTA). Each template
+exports a `render…` function returning `{ subject, text, html }`; the
+`MailService` builds the link + expiry copy and hands the data over.
+Expiry phrasing comes from the configured TTLs (`RESET_TOKEN_TTL`,
+`EMAIL_VERIFY_TTL`) via `common/duration.ts`'s `durationToHuman`.
+
 ## Security hardening
 
 - bcrypt rounds 12 (do not lower).

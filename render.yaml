@@ -10,6 +10,9 @@
 #   wriven-gateway  → web service  (public HTTP, port from Render $PORT) → api.wriven.tech
 #   wriven-auth     → pserv         (internal NestJS TCP :5001)
 #   wriven-core     → pserv         (internal NestJS TCP :5002)
+#   wriven-ai       → pserv         (internal FastAPI HTTP :8000)
+# core-service → ai-service is the only NestJS↔non-NestJS hop (HTTP); all
+# NestJS↔NestJS is TCP.
 # Database: external Supabase (no Render DB). No Redis — services are brokerless TCP.
 
 services:
@@ -67,6 +70,58 @@ services:
       - key: R2_ENDPOINT
         sync: false
       - key: R2_PUBLIC_URL
+        sync: false
+      # ai-service (internal HTTP :8000). INTERNAL_SECRET authenticates the hop.
+      - key: AI_SERVICE_URL
+        value: http://wriven-ai:8000
+      # Slightly longer than ai-service's provider timeout so a provider timeout
+      # can be returned to core instead of looking like a disconnected request.
+      - key: AI_SERVICE_TIMEOUT_MS
+        value: "35000"
+      - key: AI_AUDIT_RETENTION_DAYS
+        value: "30"
+      # Optional configured-model provider prices in micro-USD / 1M tokens.
+      # Set both values for cost reconciliation; omit both if pricing is unknown.
+      - key: AI_INPUT_COST_MICROUSD_PER_MILLION_TOKENS
+        sync: false
+      - key: AI_OUTPUT_COST_MICROUSD_PER_MILLION_TOKENS
+        sync: false
+      - key: INTERNAL_SECRET
+        sync: false
+
+  # ── ai-service (internal HTTP microservice, FastAPI) ──────────────────────────
+  - type: pserv
+    name: wriven-ai
+    runtime: docker
+    dockerfilePath: ./apps/ai-service/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: ENVIRONMENT
+        value: production
+      # Shared secret authenticating the core-service → ai-service HTTP hop.
+      - key: INTERNAL_SECRET
+        sync: false
+      # LLM provider (generic OpenAI-compatible Chat Completions). The provider
+      # key lives ONLY here — never on gateway/core/client or in the browser.
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_MODEL
+        sync: false
+      - key: AI_TIMEOUT_MS
+        value: "30000"
+      - key: AI_MAX_INPUT_CHARS
+        value: "24000"
+      - key: AI_MAX_OUTPUT_TOKENS
+        value: "8000"
+      # Optional JSON of extra provider headers (e.g. OpenRouter attribution).
+      - key: AI_HEADERS
         sync: false
 
   # ── api-gateway (public HTTP) ─────────────────────────────────────────────────

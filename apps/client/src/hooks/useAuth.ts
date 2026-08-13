@@ -15,6 +15,7 @@ export function useAuth() {
   const currentProjectId = useAuthStore((s) => s.currentProjectId);
   const setWorkspace = useAuthStore((s) => s.setWorkspace);
   const setProject = useAuthStore((s) => s.setProject);
+  const updateUser = useAuthStore((s) => s.updateUser);
   const currentWorkspace =
     workspaces.find((w) => w.id === currentWorkspaceId) ?? null;
   // Projects scoped to the active workspace.
@@ -35,6 +36,7 @@ export function useAuth() {
     currentProject,
     setWorkspace,
     setProject,
+    updateUser,
     isAuthenticated: status === 'authenticated',
   };
 }

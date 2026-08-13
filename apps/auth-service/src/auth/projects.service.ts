@@ -10,7 +10,8 @@ import {
   getProjectScope,
 } from '@wriven/contracts';
 import type { ProjectRole, WorkspaceRole } from '@wriven/contracts';
-import { DRIZZLE } from '@wriven/database';
+import { DRIZZLE, dbError } from '@wriven/database';
+import { resolveAvatarUrl } from '../common/avatar';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
@@ -78,8 +79,9 @@ export class ProjectsService {
       });
       return this.toView(result, 'admin');
     } catch (err) {
-      const e = err as { code?: string; constraint_name?: string };
-      if (e?.code === '23505' && e.constraint_name?.includes('slug')) {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      const e = dbError(err);
+      if (e?.code === '23505' && e.constraint.includes('slug')) {
         throw rpcError('CONFLICT', 'A project with that slug already exists.');
       }
       throw err;
@@ -158,8 +160,9 @@ export class ProjectsService {
         .returning();
       return this.toView(row, await this.roleFor(p.projectId, p.callerUserId));
     } catch (err) {
-      const e = err as { code?: string; constraint_name?: string };
-      if (e?.code === '23505' && e.constraint_name?.includes('slug')) {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      const e = dbError(err);
+      if (e?.code === '23505' && e.constraint.includes('slug')) {
         throw rpcError('CONFLICT', 'A project with that slug already exists.');
       }
       throw err;
@@ -402,7 +405,7 @@ export class ProjectsService {
         id: r.user.id,
         email: r.user.email,
         name: r.user.name,
-        avatar: r.user.avatar,
+        avatar: resolveAvatarUrl(r.user.avatar),
       },
     };
   }

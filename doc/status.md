@@ -2,7 +2,7 @@ Current Scope & Status
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webhook reconciler committed; live e2e pending frontend._
+_Last reviewed: after the AI generation redesign (specs/21) — typed `AiOutput` (scalar/record), whole-entry `compose`, Generate/Refine author model, per-project AI voice, and token/cost accounting on `/usage`. Image gen still deferred._
 
 ---
 
@@ -52,7 +52,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Project CRUD** (create/get/update/delete, admin-guard) | ✅ | create seeds creator as project admin |
 | **Project member CRUD** (list/add/update/remove, admin-guard) | ✅ | ≥1 admin |
 | **Stripe billing** (Checkout, Billing Portal, direct plan-swap, webhook reconcile) | ✅ | backend done (specs/08); `/billing/swap` upgrades/cycle-switches immediately (prorated) + **defers downgrades to period end** via Subscription Schedules (specs/16, `pendingDowngrade` on the view) + cancel-to-free; live e2e 🟡 deferred to sandbox config |
-| **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI limit fields added (unenforced — ai-service pending) |
+| **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI text limit fields enforced (specs/19) |
 | **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan()` filled against the shared cascade; nav + action buttons + management routes gated (specs/13) |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
 | Invitation flow (invite → pending → accept) | 🔲 | members added to existing users only |
@@ -84,13 +84,35 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | **Revision retention** (`revisionsPerEntry`) | ✅ | per-entry cap prunes oldest beyond the plan limit (5/10/15) on every write (specs/15) |
 | **Usage metering** (`usage_buckets`) | 🟡 | Delivery API request counter (batched atomic increment) + `core.usage.read` composes `UsageView` (requests + storage SUM + plan limits) (specs/14). Overage gate built but **default-off** (`USAGE_ENFORCE`); live validation pending |
 
-## ai-service (FastAPI `:8000`)
+## AI generation — ai-service (FastAPI `:8000`) + core-service metering
 
-| Item | Status |
-|------|--------|
-| Everything (text/image generation, jobs) | 🔲 Not started |
+AI content generation runs in the standalone Python `ai-service`: prompt building,
+temperature, structured-output validation, and the `select`/`compose` repair retry live
+there. core-service owns the DB-bound work — quota reserve (advisory lock), the
+`ai_generations` audit row, field/Tier-1 validation, per-project voice profile, and
+cost accounting — and calls ai-service over HTTP behind an `AiClient` seam
+(`AI_SERVICE_URL` + `INTERNAL_SECRET`). Reshaped in specs/21 (supersedes specs/19 + 20).
 
-> Schema is AI-ready: a future `ai_generations` table references `content_entries.id`; no re-model needed.
+| Item | Status | Notes |
+|------|--------|-------|
+| `ai-service` generation endpoint (`POST /generate`) | ✅ | FastAPI; per-operation prompt/temperature/token-cap; `select` + `compose` validate-and-repair-once; `extra="ignore"` for rolling-deploy safety |
+| core → ai-service HTTP client (`AiClient` seam) | ✅ | axios; `X-Internal-Secret`; code-allowlist error passthrough (`AI_INPUT_TOO_LARGE` stays actionable) |
+| Typed generation (`core.ai.generate`) | ✅ | response is `AiOutput` (`scalar` \| `record`); single-field generate/refine on Tier-1 + whole-entry `compose`; `truncated` surfaced from `finish_reason:'length'` |
+| Author model — Generate / Refine (+preset chips) | ✅ | replaced the 7-verb dropdown + tone input; per-operation tuning kept server-side (matters on a free model) |
+| Co-Writer panel (apps/client) | ✅ | per-field generate/refine + history + diff + apply modes + undo; **Draft whole entry** with per-field record preview and apply-selected |
+| Per-project AI voice | ✅ | brand voice + glossary + language (`ai_profiles`), edited in the content-types page, injected as a fenced `<voice_guide>`; never sent by the client on generate |
+| Per-field AI policy + privacy | ✅ | **one** control: `aiPrivate` (sensitive). `aiAssist`/`aiOperations` removed — eligibility is derived (Tier-1 ∧ single-value ∧ not sensitive). Opt-in `aiContextFields` under Advanced |
+| Token + cost accounting | ✅ | price resolved from the *returned* model (`*:free → 0`, never a guess); period `AiUsageStats` on `/usage` + `WorkspaceStatsView.aiText` (requests=succeeded; tokens/cost=succeeded+failed; `cost.complete` honesty flag) |
+| Plan-limit enforcement | ✅ | hard-enforce `aiTextRequestsPerMonth` (advisory-lock atomic reserve); stale reservations reclaimed; entitlement failure fails closed; gateway 40s timeout backstop |
+| Image generation | 🔲 | later (different model/cost) |
+| AI reliability / audit | ✅ | idempotency keys, persisted replay, revision provenance (+ `applied_field_keys` for compose), bounded audit redaction, token/context/output budgets, correlation IDs, readiness and private metrics |
+
+> `ai_generations` meters usage (row-count vs the plan limit), audits each generation
+> (typed output, target_kind, tokens, per-model cost, latency), persists an idempotent
+> successful output until retention redaction, links explicitly applied drafts to the
+> saved revision, and records compose field provenance. A compose is **one** generation
+> = one quota unit regardless of how many fields it fills.
+> Provider key (`AI_API_KEY`) lives in **ai-service** env only — never gateway/core/frontend.
 
 ## Frontend (`apps/client`, Next.js 16)
 
@@ -112,6 +134,7 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 | Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (specs/05) |
 | Webhooks UI (project settings: add/list/pause/delete, secret once) | ✅ | `webhookApi`; HMAC verify documented inline |
 | **Usage page** (requests + storage vs plan limits) | ✅ | `useUsage` → `GET /usage`; replaces the prior mock analytics page (specs/14) |
+| **Workspace + project stats** (real aggregate counts) | ✅ | `GET /stats/workspace` + `/stats/project` → themed stat grids; replaces every hardcoded project-dashboard number. Bandwidth `used` null (unmetered); AI text reports requests + tokens + cost (specs/17, specs/21) |
 | Email verification page (`/verify-email?token=`) | ✅ | auto-verifies on load; success/error states |
 | **RBAC gating** (`useCan()`, `<Can>`, `<RequirePermission>`) | ✅ | nav + action buttons + management routes gated by `Permission` via the shared `effectivePermissions` cascade (specs/13) |
 
@@ -119,5 +142,5 @@ _Last reviewed: after Stripe billing backend (specs/08) — Checkout/portal/webh
 
 - Consumer **SDK / npm package** + published Delivery API docs.
 - **Frontend billing page** — Checkout redirect, Billing Portal link, replace the mock pricing page; consumes `/billing/*`. Unblocks the live Stripe e2e (the hosted Checkout page also needs the sandbox account configured: `pk_test_` publishable key + Managed Payments provisioned/disabled).
-- **ai-service**.
+- **AI generation** — redesigned and shipped (specs/21): typed `AiOutput`, whole-entry `compose`, Generate/Refine author model, per-project AI voice, token/cost accounting. Remaining: streaming, embeddings/RAG grounding, async job queue (bulk/translate), image generation, token-based plan limits.
 - Deploy (Docker Compose on VPS) + CI.

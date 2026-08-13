@@ -6,7 +6,7 @@ import {
   WorkspaceView,
 } from '@wriven/contracts';
 import type { WorkspaceRole } from '@wriven/contracts';
-import { DRIZZLE } from '@wriven/database';
+import { DRIZZLE, dbError } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
 import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
@@ -31,6 +31,25 @@ export class WorkspacesService {
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly authz: AuthorizationService,
   ) {}
+
+  /**
+   * Workspace tenancy counts (projects + members) for the dashboard aggregate.
+   * Membership is already enforced by the gateway's WorkspaceGuard, so this
+   * trusts the injected `workspaceId` and just counts. Merged with core-service
+   * content/media stats at the gateway. See specs/17.
+   */
+  async stats(p: {
+    workspaceId: string;
+  }): Promise<{ projects: number; members: number }> {
+    const [projectCount, memberCount] = await Promise.all([
+      this.db.$count(projects, eq(projects.workspaceId, p.workspaceId)),
+      this.db.$count(
+        workspaceMembers,
+        eq(workspaceMembers.workspaceId, p.workspaceId),
+      ),
+    ]);
+    return { projects: projectCount, members: memberCount };
+  }
 
   async create(p: {
     userId: string;
@@ -85,8 +104,9 @@ export class WorkspacesService {
         project: { id: result.project.id },
       };
     } catch (err) {
-      const e = err as { code?: string; constraint_name?: string };
-      if (e?.code === '23505' && e.constraint_name?.includes('slug')) {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      const e = dbError(err);
+      if (e?.code === '23505' && e.constraint.includes('slug')) {
         throw rpcError('CONFLICT', 'A workspace with that slug already exists.');
       }
       throw err;
@@ -138,8 +158,9 @@ export class WorkspacesService {
         .returning();
       return this.toView(row, await this.roleFor(p.workspaceId, p.callerUserId));
     } catch (err) {
-      const e = err as { code?: string; constraint_name?: string };
-      if (e?.code === '23505' && e.constraint_name?.includes('slug')) {
+      // drizzle-orm wraps postgres.js errors — unwrap to the SQLSTATE code.
+      const e = dbError(err);
+      if (e?.code === '23505' && e.constraint.includes('slug')) {
         throw rpcError('CONFLICT', 'A workspace with that slug already exists.');
       }
       throw err;

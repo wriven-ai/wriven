@@ -45,6 +45,8 @@ This means adding a user-chosen field needs **no migration**, scales without per
 
 **usage_buckets** — workspace_id, `period_start` / `period_end` (timestamptz; calendar month, UTC), `request_count` (bigint, default 0), `updated_at`. `unique(workspace_id, period_start)` + index on `workspace_id`. One row per workspace × billing period, atomically incremented (`ON CONFLICT … request_count + n`) by the gateway's batched flush. No FK (auth_svc boundary). See specs/14.
 
+**ai_generations** — workspace_id, project_id, `content_type_id` / `entry_id` (nullable, plain uuid — no FK, so a record survives its target being deleted), target `field_key`/`operation`, a user-scoped `idempotency_key` plus request hash, persisted `output`, model/token totals, prompt version, latency, attempt count, provider request id, finish reason, optional known cost, optional applied revision, `status` (`pending`|`succeeded`|`failed`), error and completion time. `output` and `request_hash` are redacted after the configured retention period; operational metadata remains. On an explicit AI apply followed by Save, core verifies ownership/scope and links the row to the immutable revision. Indexes include `(workspace_id, created_at)`, `(entry_id)`, `(project_id)`, and unique `(workspace_id, created_by, idempotency_key)`. One row per generation — quota reservation, audit trail, safe response replay, and the durable record a future worker queue will use.
+
 ## Field types (`FieldDef`)
 
 Defined in `@wriven/contracts` (`cms.types.ts` / `cms.dto.ts`):
@@ -94,6 +96,8 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 
 `core.contentType.{create,list,get,update,delete}` · `core.entry.{create,list,get,update,delete,publish}` · `core.ping`. Defined as `CORE_PATTERNS` in `@wriven/contracts`.
 
+**AI generation** (`AI_PATTERNS`, specs/21 — supersedes specs/19 + 20): `core.ai.generate` derives the operation from `(targetKind, intent, preset)`, validates the target (Tier-1, single-value, not sensitive) or assembles `composeFields` for a whole-entry draft, loads the per-project AI voice profile (`ai_profiles`), reserves quota (advisory lock), and calls the injected `AiClient` (HTTP to the standalone `ai-service`). It returns a typed `AiOutput` (`scalar` \| `record`). `core.ai.profile.read`/`profile.update` expose the voice profile. Prompt build, temperature, and `select`/`compose` validate-and-repair live in ai-service; the gateway callers are unchanged. Cost is priced from the returned model (`core/ai/ai-model-prices.ts`).
+
 **Usage metering** (`USAGE_PATTERNS`, specs/14): `core.usage.record` (batched atomic increment from the gateway's in-process buffer) · `core.usage.read` (composes the current-period `UsageView`: request count from `usage_buckets` + live media SUM + effective plan limits via `CoreEntitlementsService`). Limits stay in auth-service; core is the usage authority because it owns the metered resources (api_keys, delivery, media).
 
 ## Environment (`apps/core-service/.env`)
@@ -102,14 +106,18 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 PORT=5002
 DATABASE_URL=...   DIRECT_URL=...     # same Supabase DB, core_svc schema
 R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET_NAME=
-AI_SERVICE_URL=http://localhost:8000  # planned
-INTERNAL_SECRET=                       # must match ai-service (planned)
+# AI content generation — runs in ai-service (Python/FastAPI); core calls it over HTTP.
+# Provider key (AI_API_KEY etc.) lives in ai-service env, NOT here.
+AI_SERVICE_TIMEOUT_MS=35000            # HTTP hop; longer than ai-service provider timeout
+AI_SERVICE_URL=http://localhost:8000   # standalone ai-service
+INTERNAL_SECRET=                       # must match ai-service INTERNAL_SECRET (authenticates the hop)
+AI_AUDIT_RETENTION_DAYS=30             # redact AI output/request hash after this period
+# Optional configured-model prices, micro-USD / 1M tokens. Set both or neither.
+AI_INPUT_COST_MICROUSD_PER_MILLION_TOKENS=
+AI_OUTPUT_COST_MICROUSD_PER_MILLION_TOKENS=
 ```
 
 ## Not yet built
 
-- **Media upload** — `media_assets` exists; needs R2 presign/upload endpoints + ImageKit URL building.
-- **Reference resolution** — stored as ids; no populate/expand.
-- **Unique-field enforcement** — `FieldDef.unique` declared but not enforced (needs a JSONB expression index or query check).
-- **Default content type seeding** on workspace creation.
-- **AI generation** — future `ai_generations` table will reference `content_entries.id`.
+- **AI image generation** — text generation (single-field + whole-entry compose) shipped in specs/21 (running in ai-service); image gen deferred (different model/cost).
+- **AI image generation** requires its own asset lifecycle, moderation, R2 provenance, and separate job/queue policy; it is intentionally not a variant of text generation.

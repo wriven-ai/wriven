@@ -51,7 +51,7 @@ export default function CoreFeaturesWireframe() {
                 AI writing
               </h3>
             </div>
-            <p className="text-xs text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-1">
+            <p className="text-sm text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-1">
               Draft, edit, and rewrite with one prompt
             </p>
           </div>
@@ -70,7 +70,7 @@ export default function CoreFeaturesWireframe() {
                 Image gen
               </h3>
             </div>
-            <p className="text-xs text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-2">
+            <p className="text-sm text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-2">
               Generate on-brand visuals instantly
             </p>
           </div>
@@ -89,7 +89,7 @@ export default function CoreFeaturesWireframe() {
                 CMS
               </h3>
             </div>
-            <p className="text-xs text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-3">
+            <p className="text-sm text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-3">
               Publish and manage all your content
             </p>
           </div>
@@ -108,7 +108,7 @@ export default function CoreFeaturesWireframe() {
                 Analytics
               </h3>
             </div>
-            <p className="text-xs text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-4">
+            <p className="text-sm text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-4">
               Track reach, SEO, and engagement
             </p>
           </div>

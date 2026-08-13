@@ -45,18 +45,8 @@ export function AppSidebar() {
         <NavTreeRenderer tree={tree} />
       </SidebarContent>
 
-      {/* Footer: gateway status + logout */}
+      {/* Footer: logout */}
       <SidebarFooter className="border-t border-sidebar-border">
-        <div className="group-data-[collapsible=icon]:hidden flex items-center justify-between px-1 text-[9px] font-mono text-text-muted">
-          <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
-            API Gateway: Active
-          </span>
-          <span className="bg-sidebar-accent border border-sidebar-border px-1.5 py-0.5 rounded text-[8px] font-bold">
-            eu-west
-          </span>
-        </div>
-
         <div className="flex justify-center px-1 py-1">
           <SidebarLogout />
         </div>

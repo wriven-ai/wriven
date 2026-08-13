@@ -155,6 +155,15 @@ export class DeliveryService {
     ];
     if (p.query.filter) {
       for (const [key, value] of Object.entries(p.query.filter)) {
+        // Equality filters only (the SDK contract). With `extended` query parsing
+        // a nested operator payload (`filter[rating][gte]=4`) now reaches the
+        // service — reject it explicitly instead of silently matching nothing.
+        if (typeof value !== 'string') {
+          throw rpcError(
+            'VALIDATION_ERROR',
+            `Filter "${key}" must be a plain equality value (no nested operators).`,
+          );
+        }
         // Parameterized JSONB equality — `key` and `value` are bound, not interpolated.
         filters.push(sql`${contentEntries.data} ->> ${key} = ${value}`);
       }

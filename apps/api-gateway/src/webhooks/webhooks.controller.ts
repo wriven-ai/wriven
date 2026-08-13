@@ -9,15 +9,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  AuthUser,
-  CORE_PATTERNS,
-  CreateWebhookDto,
-  Permission,
-  SERVICE_TOKENS,
-  UpdateWebhookDto,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -33,19 +26,19 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 export class WebhooksController {
   constructor(
-    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Post()
-  @RequirePermission(Permission.WEBHOOK_MANAGE)
+  @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
   create(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
-    @Body() dto: CreateWebhookDto,
+    @Body() dto: contracts.CreateWebhookDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.WEBHOOK_CREATE, {
+      this.core.send(contracts.CORE_PATTERNS.WEBHOOK_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
@@ -55,30 +48,30 @@ export class WebhooksController {
   }
 
   @Get()
-  @RequirePermission(Permission.PROJECT_VIEW)
+  @RequirePermission(contracts.Permission.PROJECT_VIEW)
   list(@CurrentProject() projectId: string) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.WEBHOOK_LIST, { projectId }),
+      this.core.send(contracts.CORE_PATTERNS.WEBHOOK_LIST, { projectId }),
     );
   }
 
   @Patch(':id')
-  @RequirePermission(Permission.WEBHOOK_MANAGE)
+  @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
   update(
     @CurrentProject() projectId: string,
     @Param('id') id: string,
-    @Body() dto: UpdateWebhookDto,
+    @Body() dto: contracts.UpdateWebhookDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.WEBHOOK_UPDATE, { projectId, id, dto }),
+      this.core.send(contracts.CORE_PATTERNS.WEBHOOK_UPDATE, { projectId, id, dto }),
     );
   }
 
   @Delete(':id')
-  @RequirePermission(Permission.WEBHOOK_MANAGE)
+  @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
   remove(@CurrentProject() projectId: string, @Param('id') id: string) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.WEBHOOK_DELETE, { projectId, id }),
+      this.core.send(contracts.CORE_PATTERNS.WEBHOOK_DELETE, { projectId, id }),
     );
   }
 }

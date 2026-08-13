@@ -1,14 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { ReactNode, useState } from 'react';
-import { cn } from '@/lib/utils';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { ReactNode, useState } from 'react';
 
 export type SwitcherItem = { id: string; name: string; slug: string };
 
@@ -16,18 +16,11 @@ type ScopeSwitcherProps = {
   /** Currently active entity, or null when none is selected. */
   current: SwitcherItem | null;
   items: SwitcherItem[];
-  /** Navigate to the picked entity. */
   onSelect: (item: SwitcherItem) => void;
-  /** Open the "create new" dialog. */
   onCreate: () => void;
-  /** Leading glyph in the trigger (e.g. a workspace/project icon). */
   icon?: ReactNode;
-  /** Shown in the trigger when `current` is null. */
   placeholder?: string;
-  /** Small badge after the name (e.g. role / plan). */
   badge?: string;
-  /** Where the NAME part links to (the current entity's overview). Chevron still
-   *  opens the dropdown; name navigates. Falls back to opening the dropdown. */
   titleHref?: string;
   /** 'breadcrumb' = compact (top bar); 'block' = full-width row (sidebar top). */
   variant?: 'breadcrumb' | 'block';
@@ -74,11 +67,13 @@ export function ScopeSwitcher({
           {icon}
         </span>
       ) : null}
-      <span className={cn('truncate font-bold', block ? 'flex-1' : 'max-w-[12rem]')}>
+      <span
+        className={cn('truncate font-bold', block ? 'flex-1' : 'max-w-[12rem]')}
+      >
         {current?.name ?? placeholder}
       </span>
       {badge ? (
-        <span className="rounded border border-brand-border bg-brand-surface-soft px-1 py-0.5 text-[8px] font-bold tracking-wider text-text-muted uppercase">
+        <span className="inline-flex items-center leading-none shrink-0 rounded border border-brand-border bg-brand-surface-soft px-1 py-0.5 text-[10px] font-bold tracking-wider text-text-secondary dark:text-text-primary uppercase">
           {badge}
         </span>
       ) : null}
@@ -86,7 +81,7 @@ export function ScopeSwitcher({
   );
 
   const nameClass = cn(
-    'flex items-center gap-1.5 font-mono text-2xs text-text-primary transition-all cursor-pointer',
+    'flex items-center gap-1.5 font-mono text-sm text-text-primary transition-all cursor-pointer',
     block
       ? 'flex-1 min-w-0 gap-2 rounded-l-lg px-2.5 py-2 hover:bg-brand-surface-soft'
       : 'rounded-md px-2 py-1 hover:bg-brand-surface-soft border border-transparent hover:border-brand-border',
@@ -108,7 +103,11 @@ export function ScopeSwitcher({
             {nameInner}
           </Link>
         ) : (
-          <button type="button" onClick={() => setOpen(true)} className={nameClass}>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className={nameClass}
+          >
             {nameInner}
           </button>
         )}
@@ -133,7 +132,7 @@ export function ScopeSwitcher({
       >
         <div className="max-h-72 overflow-y-auto">
           {items.length === 0 ? (
-            <p className="px-2.5 py-3 text-center font-mono text-2xs text-text-muted">
+            <p className="px-2.5 py-3 text-center font-mono text-sm text-text-muted">
               {emptyText}
             </p>
           ) : (
@@ -144,12 +143,14 @@ export function ScopeSwitcher({
                   key={item.id}
                   onClick={() => pick(item)}
                   className={cn(
-                    'flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-2xs',
+                    'flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-sm',
                     'hover:bg-brand-surface-soft transition-colors cursor-pointer',
                     active && 'bg-brand-surface-soft',
                   )}
                 >
-                  <span className="truncate text-text-primary">{item.name}</span>
+                  <span className="truncate text-text-primary">
+                    {item.name}
+                  </span>
                   {active ? (
                     <Check className="h-3.5 w-3.5 text-brand-accent shrink-0" />
                   ) : null}
@@ -165,7 +166,7 @@ export function ScopeSwitcher({
               setOpen(false);
               onCreate();
             }}
-            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-2xs text-text-secondary hover:bg-brand-surface-soft hover:text-brand-accent transition-colors cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-sm text-text-secondary hover:bg-brand-surface-soft hover:text-brand-accent transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5 shrink-0" />
             {createLabel}

@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport, Transporter } from 'nodemailer';
+import { durationToHuman } from '../common/duration';
+import { renderInvitation } from '../mail/templates/invitation.template';
+import { renderPasswordReset } from '../mail/templates/password-reset.template';
+import { renderVerification } from '../mail/templates/verification.template';
 
 @Injectable()
 export class MailService {
@@ -23,15 +27,18 @@ export class MailService {
   }
 
   async sendPasswordReset(to: string, link: string): Promise<void> {
+    const { subject, text, html } = renderPasswordReset({
+      link,
+      expiresIn: durationToHuman(
+        this.config.get<string>('RESET_TOKEN_TTL', '1h'),
+      ),
+    });
     const info = await this.transporter.sendMail({
       from: this.from,
       to,
-      subject: 'Reset your Wriven password',
-      text: `Reset your password using the link below:\n\n${link}\n\nThis link expires soon. If you didn't request a reset, ignore this email.`,
-      html: `
-        <p>Reset your password using the link below:</p>
-        <p><a href="${link}">${link}</a></p>
-        <p>This link expires soon. If you didn't request a reset, you can safely ignore this email.</p>`,
+      subject,
+      text,
+      html,
     });
     this.logger.log(`Password reset email sent to ${to} (id: ${info.messageId})`);
   }
@@ -39,33 +46,45 @@ export class MailService {
   async sendInvitation(
     to: string,
     link: string,
-    meta: { inviterName: string | null; targetName: string; role: string },
+    meta: {
+      inviterName: string | null;
+      targetName: string;
+      role: string;
+      scope: 'workspace' | 'project';
+    },
+    expiresIn = '7 days',
   ): Promise<void> {
-    const inviter = meta.inviterName ?? 'Someone';
+    const { subject, text, html } = renderInvitation({
+      inviterName: meta.inviterName,
+      targetName: meta.targetName,
+      role: meta.role,
+      scope: meta.scope,
+      link,
+      expiresIn,
+    });
     const info = await this.transporter.sendMail({
       from: this.from,
       to,
-      subject: `You've been invited to ${meta.targetName} on Wriven`,
-      text: `${inviter} invited you to ${meta.targetName} as ${meta.role}.\n\nAccept the invitation:\n${link}\n\nThis invite expires in 7 days.`,
-      html: `
-        <p><strong>${inviter}</strong> invited you to <strong>${meta.targetName}</strong> as <strong>${meta.role}</strong>.</p>
-        <p><a href="${link}">Accept the invitation</a></p>
-        <p>Or paste this link: ${link}</p>
-        <p>This invite expires in 7 days.</p>`,
+      subject,
+      text,
+      html,
     });
     this.logger.log(`Invitation email sent to ${to} (id: ${info.messageId})`);
   }
 
   async sendVerification(to: string, link: string): Promise<void> {
+    const { subject, text, html } = renderVerification({
+      link,
+      expiresIn: durationToHuman(
+        this.config.get<string>('EMAIL_VERIFY_TTL', '24h'),
+      ),
+    });
     const info = await this.transporter.sendMail({
       from: this.from,
       to,
-      subject: 'Verify your Wriven email',
-      text: `Welcome to Wriven! Verify your email using the link below:\n\n${link}\n\nThis link expires soon.`,
-      html: `
-        <p>Welcome to Wriven! Verify your email using the link below:</p>
-        <p><a href="${link}">${link}</a></p>
-        <p>This link expires soon.</p>`,
+      subject,
+      text,
+      html,
     });
     this.logger.log(`Verification email sent to ${to} (id: ${info.messageId})`);
   }

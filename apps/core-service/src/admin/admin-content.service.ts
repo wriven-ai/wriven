@@ -6,7 +6,7 @@ import {
   AdminTakedownDto,
   Paginated,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB } from '@wriven/database';
 import { and, desc, eq, isNull, SQL } from 'drizzle-orm';
 import { CachePurgeService } from '../cache/cache-purge.service';
 import { rpcError } from '../common/rpc-error';

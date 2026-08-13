@@ -10,6 +10,8 @@ import { WebhooksSection } from '@/components/webhooks/webhooks-section';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
+import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { ProjectSettingsSkeleton } from '@/components/skeleton/project-settings-skeleton';
 
 export default function ProjectSettingsPage() {
   const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
@@ -22,6 +24,7 @@ export default function ProjectSettingsPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (project) setName(project.name);
@@ -52,7 +55,7 @@ export default function ProjectSettingsPage() {
   });
 
   if (isLoading || !project) {
-    return <p className="font-mono text-xs text-text-muted">Loading…</p>;
+    return <ProjectSettingsSkeleton />;
   }
 
   if (!can(Permission.PROJECT_EDIT)) return <NoAccess />;
@@ -63,7 +66,7 @@ export default function ProjectSettingsPage() {
         <h1 className="font-display text-2xl font-black text-text-primary">
           Project Settings
         </h1>
-        <p className="font-mono text-2xs tracking-wider text-text-muted uppercase">
+        <p className="font-mono text-sm tracking-wider text-text-muted uppercase">
           {project.name} · {project.role}
         </p>
       </div>
@@ -75,38 +78,27 @@ export default function ProjectSettingsPage() {
         }}
         className="space-y-4 rounded-xl border border-brand-border bg-brand-surface p-5"
       >
-        <h2 className="font-mono text-xs font-bold text-text-primary">General</h2>
+        <h2 className="font-mono text-sm font-bold text-text-primary">General</h2>
 
         <div className="space-y-1.5">
-          <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">
+          <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider">
             Project name
           </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-brand-border bg-brand-surface-soft px-3.5 py-2.5 font-mono text-xs text-text-primary focus:border-brand-accent focus:outline-none"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">
-            Slug
-          </label>
-          <input
-            value={project.slug}
-            disabled
-            className="w-full rounded-lg border border-brand-border bg-brand-surface-soft px-3.5 py-2.5 font-mono text-xs text-text-muted"
+            className="w-full rounded-lg border border-brand-border bg-brand-surface-soft px-3.5 py-2.5 font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
           />
         </div>
 
         {error ? (
-          <p className="font-mono text-[10px] text-status-error">{error}</p>
+          <p className="font-mono text-sm text-status-error">{error}</p>
         ) : null}
 
         <button
           type="submit"
           disabled={updateMutation.isPending || name.trim() === project.name}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-accent px-4 py-2 font-mono text-xs font-bold text-white transition-all hover:bg-brand-accent-hover disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-accent px-4 py-2 font-mono text-sm font-bold text-white transition-all hover:bg-brand-accent-hover disabled:opacity-60"
         >
           <Save className="h-3.5 w-3.5" />
           {updateMutation.isPending ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
@@ -116,23 +108,31 @@ export default function ProjectSettingsPage() {
       <WebhooksSection />
 
       <div className="space-y-3 rounded-xl border border-status-error/30 bg-status-error/5 p-5">
-        <h2 className="font-mono text-xs font-bold text-status-error">Danger zone</h2>
-        <p className="font-mono text-[10px] text-text-muted">
+        <h2 className="font-mono text-sm font-bold text-status-error">Danger zone</h2>
+        <p className="font-mono text-sm text-text-muted">
           Deleting a project removes its content types, entries and media. This cannot be undone.
         </p>
         <button
-          onClick={() => {
-            if (confirm(`Delete project "${project.name}"? This cannot be undone.`)) {
-              deleteMutation.mutate();
-            }
-          }}
+          onClick={() => setDeleteOpen(true)}
           disabled={deleteMutation.isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-status-error/40 px-4 py-2 font-mono text-xs font-bold text-status-error transition-colors hover:bg-status-error/10 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-status-error/40 px-4 py-2 font-mono text-sm font-bold text-status-error transition-colors hover:bg-status-error/10 disabled:opacity-60"
         >
           <Trash2 className="h-3.5 w-3.5" />
           {deleteMutation.isPending ? 'Deleting…' : 'Delete project'}
         </button>
       </div>
+
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete project "${project.name}"?`}
+        description="Deleting a project removes its content types, entries and media. This cannot be undone."
+        confirmLabel="Delete project"
+        matchText={project.name}
+        loading={deleteMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => deleteMutation.mutate()}
+      />
     </div>
   );
 }

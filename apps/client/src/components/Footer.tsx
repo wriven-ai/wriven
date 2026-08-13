@@ -63,7 +63,7 @@ export default function Footer() {
               <WrivenLogo />
             </Link>
             
-            <p className="text-xs text-text-secondary leading-relaxed max-w-xs" id="footer-brand-tagline">
+            <p className="text-sm text-text-secondary leading-relaxed max-w-xs" id="footer-brand-tagline">
               The AI-native headless content engine. Weave structured content effortlessly with state-of-the-art models and deliver secure JSON everywhere.
             </p>
 
@@ -82,13 +82,13 @@ export default function Footer() {
 
           {/* Product links */}
           <div id="footer-product-links-col">
-            <h3 className="text-xs font-mono font-bold tracking-wider text-brand-accent uppercase" id="footer-header-product">
+            <h3 className="text-sm font-mono font-bold tracking-wider text-brand-accent uppercase" id="footer-header-product">
               Product
             </h3>
             <ul role="list" className="mt-4 space-y-2.5">
               {productLinks.map((link) => (
                 <li key={link.name}>
-                  <Link href={link.href} className="text-xs text-text-secondary hover:text-brand-accent transition-colors duration-150">
+                  <Link href={link.href} className="text-sm text-text-secondary hover:text-brand-accent transition-colors duration-150">
                     {link.name}
                   </Link>
                 </li>
@@ -98,13 +98,13 @@ export default function Footer() {
 
           {/* Company links */}
           <div id="footer-company-links-col">
-            <h3 className="text-xs font-mono font-bold tracking-wider text-brand-accent uppercase" id="footer-header-company">
+            <h3 className="text-sm font-mono font-bold tracking-wider text-brand-accent uppercase" id="footer-header-company">
               Company
             </h3>
             <ul role="list" className="mt-4 space-y-2.5">
               {companyLinks.map((link) => (
                 <li key={link.name}>
-                  <Link href={link.href} className="text-xs text-text-secondary hover:text-brand-accent transition-colors duration-150">
+                  <Link href={link.href} className="text-sm text-text-secondary hover:text-brand-accent transition-colors duration-150">
                     {link.name}
                   </Link>
                 </li>
@@ -114,10 +114,10 @@ export default function Footer() {
 
           {/* Newsletter / CTA */}
           <div className="space-y-4" id="footer-newsletter-col">
-            <h3 className="text-xs font-mono font-bold tracking-wider text-brand-accent uppercase" id="footer-header-newsletter">
+            <h3 className="text-sm font-mono font-bold tracking-wider text-brand-accent uppercase" id="footer-header-newsletter">
               Stay Connected
             </h3>
-            <p className="text-xs text-text-secondary">
+            <p className="text-sm text-text-secondary">
               Get our monthly product newsletter and developer tips.
             </p>
             <form onSubmit={(e) => e.preventDefault()} className="flex max-w-sm gap-2" id="footer-newsletter-form">
@@ -127,7 +127,7 @@ export default function Footer() {
                 type="email"
                 required
                 placeholder="you@email.com"
-                className="w-full text-xs font-mono rounded-lg bg-brand-surface border border-brand-border px-3.5 py-2 text-text-primary placeholder-text-muted focus:border-brand-accent focus:outline-none"
+                className="w-full text-sm font-mono rounded-lg bg-brand-surface border border-brand-border px-3.5 py-2 text-text-primary placeholder-text-muted focus:border-brand-accent focus:outline-none"
               />
               <button
                 type="submit"
@@ -141,12 +141,12 @@ export default function Footer() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-brand-border flex flex-col md:flex-row items-center justify-between gap-6" id="footer-legal-bar">
-          <p className="text-xs text-text-muted" id="footer-copyright">
+          <p className="text-sm text-text-muted" id="footer-copyright">
             &copy; {currentYear} Wriven, Inc. All rights reserved. Write once. Weave everywhere.
           </p>
           <div className="flex gap-6 flex-wrap justify-center" id="footer-legal-links">
             {legalLinks.map((link) => (
-              <a key={link.name} href={link.href} className="text-xs text-text-muted hover:text-brand-accent transition-colors">
+              <a key={link.name} href={link.href} className="text-sm text-text-muted hover:text-brand-accent transition-colors">
                 {link.name}
               </a>
             ))}

@@ -150,6 +150,24 @@ Errors: `CONFLICT` 409 (duplicate `apiId` within the project), `NOT_FOUND` 404, 
 
 > A starter **Post** content type is auto-seeded on project creation (idempotent).
 
+### AI generation — `/content/ai/*`
+
+Same guard chain as other `/content/*` routes (JWT + workspace + project). The generate route additionally requires `AI_GENERATE` and a per-workspace burst throttle (~10/min); profile routes require `CONTENT_TYPE_MANAGE`. Specs/21.
+
+| Method | Route | Body | Result |
+|--------|-------|------|--------|
+| POST | `/content/ai/generate` | `AiGenerateDto` | `AiGenerateResult` |
+| GET | `/content/ai/profile` | — | `AiProfileView` |
+| PATCH | `/content/ai/profile` | `UpdateAiProfileDto` | `AiProfileView` |
+
+`AiGenerateDto`: `{ requestId, contentTypeId, entryId?, targetKind:'field'\|'entry', fieldKey?, intent:'generate'\|'refine', preset?, instruction?, sourceContent?, history? }`. `targetKind:'entry'` runs a whole-entry `compose` (drafts every AI-eligible field in one call = one quota unit). `preset` ∈ `expand\|shorten\|rewrite\|tone\|summarize\|continue` (refine only). Refine requires `sourceContent`; `tone` requires `instruction`.
+
+`AiGenerateResult`: `{ generationId, output, model, usage:{promptTokens,completionTokens,totalTokens}, remaining, truncated? }` where `output` is `{kind:'scalar',text}` or `{kind:'record',fields:{[key]:string}}`. `truncated` is set when the provider hit the output cap.
+
+`AiProfileView`: `{ brandVoice, glossary:[{term,prefer}], language, updatedAt }`. The profile is resolved server-side and injected into every prompt; the client never sends it on generate.
+
+Errors: `PLAN_LIMIT_REACHED` 403, `RATE_LIMITED` 429, `AI_NOT_CONFIGURED` 503, `AI_QUOTA_UNAVAILABLE` 503, `AI_GENERATION_FAILED` 502 (incl. `select`/`compose` repair-miss), `AI_INPUT_TOO_LARGE` 422, `AI_GENERATION_IN_PROGRESS` 409, `IDEMPOTENCY_KEY_REUSED` 409. Save the entry with `aiGenerationIds` to record apply-provenance.
+
 ### Media library
 
 R2-backed; presigned **direct** upload (browser PUTs to R2). Keys-only. See specs/03.
@@ -198,12 +216,12 @@ All `/billing/*` routes are **protected** (JWT) and require `X-Workspace-Id`. `P
 | GET | `/billing/invoices` | — | `InvoiceView[]` — last 20 Stripe invoices (number/amount/status/url); `[]` if no customer |
 | POST | `/billing/checkout` | `{ planKey: 'starter'\|'pro', billingCycle: 'monthly'\|'yearly', successUrl?, cancelUrl? }` | `{ url, sessionId }` — Stripe Checkout URL (**owner/admin**; free→paid only) |
 | POST | `/billing/portal` | `{ returnUrl? }` | `{ url }` — Stripe Billing Portal URL (**owner/admin**) |
-| POST | `/billing/swap` | `{ planKey: 'free'\|'starter'\|'pro', billingCycle: 'monthly'\|'yearly' }` | `SubscriptionView` — change an existing paid sub directly (**owner/admin**). Upgrade/cycle-switch = immediate prorated invoice (`always_invoice`); **downgrade = deferred to period end** via a 2-phase Subscription Schedule (`proration_behavior: none`) — keeps current access until renewal, then drops (exposed as `SubscriptionView.pendingDowngrade`); targeting the current plan while a downgrade is pending cancels it (schedule release); `planKey:'free'` schedules cancellation at period end. The webhook reconciles the row (the returned view may lag it by ~1s). |
+| POST | `/billing/swap` | `{ planKey: 'free'\|'starter'\|'pro', billingCycle: 'monthly'\|'yearly' }` | `SubscriptionView` — change an existing paid sub directly (**owner/admin**). Upgrade/cycle-switch = immediate prorated invoice (`always_invoice`); **downgrade = deferred to period end** via a 2-phase Subscription Schedule (`proration_behavior: none`) — keeps current access until renewal, then drops (exposed as `SubscriptionView.pendingDowngrade`); targeting the current plan while a downgrade is pending cancels it (schedule release); `planKey:'free'` schedules cancellation at period end. A downgrade is first screened by the api-gateway: rejected with `DOWNGRADE_BLOCKED` 409 when the workspace exceeds the target plan's stock-resource limits (projects, members, content types, entries, API keys, webhooks, storage) — trim below the limits first (specs/18). The webhook reconciles the row (the returned view may lag it by ~1s). |
 
 `SubscriptionView`: `{ planKey, planName, status, billingCycle, currentPeriodStart, currentPeriodEnd, trialEndsAt, cancelAtPeriodEnd, pendingDowngrade, hasPaymentMethod }` (timestamps ISO or null). `pendingDowngrade: { planKey, planName, billingCycle, effectiveAt } | null` — a downgrade scheduled for period end (specs/16).
 
 - Checkout creates a Stripe Customer on first call (idempotent per workspace) + a `subscription`-mode Checkout Session. Redirect URLs are allowlisted to the app origin (`APP_URL`) — cross-origin/malformed values fall back to the default.
-- Errors: `SUBSCRIPTION_EXISTS` 409 (a live subscription already exists — use the Portal or `/billing/swap` to change plans), `SUBSCRIPTION_NOT_FOUND` 404 (no active subscription to swap — use `/billing/checkout` first), `NOT_FOUND` 404 (plan/portal-customer missing), `FORBIDDEN` 403 (non owner/admin), `INTERNAL_ERROR` 500 (plan not linked to a Stripe price).
+- Errors: `SUBSCRIPTION_EXISTS` 409 (a live subscription already exists — use the Portal or `/billing/swap` to change plans), `SUBSCRIPTION_NOT_FOUND` 404 (no active subscription to swap — use `/billing/checkout` first), `DOWNGRADE_BLOCKED` 409 (downgrade screened by the gateway — the workspace holds more stock resources than the target plan allows; `error.details` lists each over-limit `{ dimension, label, used, limit }`; trim below the limits first — specs/18), `NOT_FOUND` 404 (plan/portal-customer missing), `FORBIDDEN` 403 (non owner/admin), `INTERNAL_ERROR` 500 (plan not linked to a Stripe price).
 - Completing Checkout fires `checkout.session.completed` → the webhook reconciles the `subscriptions` row (plan from price id, status, period, Stripe ids); entitlements/quotas update automatically (no enforcement call site changes).
 
 ### POST `/webhooks/stripe`
@@ -218,12 +236,28 @@ Current-period Delivery API consumption for the active workspace. **Protected** 
 |--------|------|------|----------|
 | GET | `/usage` | — | `UsageView` — current-period requests used/limit + storage used/limit |
 
-`UsageView`: `{ period: { start, end }, requests: { used, limit }, storage: { usedMb, limitMb } }` (ISO timestamps; `limit: null` = the plan dimension is unlimited).
+`UsageView`: `{ period: { start, end }, requests: { used, limit }, storage: { usedMb, limitMb }, ai: AiUsageStats }` (ISO timestamps; `limit: null` = the plan dimension is unlimited). `ai` = `{ requests: { used, limit }, tokens: { prompt, completion, total }, cost: { microusd, complete, unpricedGenerations } }` — requests count `succeeded`; tokens/cost sum `succeeded+failed`; `complete:false` means some generation used an unpriced model.
 
 - Period is the calendar month (UTC midnight boundaries). `requests.used` counts Delivery API requests authenticated by a `Bearer wrk_…` key (one increment per HTTP request, counted on success); `storage.usedMb` is the live sum of media bytes across the workspace's projects.
 - The gateway batches increments off the hot path and flushes to core-service, so `used` lags real-time by up to the flush interval (~15s).
 - `assetBandwidthGb` is a plan field but is **not** measured yet (media is R2 keys-only; real egress lives in R2).
 - Overages are soft and **fail-open**: when `USAGE_ENFORCE=true` and `requests.used >= limit`, the Delivery API returns `RATE_LIMITED` 429; otherwise metering never blocks delivery. Enforcement is **off by default**.
+
+## Stats (aggregate dashboard counts)
+
+Read-only aggregate counts for the dashboard. Header-scoped like `/usage` (the guards read `X-Workspace-Id` / `X-Project-Id`, not path params). **Protected** (JWT) + the relevant scope header; any member can read.
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/stats/workspace` | — | `WorkspaceStatsView` — projects, members, entries split, content types, API keys, webhooks, media, API requests vs limit |
+| GET | `/stats/project` | — | `ProjectStatsView` — entries split, content types, API keys, webhooks, media (this project) |
+
+`WorkspaceStatsView`: `{ projects, members, entries: { total, published, draft, archived }, contentTypes, apiKeys, webhooks, media: { count, usedMb, limitMb }, apiRequests: { used, limit }, period, bandwidthGb: { usedGb, limitGb }, aiText: AiUsageStats, aiImage: { used, limit } }` (see `/usage` for the `AiUsageStats` shape).
+
+- Counts exclude soft-deleted entries/content-types/media and revoked API keys. `entries.total === published + draft + archived`.
+- `/stats/workspace` merges auth-service (projects + members) with core-service (the rest) at the gateway.
+- Bandwidth, AI text, AI image are **not metered yet** — their `used` is `null`; `limit` still resolves from the plan. The UI renders "not yet reported" for these.
+- `/stats/project` is core-only (no requests/bandwidth/AI — those are workspace-billing-unit dimensions).
 
 ---
 

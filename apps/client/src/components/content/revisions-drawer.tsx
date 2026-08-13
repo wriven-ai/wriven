@@ -57,16 +57,16 @@ export function RevisionsDrawer({
             <History className="h-4 w-4 text-brand-secondary" />
             Version history
           </SheetTitle>
-          <SheetDescription className="font-mono text-2xs text-text-muted">
+          <SheetDescription className="font-mono text-sm text-text-muted">
             Restore a past version. Restoring records a new revision — nothing is lost.
           </SheetDescription>
         </SheetHeader>
 
         <div className="px-4 pb-6 space-y-2">
           {isLoading ? (
-            <p className="font-mono text-2xs text-text-muted">Loading…</p>
+            <p className="font-mono text-sm text-text-muted">Loading…</p>
           ) : revisions.length === 0 ? (
-            <p className="font-mono text-2xs text-text-muted">No revisions yet.</p>
+            <p className="font-mono text-sm text-text-muted">No revisions yet.</p>
           ) : (
             revisions.map((rev) => {
               const isCurrent = rev.version === currentVersion;
@@ -80,13 +80,13 @@ export function RevisionsDrawer({
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className="font-mono text-xs font-bold text-text-primary">
+                    <p className="font-mono text-sm font-bold text-text-primary">
                       v{rev.version}
                       {isCurrent && (
-                        <span className="ml-2 text-[9px] font-bold text-brand-accent">CURRENT</span>
+                        <span className="ml-2 text-sm font-bold text-brand-accent">CURRENT</span>
                       )}
                     </p>
-                    <p className="font-mono text-[9px] text-text-muted">
+                    <p className="font-mono text-sm text-text-muted">
                       {rev.status} · {new Date(rev.createdAt).toLocaleString()}
                     </p>
                   </div>
@@ -97,7 +97,7 @@ export function RevisionsDrawer({
                           restoreMutation.mutate(rev.version);
                       }}
                       disabled={restoreMutation.isPending}
-                      className="inline-flex shrink-0 items-center gap-1 rounded border border-brand-border px-2 py-1 font-mono text-[9px] font-bold text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors disabled:opacity-50"
+                      className="inline-flex shrink-0 items-center gap-1 rounded border border-brand-border px-2 py-1 font-mono text-sm font-bold text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors disabled:opacity-50"
                     >
                       <RotateCcw className="h-3 w-3" />
                       Restore

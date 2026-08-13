@@ -24,6 +24,7 @@ import { AdminWebhooksController } from '../admin/admin-webhooks.controller';
 import { AdminWorkspacesController } from '../admin/admin-workspaces.controller';
 import { AuditInterceptor } from '../admin/audit.interceptor';
 import { AuthController } from '../auth/auth.controller';
+import { UsersController } from '../users/users.controller';
 import { GoogleStrategy } from '../auth/google.strategy';
 import { ApiKeyGuard } from '../auth/api-key.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -32,6 +33,7 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 import { AllExceptionsFilter } from '../common/all-exceptions.filter';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { ApiKeysController } from '../api-keys/api-keys.controller';
+import { AiController } from '../content/ai.controller';
 import { ContentController } from '../content/content.controller';
 import { MediaController } from '../content/media.controller';
 import { DeliveryController } from '../delivery/delivery.controller';
@@ -44,7 +46,9 @@ import { PlansController } from '../plans/plans.controller';
 import { BillingController } from '../billing/billing.controller';
 import { StripeWebhookController } from '../billing/stripe-webhook.controller';
 import { UsageBufferService } from '../usage/usage-buffer.service';
+import { WorkspaceUsageComposer } from '../billing/workspace-usage.composer';
 import { UsageController } from '../usage/usage.controller';
+import { StatsController } from '../stats/stats.controller';
 import { UsageEnforceService } from '../usage/usage-enforce.service';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -93,6 +97,8 @@ import { AppService } from './app.service';
   controllers: [
     AppController,
     AuthController,
+    UsersController,
+    AiController,
     ContentController,
     MediaController,
     DeliveryController,
@@ -104,6 +110,7 @@ import { AppService } from './app.service';
     SupportController,
     PlansController,
     UsageController,
+    StatsController,
     BillingController,
     StripeWebhookController,
     AdminAuthController,
@@ -133,6 +140,7 @@ import { AppService } from './app.service';
     AuditInterceptor,
     UsageBufferService,
     UsageEnforceService,
+    WorkspaceUsageComposer,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

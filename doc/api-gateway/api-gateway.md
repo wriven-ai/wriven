@@ -41,7 +41,6 @@ CLIENT_ORIGIN=http://localhost:3000
 JWT_SECRET=...                # same as auth-service
 AUTH_SERVICE_HOST/PORT=...    # TCP target (5001)
 CORE_SERVICE_HOST/PORT=...    # TCP target (5002)
-AI_SERVICE_URL=...            # HTTP (planned)
 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_CALLBACK_URL
 # No STRIPE_WEBHOOK_SECRET here — the gateway only forwards the raw body +
 # stripe-signature header; auth-service verifies + reconciles.

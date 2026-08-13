@@ -12,6 +12,15 @@ const nextConfig = {
   // module is ever imported client-side; the NestJS/class-validator DTOs are
   // tree-shaken out.
   transpilePackages: ['@wriven/contracts'],
+  // Avatar URLs are reconstructed server-side and may point at the R2 public
+  // host (uploaded photos) or Google (OAuth avatars). Register both so
+  // `next/image` (`UserAvatar`) can optimize/render them (specs/18).
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '*.r2.dev' },
+      { protocol: 'https', hostname: '*.googleusercontent.com' },
+    ],
+  },
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},

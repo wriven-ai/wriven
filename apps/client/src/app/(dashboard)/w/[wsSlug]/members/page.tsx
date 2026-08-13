@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Clock, Mail, RefreshCw, Send, Shield, Trash2, Users, X } from 'lucide-react';
 import { ApiRequestError, invitationApi, memberApi } from '@/lib/api';
@@ -15,6 +15,7 @@ import type {
   WorkspaceMemberView,
   WorkspaceRole,
 } from '@/lib/types';
+import { WorkspaceMembersSkeleton, MemberRows } from '@/components/skeleton/members-skeleton';
 
 const ROLE_BADGE: Record<string, string> = {
   owner: 'bg-brand-accent/15 text-brand-accent border-brand-accent/30',
@@ -29,6 +30,14 @@ const editRoleOptions = (current: string): string[] =>
   current === 'guest' ? ['guest', 'member', 'admin'] : ['admin', 'member'];
 
 export default function MembersPage() {
+  return (
+    <Suspense fallback={<WorkspaceMembersSkeleton />}>
+      <MembersInner />
+    </Suspense>
+  );
+}
+
+function MembersInner() {
   const { user, currentWorkspace, currentWorkspaceId } = useAuth();
   const queryClient = useQueryClient();
   const queryKey = ['workspace-members', currentWorkspaceId];
@@ -113,16 +122,16 @@ export default function MembersPage() {
     <div className="space-y-6 text-left" id="members-workspace">
       {/* Page Header */}
       <div className="border-b border-brand-border pb-5">
-        <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
+        <h1 className="font-display font-medium text-2xl sm:text-3xl text-text-primary tracking-tight">
           Workspace <span className="font-normal italic text-brand-secondary">Members</span>
         </h1>
-        <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
+        <p className="text-sm sm:text-base font-mono text-text-muted mt-1.5 leading-relaxed">
           {`// Manage who can access ${currentWorkspace?.name ?? 'this workspace'} and review role permissions`}
         </p>
       </div>
 
       {error && (
-        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-2xs font-mono rounded-lg px-4 py-3">
+        <div className="bg-status-error/10 border border-status-error/30 text-status-error text-sm font-mono rounded-lg px-4 py-3">
           {error}
         </div>
       )}
@@ -132,16 +141,16 @@ export default function MembersPage() {
         <TabsList className="bg-brand-surface-soft/60 border border-brand-border p-1 rounded-xl h-auto inline-flex">
           <TabsTrigger
             value="members"
-            className="px-3.5 py-1.5 rounded-lg text-2xs font-mono font-bold tracking-wider uppercase data-active:bg-brand-surface data-active:text-text-primary data-active:shadow-xs transition-all"
+            className="px-4 py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase data-active:bg-brand-surface data-active:text-text-primary data-active:shadow-xs transition-all"
           >
-            <Users className="w-3.5 h-3.5 mr-1.5 text-brand-secondary" />
+            <Users className="w-4 h-4 mr-1.5 text-brand-secondary" />
             Members & Invites
           </TabsTrigger>
           <TabsTrigger
             value="permissions"
-            className="px-3.5 py-1.5 rounded-lg text-2xs font-mono font-bold tracking-wider uppercase data-active:bg-brand-surface data-active:text-text-primary data-active:shadow-xs transition-all"
+            className="px-4 py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase data-active:bg-brand-surface data-active:text-text-primary data-active:shadow-xs transition-all"
           >
-            <Shield className="w-3.5 h-3.5 mr-1.5 text-brand-accent" />
+            <Shield className="w-4 h-4 mr-1.5 text-brand-accent" />
             Role Permissions Matrix
           </TabsTrigger>
         </TabsList>
@@ -151,17 +160,15 @@ export default function MembersPage() {
             {/* Members + pending invitations */}
             <div className={`${canManage ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-6`}>
               <div className="bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-                <span className="text-[11px] font-mono tracking-wider text-text-secondary border-b border-brand-border pb-2 mb-1.5 font-bold flex items-center gap-1.5">
+                <span className="text-sm font-mono tracking-wider text-text-secondary border-b border-brand-border pb-2 mb-1.5 font-bold flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-brand-secondary" />
                   Members{members ? ` (${members.length})` : ''}
                 </span>
 
                 {isLoading ? (
-                  <div className="flex items-center gap-2 text-text-muted font-mono text-2xs py-6 justify-center">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading members…
-                  </div>
+                  <MemberRows />
                 ) : !members || members.length === 0 ? (
-                  <p className="text-text-muted font-mono text-2xs py-6 text-center">
+                  <p className="text-text-muted font-mono text-sm py-6 text-center">
                     No members yet.
                   </p>
                 ) : (
@@ -173,17 +180,17 @@ export default function MembersPage() {
                       return (
                         <div key={member.id} className="flex items-center justify-between gap-3 p-3 border border-brand-border bg-brand-surface-soft/40 rounded-xl">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-full bg-brand-accent/15 border border-brand-border text-brand-accent font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-brand-accent/15 border border-brand-border text-brand-accent font-mono font-bold text-sm flex items-center justify-center shrink-0">
                               {initials(member.user.name)}
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-2xs font-mono font-bold text-text-primary truncate">{member.user.name}</p>
+                                <p className="text-sm font-mono font-bold text-text-primary truncate">{member.user.name}</p>
                                 {isSelf && (
-                                  <span className="text-[8px] font-bold px-1.5 py-0.2 rounded uppercase bg-brand-surface text-text-muted border border-brand-border">You</span>
+                                  <span className="text-xs font-bold px-1.5 py-0.5 rounded uppercase bg-brand-surface text-text-muted border border-brand-border">You</span>
                                 )}
                               </div>
-                              <p className="text-[9.5px] font-mono text-text-muted select-all truncate">{member.user.email}</p>
+                              <p className="text-sm font-mono text-text-muted select-all truncate">{member.user.email}</p>
                             </div>
                           </div>
 
@@ -198,7 +205,7 @@ export default function MembersPage() {
                                     role: e.target.value as WorkspaceRole,
                                   })
                                 }
-                                className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-1 rounded text-[9px] font-mono font-semibold cursor-pointer outline-hidden"
+                                className="bg-brand-surface border border-brand-border text-text-secondary px-2 py-1 rounded text-sm font-mono font-semibold cursor-pointer outline-hidden"
                               >
                                 {editRoleOptions(member.role).map((r) => (
                                   <option key={r} value={r}>
@@ -207,7 +214,7 @@ export default function MembersPage() {
                                 ))}
                               </select>
                             ) : (
-                              <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-semibold uppercase border ${ROLE_BADGE[member.role] ?? ROLE_BADGE.member}`}>
+                              <span className={`px-2 py-0.5 rounded text-xs font-mono font-semibold uppercase border ${ROLE_BADGE[member.role] ?? ROLE_BADGE.member}`}>
                                 {member.role}
                               </span>
                             )}
@@ -218,7 +225,7 @@ export default function MembersPage() {
                                 className="p-1 hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors disabled:opacity-40"
                                 title="Remove member"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             )}
                           </div>
@@ -231,16 +238,16 @@ export default function MembersPage() {
 
               {canManage && invites && invites.length > 0 ? (
                 <div className="bg-brand-surface border border-brand-border rounded-xl p-5 space-y-3">
-                  <span className="text-[11px] font-mono tracking-wider text-text-secondary flex items-center gap-1.5 border-b border-brand-border pb-2 font-bold">
-                    <Clock className="w-3.5 h-3.5 text-brand-secondary" />
+                  <span className="text-sm font-mono tracking-wider text-text-secondary flex items-center gap-1.5 border-b border-brand-border pb-2 font-bold">
+                    <Clock className="w-4 h-4 text-brand-secondary" />
                     Pending invitations ({invites.length})
                   </span>
                   <ul className="divide-y divide-brand-border">
                     {invites.map((inv: InvitationView) => (
                       <li key={inv.id} className="flex items-center justify-between gap-2 py-2.5">
                         <div className="min-w-0">
-                          <p className="truncate font-mono text-2xs font-bold text-text-primary">{inv.email}</p>
-                          <p className="font-mono text-[9px] text-text-muted uppercase">
+                          <p className="truncate font-mono text-sm font-bold text-text-primary">{inv.email}</p>
+                          <p className="font-mono text-sm text-text-muted uppercase">
                             {inv.role} · invited {new Date(inv.createdAt).toLocaleDateString()}
                           </p>
                         </div>
@@ -251,7 +258,7 @@ export default function MembersPage() {
                             title="Resend invitation"
                             className="p-1 text-text-muted hover:text-brand-accent rounded cursor-pointer disabled:opacity-40"
                           >
-                            <Send className="w-3.5 h-3.5" />
+                            <Send className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => revokeInviteMutation.mutate(inv.id)}
@@ -259,7 +266,7 @@ export default function MembersPage() {
                             title="Revoke invitation"
                             className="p-1 text-text-muted hover:text-status-error rounded cursor-pointer disabled:opacity-40"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-4 h-4" />
                           </button>
                         </div>
                       </li>
@@ -272,14 +279,14 @@ export default function MembersPage() {
             {/* Invite member */}
             {canManage && (
               <div className="lg:col-span-5 lg:sticky lg:top-24 bg-brand-surface border border-brand-border rounded-xl p-5 text-left space-y-4">
-                <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2 mb-1 font-bold">
+                <span className="text-sm font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2 mb-1 font-bold">
                   Invite a member
                 </span>
 
                 <form onSubmit={submitInvite} className="space-y-4">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="invite-email">Email</label>
+                      <label className="block text-sm font-mono text-text-secondary mb-1.5" htmlFor="invite-email">Email</label>
                       <input
                         id="invite-email"
                         type="email"
@@ -287,17 +294,17 @@ export default function MembersPage() {
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
                         required
-                        className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent"
+                        className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-2xs font-mono text-text-secondary mb-1.5" htmlFor="invite-role">Role</label>
+                      <label className="block text-sm font-mono text-text-secondary mb-1.5" htmlFor="invite-role">Role</label>
                       <select
                         id="invite-role"
                         value={inviteRole}
                         onChange={(e) => setInviteRole(e.target.value as AssignableWorkspaceRole)}
-                        className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
+                        className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary outline-hidden cursor-pointer"
                       >
                         <option value="member">Member</option>
                         <option value="admin">Admin</option>
@@ -308,23 +315,23 @@ export default function MembersPage() {
                   <button
                     type="submit"
                     disabled={inviteMutation.isPending || !inviteEmail.trim()}
-                    className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg cursor-pointer transition-all"
+                    className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-3 rounded-lg cursor-pointer transition-all"
                   >
                     {inviteMutation.isPending ? (
                       <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <RefreshCw className="w-4 h-4 animate-spin" />
                         Sending…
                       </>
                     ) : (
                       <>
-                        <Mail className="w-3.5 h-3.5 text-white" />
+                        <Mail className="w-4 h-4 text-white" />
                         Send invitation
                       </>
                     )}
                   </button>
                 </form>
 
-                <p className="text-[9.5px] font-mono text-text-muted leading-relaxed">
+                <p className="text-sm font-mono text-text-muted leading-relaxed">
                   We&apos;ll email an invite link. They join after accepting — and
                   sign up first if they don&apos;t have an account.
                 </p>

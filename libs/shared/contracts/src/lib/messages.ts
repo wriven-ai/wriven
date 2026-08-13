@@ -17,6 +17,8 @@ export const AUTH_PATTERNS = {
   VALIDATE_USER: 'auth.validateUser',
   GET_USER_BY_ID: 'auth.getUserById',
   GET_SESSION: 'auth.getSession',
+  // Self-service profile update (name + avatar key) for the authed user.
+  UPDATE_PROFILE: 'auth.user.updateProfile',
   // Effective plan limits + usage for a workspace (plan enforcement).
   ENTITLEMENTS_RESOLVE: 'auth.entitlements.resolve',
 } as const;
@@ -36,6 +38,7 @@ export const WORKSPACE_PATTERNS = {
   ADD_MEMBER: 'auth.workspace.addMember',
   UPDATE_MEMBER: 'auth.workspace.updateMember',
   REMOVE_MEMBER: 'auth.workspace.removeMember',
+  STATS: 'auth.workspace.stats',
 } as const;
 
 /**
@@ -90,6 +93,12 @@ export const CORE_PATTERNS = {
   MEDIA_LIST: 'core.media.list',
   MEDIA_GET: 'core.media.get',
   MEDIA_DELETE: 'core.media.delete',
+  MEDIA_DELETE_BULK: 'core.media.deleteBulk',
+
+  // Profile photo upload (R2 direct; no media_assets row — see specs/18).
+  AVATAR_PRESIGN: 'core.media.avatarPresign',
+  // Delete an orphaned avatar object on photo change/remove (best-effort).
+  AVATAR_DELETE: 'core.media.avatarDelete',
 
   // Outgoing webhooks (publish → signed POST; see plans/01 P6).
   WEBHOOK_CREATE: 'core.webhook.create',
@@ -140,6 +149,19 @@ export const BILLING_PATTERNS = {
 export const USAGE_PATTERNS = {
   RECORD: 'core.usage.record',
   READ: 'core.usage.read',
+  WORKSPACE_STATS: 'core.usage.workspaceStats',
+  PROJECT_STATS: 'core.usage.projectStats',
+} as const;
+
+/**
+ * AI content generation. Core-service owns scope, policy, quota, and audit;
+ * it calls the standalone Python ai-service through its internal `AiClient`.
+ * The stable message pattern keeps the gateway and clients transport-agnostic.
+ */
+export const AI_PATTERNS = {
+  GENERATE: 'core.ai.generate',
+  PROFILE_READ: 'core.ai.profile.read',
+  PROFILE_UPDATE: 'core.ai.profile.update',
 } as const;
 
 /**

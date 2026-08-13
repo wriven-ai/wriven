@@ -3,16 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
+  BookOpen,
   Check,
   Copy,
+  ExternalLink,
   Folder,
   Key,
-  Plus,
-  RefreshCw,
-  ShieldAlert,
-  Terminal,
-  Trash2,
   TriangleAlert,
+  Trash2,
 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import React, { useState } from 'react';
@@ -22,21 +20,26 @@ import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
 import type { ApiKeyScope } from '@/lib/types';
+import { ApiKeyRowsSkeleton } from '@/components/skeleton/api-keys-skeleton';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { Pagination } from '@/components/ui/pagination';
+import { CreateApiKeyModal } from '@/components/api-keys/create-api-key-modal';
+import { toast } from 'sonner';
 
 const SCOPES: { value: ApiKeyScope; label: string; desc: string }[] = [
   {
     value: 'read',
-    label: 'Read-Only Content Cache',
+    label: 'Read-only content cache',
     desc: 'Fetches published content from the delivery API. Safe to expose client-side.',
   },
   {
     value: 'preview',
-    label: 'Read-Only Draft Preview',
+    label: 'Read-only draft preview',
     desc: 'Reads drafts + published. Best for preview/staging environments.',
   },
   {
     value: 'manage',
-    label: 'Full Read/Write Access',
+    label: 'Full read/write access',
     desc: 'Full privileges. Keep server-side only — never expose client-side.',
   },
 ];
@@ -55,12 +58,12 @@ export default function ApiKeysPage() {
   const canManage = useCan()(Permission.API_KEY_MANAGE);
   const projectId = projects.find((p) => p.slug === projSlug)?.id ?? '';
 
-  const [newName, setNewName] = useState('');
-  const [newScope, setNewScope] = useState<ApiKeyScope>('read');
-  const [error, setError] = useState<string | null>(null);
   const [newToken, setNewToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<{ id: string; name: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const copyProjectId = () => {
     if (!projectId) return;
@@ -74,28 +77,27 @@ export default function ApiKeysPage() {
     queryFn: () => apiKeyApi.list(),
   });
 
-  const createMutation = useMutation({
-    mutationFn: () => apiKeyApi.create({ name: newName.trim(), scope: newScope }),
-    onSuccess: (result) => {
-      setNewToken(result.token);
-      setNewName('');
-      setNewScope('read');
-      setError(null);
-      queryClient.invalidateQueries({ queryKey });
-    },
-    onError: (err) =>
-      setError(err instanceof ApiRequestError ? err.message : 'Create failed.'),
-  });
+  const allKeys = keys ?? [];
+  const totalPages = Math.max(1, Math.ceil(allKeys.length / PAGE_SIZE));
+  // Clamp to a valid page if the list shrank (e.g. after a revoke) so we never
+  // render an empty "page 2 of 1".
+  const safePage = Math.min(page, totalPages);
+  const paginatedKeys = allKeys.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => apiKeyApi.revoke(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => {
+      setRevokeTarget(null);
+      setPage(1);
+      queryClient.invalidateQueries({ queryKey });
+      toast.success('API key revoked successfully.');
+    },
+    onError: (err) =>
+      toast.error(err instanceof ApiRequestError ? err.message : 'Revoke failed.'),
   });
-
-  const createKey = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newName.trim()) createMutation.mutate();
-  };
 
   const copyToken = () => {
     if (!newToken) return;
@@ -104,269 +106,250 @@ export default function ApiKeysPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const curlExample = `curl "https://wriven.io/api/v1/projects/${
-    projectId || '<projectId>'
-  }/content/blog_post" \\\n  -H "Authorization: Bearer wrk_live_…"`;
-
   if (!canManage) return <NoAccess />;
 
   return (
-    <div className="space-y-8 text-left">
-      {/* Header */}
-      <div className="border-b border-brand-border pb-5">
-        <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
-          Security &{' '}
-          <span className="font-normal italic text-brand-secondary">
-            API Access Tokens
-          </span>
-        </h1>
-        <p className="text-2xs sm:text-xs font-mono text-text-muted mt-1 leading-relaxed">
-          {'// Keys that authenticate the Content Delivery API from your site'}
-        </p>
-      </div>
-
-      {/* Project ID — needed in every Delivery API URL */}
-      <div className="rounded-xl border border-brand-border bg-brand-surface p-4 sm:p-5 space-y-2">
-        <div className="flex items-center gap-2">
-          <Folder className="h-3.5 w-3.5 text-brand-secondary" />
-          <span className="font-mono text-[11px] font-bold text-text-secondary">Project ID</span>
+    <>
+      <div className="space-y-8 text-left">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-brand-border pb-5">
+          <div>
+            <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
+              Security &{' '}
+              <span className="font-normal italic text-brand-secondary">
+                API Access Tokens
+              </span>
+            </h1>
+            <p className="text-sm sm:text-sm font-mono text-text-muted mt-1 leading-relaxed">
+              {'// Keys that authenticate the Content Delivery API from your site'}
+            </p>
+          </div>
+          <div className="shrink-0">
+            <CreateApiKeyModal
+              projSlug={projSlug}
+              canManage={canManage}
+              onKeyCreated={(token) => { setNewToken(token); setPage(1); }}
+            />
+          </div>
         </div>
-        <p className="font-mono text-[10px] text-text-muted leading-relaxed">
-          Use this in the Delivery API path:{' '}
-          <code className="text-text-secondary">/v1/projects/&lt;projectId&gt;/content/…</code>
-        </p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-xs text-text-primary">
-            {projectId || 'Loading…'}
-          </code>
-          <button
-            onClick={copyProjectId}
-            disabled={!projectId}
-            className="shrink-0 rounded-lg border border-brand-border p-2 text-text-muted hover:text-brand-accent transition-colors disabled:opacity-50"
-            aria-label="Copy project ID"
-          >
-            {copiedId ? (
-              <Check className="h-3.5 w-3.5 text-emerald-500" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-          </button>
-        </div>
-      </div>
 
-      {/* One-time token reveal */}
-      {newToken ? (
-        <div className="space-y-3 rounded-xl border border-brand-accent/40 bg-brand-accent/5 p-5">
-          <h2 className="flex items-center gap-2 font-mono text-xs font-bold text-text-primary">
-            <TriangleAlert className="h-3.5 w-3.5 text-brand-accent" />
-            Copy your token now
-          </h2>
-          <p className="font-mono text-[10px] text-text-muted leading-relaxed">
-            This is the only time the full token is shown. We store only a hash —
-            it cannot be retrieved again.
+        {/* Project ID — needed in every Delivery API URL */}
+        <div className="rounded-xl border border-brand-border bg-brand-surface p-3.5 sm:p-4 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Folder className="h-3.5 w-3.5 text-brand-secondary" />
+            <span className="font-mono text-sm font-bold text-text-secondary">Project ID</span>
+          </div>
+          <p className="font-mono text-sm text-text-muted leading-relaxed">
+            Use this in the Delivery API path:{' '}
+            <code className="text-text-secondary">/v1/projects/&lt;projectId&gt;/content/…</code>
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface px-3 py-2 font-mono text-xs text-brand-secondary font-bold">
-              {newToken}
+            <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-sm text-text-primary">
+              {projectId || 'Loading…'}
             </code>
             <button
-              onClick={copyToken}
-              className="shrink-0 rounded-lg border border-brand-border p-2 text-text-muted hover:text-brand-accent"
-              aria-label="Copy token"
+              onClick={copyProjectId}
+              disabled={!projectId}
+              className="shrink-0 rounded-lg border border-brand-border p-2 text-text-muted hover:text-brand-accent transition-colors disabled:opacity-50"
+              aria-label="Copy project ID"
             >
-              {copied ? (
+              {copiedId ? (
                 <Check className="h-3.5 w-3.5 text-emerald-500" />
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
             </button>
           </div>
-          <button
-            onClick={() => setNewToken(null)}
-            className="font-mono text-2xs font-bold text-brand-accent hover:underline"
-          >
-            I&apos;ve saved it — dismiss
-          </button>
         </div>
-      ) : null}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: create */}
-        <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-5">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block border-b border-brand-border pb-2.5 font-bold">
-            Commission API Access Token
-          </span>
-
-          <form onSubmit={createKey} className="space-y-5">
-            <div>
-              <label
-                className="block text-2xs font-mono text-text-secondary mb-1.5"
-                htmlFor="api-key-name"
+        {/* One-time token reveal */}
+        {newToken ? (
+          <div className="space-y-3 rounded-xl border border-brand-accent/40 bg-brand-accent/5 p-5">
+            <h2 className="flex items-center gap-2 font-mono text-sm font-bold text-text-primary">
+              <TriangleAlert className="h-3.5 w-3.5 text-brand-accent" />
+              Copy your token now
+            </h2>
+            <p className="font-mono text-sm text-text-muted leading-relaxed">
+              This is the only time the full token is shown. We store only a hash —
+              it cannot be retrieved again.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 truncate rounded-lg border border-brand-border bg-brand-surface px-3 py-2 font-mono text-sm text-brand-secondary font-bold">
+                {newToken}
+              </code>
+              <button
+                onClick={copyToken}
+                className="shrink-0 rounded-lg border border-brand-border p-2 text-text-muted hover:text-brand-accent cursor-pointer"
+                aria-label="Copy token"
               >
-                Token Application Context
-              </label>
-              <input
-                id="api-key-name"
-                type="text"
-                placeholder="e.g. Production site"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                required
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent h-11"
-              />
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+            <button
+              onClick={() => setNewToken(null)}
+              className="font-mono text-sm font-bold text-brand-accent hover:underline cursor-pointer"
+            >
+              I&apos;ve saved it — dismiss
+            </button>
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Main section: list */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-sm font-mono tracking-wider text-text-secondary font-bold">
+                Active integration tokens ({allKeys.length})
+              </span>
             </div>
 
-            <div>
-              <label className="block text-2xs font-mono text-text-secondary mb-1.5">
-                Authorization Scope
-              </label>
-              <div className="space-y-2 mt-1.5">
-                {SCOPES.map((s) => (
-                  <label
-                    key={s.value}
-                    className="flex items-start gap-2.5 p-3 rounded-lg border border-brand-border bg-brand-surface-soft/40 cursor-pointer select-none hover:bg-brand-surface-soft"
+            {isLoading ? (
+              <ApiKeyRowsSkeleton />
+            ) : allKeys.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-brand-border bg-brand-surface/50 p-8 text-center space-y-4">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-surface-soft border border-brand-border">
+                  <Key className="h-6 w-6 text-brand-secondary" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-display text-base font-bold text-text-primary">No API keys created yet</h3>
+                  <p className="font-mono text-xs text-text-muted max-w-sm mx-auto leading-relaxed">
+                    Create your first API key to connect your site or application to Wriven&apos;s Content Delivery API.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <CreateApiKeyModal
+                    projSlug={projSlug}
+                    canManage={canManage}
+                    onKeyCreated={(token) => { setNewToken(token); setPage(1); }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {paginatedKeys.map((key) => (
+                  <div
+                    key={key.id}
+                    className="bg-brand-surface border border-brand-border hover:border-brand-accent/30 rounded-xl p-3.5 px-4 text-left shadow-xs transition-all"
                   >
-                    <input
-                      type="radio"
-                      name="scope-group"
-                      checked={newScope === s.value}
-                      onChange={() => setNewScope(s.value)}
-                      className="mt-0.5 text-brand-accent border-brand-border cursor-pointer focus:ring-0"
-                    />
-                    <div>
-                      <p className="text-2xs font-mono font-bold text-text-primary">
-                        {s.label}
-                      </p>
-                      <p className="text-[9.5px] text-text-muted font-light mt-0.5 leading-relaxed">
-                        {s.desc}
-                      </p>
+                    <div className="flex flex-wrap justify-between items-center gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 leading-none">
+                          <Key className="w-3.5 h-3.5 text-brand-secondary" />
+                          <h3 className="font-display font-bold text-sm tracking-tight truncate text-text-primary">
+                            {key.name}
+                          </h3>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-xs font-mono text-text-muted leading-none mt-1">
+                          <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1 py-0.5 rounded font-bold text-xs">
+                            {scopeLabel(key.scope)}
+                          </span>
+                          <span>•</span>
+                          <span>Issued {new Date(key.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setRevokeTarget({ id: key.id, name: key.name })}
+                        disabled={revokeMutation.isPending || !canManage}
+                        className="inline-flex shrink-0 items-center gap-1.5 p-1 px-2 border border-brand-border text-text-secondary hover:bg-status-error/10 hover:text-status-error hover:border-status-error/30 rounded-lg font-mono text-xs font-semibold leading-none cursor-pointer transition-colors disabled:opacity-60"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Revoke
+                      </button>
                     </div>
-                  </label>
+
+                    <div className="mt-2.5 flex items-center justify-between border border-brand-border-button bg-brand-surface-soft rounded-lg p-1.5 px-3 font-mono text-xs text-text-secondary">
+                      <span className="tracking-wide">
+                        {key.prefix}
+                        <span className="text-text-muted">••••••••••••••••••••</span>
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-text-muted">
+                        <Activity className="w-3 h-3" />
+                        {key.lastUsedAt
+                          ? `used ${new Date(key.lastUsedAt).toLocaleDateString()}`
+                          : 'never used'}
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-
-            {error ? (
-              <p className="font-mono text-[10px] text-status-error">{error}</p>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={createMutation.isPending || !newName.trim() || !canManage}
-              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:opacity-60 border border-brand-border-button font-mono font-bold text-2xs py-3 rounded-lg neo-shadow cursor-pointer transition-all"
-            >
-              {createMutation.isPending ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                  Generating secure key…
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 text-white" />
-                  Generate Access Token
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="bg-brand-surface border border-brand-border p-4 rounded-xl text-left space-y-2">
-            <div className="flex items-center gap-2 text-[10px] font-mono text-status-warning font-black uppercase">
-              <ShieldAlert className="w-4 h-4 text-amber-500" />
-              Secure Key Guidelines
-            </div>
-            <p className="text-[10.5px] text-text-secondary leading-relaxed font-light">
-              Store management keys in server environment configs (
-              <code className="font-mono bg-brand-surface-soft border border-brand-border px-1 rounded text-[9.5px]">
-                process.env.WRIVEN_TOKEN
-              </code>
-              ). Never commit them or expose admin keys client-side.
-            </p>
+            )}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={safePage}
+                totalPages={totalPages}
+                onPageChange={(p) => setPage(p)}
+              />
+            )}
           </div>
-        </div>
 
-        {/* Right: list */}
-        <div className="lg:col-span-7 space-y-4">
-          <span className="text-[11px] font-mono tracking-wider text-text-secondary block px-1 font-bold">
-            Active Integration Tokens ({keys?.length ?? 0})
-          </span>
-
-          {isLoading ? (
-            <p className="font-mono text-2xs text-text-muted px-1">Loading…</p>
-          ) : !keys || keys.length === 0 ? (
-            <p className="font-mono text-2xs text-text-muted px-1">
-              No keys yet. Create one to connect your site.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {keys.map((key) => (
-                <div
-                  key={key.id}
-                  className="bg-brand-surface border border-brand-border hover:border-brand-accent/30 rounded-xl p-5 text-left shadow-xs transition-all"
+          {/* Right section: Help & docs */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="rounded-xl border border-brand-border bg-brand-surface p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-mono font-bold text-text-secondary">
+                <BookOpen className="w-3.5 h-3.5 text-brand-accent" />
+                Documentation
+              </div>
+              <p className="text-sm text-text-muted font-light leading-relaxed">
+                Learn how to authenticate requests, query content, and integrate Wriven into your stack.
+              </p>
+              <div className="flex flex-col gap-1.5">
+                <a
+                  href="/docs/authentication"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-mono text-brand-accent hover:underline"
                 >
-                  <div className="flex flex-wrap justify-between items-start gap-3">
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 leading-none">
-                        <Key className="w-3.5 h-3.5 text-brand-secondary" />
-                        <h3 className="font-display font-bold text-sm tracking-tight truncate text-text-primary">
-                          {key.name}
-                        </h3>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 text-[9px] font-mono text-text-muted leading-none mt-1">
-                        <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1 rounded uppercase font-bold text-[8px]">
-                          {scopeLabel(key.scope)}
-                        </span>
-                        <span>•</span>
-                        <span>Issued {new Date(key.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `Revoke key "${key.name}"? Sites using it will stop working. This cannot be undone.`,
-                          )
-                        ) {
-                          revokeMutation.mutate(key.id);
-                        }
-                      }}
-                      disabled={revokeMutation.isPending || !canManage}
-                      className="inline-flex shrink-0 items-center gap-1.5 p-1.5 px-2.5 border border-brand-border text-text-secondary hover:bg-status-error/10 hover:text-status-error hover:border-status-error/30 rounded-lg font-mono text-3xs font-semibold leading-none cursor-pointer transition-colors disabled:opacity-60"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      Revoke
-                    </button>
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between border border-brand-border-button bg-brand-surface-soft rounded-lg p-2.5 px-3.5 font-mono text-[10px] text-text-secondary">
-                    <span className="tracking-wide">
-                      {key.prefix}
-                      <span className="text-text-muted">••••••••••••••••••••</span>
-                    </span>
-                    <span className="flex items-center gap-1 text-[9.5px] text-text-muted">
-                      <Activity className="w-3 h-3" />
-                      {key.lastUsedAt
-                        ? `used ${new Date(key.lastUsedAt).toLocaleDateString()}`
-                        : 'never used'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* cURL example */}
-          <div className="bg-brand-surface border border-brand-border rounded-xl p-5 text-left">
-            <h4 className="text-xs font-mono font-bold text-text-primary mb-2 flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-brand-secondary" />
-              Delivery API Example
-            </h4>
-            <div className="bg-brand-surface-soft border border-brand-border rounded-lg p-3.5 font-mono text-[10px] text-text-secondary overflow-x-auto select-all leading-relaxed whitespace-pre-wrap">
-              {curlExample}
+                  <ExternalLink className="w-3 h-3" />
+                  Authentication & API keys
+                </a>
+                <a
+                  href="/docs/delivery-api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-mono text-brand-accent hover:underline"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Delivery API reference
+                </a>
+                <a
+                  href="/docs/quickstart"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-mono text-brand-accent hover:underline"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Quickstart guide
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <ConfirmationDialog
+        open={!!revokeTarget}
+        onOpenChange={(open) => { if (!open) setRevokeTarget(null); }}
+        variant="danger"
+        title="Revoke API key?"
+        description={
+          revokeTarget
+            ? `Revoking "${revokeTarget.name}" will immediately invalidate it. Any services relying on this key will stop working. This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Revoke key"
+        loading={revokeMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => {
+          if (!revokeTarget) return;
+          revokeMutation.mutate(revokeTarget.id);
+        }}
+      />
+    </>
   );
 }

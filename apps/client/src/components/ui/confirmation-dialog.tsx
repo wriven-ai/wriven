@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -34,6 +35,8 @@ export interface ConfirmationDialogProps {
   loading?: boolean;
   /** Blocks dismissal (hides X, ignores overlay/escape) while `loading`. */
   lockWhileLoading?: boolean;
+  /** If provided, fires toast.success(successToast) when the user confirms. */
+  successToast?: string;
   onConfirm: () => void;
 }
 
@@ -59,6 +62,7 @@ export function ConfirmationDialog({
   variant = 'accent',
   loading = false,
   lockWhileLoading = false,
+  successToast,
   onConfirm,
 }: ConfirmationDialogProps) {
   const locked = loading && lockWhileLoading;
@@ -70,35 +74,38 @@ export function ConfirmationDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent showCloseButton={!locked} className="font-mono">
+      <DialogContent showCloseButton={!locked} className="font-mono sm:max-w-md p-6">
         <DialogHeader>
           <div className="flex items-start gap-2.5">
             <AlertTriangle className={cn('mt-0.5 size-4 shrink-0', ICON_CLASS[variant])} />
             <div className="space-y-1">
-              <DialogTitle className="font-display text-sm font-bold tracking-tight text-text-primary">
+              <DialogTitle className="font-display text-base font-bold tracking-tight text-text-primary">
                 {title}
               </DialogTitle>
               {description && (
-                <DialogDescription className="font-light leading-relaxed text-text-secondary">
+                <DialogDescription className="font-normal leading-relaxed text-text-secondary">
                   {description}
                 </DialogDescription>
               )}
             </div>
           </div>
         </DialogHeader>
-        <DialogFooter>
-          <DialogClose render={<Button variant="ghost" disabled={loading} />}>
-            {cancelLabel}
-          </DialogClose>
-          <Button
-            variant={BUTTON_VARIANT[variant]}
-            onClick={onConfirm}
-            disabled={loading}
-          >
-            {loading && <Loader2 className="size-3.5 animate-spin" />}
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
+         <DialogFooter className="mt-2">
+           <DialogClose render={<Button variant="ghost" disabled={loading} />}>
+             {cancelLabel}
+           </DialogClose>
+           <Button
+             variant={BUTTON_VARIANT[variant]}
+             onClick={() => {
+               onConfirm();
+               if (successToast) toast.success(successToast);
+             }}
+             disabled={loading}
+           >
+             {loading && <Loader2 className="size-3.5 animate-spin" />}
+             {confirmLabel}
+           </Button>
+         </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -16,7 +16,7 @@ export default function OutputRegistry() {
           {/* Info & Navigation Column */}
           <div className="lg:col-span-5 space-y-8 text-left">
             <div className="space-y-3">
-              <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase">
+              <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase">
                 Multi-Channel Delivery
               </span>
               <h2 className="font-display font-medium tracking-tight text-text-primary text-3xl sm:text-4xl">
@@ -45,14 +45,14 @@ export default function OutputRegistry() {
                   >
                     <div className="space-y-1 pr-4">
                       <div className="flex items-center gap-3">
-                        <span className={`font-mono text-[9px] ${isActive ? 'text-brand-accent' : 'text-text-muted group-hover:text-text-secondary'}`}>
-                          {"// "}{target.key}
+                        <span className={`font-mono text-sm ${isActive ? 'text-brand-accent' : 'text-text-muted group-hover:text-text-secondary'}`}>
+                          {target.key}
                         </span>
-                        <span className={`text-xs font-bold uppercase tracking-wider transition-colors ${isActive ? 'text-brand-accent' : 'text-text-primary group-hover:text-brand-accent'}`}>
+                        <span className={`text-sm font-bold uppercase tracking-wider transition-colors ${isActive ? 'text-brand-accent' : 'text-text-primary group-hover:text-brand-accent'}`}>
                           {target.name}
                         </span>
                       </div>
-                      <p className="text-2xs font-light text-text-secondary pl-[26px]">
+                      <p className="text-sm font-light text-text-secondary pl-[26px]">
                         {target.desc}
                       </p>
                     </div>
@@ -64,7 +64,7 @@ export default function OutputRegistry() {
               })}
             </div>
 
-            <div className="pt-2 flex items-center gap-2 text-[10px] font-mono text-text-muted">
+            <div className="pt-2 flex items-center gap-2 text-sm font-mono text-text-muted">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
               <span>REGISTRY PIPELINE: ONLINE</span>
               <span className="mx-1">•</span>
@@ -79,11 +79,11 @@ export default function OutputRegistry() {
             <div className="flex items-center justify-between border-b border-brand-border pb-4 mb-6">
               <div className="flex items-center gap-2">
                 <span className="w-1 h-1 rounded-full bg-brand-secondary" />
-                <span className="font-mono text-[9px] font-bold text-text-muted uppercase tracking-widest">
-                  {"// LIVE CLIENT OUTPUT SIMULATION"}
+                <span className="font-mono text-sm font-bold text-text-muted uppercase tracking-widest">
+                  LIVE CLIENT OUTPUT SIMULATION
                 </span>
               </div>
-              <div className="text-[9px] font-mono font-bold text-brand-accent bg-brand-accent/5 px-2 py-0.5 rounded border border-brand-accent/10">
+              <div className="text-sm font-mono font-bold text-brand-accent bg-brand-accent/5 px-2 py-0.5 rounded border border-brand-accent/10">
                 {activeOutputTab.toUpperCase()}_STAGE
               </div>
             </div>
@@ -106,15 +106,15 @@ export default function OutputRegistry() {
                       <span className="w-2 h-2 rounded-full bg-brand-border" />
                       <span className="w-2 h-2 rounded-full bg-brand-border" />
                       <span className="w-2 h-2 rounded-full bg-brand-border" />
-                      <span className="text-[9px] font-mono ml-2">https://localhost:3000/blog/future-of-wearables</span>
+                      <span className="text-sm font-mono ml-2">https://localhost:3000/blog/future-of-wearables</span>
                     </div>
 
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-mono font-bold text-brand-accent bg-brand-accent/5 border border-brand-accent/10 px-2 py-0.5 uppercase tracking-wider">
+                        <span className="text-sm font-mono font-bold text-brand-accent bg-brand-accent/5 border border-brand-accent/10 px-2 py-0.5 uppercase tracking-wider">
                           Wellness tech
                         </span>
-                        <span className="text-[10px] font-mono text-text-muted">June 10, 2026</span>
+                        <span className="text-sm font-mono text-text-muted">June 10, 2026</span>
                       </div>
                       
                       <h3 className="font-display font-medium text-text-primary text-xl sm:text-2xl tracking-tight leading-snug">
@@ -122,20 +122,20 @@ export default function OutputRegistry() {
                       </h3>
 
                       <div className="flex items-center gap-3 py-2 border-t border-b border-brand-border">
-                        <div className="w-6 h-6 rounded-full bg-brand-surface-soft border border-brand-border flex items-center justify-center font-mono text-xs font-bold text-brand-accent">
+                        <div className="w-6 h-6 rounded-full bg-brand-surface-soft border border-brand-border flex items-center justify-center font-mono text-sm font-bold text-brand-accent">
                           W
                         </div>
                         <div>
-                          <div className="text-2xs font-bold text-text-primary">Wriven Editorial Compiler</div>
-                          <div className="text-[9px] text-text-muted font-mono">1.2k reads • Localized: EN-US</div>
+                          <div className="text-sm font-bold text-text-primary">Wriven Editorial Compiler</div>
+                          <div className="text-sm text-text-muted font-mono">1.2k reads • Localized: EN-US</div>
                         </div>
                       </div>
 
-                      <p className="text-xs text-text-secondary font-light leading-relaxed">
+                      <p className="text-sm text-text-secondary font-light leading-relaxed">
                         Structured nodes assemble on the modern layout canvas flawlessly. With sovereign headless microservices, paragraphs and media arrays stream smoothly into optimized React stacks without cold-start database latency.
                       </p>
 
-                      <div className="flex items-center gap-2 pt-2 text-2xs font-semibold text-brand-accent hover:underline">
+                      <div className="flex items-center gap-2 pt-2 text-sm font-semibold text-brand-accent hover:underline">
                         <span>Read article</span>
                         <ArrowRight className="w-3 h-3" />
                       </div>
@@ -153,22 +153,22 @@ export default function OutputRegistry() {
                     className="w-full max-w-[280px] bg-brand-bg border border-brand-border rounded-2xl p-4 shadow-md text-left font-sans space-y-4 relative"
                   >
                     {/* iOS top notch simulation bar */}
-                    <div className="flex justify-between items-center text-[10px] font-mono text-text-muted px-1.5 pb-2">
+                    <div className="flex justify-between items-center text-sm font-mono text-text-muted px-1.5 pb-2">
                       <span>9:41</span>
                       <span className="w-4 h-2 bg-brand-border rounded-full" />
                     </div>
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-brand-accent font-mono font-bold tracking-wider">{"// COGNITIVE"}</span>
+                        <span className="text-sm text-brand-accent font-mono font-bold tracking-wider">COGNITIVE</span>
                         <Bookmark className="w-3.5 h-3.5 text-text-muted hover:text-brand-accent" />
                       </div>
 
                       <div className="h-28 bg-brand-surface-soft border border-brand-border rounded-lg relative overflow-hidden flex items-center justify-center p-3">
                         <Layers className="w-8 h-8 text-brand-accent opacity-20 absolute" />
                         <div className="relative z-10 text-center space-y-1">
-                          <span className="text-[9px] font-mono text-text-primary px-2 py-0.5 bg-brand-bg border border-brand-border rounded">Wriven App Feed</span>
-                          <div className="text-[11px] text-text-secondary mt-1">Ingested via Core CLI</div>
+                          <span className="text-sm font-mono text-text-primary px-2 py-0.5 bg-brand-bg border border-brand-border rounded">Wriven App Feed</span>
+                          <div className="text-sm text-text-secondary mt-1">Ingested via Core CLI</div>
                         </div>
                       </div>
 
@@ -176,11 +176,11 @@ export default function OutputRegistry() {
                         Aesthetic Headless Editorial Rules
                       </h4>
 
-                      <p className="text-[11px] text-text-secondary leading-relaxed font-light line-clamp-3">
+                      <p className="text-sm text-text-secondary leading-relaxed font-light line-clamp-3">
                         Clean static JSON vectors let native swift nodes render margins, typography scaling, and dark-theme blocks securely at 120 FPS.
                       </p>
 
-                      <div className="bg-brand-surface-soft p-2.5 rounded border border-brand-border flex items-center justify-between text-2xs font-mono text-text-primary">
+                      <div className="bg-brand-surface-soft p-2.5 rounded border border-brand-border flex items-center justify-between text-sm font-mono text-text-primary">
                         <span>RENDER: SWIFTUI</span>
                         <span className="text-brand-accent font-bold">12ms</span>
                       </div>
@@ -198,15 +198,15 @@ export default function OutputRegistry() {
                     className="w-full bg-brand-bg border border-brand-border rounded-lg p-8 shadow-sm text-left font-serif space-y-6"
                   >
                     <div className="border-b border-brand-border pb-4 space-y-1">
-                      <div className="text-[9px] font-mono text-text-muted font-bold tracking-widest uppercase">
-                        {"// THE CHRONICLER STATIC BLOG"}
+                      <div className="text-sm font-mono text-text-muted font-bold tracking-widest uppercase">
+                        THE CHRONICLER STATIC BLOG
                       </div>
                       <h3 className="font-display font-medium text-text-primary text-xl sm:text-2xl tracking-tight leading-tight italic">
                         The Sovereignty of Print Layouts on Screen
                       </h3>
                     </div>
 
-                    <div className="space-y-4 text-xs font-light tracking-wide text-text-secondary leading-relaxed font-sans">
+                    <div className="space-y-4 text-sm font-light tracking-wide text-text-secondary leading-relaxed font-sans">
                       <p>
                         Static generation engines demand raw, pre-built structural records to optimize SEO indices perfectly. By compiling markdown models into static JSON blocks, Astro loaders build clean assets instantaneously.
                       </p>
@@ -229,7 +229,7 @@ export default function OutputRegistry() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.25 }}
-                    className="w-full bg-brand-bg border border-brand-border rounded-lg p-5 shadow-sm text-left font-mono text-2xs overflow-x-auto relative"
+                    className="w-full bg-brand-bg border border-brand-border rounded-lg p-5 shadow-sm text-left font-mono text-sm overflow-x-auto relative"
                   >
                     <div className="flex items-center justify-between pb-3 border-b border-brand-border mb-3 text-text-muted">
                       <span>GET /api/v1/posts/wearables-wellness</span>
@@ -268,7 +268,7 @@ export default function OutputRegistry() {
             </div>
 
             {/* Technical specifications footer */}
-            <div className="pt-4 mt-6 border-t border-brand-border flex items-center justify-between text-[8px] font-mono text-text-muted">
+            <div className="pt-4 mt-6 border-t border-brand-border flex items-center justify-between text-sm font-mono text-text-muted">
               <span>CACHED EDGE RECORD: HIT</span>
               <span>SERVED LENGTH: 488 BYTES</span>
             </div>

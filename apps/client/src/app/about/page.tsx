@@ -54,7 +54,7 @@ export default function About() {
         <section className="relative overflow-hidden pt-20 pb-16 lg:pt-28 lg:pb-28 border-b border-brand-border" id="about-hero">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10 text-center">
             <div className="max-w-3xl mx-auto space-y-6">
-              <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase animate-fade-in">
+              <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase animate-fade-in">
                 Our Origin Story
               </span>
               <h1 className="font-display font-medium leading-[1.1] tracking-tight text-text-primary text-4xl sm:text-5xl" id="about-title">
@@ -74,17 +74,17 @@ export default function About() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center" id="story-grid">
               
               <div className="lg:col-span-6 space-y-6 text-left animate-fade-in" id="story-text-pane">
-                <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase block">Form & Metaphor</span>
+                <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase block">Form & Metaphor</span>
                 <h2 className="font-display font-medium text-text-primary text-2xl sm:text-3xl">
                   Written + Woven = Wriven
                 </h2>
-                <p className="text-xs sm:text-sm text-text-secondary leading-relaxed font-light">
+                <p className="text-sm sm:text-sm text-text-secondary leading-relaxed font-light">
                   The name <strong className="text-text-primary font-bold">Wriven</strong> represents a convergence of two core digital creative disciplines: being <strong>Written</strong> (the core semantic content draft) and being <strong>Woven</strong> (the delivery format, distributed through global client engines).
                 </p>
-                <p className="text-xs sm:text-sm text-text-secondary leading-relaxed font-light">
+                <p className="text-sm sm:text-sm text-text-secondary leading-relaxed font-light">
                   For years, legacy headless platforms did exactly one thing: store strings in SQL arrays. If authors needed help with copy, they copy-pasted back and forth into loose translation widgets or separate ChatGPT tabs.
                 </p>
-                <p className="text-xs sm:text-sm text-text-secondary leading-relaxed font-light font-serif italic text-brand-accent">
+                <p className="text-sm sm:text-sm text-text-secondary leading-relaxed font-light font-serif italic text-brand-accent">
                   We built Wriven to secure a single, highly integrated context. By deploying AI assistants right inside structured layouts, authors draft, translate, and verify delivery in milliseconds, all from a beautiful unified experience.
                 </p>
               </div>
@@ -95,16 +95,16 @@ export default function About() {
                   <div className="absolute inset-0 bg-[radial-gradient(#1a1a18_1px,transparent_1px)] [background-size:16px_16px] opacity-10" />
                   
                   <div className="z-10 bg-brand-surface-soft rounded-xl p-6 border border-brand-border max-w-sm shadow-2xl space-y-4">
-                    <div className="flex items-center gap-2 text-brand-accent font-mono text-xs font-bold">
+                    <div className="flex items-center gap-2 text-brand-accent font-mono text-sm font-bold">
                       <Layers className="w-4 h-4 text-brand-accent animate-pulse" />
                       <span>THE WEAVING ALGORITHM v1.0</span>
                     </div>
-                    <blockquote className="text-xs sm:text-sm italic text-text-primary font-light leading-relaxed font-serif">
+                    <blockquote className="text-sm sm:text-sm italic text-text-primary font-light leading-relaxed font-serif">
                       &ldquo;A clean content pipeline isn&apos;t just about delivering raw fields; it&apos;s about making sure your AI assistant feels native, quiet, and beautifully structured.&rdquo;
                     </blockquote>
                     <div className="flex items-center gap-2 pt-2 border-t border-brand-border">
                       <div className="w-1.5 h-1.5 rounded-full bg-status-success" />
-                      <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-status-success">SECURE INSTANCE RUNNING</span>
+                      <span className="text-sm font-mono font-bold uppercase tracking-wider text-status-success">SECURE INSTANCE RUNNING</span>
                     </div>
                   </div>
                 </div>
@@ -130,7 +130,7 @@ export default function About() {
                       <Icon className="w-5 h-5" />
                     </div>
                     <h4 className="text-sm font-mono font-bold uppercase tracking-wide text-text-primary mb-3">{val.title}</h4>
-                    <p className="text-xs text-text-secondary leading-relaxed font-light">{val.desc}</p>
+                    <p className="text-sm text-text-secondary leading-relaxed font-light">{val.desc}</p>
                   </div>
                 );
               })}
@@ -142,7 +142,7 @@ export default function About() {
         <section className="py-20 relative" id="team">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto space-y-4 mb-20">
-              <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase">Mission Specialists</span>
+              <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase">Mission Specialists</span>
               <h2 className="font-display font-medium tracking-tight text-text-primary text-3xl sm:text-4xl">
                 Led by content veterans
               </h2>
@@ -166,11 +166,11 @@ export default function About() {
                   <div className="p-6 space-y-3 flex-1 flex flex-col justify-between text-left">
                     <div>
                       <h3 className="font-display font-bold text-sm text-text-primary">{member.name}</h3>
-                      <span className="text-[9px] font-mono font-bold text-brand-accent block uppercase mt-0.5">{member.role}</span>
-                      <p className="text-xs text-text-secondary mt-3 leading-relaxed font-light">{member.bio}</p>
+                      <span className="text-sm font-mono font-bold text-brand-accent block uppercase mt-0.5">{member.role}</span>
+                      <p className="text-sm text-text-secondary mt-3 leading-relaxed font-light">{member.bio}</p>
                     </div>
 
-                    <div className="pt-4 border-t border-brand-border mt-4 flex items-center gap-1.5 text-[9px] font-mono font-bold text-brand-accent uppercase">
+                    <div className="pt-4 border-t border-brand-border mt-4 flex items-center gap-1.5 text-sm font-mono font-bold text-brand-accent uppercase">
                       <User className="w-3.5 h-3.5 text-brand-accent" />
                       <span>Verified Core Team Member</span>
                     </div>

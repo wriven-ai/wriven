@@ -8,18 +8,9 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import type { ClientProxy } from '@nestjs/microservices';
 import { Throttle } from '@nestjs/throttler';
-import {
-  ADMIN_PATTERNS,
-  AdminAuthResult,
-  AdminAuthUser,
-  AdminLoginDto,
-  AdminRefreshResult,
-  ERROR_CODES,
-  SERVICE_TOKENS,
-  ServiceError,
-} from '@wriven/contracts';
+import * as contracts from '@wriven/contracts';
 import { randomBytes } from 'crypto';
 import type { CookieOptions, Request, Response } from 'express';
 import { firstValueFrom } from 'rxjs';
@@ -38,17 +29,17 @@ const ACCESS_COOKIE_MAX_AGE = 15 * MINUTE; // matches ADMIN_JWT_ACCESS_TTL
 @Controller('admin/auth')
 export class AdminAuthController {
   constructor(
-    @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
   ) {}
 
   @Throttle({ default: { limit: 10, ttl: MINUTE } })
   @Post('login')
   async login(
-    @Body() dto: AdminLoginDto,
+    @Body() dto: contracts.AdminLoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await firstValueFrom(
-      this.auth.send<AdminAuthResult>(ADMIN_PATTERNS.LOGIN, dto),
+      this.auth.send<contracts.AdminAuthResult>(contracts.ADMIN_PATTERNS.LOGIN, dto),
     );
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
     const csrfToken = this.setAccessCookies(res, result.accessToken);
@@ -65,7 +56,7 @@ export class AdminAuthController {
       throw this.error('INVALID_REFRESH_TOKEN', 'No refresh token provided.');
     }
     const result = await firstValueFrom(
-      this.auth.send<AdminRefreshResult>(ADMIN_PATTERNS.REFRESH, {
+      this.auth.send<contracts.AdminRefreshResult>(contracts.ADMIN_PATTERNS.REFRESH, {
         refreshToken: token,
       }),
     );
@@ -82,7 +73,7 @@ export class AdminAuthController {
     const token = req.cookies?.[ADMIN_REFRESH_COOKIE];
     if (token) {
       await firstValueFrom(
-        this.auth.send(ADMIN_PATTERNS.LOGOUT, { refreshToken: token }),
+        this.auth.send(contracts.ADMIN_PATTERNS.LOGOUT, { refreshToken: token }),
       );
     }
     res.clearCookie(ADMIN_REFRESH_COOKIE, { path: ADMIN_REFRESH_PATH });
@@ -93,9 +84,9 @@ export class AdminAuthController {
 
   @UseGuards(AdminJwtGuard)
   @Get('me')
-  async me(@CurrentAdmin() admin: AdminAuthUser, @Req() req: Request) {
+  async me(@CurrentAdmin() admin: contracts.AdminAuthUser, @Req() req: Request) {
     const view = await firstValueFrom(
-      this.auth.send(ADMIN_PATTERNS.GET_BY_ID, {
+      this.auth.send(contracts.ADMIN_PATTERNS.GET_BY_ID, {
         adminUserId: admin.adminUserId,
       }),
     );
@@ -143,7 +134,7 @@ export class AdminAuthController {
     return csrfToken;
   }
 
-  private error(key: keyof typeof ERROR_CODES, message: string): ServiceError {
-    return { ...ERROR_CODES[key], message };
+  private error(key: keyof typeof contracts.ERROR_CODES, message: string): contracts.ServiceError {
+    return { ...contracts.ERROR_CODES[key], message };
   }
 }

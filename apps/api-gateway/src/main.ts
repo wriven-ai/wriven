@@ -15,6 +15,14 @@ async function bootstrap() {
   // still populated for every other route.
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
+  // Express 5's default query parser is the `simple` querystring parser, which
+  // does NOT expand bracket notation — `filter[category]=news` would arrive as
+  // a literal "filter[category]" key instead of nesting into `{ filter }`. The
+  // Delivery API + SDK rely on `filter[field]=value`, so use the bundled `qs`
+  // parser (extended) that expands it.
+  (app.getHttpAdapter().getInstance() as { set: (k: string, v: unknown) => void })
+    .set('query parser', 'extended');
+
   const globalPrefix = 'api/v1';
   // The public Content Delivery API is its own versioned surface mounted at
   // /v1/projects/:projectId/... (per specs/01 and the @wriven-ai/client SDK) —

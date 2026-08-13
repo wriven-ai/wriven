@@ -6,7 +6,7 @@ import {
   SERVICE_TOKENS,
   WorkspaceEntitlements,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
 import { firstValueFrom, timeout } from 'rxjs';
 import { rpcError } from '../common/rpc-error';
@@ -136,6 +136,24 @@ export class CoreEntitlementsService {
   async revisionsCap(workspaceId: string): Promise<number | null> {
     const cap = (await this.limits(workspaceId))?.revisionsPerEntry;
     return cap == null ? null : cap;
+  }
+
+  /**
+   * AI text-generation requests allowed per month, or `null` = unlimited.
+   * Unlike ordinary CMS writes, generation has direct provider cost: if no
+   * current or stale entitlement snapshot is available, fail closed before the
+   * request reaches the provider.
+   */
+  async aiTextLimit(workspaceId: string): Promise<number | null> {
+    const limits = await this.limits(workspaceId);
+    if (!limits) {
+      throw rpcError(
+        'AI_QUOTA_UNAVAILABLE',
+        'AI usage could not be verified. Please try again shortly.',
+      );
+    }
+    const limit = limits.aiTextRequestsPerMonth;
+    return limit == null ? null : limit;
   }
 
   private assert(used: number, max: number, label: string): void {

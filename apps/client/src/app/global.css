@@ -57,8 +57,7 @@
   --font-sans: var(--font-manrope), sans-serif;
   --font-serif: var(--font-manrope), sans-serif;
   --font-mono: var(--font-manrope), sans-serif;
-  --text-2xs: 0.65rem;
-  --text-3xs: 0.55rem;
+  --text-2xs: 0.75rem;
 }
 
 :root {
@@ -236,6 +235,15 @@ body {
 /* Notched "identity tag" badge used for the small uppercase eyebrow labels */
 .id-tag {
   clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+
+/* Hide scrollbars on scrollable regions while keeping them scrollable */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {

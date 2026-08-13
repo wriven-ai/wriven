@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3b82f6"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#14b8a6"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f43f5e"/></marker>
+    <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#818cf8"/></marker>
+  </defs>
+  <rect width="1280" height="800" fill="#0b1120"/>
+
+  <text x="640" y="34" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">AI Generation — Request Flow</text>
+  <text x="640" y="56" text-anchor="middle" fill="#94a3b8" font-size="12">gateway → core (quota + cost) → ai-service (prompt + structured output) → provider · typed AiOutput · one generation = one quota unit · specs/21</text>
+
+  <!-- ── REQUEST PATH ───────────────────────────────────────────── -->
+  <text x="30" y="86" fill="#64748b" font-size="10" font-weight="bold">REQUEST PATH</text>
+
+  <!-- client -->
+  <g><rect x="30" y="104" width="170" height="120" rx="8" fill="#171433" stroke="#818cf8" stroke-width="2"/>
+    <text x="115" y="128" text-anchor="middle" fill="#c7d2fe" font-size="10" font-weight="bold">Co-Writer panel</text>
+    <text x="40" y="150" fill="#94a3b8" font-size="9">Generate / Refine (+chips)</text>
+    <text x="40" y="166" fill="#94a3b8" font-size="9">Draft whole entry</text>
+    <text x="40" y="188" fill="#fcd34d" font-size="9">POST /content/ai/generate</text>
+    <text x="40" y="206" fill="#64748b" font-size="9">AbortController · retry-safe</text></g>
+
+  <!-- gateway -->
+  <g><rect x="230" y="104" width="200" height="120" rx="8" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
+    <text x="330" y="128" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">api-gateway</text>
+    <text x="240" y="150" fill="#94a3b8" font-size="9">JwtAuth·Workspace·Project</text>
+    <text x="240" y="166" fill="#fda4af" font-size="9">Permission AI_GENERATE</text>
+    <text x="240" y="184" fill="#fda4af" font-size="9">AiBurstGuard 10/min (route)</text>
+    <text x="240" y="202" fill="#5eead4" font-size="9">timeout 40s backstop</text></g>
+
+  <!-- core.ai.generate (orchestrator) -->
+  <g><rect x="460" y="96" width="300" height="262" rx="8" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+    <text x="610" y="118" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">core.ai.generate</text>
+    <text x="610" y="134" text-anchor="middle" fill="#5eead4" font-size="9">TCP :5002 · core_svc · NestJS</text>
+    <line x1="470" y1="142" x2="750" y2="142" stroke="#334155"/>
+    <text x="470" y="160" fill="#5eead4" font-size="9">1 · load content type, derive op</text>
+    <text x="478" y="174" fill="#64748b" font-size="9">(targetKind, intent, preset) → op</text>
+    <text x="470" y="192" fill="#5eead4" font-size="9">2 · validate target / build composeFields</text>
+    <text x="470" y="210" fill="#5eead4" font-size="9">3 · resolve AI profile (ai_profiles)</text>
+    <text x="470" y="228" fill="#fcd34d" font-size="9">4 · reserve quota (advisory lock)</text>
+    <text x="478" y="242" fill="#64748b" font-size="9">INSERT pending · count pending+succeeded</text>
+    <text x="470" y="260" fill="#fda4af" font-size="9">5 · AiClient.generate() → ai-service</text>
+    <text x="470" y="278" fill="#5eead4" font-size="9">6 · finalize + cost(priced model)</text>
+    <text x="478" y="292" fill="#64748b" font-size="9">status: pending → succeeded|failed</text>
+    <text x="470" y="312" fill="#94a3b8" font-size="9">replay: same requestId → stored output</text>
+    <text x="470" y="330" fill="#64748b" font-size="9">over-limit / not-configured → fail before provider</text>
+    <text x="470" y="348" fill="#64748b" font-size="9">failed row = NO charge (tokens still kept)</text></g>
+
+  <!-- ai-service (python, non-TCP hop) -->
+  <g><rect x="800" y="104" width="210" height="180" rx="8" fill="#1a1a1f" stroke="#64748b" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="905" y="128" text-anchor="middle" fill="#cbd5e1" font-size="10" font-weight="bold">ai-service</text>
+    <text x="905" y="144" text-anchor="middle" fill="#64748b" font-size="9">Python · FastAPI :8000</text>
+    <line x1="810" y1="152" x2="1000" y2="152" stroke="#334155"/>
+    <text x="810" y="170" fill="#94a3b8" font-size="9">prompt build (per-op temp/cap)</text>
+    <text x="810" y="186" fill="#94a3b8" font-size="9">profile → fenced &lt;voice_guide&gt;</text>
+    <text x="810" y="204" fill="#5eead4" font-size="9">field: generate / refine</text>
+    <text x="810" y="220" fill="#5eead4" font-size="9">compose: JSON parse + repair ×1</text>
+    <text x="810" y="236" fill="#5eead4" font-size="9">select: validate + retry ×1</text>
+    <text x="810" y="256" fill="#fda4af" font-size="9">openai SDK · stateless</text>
+    <text x="810" y="272" fill="#64748b" font-size="9">owns no tables</text></g>
+
+  <!-- provider -->
+  <g><rect x="1040" y="120" width="200" height="120" rx="8" fill="#1a0c14" stroke="#f43f5e" stroke-width="2"/>
+    <text x="1140" y="144" text-anchor="middle" fill="#fda4af" font-size="10" font-weight="bold">Provider · External</text>
+    <text x="1140" y="164" text-anchor="middle" fill="#e2e8f0" font-size="10">OpenRouter</text>
+    <text x="1050" y="186" fill="#fcd34d" font-size="9">AI_MODEL = openrouter/free</text>
+    <text x="1050" y="202" fill="#94a3b8" font-size="9">model varies per call</text>
+    <text x="1050" y="220" fill="#94a3b8" font-size="9">response.model is priced</text>
+    <text x="1050" y="234" fill="#64748b" font-size="9">X-Request-ID correlation</text></g>
+
+  <!-- arrows: request path -->
+  <line x1="200" y1="164" x2="228" y2="164" stroke="#818cf8" stroke-width="1.6" marker-end="url(#ai)"/>
+  <line x1="430" y1="164" x2="458" y2="164" stroke="#3b82f6" stroke-width="1.6" marker-end="url(#ab)"/>
+  <text x="444" y="158" text-anchor="middle" fill="#93c5fd" font-size="9">TCP</text>
+  <line x1="760" y1="164" x2="798" y2="164" stroke="#f43f5e" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text x="779" y="158" text-anchor="middle" fill="#fda4af" font-size="9">HTTP</text>
+  <text x="779" y="178" text-anchor="middle" fill="#64748b" font-size="8">X-Internal-Secret</text>
+  <line x1="1010" y1="180" x2="1038" y2="180" stroke="#f43f5e" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- ── DATA (core_svc) ────────────────────────────────────────── -->
+  <text x="30" y="402" fill="#64748b" font-size="10" font-weight="bold">DATA (core_svc) — core owns quota, audit, profile, cost</text>
+
+  <!-- ai_generations -->
+  <g><rect x="30" y="420" width="430" height="232" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="245" y="442" text-anchor="middle" fill="#5eead4" font-size="11" font-weight="bold">ai_generations</text>
+    <line x1="40" y1="450" x2="450" y2="450" stroke="#334155"/>
+    <text x="40" y="468" fill="#e2e8f0" font-size="9">workspace_id · project_id · content_type_id · entry_id</text>
+    <text x="40" y="484" fill="#fcd34d" font-size="9">field_key (nullable) · target_kind (field|entry)</text>
+    <text x="40" y="500" fill="#e2e8f0" font-size="9">operation · idempotency_key · request_hash</text>
+    <text x="40" y="516" fill="#e2e8f0" font-size="9">status: pending → succeeded | failed</text>
+    <text x="40" y="532" fill="#e2e8f0" font-size="9">output (text · or record as JSON) · prompt_version</text>
+    <text x="40" y="548" fill="#e2e8f0" font-size="9">prompt/completion/total_tokens · cost_microusd</text>
+    <text x="40" y="564" fill="#e2e8f0" font-size="9">model · latency_ms · attempt_count · finish_reason</text>
+    <text x="40" y="580" fill="#e2e8f0" font-size="9">applied_revision_id · applied_field_keys (compose)</text>
+    <text x="40" y="600" fill="#64748b" font-size="9">unique(workspace_id, created_by, idempotency_key)</text>
+    <text x="40" y="616" fill="#64748b" font-size="9">retention: redact output + request_hash after 30d (tokens/cost kept)</text>
+    <text x="40" y="636" fill="#64748b" font-size="9">1 compose = 1 row = 1 quota unit (any # fields filled)</text></g>
+
+  <!-- ai_profiles -->
+  <g><rect x="480" y="420" width="240" height="150" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="600" y="442" text-anchor="middle" fill="#5eead4" font-size="11" font-weight="bold">ai_profiles</text>
+    <line x1="490" y1="450" x2="710" y2="450" stroke="#334155"/>
+    <text x="490" y="468" fill="#e2e8f0" font-size="9">project_id (unique · 1/profile)</text>
+    <text x="490" y="486" fill="#e2e8f0" font-size="9">brand_voice (free text)</text>
+    <text x="490" y="504" fill="#e2e8f0" font-size="9">glossary [{term, prefer}]</text>
+    <text x="490" y="522" fill="#e2e8f0" font-size="9">language (BCP-47 hint)</text>
+    <text x="490" y="544" fill="#64748b" font-size="9">absent row = no guidance</text>
+    <text x="490" y="560" fill="#64748b" font-size="9">never sent by the client</text></g>
+
+  <!-- core reads/writes its tables -->
+  <line x1="540" y1="358" x2="245" y2="418" stroke="#14b8a6" stroke-width="1.6" marker-end="url(#at)"/>
+  <text x="330" y="392" fill="#5eead4" font-size="9">reserve → finalize</text>
+  <line x1="680" y1="358" x2="600" y2="418" stroke="#14b8a6" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#at)"/>
+  <text x="660" y="392" fill="#5eead4" font-size="9">resolve (step 3)</text>
+
+  <!-- entitlements dependency -->
+  <g><rect x="750" y="420" width="220" height="92" rx="8" fill="#0f172a" stroke="#334155" stroke-width="2" stroke-dasharray="5 3"/>
+    <text x="860" y="442" text-anchor="middle" fill="#cbd5e1" font-size="10" font-weight="bold">auth.entitlements</text>
+    <text x="760" y="462" fill="#94a3b8" font-size="9">aiTextRequestsPerMonth</text>
+    <text x="760" y="480" fill="#64748b" font-size="9">resolve → cached, fail-CLOSED</text>
+    <text x="760" y="498" fill="#64748b" font-size="9">(paid resource: no resolver = reject)</text></g>
+  <line x1="760" y1="332" x2="860" y2="418" stroke="#334155" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#a)"/>
+
+  <!-- ── CALLOUTS ───────────────────────────────────────────────── -->
+  <g><rect x="30" y="676" width="610" height="76" rx="8" fill="#2a2008" stroke="#f59e0b" stroke-width="2"/>
+    <text x="44" y="698" fill="#fcd34d" font-size="10" font-weight="bold">Quota &amp; idempotency (atomic, no double-charge)</text>
+    <text x="44" y="716" fill="#94a3b8" font-size="9">pg_advisory_xact_lock(ws) → INSERT pending → count(status IN pending,succeeded) this UTC month</text>
+    <text x="44" y="732" fill="#94a3b8" font-size="9">over limit → PLAN_LIMIT_REACHED, txn rolls back (no row, no provider call) · stale pending reclaimed (5 min)</text>
+    <text x="44" y="748" fill="#94a3b8" font-size="9">same requestId → replay stored output (no 2nd call) · hash mismatch → IDEMPOTENCY_KEY_REUSED</text></g>
+
+  <g><rect x="660" y="676" width="580" height="76" rx="8" fill="#2a2008" stroke="#f59e0b" stroke-width="2"/>
+    <text x="674" y="698" fill="#fcd34d" font-size="10" font-weight="bold">Cost (priced from the returned model)</text>
+    <text x="674" y="716" fill="#94a3b8" font-size="9">cost_microusd = price(response.model): exact → suffix (*:free → 0) → env pair → null</text>
+    <text x="674" y="732" fill="#94a3b8" font-size="9">0 ≠ null (free is a fact; null = unknown, never guessed) · tokens+cost sum succeeded AND failed</text>
+    <text x="674" y="748" fill="#94a3b8" font-size="9">→ /usage ai.cost { microusd, complete, unpricedGenerations } · complete=false hides the $ figure</text></g>
+
+  <!-- return note -->
+  <text x="115" y="232" fill="#818cf8" font-size="9">← AiOutput {scalar text | record fields} + truncated + remaining → preview → apply → save(aiGenerationIds)</text>
+
+  <!-- footer -->
+  <text x="30" y="784" fill="#64748b" font-size="10">Provider key (AI_API_KEY) lives only in ai-service env · all NestJS↔NestJS is TCP · core→ai-service is the only HTTP hop.</text>
+</svg>

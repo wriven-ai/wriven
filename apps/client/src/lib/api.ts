@@ -1,5 +1,10 @@
 import type {
   ApiError,
+  AiIntent,
+  AiProfileView,
+  AiGlossaryTerm,
+  AiRefinePreset,
+  AiTargetKind,
   ApiKeyScope,
   ApiKeyView,
   AssignableWorkspaceRole,
@@ -36,6 +41,9 @@ import type {
   SubscriptionView,
   SwapPlanInput,
   UsageView,
+  UserView,
+  WorkspaceStatsView,
+  ProjectStatsView,
   WebhookEvent,
   WebhookView,
   WorkspaceMemberView,
@@ -102,6 +110,8 @@ interface RequestOptions {
   workspace?: boolean;
   /** Attach the X-Project-Id header. */
   project?: boolean;
+  /** Abort only this browser request; server-side work may already be running. */
+  signal?: AbortSignal;
 }
 
 // De-dupe concurrent refreshes so a burst of 401s triggers one refresh call.
@@ -143,6 +153,7 @@ async function request<T>(
     auth = true,
     workspace = false,
     project = false,
+    signal,
   } = opts;
   const headers: Record<string, string> = {};
   if (process.env.NEXT_PUBLIC_USE_NGROK === 'true')
@@ -168,6 +179,7 @@ async function request<T>(
     headers,
     credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal,
   });
 
   // Expired access cookie → refresh once, then retry the original request.
@@ -228,14 +240,41 @@ export const authApi = {
     }),
   resendVerification: () =>
     request<{ success: true }>('/auth/resend-verification', { method: 'POST' }),
+  // Self-service profile (specs/18). User-scoped — no workspace header.
+  updateProfile: (dto: { name?: string; avatar?: string | null }) =>
+    request<UserView>('/users/me', { method: 'PATCH', body: dto }),
+  avatarPresign: (dto: {
+    filename: string;
+    contentType: string;
+    size?: number;
+  }) =>
+    request<PresignResult>('/users/me/avatar-presign', {
+      method: 'POST',
+      body: dto,
+    }),
 };
 
 export const contentApi = {
-  listTypes: () =>
-    request<ContentTypeView[]>('/content/types', {
-      workspace: true,
-      project: true,
-    }),
+  listTypes: async (params?: { page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const q = qs.toString();
+    const raw = await request<ContentTypeView[] | Paginated<ContentTypeView>>(
+      `/content/types${q ? `?${q}` : ''}`,
+      { workspace: true, project: true },
+    );
+    // Backend returns a flat array — normalise into the Paginated envelope.
+    if (Array.isArray(raw)) {
+      return {
+        items: raw,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? raw.length,
+        total: raw.length,
+      } as Paginated<ContentTypeView>;
+    }
+    return raw as Paginated<ContentTypeView>;
+  },
   createType: (dto: { name: string; apiId: string; fields: FieldDef[] }) =>
     request<ContentTypeView>('/content/types', {
       method: 'POST',
@@ -284,6 +323,7 @@ export const contentApi = {
     slug?: string;
     status?: string;
     data: Record<string, unknown>;
+    aiGenerationIds?: string[];
   }) =>
     request<ContentEntryView>('/content/entries', {
       method: 'POST',
@@ -298,7 +338,7 @@ export const contentApi = {
     }),
   updateEntry: (
     id: string,
-    dto: { slug?: string; status?: string; data?: Record<string, unknown> },
+    dto: { slug?: string; status?: string; data?: Record<string, unknown>; aiGenerationIds?: string[] },
   ) =>
     request<ContentEntryView>(`/content/entries/${id}`, {
       method: 'PATCH',
@@ -328,6 +368,60 @@ export const contentApi = {
       `/content/entries/${entryId}/revisions/${version}/restore`,
       { method: 'POST', workspace: true, project: true },
     ),
+};
+
+export const aiApi = {
+  generate: (
+    dto: {
+      requestId: string;
+      contentTypeId: string;
+      entryId?: string;
+      targetKind: AiTargetKind;
+      /** Required when `targetKind` is `'field'`. */
+      fieldKey?: string;
+      intent: AiIntent;
+      /** Refine shortcut; only valid with `intent: 'refine'` on a field. */
+      preset?: AiRefinePreset;
+      instruction?: string;
+      sourceContent?: string;
+      history?: { role: 'user' | 'assistant'; content: string }[];
+    },
+    signal?: AbortSignal,
+  ) =>
+    request<{
+      generationId: string;
+      output:
+        | { kind: 'scalar'; text: string }
+        | { kind: 'record'; fields: Record<string, string> };
+      model: string;
+      usage: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+      };
+      remaining: number | null;
+      /** Provider hit the output cap — the result is incomplete. */
+      truncated?: boolean;
+    }>('/content/ai/generate', {
+      method: 'POST',
+      body: dto,
+      workspace: true,
+      project: true,
+      signal,
+    }),
+  getProfile: () =>
+    request<AiProfileView>('/content/ai/profile', { workspace: true, project: true }),
+  updateProfile: (dto: {
+    brandVoice?: string | null;
+    glossary?: AiGlossaryTerm[];
+    language?: string | null;
+  }) =>
+    request<AiProfileView>('/content/ai/profile', {
+      method: 'PATCH',
+      body: dto,
+      workspace: true,
+      project: true,
+    }),
 };
 
 export const apiKeyApi = {
@@ -397,10 +491,12 @@ export const mediaApi = {
       workspace: true,
       project: true,
     }),
-  list: (params?: { page?: number; limit?: number }) => {
+  list: (params?: { page?: number; limit?: number; search?: string; sort?: 'newest' | 'oldest' | 'name' }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.search) qs.set('search', params.search);
+    if (params?.sort) qs.set('sort', params.sort);
     const q = qs.toString();
     return request<Paginated<MediaView>>(
       `/content/media${q ? `?${q}` : ''}`,
@@ -415,6 +511,13 @@ export const mediaApi = {
   remove: (id: string) =>
     request<{ success: true }>(`/content/media/${id}`, {
       method: 'DELETE',
+      workspace: true,
+      project: true,
+    }),
+  removeMany: (ids: string[]) =>
+    request<{ success: true; deleted: number }>(`/content/media/bulk-delete`, {
+      method: 'POST',
+      body: { ids },
       workspace: true,
       project: true,
     }),
@@ -498,6 +601,34 @@ export async function uploadMedia(file: File): Promise<MediaView> {
     height,
     originalFilename: file.name,
   });
+}
+
+/**
+ * Upload a profile photo to R2 and return the object key to store on the user
+ * (specs/18). Mirrors {@link uploadMedia} but skips the `media.create` step —
+ * an avatar is not a media-library asset. Image-only, ≤ the image size cap.
+ */
+export async function uploadAvatar(file: File): Promise<string> {
+  const contentType = file.type || 'application/octet-stream';
+  if (!contentType.startsWith('image/')) {
+    throw new Error('Avatar must be an image file.');
+  }
+  if (file.size > MEDIA_MAX_IMAGE_BYTES) {
+    const mb = Math.round(MEDIA_MAX_IMAGE_BYTES / (1024 * 1024));
+    throw new Error(`Avatar is too large. Max ${mb} MB.`);
+  }
+  const { uploadUrl, key } = await authApi.avatarPresign({
+    filename: file.name,
+    contentType,
+    size: file.size,
+  });
+  const put = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': contentType },
+  });
+  if (!put.ok) throw new Error('Upload to storage failed.');
+  return key;
 }
 
 export const workspaceApi = {
@@ -716,6 +847,18 @@ export const plansApi = {
 export const usageApi = {
   /** Current-period workspace usage (Delivery API requests + storage). */
   getUsage: () => request<UsageView>('/usage', { workspace: true }),
+};
+
+export const statsApi = {
+  /** Workspace aggregate stats (projects, members, content, usage). See specs/17. */
+  workspaceStats: () =>
+    request<WorkspaceStatsView>('/stats/workspace', { workspace: true }),
+  /** Project-scoped aggregate stats. */
+  projectStats: () =>
+    request<ProjectStatsView>('/stats/project', {
+      workspace: true,
+      project: true,
+    }),
 };
 
 /**

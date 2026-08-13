@@ -162,6 +162,12 @@ const PROJECT_PERMISSION_ROWS: PermissionRow[] = [
     description: 'Permanently remove content entries',
   },
   {
+    category: 'Content Schema & Entries',
+    key: Permission.AI_GENERATE,
+    label: 'Use AI Co-Writer',
+    description: 'Generate and refine AI-assisted content drafts',
+  },
+  {
     category: 'Assets & Developers',
     key: Permission.MEDIA_MANAGE,
     label: 'Manage Media Library',
@@ -200,11 +206,11 @@ export function WorkspacePermissionsTable() {
   return (
     <div className="space-y-4">
       {/* Information Banner */}
-      <div className="flex items-start gap-3 p-3.5 border border-brand-border bg-brand-surface-soft/60 rounded-xl text-2xs font-mono text-text-secondary leading-relaxed">
+      <div className="flex items-start gap-3 p-3.5 border border-brand-border bg-brand-surface-soft/60 rounded-xl text-sm font-mono text-text-secondary leading-relaxed">
         <Shield className="w-4 h-4 text-brand-accent shrink-0 mt-0.5" />
         <div>
           <span className="font-bold text-text-primary">Workspace Level RBAC:</span> Controls broad access to workspace settings, billing, project creation, and team management.
-          <p className="mt-1 text-[10px] text-text-muted">
+          <p className="mt-1 text-sm text-text-muted">
             <span className="font-semibold text-brand-accent">Cascade Note:</span> Workspace Owners and Admins automatically inherit full access to all projects in the workspace.
           </p>
         </div>
@@ -214,10 +220,10 @@ export function WorkspacePermissionsTable() {
         <Table>
           <TableHeader className="bg-brand-surface-soft/40 border-b border-brand-border">
             <TableRow>
-              <TableHead className="w-[45%] font-mono text-2xs font-bold text-text-primary py-3">Permission / Action</TableHead>
+              <TableHead className="w-[45%] font-mono text-sm font-bold text-text-primary py-3">Permission / Action</TableHead>
               {WORKSPACE_ROLES_LIST.map(({ role, label, badgeClass }) => (
-                <TableHead key={role} className="text-center font-mono text-2xs py-3 w-[13.75%]">
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase border ${badgeClass}`}>
+                <TableHead key={role} className="text-center font-mono text-sm py-3 w-[13.75%]">
+                  <span className={`px-2 py-0.5 rounded text-sm font-semibold uppercase border ${badgeClass}`}>
                     {label}
                   </span>
                 </TableHead>
@@ -231,15 +237,15 @@ export function WorkspacePermissionsTable() {
                 <React.Fragment key={cat}>
                   {/* Category Header Row */}
                   <TableRow className="bg-brand-surface-soft/20 border-b border-brand-border">
-                    <TableCell colSpan={5} className="py-2 px-3 font-mono text-[10px] font-bold text-brand-secondary uppercase tracking-wider">
+                    <TableCell colSpan={5} className="py-2 px-3 font-mono text-sm font-bold text-brand-secondary uppercase tracking-wider">
                       {cat}
                     </TableCell>
                   </TableRow>
                   {rows.map((row) => (
                     <TableRow key={row.key} className="border-b border-brand-border/60 hover:bg-brand-surface-soft/30 transition-colors">
                       <TableCell className="py-2.5 px-3">
-                        <div className="font-mono text-2xs font-bold text-text-primary">{row.label}</div>
-                        <div className="font-mono text-[9.5px] text-text-muted leading-tight mt-0.5">{row.description}</div>
+                        <div className="font-mono text-sm font-bold text-text-primary">{row.label}</div>
+                        <div className="font-mono text-sm text-text-muted leading-tight mt-0.5">{row.description}</div>
                       </TableCell>
                       {WORKSPACE_ROLES_LIST.map(({ role }) => {
                         const hasPerm = WORKSPACE_ROLE_PERMISSIONS[role].has(row.key);
@@ -275,11 +281,11 @@ export function ProjectPermissionsTable() {
   return (
     <div className="space-y-4">
       {/* Information Banner */}
-      <div className="flex items-start gap-3 p-3.5 border border-brand-border bg-brand-surface-soft/60 rounded-xl text-2xs font-mono text-text-secondary leading-relaxed">
+      <div className="flex items-start gap-3 p-3.5 border border-brand-border bg-brand-surface-soft/60 rounded-xl text-sm font-mono text-text-secondary leading-relaxed">
         <Sparkles className="w-4 h-4 text-brand-secondary shrink-0 mt-0.5" />
         <div>
           <span className="font-bold text-text-primary">Project Level RBAC:</span> Fine-grained control over content types, entries, publishing workflows, media assets, API keys, and webhooks.
-          <p className="mt-1 text-[10px] text-text-muted">
+          <p className="mt-1 text-sm text-text-muted">
             Editors can draft and edit entries, but only Project Admins (and Workspace Owners/Admins) can publish content or alter schemas.
           </p>
         </div>
@@ -289,10 +295,10 @@ export function ProjectPermissionsTable() {
         <Table>
           <TableHeader className="bg-brand-surface-soft/40 border-b border-brand-border">
             <TableRow>
-              <TableHead className="w-[52%] font-mono text-2xs font-bold text-text-primary py-3">Permission / Action</TableHead>
+              <TableHead className="w-[52%] font-mono text-sm font-bold text-text-primary py-3">Permission / Action</TableHead>
               {PROJECT_ROLES_LIST.map(({ role, label, badgeClass }) => (
-                <TableHead key={role} className="text-center font-mono text-2xs py-3 w-[16%]">
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase border ${badgeClass}`}>
+                <TableHead key={role} className="text-center font-mono text-sm py-3 w-[16%]">
+                  <span className={`px-2 py-0.5 rounded text-sm font-semibold uppercase border ${badgeClass}`}>
                     {label}
                   </span>
                 </TableHead>
@@ -306,15 +312,15 @@ export function ProjectPermissionsTable() {
                 <React.Fragment key={cat}>
                   {/* Category Header Row */}
                   <TableRow className="bg-brand-surface-soft/20 border-b border-brand-border">
-                    <TableCell colSpan={4} className="py-2 px-3 font-mono text-[10px] font-bold text-brand-secondary uppercase tracking-wider">
+                    <TableCell colSpan={4} className="py-2 px-3 font-mono text-sm font-bold text-brand-secondary uppercase tracking-wider">
                       {cat}
                     </TableCell>
                   </TableRow>
                   {rows.map((row) => (
                     <TableRow key={row.key} className="border-b border-brand-border/60 hover:bg-brand-surface-soft/30 transition-colors">
                       <TableCell className="py-2.5 px-3">
-                        <div className="font-mono text-2xs font-bold text-text-primary">{row.label}</div>
-                        <div className="font-mono text-[9.5px] text-text-muted leading-tight mt-0.5">{row.description}</div>
+                        <div className="font-mono text-sm font-bold text-text-primary">{row.label}</div>
+                        <div className="font-mono text-sm text-text-muted leading-tight mt-0.5">{row.description}</div>
                       </TableCell>
                       {PROJECT_ROLES_LIST.map(({ role }) => {
                         const hasPerm = PROJECT_ROLE_PERMISSIONS[role].has(row.key);

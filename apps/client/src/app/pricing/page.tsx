@@ -30,7 +30,7 @@ const PricingPage = () => {
             className="text-center max-w-3xl mx-auto space-y-4 mb-16"
             id="pricing-header-info"
           >
-            <span className="text-xs font-semibold tracking-wider text-brand-secondary uppercase animate-fade-in">
+            <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase animate-fade-in">
               Wriven Subscriptions
             </span>
             <h1
@@ -49,7 +49,7 @@ const PricingPage = () => {
               id="billing-choice-selector"
             >
               <span
-                className={`text-[10px] font-mono font-bold uppercase tracking-wider ${billingCycle === 'monthly' ? 'text-text-primary' : 'text-text-muted'}`}
+                className={`text-sm font-mono font-bold uppercase tracking-wider ${billingCycle === 'monthly' ? 'text-text-primary' : 'text-text-muted'}`}
               >
                 Billed Monthly
               </span>
@@ -74,10 +74,10 @@ const PricingPage = () => {
                 />
               </button>
               <span
-                className={`text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-2 ${billingCycle === 'annual' ? 'text-brand-accent' : 'text-text-muted'}`}
+                className={`text-sm font-mono font-bold uppercase tracking-wider flex items-center gap-2 ${billingCycle === 'annual' ? 'text-brand-accent' : 'text-text-muted'}`}
               >
                 Billed Annually
-                <span className="inline-flex items-center text-[9px] bg-brand-accent text-white border border-brand-border-button px-2 py-0.5 rounded font-mono font-bold uppercase">
+                <span className="inline-flex items-center text-sm bg-brand-accent text-white border border-brand-border-button px-2 py-0.5 rounded font-mono font-bold uppercase">
                   Save 10%
                 </span>
               </span>
@@ -95,7 +95,7 @@ const PricingPage = () => {
               ))}
             </div>
           ) : isError || sorted.length === 0 ? (
-            <div className="text-center text-text-muted text-xs font-mono py-24 mb-24">
+            <div className="text-center text-text-muted text-sm font-mono py-24 mb-24">
               Couldn&apos;t load plans. Please try again later.
             </div>
           ) : (
@@ -148,7 +148,7 @@ function PricingCards({
           >
             {popular && (
               <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2">
-                <span className="inline-flex items-center gap-1.5 bg-brand-secondary border border-brand-border-button text-white text-[10px] font-semibold tracking-wider px-3 py-1 rounded shadow-lg">
+                <span className="inline-flex items-center gap-1.5 bg-brand-secondary border border-brand-border-button text-white text-sm font-semibold tracking-wider px-3 py-1 rounded shadow-lg">
                   <Sparkles className="w-3 h-3 text-white" />
                   Most Popular
                 </span>
@@ -160,7 +160,7 @@ function PricingCards({
                 <h3 className="font-display font-bold text-xl text-text-primary uppercase tracking-tight">
                   {plan.name}
                 </h3>
-                <p className="text-xs text-text-secondary mt-2 min-h-[40px] font-light italic">
+                <p className="text-sm text-text-secondary mt-2 min-h-[40px] font-light italic">
                   {plan.description}
                 </p>
               </div>
@@ -173,18 +173,18 @@ function PricingCards({
                   <span className="text-5xl font-extrabold text-text-primary font-serif tracking-tight">
                     {display % 1 === 0 ? display : display.toFixed(2)}
                   </span>
-                  <span className="text-xs font-mono text-text-muted ml-2 font-bold select-none uppercase">
+                  <span className="text-sm font-mono text-text-muted ml-2 font-bold select-none uppercase">
                     / month
                   </span>
                 </div>
-                <p className="text-[10px] font-mono text-text-muted mt-1.5 uppercase font-bold tracking-wider">
+                <p className="text-sm font-mono text-text-muted mt-1.5 uppercase font-bold tracking-wider">
                   {plan.priceMonthly === 0
                     ? 'Forever free to build'
                     : `Billed ${billingCycle === 'annual' ? 'annually' : 'monthly'}`}
                 </p>
               </div>
 
-              <ul className="space-y-3 text-xs text-text-secondary text-left font-light font-mono">
+              <ul className="space-y-3 text-sm text-text-secondary text-left font-light font-mono">
                 {cardHighlights(plan).map((feat) => (
                   <li key={feat} className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
@@ -197,7 +197,7 @@ function PricingCards({
             <div className="pt-8">
               <Link
                 href="/register"
-                className={`block text-center font-mono font-bold text-xs uppercase tracking-wider py-4 px-4 rounded-lg border border-brand-border-button transition-all duration-150 cursor-pointer neo-shadow ${
+                className={`block text-center font-mono font-bold text-sm uppercase tracking-wider py-4 px-4 rounded-lg border border-brand-border-button transition-all duration-150 cursor-pointer neo-shadow ${
                   popular
                     ? 'bg-brand-accent hover:bg-brand-accent-hover text-white'
                     : 'bg-brand-surface-soft hover:bg-brand-border text-text-primary'
@@ -281,13 +281,13 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
         <table className="w-full min-w-[650px] text-left border-collapse" id="pricing-matrix-table">
           <thead>
             <tr className="bg-brand-surface-soft border-b border-brand-border-button">
-              <th className="p-4.5 text-xs font-mono font-bold uppercase text-text-muted tracking-wider">
+              <th className="p-4.5 text-sm font-mono font-bold uppercase text-text-muted tracking-wider">
                 Features &amp; Capabilities
               </th>
               {plans.map((p, i) => (
                 <th
                   key={p.key}
-                  className={`p-4.5 text-xs font-mono font-bold uppercase tracking-wider ${
+                  className={`p-4.5 text-sm font-mono font-bold uppercase tracking-wider ${
                     i === 1 ? 'text-brand-accent bg-brand-accent/5' : 'text-text-secondary'
                   }`}
                 >
@@ -296,7 +296,7 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-brand-border text-xs font-mono">
+          <tbody className="divide-y divide-brand-border text-sm font-mono">
             {LIMIT_ROWS.map((row) => (
               <tr key={row.label} className="hover:bg-brand-surface-soft/40 transition-colors">
                 <td className="p-4 font-sans font-bold text-text-primary">{row.label}</td>
@@ -315,7 +315,7 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
                 <td className="p-4 font-sans font-bold text-text-primary">
                   {row.label}
                   {row.future && (
-                    <span className="ml-1 text-[9px] text-text-muted font-normal">(future)</span>
+                    <span className="ml-1 text-sm text-text-muted font-normal">(future)</span>
                   )}
                 </td>
                 {plans.map((p, i) => {
@@ -395,7 +395,7 @@ function PricingFaq() {
                 <HelpCircle className="w-5 h-5 text-brand-accent shrink-0 mt-0.5" />
                 <span>{faq.question}</span>
               </h4>
-              <p className="text-xs text-text-secondary leading-relaxed pl-7 font-light font-serif italic">
+              <p className="text-sm text-text-secondary leading-relaxed pl-7 font-light font-serif italic">
                 {faq.answer}
               </p>
             </div>
@@ -411,14 +411,14 @@ function PricingFaq() {
           <h3 className="font-display font-medium text-2xl sm:text-3xl text-text-primary">
             Get weaving in less than 2 minutes
           </h3>
-          <p className="text-text-secondary text-xs sm:text-sm max-w-xl mx-auto font-light leading-relaxed">
+          <p className="text-text-secondary text-sm sm:text-sm max-w-xl mx-auto font-light leading-relaxed">
             No contracts or setup overhead. Define your content models, draft
             copy, and ship a typed JSON API — completely free.
           </p>
           <div className="flex justify-center pt-2">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-xs uppercase tracking-wider py-4 px-6 rounded-lg neo-shadow cursor-pointer transition-all"
+              className="inline-flex items-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg neo-shadow cursor-pointer transition-all"
               id="pricing-bottom-primary"
             >
               Start for free, no card required

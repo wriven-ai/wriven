@@ -9,16 +9,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  AddWorkspaceMemberDto,
-  AuthUser,
-  CreateWorkspaceDto,
-  SERVICE_TOKENS,
-  UpdateWorkspaceDto,
-  UpdateWorkspaceMemberDto,
-  WORKSPACE_PATTERNS,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -27,15 +19,15 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class WorkspacesController {
   constructor(
-    @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
   ) {}
 
   // ── Workspace CRUD ───────────────────────────────────────────────────────────
 
   @Post()
-  create(@CurrentUser() user: AuthUser, @Body() dto: CreateWorkspaceDto) {
+  create(@CurrentUser() user: contracts.AuthUser, @Body() dto: contracts.CreateWorkspaceDto) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.CREATE_WORKSPACE, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.CREATE_WORKSPACE, {
         userId: user.userId,
         dto,
       }),
@@ -43,9 +35,9 @@ export class WorkspacesController {
   }
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
+  list(@CurrentUser() user: contracts.AuthUser) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.LIST_WORKSPACES, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.LIST_WORKSPACES, {
         userId: user.userId,
       }),
     );
@@ -53,11 +45,11 @@ export class WorkspacesController {
 
   @Get(':workspaceId')
   get(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
   ) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.GET_WORKSPACE, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.GET_WORKSPACE, {
         callerUserId: user.userId,
         workspaceId,
       }),
@@ -66,12 +58,12 @@ export class WorkspacesController {
 
   @Patch(':workspaceId')
   update(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
-    @Body() dto: UpdateWorkspaceDto,
+    @Body() dto: contracts.UpdateWorkspaceDto,
   ) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.UPDATE_WORKSPACE, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.UPDATE_WORKSPACE, {
         callerUserId: user.userId,
         workspaceId,
         dto,
@@ -81,11 +73,11 @@ export class WorkspacesController {
 
   @Delete(':workspaceId')
   remove(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
   ) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.DELETE_WORKSPACE, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.DELETE_WORKSPACE, {
         callerUserId: user.userId,
         workspaceId,
       }),
@@ -96,11 +88,11 @@ export class WorkspacesController {
 
   @Get(':workspaceId/members')
   listMembers(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
   ) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.LIST_MEMBERS, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.LIST_MEMBERS, {
         callerUserId: user.userId,
         workspaceId,
       }),
@@ -109,12 +101,12 @@ export class WorkspacesController {
 
   @Post(':workspaceId/members')
   addMember(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
-    @Body() dto: AddWorkspaceMemberDto,
+    @Body() dto: contracts.AddWorkspaceMemberDto,
   ) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.ADD_MEMBER, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.ADD_MEMBER, {
         callerUserId: user.userId,
         workspaceId,
         dto,
@@ -124,13 +116,13 @@ export class WorkspacesController {
 
   @Patch(':workspaceId/members/:userId')
   updateMember(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Param('userId') targetUserId: string,
-    @Body() dto: UpdateWorkspaceMemberDto,
+    @Body() dto: contracts.UpdateWorkspaceMemberDto,
   ) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.UPDATE_MEMBER, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.UPDATE_MEMBER, {
         callerUserId: user.userId,
         workspaceId,
         targetUserId,
@@ -141,12 +133,12 @@ export class WorkspacesController {
 
   @Delete(':workspaceId/members/:userId')
   removeMember(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Param('userId') targetUserId: string,
   ) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.REMOVE_MEMBER, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.REMOVE_MEMBER, {
         callerUserId: user.userId,
         workspaceId,
         targetUserId,

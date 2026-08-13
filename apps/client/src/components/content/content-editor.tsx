@@ -27,14 +27,15 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { FieldRow, isFieldEmpty, STATUS_COLORS } from './fields';
+import { AiPanel } from './ai-panel';
 import { RevisionsDrawer } from './revisions-drawer';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 
 /**
  * Single-entry editor (create + edit). Center = title + body + structured
- * fields (media, reference, etc.) inline; right = AI co-writer, shown only when
- * the content type has a rich-text field. Settings sheet holds the slug.
+ * fields (media, reference, etc.) inline; desktop = AI co-writer for configured
+ * Tier-1 fields, while mobile opens it as a bottom sheet. Settings holds the slug.
  * The entries *list* lives on its own page — this view is one document.
  */
 export function ContentEditor({
@@ -51,10 +52,11 @@ export function ContentEditor({
   const contentBase = `/w/${wsSlug}/p/${projSlug}/content`;
   const contentTypesHref = `/w/${wsSlug}/p/${projSlug}/content-types`;
 
-  const { data: types = [] } = useQuery({
+  const { data: typesData } = useQuery({
     queryKey: ['content-types'],
-    queryFn: contentApi.listTypes,
+    queryFn: () => contentApi.listTypes({ limit: 100 }),
   });
+  const types = typesData?.items ?? [];
 
   const { data: entry } = useQuery({
     queryKey: ['entry', entryId],
@@ -70,9 +72,10 @@ export function ContentEditor({
   const [isDirty, setIsDirty] = useState(false);
   const [saveOk, setSaveOk] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [aiPrompt, setAiPrompt] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [appliedGenerationIds, setAppliedGenerationIds] = useState<string[]>([]);
 
   // Populate when an existing entry loads.
   useEffect(() => {
@@ -81,6 +84,7 @@ export function ContentEditor({
       setSlug(entry.slug ?? '');
       setIsDirty(false);
       setFieldErrors({});
+      setAppliedGenerationIds([]);
     }
   }, [entry]);
 
@@ -96,21 +100,23 @@ export function ContentEditor({
   };
 
   const createMutation = useMutation({
-    mutationFn: (dto: { data: Record<string, unknown>; slug?: string }) =>
+    mutationFn: (dto: { data: Record<string, unknown>; slug?: string; aiGenerationIds?: string[] }) =>
       contentApi.createEntry({ contentTypeId: activeTypeId, ...dto }),
     onSuccess: (created) => {
       qc.setQueryData(['entry', created.id], created);
       qc.invalidateQueries({ queryKey: ['entries'] });
+      setAppliedGenerationIds([]);
       router.replace(`${contentBase}/${created.id}`);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (dto: { data: Record<string, unknown>; slug?: string }) =>
+    mutationFn: (dto: { data: Record<string, unknown>; slug?: string; aiGenerationIds?: string[] }) =>
       contentApi.updateEntry(entryId as string, dto),
     onSuccess: () => {
       setIsDirty(false);
       setSaveOk(true);
+      setAppliedGenerationIds([]);
       setTimeout(() => setSaveOk(false), 2000);
       qc.invalidateQueries({ queryKey: ['entries'] });
       qc.invalidateQueries({ queryKey: ['entry', entryId] });
@@ -144,7 +150,11 @@ export function ContentEditor({
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    const payload = { data: formData, slug: slug || undefined };
+    const payload = {
+      data: formData,
+      slug: slug || undefined,
+      aiGenerationIds: appliedGenerationIds.length ? appliedGenerationIds : undefined,
+    };
     if (entryId) updateMutation.mutate(payload);
     else createMutation.mutate(payload);
   };
@@ -162,8 +172,15 @@ export function ContentEditor({
     [titleField?.key, ...bodyFields.map((b) => b.key)].filter(Boolean) as string[],
   );
   const mainFields = allFields.filter((f) => !usedInMain.has(f.key));
-  const hasRichText = bodyFields.length > 0;
   const hasMain = !!titleField || bodyFields.length > 0;
+  // Show the Co-Writer when there is at least one AI-eligible field. Eligibility
+  // is derived: Tier-1 type, single-value, not marked sensitive.
+  const hasAiTarget = can(Permission.AI_GENERATE) && allFields.some(
+    (f) =>
+      (f.type === 'text' || f.type === 'richtext' || f.type === 'select') &&
+      !f.multiple &&
+      !f.aiPrivate,
+  );
 
   return (
     <div className="space-y-6 text-left">
@@ -172,7 +189,7 @@ export function ContentEditor({
         <div className="space-y-1">
           <Link
             href={contentBase}
-            className="inline-flex items-center gap-1 text-[10px] font-mono text-text-muted hover:text-brand-accent transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-mono text-text-muted hover:text-brand-accent transition-colors"
           >
             <ArrowLeft className="w-3 h-3" /> Entries
           </Link>
@@ -186,19 +203,19 @@ export function ContentEditor({
 
         <div className="flex items-center gap-2">
           {isDirty && (
-            <span className="text-3xs font-mono text-brand-secondary bg-brand-secondary/10 px-2 py-1 rounded animate-pulse font-bold">
+            <span className="text-sm font-mono text-brand-secondary bg-brand-secondary/10 px-2 py-1 rounded animate-pulse font-bold">
               ● Unsaved
             </span>
           )}
           {entry && (
-            <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${STATUS_COLORS[status as EntryStatus]}`}>
+            <span className={`text-sm font-mono font-bold px-2 py-0.5 rounded border ${STATUS_COLORS[status as EntryStatus]}`}>
               {status.toUpperCase()}
             </span>
           )}
           {entryId && (
             <button
               onClick={() => setHistoryOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-xs font-mono font-bold"
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-sm font-mono font-bold"
               title="Version history"
             >
               <History className="w-3.5 h-3.5" />
@@ -207,12 +224,21 @@ export function ContentEditor({
           )}
           <button
             onClick={() => setSettingsOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-xs font-mono font-bold"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-border rounded-lg text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors cursor-pointer text-sm font-mono font-bold"
             title="Entry settings (slug)"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Settings</span>
           </button>
+          {hasAiTarget && (
+            <button
+              onClick={() => setAiOpen(true)}
+              className="lg:hidden inline-flex items-center gap-1.5 px-3 py-2.5 border border-brand-secondary/40 rounded-lg text-brand-secondary hover:text-brand-accent hover:border-brand-accent/60 transition-colors cursor-pointer text-sm font-mono font-bold"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              AI
+            </button>
+          )}
           {entryId && can(Permission.CONTENT_ENTRY_DELETE) && (
             <button
               onClick={() => {
@@ -233,7 +259,7 @@ export function ContentEditor({
                 ? !can(Permission.CONTENT_ENTRY_UPDATE)
                 : !can(Permission.CONTENT_ENTRY_CREATE))
             }
-            className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button px-5 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer neo-shadow"
+            className="inline-flex items-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button px-5 py-2.5 rounded-lg text-sm font-mono font-bold transition-all cursor-pointer neo-shadow"
           >
             {isSaving ? (
               <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving...</>
@@ -247,7 +273,7 @@ export function ContentEditor({
             <button
               onClick={() => publishMutation.mutate()}
               disabled={publishMutation.isPending || isDirty}
-              className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 border border-green-700 px-5 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 border border-green-700 px-5 py-2.5 rounded-lg text-sm font-mono font-bold transition-all cursor-pointer"
               title={isDirty ? 'Save first before publishing' : undefined}
             >
               {publishMutation.isPending ? (
@@ -262,7 +288,7 @@ export function ContentEditor({
 
       {/* Timeline strip */}
       {entry && (
-        <div className="bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 shadow-xs font-mono text-[10px] text-text-muted">
+        <div className="bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 shadow-xs font-mono text-sm text-text-muted">
           <span className="flex items-center gap-1.5 text-text-secondary font-bold">
             <Clock className="w-3.5 h-3.5 text-brand-secondary" /> Timeline
           </span>
@@ -285,10 +311,10 @@ export function ContentEditor({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Center: writing surface */}
-        <div className={`${hasRichText ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
+        <div className={`${hasAiTarget ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
           <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 sm:p-6 shadow-sm space-y-5">
             {allFields.length === 0 && (
-              <p className="text-xs font-mono text-text-muted">
+              <p className="text-sm font-mono text-text-muted">
                 This content type has no fields.{' '}
                 <a href={contentTypesHref} className="text-brand-accent underline">Add fields</a>.
               </p>
@@ -306,7 +332,7 @@ export function ContentEditor({
                   }`}
                 />
                 {fieldErrors[titleField.key] && (
-                  <p className="text-[9px] font-mono text-status-error">{fieldErrors[titleField.key]}</p>
+                  <p className="text-sm font-mono text-status-error">{fieldErrors[titleField.key]}</p>
                 )}
               </div>
             )}
@@ -337,55 +363,66 @@ export function ContentEditor({
             )}
 
             {!hasMain && allFields.length > 0 && (
-              <p className="text-[10px] font-mono text-text-muted">
+              <p className="text-sm font-mono text-text-muted">
                 No title or body field for this content type.
               </p>
             )}
           </div>
 
           {saveError && (
-            <div className="flex items-center gap-2 text-[10px] font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 text-sm font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-3 py-2">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               {(saveError as { error?: { message?: string } })?.error?.message ?? 'Failed to save entry'}
             </div>
           )}
         </div>
 
-        {/* Right: AI co-writer — only when the content type has a rich-text body */}
-        {hasRichText && (
-        <aside className="lg:col-span-4">
-          <div className="bg-brand-surface border border-brand-border rounded-xl shadow-sm flex flex-col sticky top-4">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-brand-border">
-              <Sparkles className="w-4 h-4 text-brand-secondary" />
-              <span className="text-[11px] font-mono font-bold tracking-wider text-text-primary">Wriven Co-Writer</span>
-              <span className="ml-auto text-[9px] font-mono bg-brand-secondary/10 text-brand-secondary px-2 py-0.5 rounded font-bold">AI</span>
-            </div>
-            <div className="px-5 py-3 bg-brand-surface-soft/60 border-b border-brand-border">
-              <p className="text-[10px] font-mono text-text-muted leading-relaxed">
-                AI content generation — coming soon. The AI service is not yet wired.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 p-5">
-              <textarea
-                rows={12}
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="e.g. Expand this paragraph with 3 bullet points..."
-                className="w-full min-h-[300px] text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-3 text-text-primary focus:outline-none focus:border-brand-accent leading-relaxed resize-y"
-              />
-              <button
-                type="button"
-                disabled
-                className="w-full inline-flex items-center justify-center gap-2 bg-brand-secondary/40 text-white/60 border border-brand-border-button font-mono font-bold text-xs py-2.5 px-4 rounded-lg cursor-not-allowed"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Apply Suggestions (unavailable)
-              </button>
-            </div>
+        {/* Right: AI Co-Writer — shown when there's an AI-eligible field */}
+        {hasAiTarget && (
+          <div className="hidden lg:contents">
+          <AiPanel
+            contentTypeId={activeTypeId}
+            entryId={entryId}
+            fields={allFields}
+            fieldValues={formData}
+            setField={setField}
+            onApplied={(generationId) =>
+              setAppliedGenerationIds((current) =>
+                current.includes(generationId) ? current : [...current, generationId],
+              )
+            }
+            onUnapplied={(generationId) =>
+              setAppliedGenerationIds((current) => current.filter((id) => id !== generationId))
+            }
+          />
           </div>
-        </aside>
         )}
       </div>
+
+      {hasAiTarget && (
+        <Sheet open={aiOpen} onOpenChange={setAiOpen}>
+          <SheetContent
+            side="bottom"
+            className="lg:hidden bg-brand-surface border-brand-border max-h-[90vh] overflow-y-auto p-0"
+          >
+            <AiPanel
+              contentTypeId={activeTypeId}
+              entryId={entryId}
+              fields={allFields}
+              fieldValues={formData}
+              setField={setField}
+              onApplied={(generationId) =>
+                setAppliedGenerationIds((current) =>
+                  current.includes(generationId) ? current : [...current, generationId],
+                )
+              }
+              onUnapplied={(generationId) =>
+                setAppliedGenerationIds((current) => current.filter((id) => id !== generationId))
+              }
+            />
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Settings drawer — slug only */}
       <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
@@ -395,7 +432,7 @@ export function ContentEditor({
         >
           <SheetHeader>
             <SheetTitle className="font-display text-text-primary">Entry settings</SheetTitle>
-            <SheetDescription className="font-mono text-2xs text-text-muted">
+            <SheetDescription className="font-mono text-sm text-text-muted">
               URL slug for this entry.
             </SheetDescription>
           </SheetHeader>
@@ -403,7 +440,7 @@ export function ContentEditor({
           <div className="px-4 pb-6 space-y-5">
             {/* Slug */}
             <div className="space-y-2">
-              <label className="block text-[10px] font-mono text-text-muted">
+              <label className="block text-sm font-mono text-text-muted">
                 Slug <span className="text-text-muted/70">— URL key, auto from title if empty</span>
               </label>
               <input
@@ -414,7 +451,7 @@ export function ContentEditor({
                   setIsDirty(true);
                 }}
                 placeholder="my-entry-slug"
-                className="w-full text-xs font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2 text-text-primary focus:outline-none focus:border-brand-accent"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2 text-text-primary focus:outline-none focus:border-brand-accent"
               />
             </div>
 

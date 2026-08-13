@@ -68,6 +68,13 @@ export interface ServiceError {
   code: string;
   message: string;
   statusCode: number;
+  /**
+   * Optional structured payload. The gateway exception filter returns a
+   * `ServiceError` as-is, so this survives to the client envelope. Today only
+   * `DOWNGRADE_BLOCKED` uses it (a `DowngradeBlock[]` listing over-limit
+   * dimensions); other codes leave it absent.
+   */
+  details?: unknown;
 }
 
 /** Identity extracted from a validated access token (attached to the request). */

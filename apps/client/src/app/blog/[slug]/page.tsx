@@ -32,7 +32,7 @@ export default function BlogPostReader({ params }: PageProps) {
           <div className="mb-8" id="blog-back-btn">
             <Link
               href="/blog"
-              className="inline-flex items-center gap-2 text-xs font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
+              className="inline-flex items-center gap-2 text-sm font-mono font-bold text-text-secondary uppercase tracking-wider hover:text-brand-accent transition-colors"
             >
               <ArrowLeft className="w-4 h-4 text-brand-accent" />
               Back to all blog posts
@@ -42,7 +42,7 @@ export default function BlogPostReader({ params }: PageProps) {
           <article className="space-y-8 bg-brand-surface/60 border border-brand-border rounded-xl p-6 sm:p-10 shadow-2xl backdrop-blur-md" id="post-main-container">
             {/* Header / Meta */}
             <div className="space-y-4 text-left border-b border-brand-border pb-6" id="post-meta-heading">
-              <span className="inline-block bg-brand-secondary/10 border border-brand-secondary/30 text-brand-secondary text-xs font-semibold tracking-wider px-3 py-1 rounded-full">
+              <span className="inline-block bg-brand-secondary/10 border border-brand-secondary/30 text-brand-secondary text-sm font-semibold tracking-wider px-3 py-1 rounded-full">
                 {post.category}
               </span>
               
@@ -60,12 +60,12 @@ export default function BlogPostReader({ params }: PageProps) {
                     className="w-10 h-10 rounded-full border border-brand-border"
                   />
                   <div>
-                    <span className="block text-xs font-bold text-white">{post.authorName}</span>
-                    <span className="block text-[10px] font-mono text-text-muted">Software Engineer</span>
+                    <span className="block text-sm font-bold text-white">{post.authorName}</span>
+                    <span className="block text-sm font-mono text-text-muted">Software Engineer</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs font-mono text-text-muted">
+                <div className="flex items-center gap-4 text-sm font-mono text-text-muted">
                   <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {post.date}</span>
                   <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {post.readingTime}</span>
                 </div>
@@ -99,7 +99,7 @@ export default function BlogPostReader({ params }: PageProps) {
 
               <h3 className="font-display font-medium text-lg text-white pt-4">Expanding primitive types into smart assets</h3>
               <p>
-                In standard headless CMS engines like Strapi or Sanity, a field type is declared as <code className="bg-violet-950/40 text-violet-300 border border-violet-900/30 px-1.5 py-0.5 rounded font-mono text-xs">Short_Text</code>, <code className="bg-violet-950/40 text-violet-300 border border-violet-900/30 px-1.5 py-0.5 rounded font-mono text-xs">Rich_Markdown</code>, or <code className="bg-violet-950/40 text-violet-300 border border-violet-900/30 px-1.5 py-0.5 rounded font-mono text-xs">Media_Library</code>. Wriven takes this baseline configuration and extends it with server-side AI handlers.
+                In standard headless CMS engines like Strapi or Sanity, a field type is declared as <code className="bg-violet-950/40 text-violet-300 border border-violet-900/30 px-1.5 py-0.5 rounded font-mono text-sm">Short_Text</code>, <code className="bg-violet-950/40 text-violet-300 border border-violet-900/30 px-1.5 py-0.5 rounded font-mono text-sm">Rich_Markdown</code>, or <code className="bg-violet-950/40 text-violet-300 border border-violet-900/30 px-1.5 py-0.5 rounded font-mono text-sm">Media_Library</code>. Wriven takes this baseline configuration and extends it with server-side AI handlers.
               </p>
 
               <ul className="list-disc pl-6 space-y-4">
@@ -117,11 +117,11 @@ export default function BlogPostReader({ params }: PageProps) {
             {/* Social Share / Interaction Bar */}
             <div className="flex items-center justify-between pt-2" id="post-share-interactions font-mono">
               <div className="flex gap-2">
-                <button className="inline-flex items-center gap-1.5 bg-brand-surface-soft hover:bg-brand-border text-xs font-mono font-semibold text-text-secondary px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer">
+                <button className="inline-flex items-center gap-1.5 bg-brand-surface-soft hover:bg-brand-border text-sm font-mono font-semibold text-text-secondary px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer">
                   <MessageSquare className="w-3.5 h-3.5 text-brand-accent" />
                   Comment
                 </button>
-                <button className="inline-flex items-center gap-1.5 bg-brand-surface-soft hover:bg-brand-border text-xs font-mono font-semibold text-text-secondary px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer">
+                <button className="inline-flex items-center gap-1.5 bg-brand-surface-soft hover:bg-brand-border text-sm font-mono font-semibold text-text-secondary px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer">
                   <Share2 className="w-3.5 h-3.5 text-brand-accent" />
                   Share post
                 </button>
@@ -146,16 +146,16 @@ export default function BlogPostReader({ params }: PageProps) {
               {relativePosts.map((rel) => (
                 <div key={rel.slug} className="bg-brand-surface/40 border border-brand-border/80 rounded-xl p-6 shadow-xl flex flex-col justify-between hover:border-brand-accent/40 transition-all">
                   <div className="space-y-2">
-                    <span className="text-[10px] font-mono font-semibold text-brand-accent uppercase tracking-wider">{rel.category}</span>
+                    <span className="text-sm font-mono font-semibold text-brand-accent uppercase tracking-wider">{rel.category}</span>
                     <h4 className="font-display font-medium text-base text-white line-clamp-2 hover:text-brand-accent transition-colors">
                       <Link href={`/blog/${rel.slug}`}>{rel.title}</Link>
                     </h4>
-                    <p className="text-xs text-text-secondary font-light line-clamp-2">{rel.excerpt}</p>
+                    <p className="text-sm text-text-secondary font-light line-clamp-2">{rel.excerpt}</p>
                   </div>
                   
                   <Link
                     href={`/blog/${rel.slug}`}
-                    className="inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider font-bold text-white hover:text-brand-accent pt-5"
+                    className="inline-flex items-center gap-1 text-sm font-mono uppercase tracking-wider font-bold text-white hover:text-brand-accent pt-5"
                   >
                     Read article
                     <ArrowRight className="w-3.5 h-3.5 text-brand-accent" />

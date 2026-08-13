@@ -4,9 +4,14 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
+
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+const PASSWORD_MESSAGE =
+  'Password must be at least 8 characters with one uppercase letter and one special character';
 
 export class RegisterDto {
   @IsString()
@@ -24,6 +29,7 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   password!: string;
 
   @IsOptional()
@@ -66,6 +72,7 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   newPassword!: string;
 }
 
@@ -73,4 +80,25 @@ export class VerifyEmailDto {
   @IsString()
   @MinLength(1)
   token!: string;
+}
+
+/**
+ * Self-service profile update for the authenticated user (`PATCH /users/me`).
+ * Either field is optional; `avatar` accepts an R2 object key (to set) or
+ * `null` (to clear). The handler additionally validates `avatar` is `null`,
+ * an `http(s)://` URL (e.g. a Google avatar), or under the user's own
+ * `avatars/<userId>/` prefix — rejects arbitrary strings / other objects' keys.
+ */
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  avatar?: string | null;
 }
