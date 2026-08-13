@@ -37,7 +37,7 @@ If `curl` also fails → see the table below.
 - **Cause (C):** **old gateway build** — Wriven gateways before the global-prefix
   fix mistakenly served delivery at `/api/v1/v1/projects/…` instead of
   `/v1/projects/…`. **This makes *every* request 404.**
-  - Verify: `curl http://localhost:5000/api/v1/health` works but
+  - Verify: `curl http://localhost:5000/v1/health` works but
     `…/v1/projects/…` 404s → you're on an old build.
   - Fix: update Wriven (preferred). Or, in `src/lib/wriven.ts`, change `CONTENT_BASE`
     to `${BASE_URL}/api/v1/v1/projects/${PROJECT_ID}/content` to match the old build.

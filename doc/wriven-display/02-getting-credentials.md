@@ -51,7 +51,8 @@ GET  {BASE_URL}/v1/projects/{projectId}/content/{apiId}/{slug} # one entry
   (e.g. `https://api.wriven.com`).
 
 > **Prefix note:** The public path is `/v1/projects/{projectId}/content/…`
-> (separate from the dashboard's `/api/v1/…`). Older gateway builds (before the
+> (the dashboard's management API now shares the same `/v1` root). Older gateway
+> builds (before the
 > global-prefix fix) mistakenly doubled this to `/api/v1/v1/projects/…`, so if
 > **every** request `404`s, your Wriven build predates the fix — either update
 > Wriven, or temporarily point your base at `/api/v1/v1/…`. The typed client in
@@ -63,7 +64,7 @@ Run this from a terminal. Replace the three values:
 
 ```bash
 # Health check (no auth) — confirms the gateway is up
-curl http://localhost:5000/api/v1/health
+curl http://localhost:5000/v1/health
 # -> { "success": true, "data": { "gateway": "ok", "auth": "ok", "core": "ok" } }
 
 # List published entries of the "post" content type (auto-seeded on project creation)

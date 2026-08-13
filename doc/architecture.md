@@ -65,7 +65,7 @@ this.core.send(CORE_PATTERNS.ENTRY_CREATE, { workspaceId, userId, dto });
 ## Request lifecycle (workspace-scoped route)
 
 ```
-1. Client → POST /api/v1/content/entries
+1. Client → POST /v1/content/entries
      headers: Authorization: Bearer <access>, X-Workspace-Id: <ws>
 2. ThrottlerGuard      — per-IP rate limit
 3. JwtAuthGuard        — verify access token locally (gateway holds JWT_SECRET), set req.user

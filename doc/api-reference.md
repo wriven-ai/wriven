@@ -1,6 +1,6 @@
 API Reference
 
-Base URL: `http://localhost:5000/api/v1` (gateway). All responses use the standard envelope (see [Conventions](./conventions.md)):
+Base URL: `http://localhost:5000/v1` (gateway). All responses use the standard envelope (see [Conventions](./conventions.md)):
 
 - Success: `{ "success": true, "data": <payload> }`
 - Error: `{ "success": false, "error": { "code", "message", "statusCode" } }`
@@ -8,7 +8,7 @@ Base URL: `http://localhost:5000/api/v1` (gateway). All responses use the standa
 **Auth header:** `Authorization: Bearer <accessToken>` for protected routes.
 **Workspace header:** `X-Workspace-Id: <workspaceId>` for workspace-scoped routes.
 **Project header:** `X-Project-Id: <projectId>` for `/content/*` routes.
-**Refresh cookie:** `refresh_token` (HttpOnly), set by register/login/refresh, scoped to `/api/v1/auth`.
+**Refresh cookie:** `refresh_token` (HttpOnly), set by register/login/refresh, scoped to `/v1/auth`.
 
 ---
 
@@ -272,13 +272,13 @@ Public. Pings auth + core over TCP. → `{ gateway, auth, core }`.
 
 ```bash
 # Register
-curl -X POST http://localhost:5000/api/v1/auth/register \
+curl -X POST http://localhost:5000/v1/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"name":"Ana","email":"ana@x.dev","password":"secret123"}'
 # → { success:true, data:{ accessToken, user, workspace, project } }  (+ refresh cookie)
 
 # Create a content type
-curl -X POST http://localhost:5000/api/v1/content/types \
+curl -X POST http://localhost:5000/v1/content/types \
   -H "Authorization: Bearer $AT" -H "X-Workspace-Id: $WS" -H "X-Project-Id: $PID" \
   -H 'Content-Type: application/json' \
   -d '{"name":"Blog Post","apiId":"blog_post","fields":[
@@ -286,7 +286,7 @@ curl -X POST http://localhost:5000/api/v1/content/types \
         {"key":"body","label":"Body","type":"richtext"}]}'
 
 # Create an entry
-curl -X POST http://localhost:5000/api/v1/content/entries \
+curl -X POST http://localhost:5000/v1/content/entries \
   -H "Authorization: Bearer $AT" -H "X-Workspace-Id: $WS" -H "X-Project-Id: $PID" \
   -H 'Content-Type: application/json' \
   -d '{"contentTypeId":"'$TID'","data":{"title":"Hello","body":"<p>hi</p>"}}'

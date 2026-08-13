@@ -1,6 +1,6 @@
 # Core Service (CMS)
 
-NestJS TCP microservice (`:5002`) owning content. Schema: `core_svc`. Handlers are `@MessagePattern`; HTTP routes are exposed by the gateway under `/api/v1/content/*` (see [API Reference](../api-reference.md)).
+NestJS TCP microservice (`:5002`) owning content. Schema: `core_svc`. Handlers are `@MessagePattern`; HTTP routes are exposed by the gateway under `/v1/content/*` (see [API Reference](../api-reference.md)).
 
 ## Content model: flexible / headless
 

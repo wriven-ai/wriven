@@ -33,7 +33,7 @@
   <text x="949" y="128" text-anchor="middle" fill="#5eead4" font-size="9">HTTP</text>
   <g><rect x="980" y="100" width="120" height="70" rx="8" fill="#0c1a33" stroke="#3b82f6" stroke-width="2"/>
     <text x="1040" y="124" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="bold">gateway</text>
-    <text x="1040" y="146" text-anchor="middle" fill="#64748b" font-size="9">/api/v1</text>
+    <text x="1040" y="146" text-anchor="middle" fill="#64748b" font-size="9">/v1</text>
     <text x="1040" y="162" text-anchor="middle" fill="#64748b" font-size="9">{success,data}</text></g>
 
   <line x1="180" y1="135" x2="208" y2="135" stroke="#475569" stroke-width="1.4"/>

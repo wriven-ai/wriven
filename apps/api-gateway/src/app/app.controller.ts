@@ -12,7 +12,7 @@ export class AppController {
     private readonly coreClient: ClientProxy,
   ) {}
 
-  /** GET /api/v1/health — verifies gateway can reach both TCP services. */
+  /** GET /v1/health — verifies gateway can reach both TCP services. */
   @Get('health')
   async health() {
     const [auth, core] = await Promise.all([

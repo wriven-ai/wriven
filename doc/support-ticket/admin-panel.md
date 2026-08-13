@@ -54,7 +54,7 @@ export interface AdminTicketMessage { id: string; authorType: 'user'|'admin'; au
 export interface AdminTicketDetail extends AdminTicketRow { description: string; attachments: {...}[]; messages: AdminTicketMessage[]; }
 ```
 
-Endpoints (all `/api/v1` prefixed, cross-origin cookies):
+Endpoints (all `/v1` prefixed, cross-origin cookies):
 ```
 listTickets(query)     GET   /admin/support/tickets        # page,status,priority,scope,workspaceId,assignee,q
 getTicket(id)          GET   /admin/support/tickets/:id

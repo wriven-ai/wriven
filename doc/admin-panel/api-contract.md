@@ -6,8 +6,8 @@ below are copy-paste-ready into the SPA's `lib/types.ts` (see
 [frontend/03-data-layer.md §2](./frontend/03-data-layer.md)).
 
 **Conventions (all endpoints):**
-- Base URL: `${VITE_API_URL}` (e.g. `https://api.wriven.com`), prefix `/api/v1`,
-  so full path = `${VITE_API_URL}/api/v1/admin/...`.
+- Base URL: `${VITE_API_URL}` (e.g. `https://api.wriven.com`), prefix `/v1`,
+  so full path = `${VITE_API_URL}/v1/admin/...`.
 - Auth: httpOnly admin cookies. Send `credentials: 'include'` on **every** request.
 - Envelope: success → `{ "success": true, "data": <T> }`; error →
   `{ "success": false, "error": { "code", "message" } }`. Unwrap `data`; throw on

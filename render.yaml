@@ -31,8 +31,6 @@ services:
       - key: HOST
         value: "0.0.0.0"
       - fromGroup: wriven-shared
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
       - key: MAIL_HOST
         sync: false
       - key: MAIL_PORT
@@ -42,6 +40,25 @@ services:
       - key: MAIL_PASS
         sync: false
       - key: MAIL_FROM
+        sync: false
+      # Stripe — auth-service owns billing and builds the Stripe client at boot.
+      # The provider THROWS if STRIPE_SECRET_KEY is unset, so this is required
+      # even if billing is unused yet (a test-mode sk_test_… key works).
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Admin JWT comes from the wriven-shared group (auth SIGNS admin tokens,
+      # the gateway verifies them — one shared value keeps them in lockstep).
+      # Frontend links — invitation emails (CLIENT_ORIGIN), password-reset +
+      # verify-email links + billing redirects (APP_URL).
+      - key: CLIENT_ORIGIN
+        value: https://wriven.tech
+      - key: APP_URL
+        value: https://wriven.tech
+      # R2 public base for avatar URL reconstruction — same value as core's
+      # R2_PUBLIC_URL. If unset, avatars render as broken /avatars/… paths.
+      - key: R2_PUBLIC_URL
         sync: false
 
   # ── core-service (internal TCP microservice) ─────────────────────────────────
@@ -88,6 +105,14 @@ services:
         sync: false
       - key: INTERNAL_SECRET
         sync: false
+      # auth-service TCP target — core's entitlements (AI/entries/media/webhooks
+      # quota enforcement) call auth to check limits. Without these, core
+      # defaults to localhost:5001 (its OWN container) and quotas silently
+      # fail open.
+      - key: AUTH_SERVICE_HOST
+        value: wriven-auth
+      - key: AUTH_SERVICE_PORT
+        value: "5001"
 
   # ── ai-service (internal HTTP microservice, FastAPI) ──────────────────────────
   - type: pserv
@@ -132,14 +157,12 @@ services:
     dockerContext: .
     plan: starter
     region: oregon
-    healthCheckPath: /api/v1/health
+    healthCheckPath: /v1/health
     autoDeployTrigger: commit
     domains:
       - api.wriven.tech
     envVars:
       - fromGroup: wriven-shared
-      - key: ADMIN_JWT_SECRET
-        sync: false
       # Internal TCP hosts of the private services. Default to the service names
       # (Render routes pserv traffic by name). If a name does not resolve, copy the
       # exact internal hostname from each pserv's "Connect" tab and paste it here.
@@ -151,12 +174,20 @@ services:
         value: wriven-core
       - key: CORE_SERVICE_PORT
         value: "5002"
-      - key: FRONTEND_URL
+      # Google OAuth — the passport strategy lives on the gateway. Redirect URI
+      # must match the Google Cloud console exactly (see doc/deployment.md).
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: https://api.wriven.tech/v1/auth/google/callback
+      # SPA origin for the OAuth post-login redirect (falls back to localhost).
+      - key: CLIENT_ORIGIN
         value: https://wriven.tech
       - key: USAGE_ENFORCE
         value: "false"
 
-# ── Shared environment group (attached to all three services) ───────────────────
+# ── Shared environment group (attached to the three NestJS services; the FastAPI
+# ai-service reads none of these and is intentionally excluded) ─────────────────
 envVarGroups:
   - name: wriven-shared
     envVars:
@@ -166,9 +197,11 @@ envVarGroups:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: REFRESH_SECRET
-        sync: false
       - key: GOOGLE_CLIENT_ID
+        sync: false
+      # Admin JWT — shared so the gateway (verifies) and auth-service (signs)
+      # always agree on one value with a single prompt.
+      - key: ADMIN_JWT_SECRET
         sync: false
       - key: NODE_ENV
         value: production

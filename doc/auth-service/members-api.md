@@ -2,7 +2,7 @@
 
 Detailed reference for **workspace member** and **project member** management. Owned by `auth-service` (`MembersService` for workspaces, `ProjectsService` for projects); exposed by the gateway. All routes are JWT-protected and use the standard envelope (`{ success, data }` / `{ success, error }`).
 
-- **Base URL:** `http://localhost:5000/api/v1`
+- **Base URL:** `http://localhost:5000/v1`
 - **Auth:** `Authorization: Bearer <accessToken>` on every route.
 - **No `X-Workspace-Id` / `X-Project-Id` header needed** for member management routes — the id comes from the path; the caller's permission is derived from their membership row.
 - Identity model: members reference `auth_svc.users`. Adding a member **links an existing user by email** — there is no invitation flow yet.

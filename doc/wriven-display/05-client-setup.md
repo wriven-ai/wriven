@@ -112,8 +112,9 @@ if (!BASE_URL || !PROJECT_ID || !TOKEN) {
 }
 
 /**
- * The Delivery API path. Public surface is `/v1/projects/…` (separate from the
- * dashboard's `/api/v1/…`). If EVERY request 404s, your Wriven gateway predates
+ * The Delivery API path. Public surface is `/v1/projects/…` (the dashboard's
+ * management API shares the same `/v1` root). If EVERY request 404s, your Wriven
+ * gateway predates
  * the global-prefix fix and serves these at `/api/v1/v1/projects/…` instead —
  * change this line to that path (or, better, update Wriven).
  */
