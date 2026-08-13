@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlertCircle, Database, Globe, RefreshCw } from 'lucide-react';
+import { AlertCircle, Database, Globe, RefreshCw, Sparkles } from 'lucide-react';
 import { useUsage } from '@/hooks/use-usage';
 import type { UsageView } from '@/lib/types';
 import { WorkspaceStatsGrid } from '@/components/workspace/workspace-stats-grid';
@@ -92,9 +92,31 @@ function UsageBody({ data }: { data: UsageView }) {
           limit={data.storage.limitMb}
           fmt={fmtMb}
         />
+        <UsageCard
+          icon={<Sparkles className="w-4 h-4 text-brand-secondary" />}
+          label="AI Generations"
+          sublabel={aiSublabel(data.ai)}
+          used={data.ai.requests.used}
+          limit={data.ai.requests.limit}
+          fmt={fmtCount}
+        />
       </div>
     </>
   );
+}
+
+/**
+ * Tokens + cost caption for the AI card. Tokens always show (they include failed
+ * generations, which still burn tokens). Cost only shows when every generation
+ * this period had a known price — otherwise we'd render a confidently-wrong
+ * dollar figure, so we say how many are unpriced instead. See specs/21.
+ */
+function aiSublabel(ai: UsageView['ai']): string {
+  const tokens = `${fmtCount(ai.tokens.total)} tokens`;
+  if (ai.cost.unpricedGenerations > 0) {
+    return `${tokens} · cost n/a (${ai.cost.unpricedGenerations} unpriced)`;
+  }
+  return `${tokens} · ${fmtUsd(ai.cost.microusd)} this period`;
 }
 
 function UsageCard({
@@ -153,6 +175,13 @@ function fmtCount(n: number): string {
 function fmtMb(mb: number): string {
   if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
   return `${mb} MB`;
+}
+
+/** micro-USD → a short dollar string. Sub-cent spend keeps 4 decimals. */
+function fmtUsd(microusd: number): string {
+  const usd = microusd / 1_000_000;
+  if (usd === 0) return '$0.00';
+  return usd < 1 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
 
 function fmtPeriod(startIso: string, endIso: string): string {

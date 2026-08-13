@@ -8,14 +8,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  AuthUser,
-  CORE_PATTERNS,
-  CreateApiKeyDto,
-  Permission,
-  SERVICE_TOKENS,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -33,21 +27,21 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
  */
 @Controller('api-keys')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
-@RequirePermission(Permission.API_KEY_MANAGE)
+@RequirePermission(contracts.Permission.API_KEY_MANAGE)
 export class ApiKeysController {
   constructor(
-    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Post()
   create(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
-    @Body() dto: CreateApiKeyDto,
+    @Body() dto: contracts.CreateApiKeyDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.API_KEY_CREATE, {
+      this.core.send(contracts.CORE_PATTERNS.API_KEY_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
@@ -62,7 +56,7 @@ export class ApiKeysController {
     @CurrentProject() projectId: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.API_KEY_LIST, { workspaceId, projectId }),
+      this.core.send(contracts.CORE_PATTERNS.API_KEY_LIST, { workspaceId, projectId }),
     );
   }
 
@@ -73,7 +67,7 @@ export class ApiKeysController {
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.API_KEY_REVOKE, {
+      this.core.send(contracts.CORE_PATTERNS.API_KEY_REVOKE, {
         workspaceId,
         projectId,
         id,

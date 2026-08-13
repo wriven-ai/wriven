@@ -173,13 +173,13 @@ export function ContentEditor({
   );
   const mainFields = allFields.filter((f) => !usedInMain.has(f.key));
   const hasMain = !!titleField || bodyFields.length > 0;
-  // Show the Co-Writer when there is at least one AI-eligible field.
+  // Show the Co-Writer when there is at least one AI-eligible field. Eligibility
+  // is derived: Tier-1 type, single-value, not marked sensitive.
   const hasAiTarget = can(Permission.AI_GENERATE) && allFields.some(
     (f) =>
       (f.type === 'text' || f.type === 'richtext' || f.type === 'select') &&
       !f.multiple &&
-      !f.aiPrivate &&
-      f.aiAssist !== false,
+      !f.aiPrivate,
   );
 
   return (

@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#14b8a6"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f43f5e"/></marker>
+    <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#818cf8"/></marker>
+  </defs>
+  <rect width="1280" height="640" fill="#0b1120"/>
+
+  <text x="640" y="34" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">AI Generation — Author Model, Typed Output &amp; Structured Repair</text>
+  <text x="640" y="56" text-anchor="middle" fill="#94a3b8" font-size="12">Generate / Refine / Compose → derived operation → typed AiOutput · select &amp; compose validated + repaired once (free models can't honour JSON-mode)</text>
+
+  <!-- ── COL 1: AUTHOR MODEL ────────────────────────────────────── -->
+  <text x="30" y="86" fill="#64748b" font-size="10" font-weight="bold">AUTHOR MODEL (the editor surface)</text>
+
+  <g><rect x="30" y="104" width="380" height="92" rx="8" fill="#171433" stroke="#818cf8" stroke-width="2"/>
+    <text x="220" y="128" text-anchor="middle" fill="#c7d2fe" font-size="10" font-weight="bold">Co-Writer panel — three choices only</text>
+    <text x="40" y="150" fill="#94a3b8" font-size="9">target:  field  |  entry</text>
+    <text x="40" y="168" fill="#94a3b8" font-size="9">intent:  generate  |  refine</text>
+    <text x="40" y="186" fill="#fcd34d" font-size="9">preset chip: shorten·expand·rewrite·tone·summarize·continue</text></g>
+
+  <line x1="220" y1="196" x2="220" y2="216" stroke="#818cf8" stroke-width="1.6" marker-end="url(#ai)"/>
+
+  <!-- derivation table -->
+  <g><rect x="30" y="220" width="380" height="248" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="220" y="242" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">core derives operation (persisted on the audit row)</text>
+    <line x1="40" y1="250" x2="400" y2="250" stroke="#334155"/>
+    <text x="44" y="270" fill="#64748b" font-size="9">target</text>
+    <text x="120" y="270" fill="#64748b" font-size="9">intent</text>
+    <text x="210" y="270" fill="#64748b" font-size="9">preset</text>
+    <text x="300" y="270" fill="#64748b" font-size="9">→ operation</text>
+    <line x1="40" y1="278" x2="400" y2="278" stroke="#1e293b"/>
+    <text x="44" y="296" fill="#e2e8f0" font-size="9">entry</text>
+    <text x="120" y="296" fill="#e2e8f0" font-size="9">generate</text>
+    <text x="210" y="296" fill="#64748b" font-size="9">—</text>
+    <text x="300" y="296" fill="#fcd34d" font-size="9">compose</text>
+    <text x="44" y="316" fill="#e2e8f0" font-size="9">field</text>
+    <text x="120" y="316" fill="#e2e8f0" font-size="9">generate</text>
+    <text x="210" y="316" fill="#64748b" font-size="9">—</text>
+    <text x="300" y="316" fill="#fcd34d" font-size="9">generate</text>
+    <text x="44" y="336" fill="#e2e8f0" font-size="9">field</text>
+    <text x="120" y="336" fill="#e2e8f0" font-size="9">refine</text>
+    <text x="210" y="336" fill="#e2e8f0" font-size="9">set</text>
+    <text x="300" y="336" fill="#fcd34d" font-size="9">that preset</text>
+    <text x="44" y="356" fill="#e2e8f0" font-size="9">field</text>
+    <text x="120" y="356" fill="#e2e8f0" font-size="9">refine</text>
+    <text x="210" y="356" fill="#e2e8f0" font-size="9">none</text>
+    <text x="300" y="356" fill="#fcd34d" font-size="9">refine (freeform)</text>
+    <line x1="40" y1="368" x2="400" y2="368" stroke="#1e293b"/>
+    <text x="44" y="388" fill="#5eead4" font-size="9">per-operation temperature + token cap kept</text>
+    <text x="44" y="406" fill="#64748b" font-size="9">server-side (tight templates beat one</text>
+    <text x="44" y="422" fill="#64748b" font-size="9">generic "refine" on a weak free model)</text>
+    <text x="44" y="444" fill="#fda4af" font-size="9">field policy: aiPrivate only (sensitive)</text>
+    <text x="44" y="460" fill="#64748b" font-size="9">aiAssist/aiOperations removed · eligibility derived</text></g>
+
+  <g><rect x="30" y="478" width="380" height="60" rx="8" fill="#1a0c14" stroke="#f43f5e" stroke-width="2"/>
+    <text x="44" y="500" fill="#fda4af" font-size="10" font-weight="bold">Eligibility (derived, not configured)</text>
+    <text x="44" y="518" fill="#94a3b8" font-size="9">Tier-1 type (text·richtext·select) ∧ single-value ∧ !aiPrivate</text>
+    <text x="44" y="532" fill="#64748b" font-size="9">aiContextFields = opt-in sibling allowlist (Advanced)</text></g>
+
+  <!-- ── COL 2: TYPED OUTPUT ────────────────────────────────────── -->
+  <text x="440" y="86" fill="#64748b" font-size="10" font-weight="bold">TYPED RESULT (AiOutput)</text>
+
+  <g><rect x="440" y="104" width="380" height="180" rx="8" fill="#0f1f1c" stroke="#14b8a6" stroke-width="2"/>
+    <text x="630" y="128" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">AiOutput (discriminated union)</text>
+    <line x1="450" y1="138" x2="810" y2="138" stroke="#334155"/>
+    <text x="454" y="158" fill="#fcd34d" font-size="9">kind: 'scalar'</text>
+    <text x="454" y="174" fill="#94a3b8" font-size="9">  text: string</text>
+    <text x="454" y="190" fill="#64748b" font-size="9">  ← field generate/refine, or a select value</text>
+    <text x="454" y="212" fill="#fcd34d" font-size="9">kind: 'record'</text>
+    <text x="454" y="228" fill="#94a3b8" font-size="9">  fields: { [fieldKey]: string }</text>
+    <text x="454" y="244" fill="#64748b" font-size="9">  ← whole-entry compose (many fields)</text>
+    <text x="454" y="264" fill="#fda4af" font-size="9">+ truncated? (finish_reason = 'length')</text>
+    <text x="454" y="278" fill="#64748b" font-size="9">+ generationId · model · usage · remaining</text></g>
+
+  <line x1="630" y1="284" x2="630" y2="304" stroke="#14b8a6" stroke-width="1.6" marker-end="url(#at)"/>
+
+  <g><rect x="440" y="308" width="380" height="150" rx="8" fill="#0f2a2a" stroke="#14b8a6" stroke-width="2"/>
+    <text x="630" y="330" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="bold">Apply (explicit, never auto-saved)</text>
+    <text x="454" y="352" fill="#94a3b8" font-size="9">scalar → replace / append / prepend one field</text>
+    <text x="454" y="370" fill="#94a3b8" font-size="9">  richtext: semantic HTML → ProseMirror JSON</text>
+    <text x="454" y="390" fill="#5eead4" font-size="9">record → per-field preview + include/skip</text>
+    <text x="454" y="406" fill="#5eead4" font-size="9">  → "Apply selected" (replace-only)</text>
+    <text x="454" y="426" fill="#fcd34d" font-size="9">save entry with aiGenerationIds</text>
+    <text x="454" y="442" fill="#64748b" font-size="9">  → provenance: applied_revision_id + applied_field_keys</text></g>
+
+  <line x1="630" y1="458" x2="630" y2="478" stroke="#14b8a6" stroke-width="1.6" marker-end="url(#at)"/>
+
+  <g><rect x="440" y="482" width="380" height="56" rx="8" fill="#2a2008" stroke="#f59e0b" stroke-width="2"/>
+    <text x="454" y="504" fill="#fcd34d" font-size="10" font-weight="bold">Replay = reconstruct from target_kind</text>
+    <text x="454" y="522" fill="#94a3b8" font-size="9">field → scalar(stored text) · entry → record(parsed JSON)</text></g>
+
+  <!-- ── COL 3: STRUCTURED REPAIR ───────────────────────────────── -->
+  <text x="850" y="86" fill="#64748b" font-size="10" font-weight="bold">STRUCTURED OUTPUT — validate + repair once</text>
+
+  <g><rect x="850" y="104" width="400" height="170" rx="8" fill="#2a2008" stroke="#f59e0b" stroke-width="2"/>
+    <text x="1050" y="126" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="bold">select</text>
+    <text x="860" y="148" fill="#94a3b8" font-size="9">model → value</text>
+    <text x="860" y="166" fill="#5eead4" font-size="9">value ∈ options[]?</text>
+    <text x="860" y="184" fill="#94a3b8" font-size="9">  yes → ScalarOutput(value)</text>
+    <text x="860" y="202" fill="#fda4af" font-size="9">  no  → retry ×1 (aggregate tokens)</text>
+    <text x="860" y="220" fill="#5eead4" font-size="9">      ∈ options[]? yes → ScalarOutput</text>
+    <text x="860" y="238" fill="#f43f5e" font-size="9">      no → SelectMissError</text>
+    <text x="860" y="256" fill="#64748b" font-size="9">→ AI_GENERATION_FAILED · row failed ·</text>
+    <text x="860" y="270" fill="#64748b" font-size="9">  NO quota charge · tokens kept</text></g>
+
+  <g><rect x="850" y="290" width="400" height="180" rx="8" fill="#2a2008" stroke="#f59e0b" stroke-width="2"/>
+    <text x="1050" y="312" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="bold">compose (whole entry)</text>
+    <text x="860" y="334" fill="#94a3b8" font-size="9">model → JSON text</text>
+    <text x="860" y="352" fill="#5eead4" font-size="9">_parse_record (strip fence, { … })</text>
+    <text x="860" y="370" fill="#5eead4" font-size="9">  filter → allowed keys · ≥1 valid?</text>
+    <text x="860" y="388" fill="#94a3b8" font-size="9">  yes → RecordOutput(fields)</text>
+    <text x="860" y="406" fill="#fda4af" font-size="9">  no  → retry ×1 (aggregate tokens)</text>
+    <text x="860" y="424" fill="#5eead4" font-size="9">      parse ok? yes → RecordOutput</text>
+    <text x="860" y="442" fill="#f43f5e" font-size="9">      no → ComposeMissError</text>
+    <text x="860" y="460" fill="#64748b" font-size="9">→ AI_GENERATION_FAILED · no charge · tokens kept</text></g>
+
+  <g><rect x="850" y="482" width="400" height="56" rx="8" fill="#1a0c14" stroke="#f43f5e" stroke-width="2"/>
+    <text x="864" y="504" fill="#fda4af" font-size="10" font-weight="bold">Why prompt + repair, not JSON-mode</text>
+    <text x="864" y="522" fill="#94a3b8" font-size="9">openrouter/free rotates models per call; many can't honour response_format reliably.</text></g>
+
+  <!-- footer -->
+  <text x="30" y="600" fill="#64748b" font-size="10">Author never sends operation/output-kind — core derives both. Apply is always explicit (preview → apply → normal entry save → revision history).</text>
+  <text x="30" y="618" fill="#64748b" font-size="10">Legend: ── solid = sync/flow · ┄┄ dashed = dependency · indigo = client · teal = core/data · amber = validation/data · rose = external/forbidden/fail.</text>
+</svg>

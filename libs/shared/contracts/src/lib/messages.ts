@@ -160,6 +160,8 @@ export const USAGE_PATTERNS = {
  */
 export const AI_PATTERNS = {
   GENERATE: 'core.ai.generate',
+  PROFILE_READ: 'core.ai.profile.read',
+  PROFILE_UPDATE: 'core.ai.profile.update',
 } as const;
 
 /**

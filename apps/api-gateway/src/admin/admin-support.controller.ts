@@ -10,15 +10,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  ADMIN_PATTERNS,
-  AdminAuthUser,
-  AdminReplyDto,
-  AdminTicketListQueryDto,
-  AdminUpdateTicketDto,
-  SERVICE_TOKENS,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRoles } from './admin-roles.decorator';
@@ -33,18 +26,18 @@ import { CurrentAdmin } from './current-admin.decorator';
 @Controller('admin/support/tickets')
 export class AdminSupportController {
   constructor(
-    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Get()
-  list(@Query() query: AdminTicketListQueryDto) {
-    return firstValueFrom(this.core.send(ADMIN_PATTERNS.SUPPORT_LIST, query));
+  list(@Query() query: contracts.AdminTicketListQueryDto) {
+    return firstValueFrom(this.core.send(contracts.ADMIN_PATTERNS.SUPPORT_LIST, query));
   }
 
   @Get(':id')
   get(@Param('id') id: string) {
     return firstValueFrom(
-      this.core.send(ADMIN_PATTERNS.SUPPORT_GET, { id }),
+      this.core.send(contracts.ADMIN_PATTERNS.SUPPORT_GET, { id }),
     );
   }
 
@@ -53,11 +46,11 @@ export class AdminSupportController {
   @Post(':id/messages')
   reply(
     @Param('id') id: string,
-    @Body() dto: AdminReplyDto,
-    @CurrentAdmin() admin: AdminAuthUser,
+    @Body() dto: contracts.AdminReplyDto,
+    @CurrentAdmin() admin: contracts.AdminAuthUser,
   ) {
     return firstValueFrom(
-      this.core.send(ADMIN_PATTERNS.SUPPORT_REPLY, {
+      this.core.send(contracts.ADMIN_PATTERNS.SUPPORT_REPLY, {
         id,
         adminUserId: admin.adminUserId,
         dto,
@@ -68,9 +61,9 @@ export class AdminSupportController {
   @AdminRoles('admin', 'moderator')
   @Audit('support.update', 'ticket')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: AdminUpdateTicketDto) {
+  update(@Param('id') id: string, @Body() dto: contracts.AdminUpdateTicketDto) {
     return firstValueFrom(
-      this.core.send(ADMIN_PATTERNS.SUPPORT_UPDATE, { id, dto }),
+      this.core.send(contracts.ADMIN_PATTERNS.SUPPORT_UPDATE, { id, dto }),
     );
   }
 }

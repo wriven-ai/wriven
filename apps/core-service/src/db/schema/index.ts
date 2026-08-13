@@ -4,8 +4,8 @@ import {
   boolean,
   check,
   index,
-  jsonb,
   integer,
+  jsonb,
   pgSchema,
   text,
   timestamp,
@@ -39,7 +39,9 @@ export const contentTypes = coreSchema.table(
     projectId: uuid('project_id').notNull(),
     name: text('name').notNull(),
     apiId: text('api_id').notNull(), // machine name, e.g. "blog_post"
-    fields: jsonb('fields').notNull().default(sql`'[]'::jsonb`),
+    fields: jsonb('fields')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdBy: uuid('created_by').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -70,7 +72,9 @@ export const contentEntries = coreSchema.table(
       .references(() => contentTypes.id, { onDelete: 'cascade' }),
     slug: text('slug').notNull(),
     status: text('status').notNull().default('draft'), // draft|published|archived
-    data: jsonb('data').notNull().default(sql`'{}'::jsonb`),
+    data: jsonb('data')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     authorId: uuid('author_id').notNull(),
     createdBy: uuid('created_by').notNull(),
     updatedBy: uuid('updated_by'),
@@ -229,7 +233,9 @@ export const supportTickets = coreSchema.table(
   'support_tickets',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    number: bigint('number', { mode: 'number' }).notNull().generatedByDefaultAsIdentity(),
+    number: bigint('number', { mode: 'number' })
+      .notNull()
+      .generatedByDefaultAsIdentity(),
     workspaceId: uuid('workspace_id').notNull(),
     authorId: uuid('author_id').notNull(),
     subject: text('subject').notNull(),
@@ -244,7 +250,9 @@ export const supportTickets = coreSchema.table(
     firstRespondedAt: timestamp('first_responded_at', { withTimezone: true }),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
     closedAt: timestamp('closed_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
       .defaultNow()
@@ -283,7 +291,9 @@ export const supportTicketMessages = coreSchema.table(
     authorId: uuid('author_id').notNull(),
     body: text('body').notNull(),
     isInternalNote: boolean('is_internal_note').notNull().default(false),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     index('support_ticket_messages_ticket_id_idx').on(t.ticketId),
@@ -309,7 +319,9 @@ export const supportTicketAttachments = coreSchema.table(
     sizeBytes: integer('size_bytes'),
     originalFilename: text('original_filename'),
     uploadedBy: uuid('uploaded_by').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     index('support_ticket_attachments_ticket_id_idx').on(t.ticketId),
@@ -358,10 +370,15 @@ export const usageBuckets = coreSchema.table(
  * `aiTextRequestsPerMonth`) and an audit trail with token totals. `status`
  * flows `pending` (reserved before the provider call) → `succeeded` | `failed`.
  * Quota reserves against `status IN ('pending','succeeded')`; the `/usage` stat
- * counts only `succeeded`. `content_type_id` / `entry_id` are plain uuids with no
+ * counts only `succeeded`, while token/cost sums include `failed` (a failed call
+ * still burned tokens). `content_type_id` / `entry_id` are plain uuids with no
  * FK — a generation record survives its target being deleted. The idempotency key
  * and persisted output make this row the durable hand-off record for the future
  * worker queue; no separate job table needs to replace it later.
+ *
+ * `target_kind` distinguishes a single-field generation from a whole-entry
+ * `compose`; for `compose`, `field_key` is null and `applied_field_keys` records
+ * which fields of the returned record the author actually applied. See specs/21.
  */
 export const aiGenerations = coreSchema.table(
   'ai_generations',
@@ -371,8 +388,11 @@ export const aiGenerations = coreSchema.table(
     projectId: uuid('project_id').notNull(),
     contentTypeId: uuid('content_type_id'),
     entryId: uuid('entry_id'),
-    fieldKey: text('field_key').notNull(),
-    operation: text('operation').notNull(), // generate|expand|shorten|rewrite|tone|summarize|continue
+    /** Target field key. Null for a whole-entry `compose`. */
+    fieldKey: text('field_key'),
+    /** `field` (single field) | `entry` (whole-entry compose). */
+    targetKind: text('target_kind').notNull().default('field'),
+    operation: text('operation').notNull(), // generate|compose|refine|expand|shorten|rewrite|tone|summarize|continue
     idempotencyKey: uuid('idempotency_key').notNull().defaultRandom(),
     /** SHA-256 of the stable request payload; prevents accidental key reuse. */
     requestHash: text('request_hash'),
@@ -382,7 +402,7 @@ export const aiGenerations = coreSchema.table(
     totalTokens: integer('total_tokens'),
     /** Generated content kept only long enough to replay an idempotent request. */
     output: text('output'),
-    promptVersion: text('prompt_version').notNull().default('text-v1'),
+    promptVersion: text('prompt_version').notNull().default('text-v2'),
     latencyMs: integer('latency_ms'),
     attemptCount: integer('attempt_count').notNull().default(1),
     providerRequestId: text('provider_request_id'),
@@ -391,6 +411,8 @@ export const aiGenerations = coreSchema.table(
     costMicrousd: integer('cost_microusd'),
     /** Plain uuid: audit survives revision pruning and entry deletion. */
     appliedRevisionId: uuid('applied_revision_id'),
+    /** For a `compose` apply: which record field keys the author committed. */
+    appliedFieldKeys: jsonb('applied_field_keys').$type<string[]>(),
     status: text('status').notNull().default('pending'), // pending|succeeded|failed
     error: text('error'),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -412,6 +434,45 @@ export const aiGenerations = coreSchema.table(
       'ai_generations_status_check',
       sql`${t.status} in ('pending', 'succeeded', 'failed')`,
     ),
+    check(
+      'ai_generations_target_kind_check',
+      sql`${t.targetKind} in ('field', 'entry')`,
+    ),
+  ],
+);
+
+/**
+ * Per-project AI "voice" configuration (specs/21). Operator-authored guidance
+ * injected into the generation system prompt: a brand voice description, a
+ * glossary of preferred terms, and a default output language. One row per
+ * project (absent row = no guidance = today's neutral behavior). This is
+ * configuration, not tenant content — but it is still fenced in the prompt.
+ */
+export const aiProfiles = coreSchema.table(
+  'ai_profiles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id').notNull(),
+    projectId: uuid('project_id').notNull(),
+    /** Free-text brand/voice description; capped in the DTO. */
+    brandVoice: text('brand_voice'),
+    /** `[{ term, prefer }]` — preferred terminology the model should use. */
+    glossary: jsonb('glossary')
+      .$type<{ term: string; prefer: string }[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    /** BCP-47-ish output language hint (e.g. "en", "fr"). */
+    language: text('language'),
+    updatedBy: uuid('updated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex('ai_profiles_project_uq').on(t.projectId),
+    index('ai_profiles_workspace_id_idx').on(t.workspaceId),
   ],
 );
 
@@ -442,10 +503,13 @@ export const contentRevisionsRelations = relations(
   }),
 );
 
-export const supportTicketsRelations = relations(supportTickets, ({ many }) => ({
-  messages: many(supportTicketMessages),
-  attachments: many(supportTicketAttachments),
-}));
+export const supportTicketsRelations = relations(
+  supportTickets,
+  ({ many }) => ({
+    messages: many(supportTicketMessages),
+    attachments: many(supportTicketAttachments),
+  }),
+);
 
 export const supportTicketMessagesRelations = relations(
   supportTicketMessages,

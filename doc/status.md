@@ -2,7 +2,7 @@ Current Scope & Status
 
 What is actually implemented today, per module. Legend: ✅ done · 🟡 partial · 🔲 not started.
 
-_Last reviewed: after AI extraction to ai-service (specs/20) — Tier-1 generation now runs in the Python ai-service (core calls it over HTTP); image gen still deferred._
+_Last reviewed: after the AI generation redesign (specs/21) — typed `AiOutput` (scalar/record), whole-entry `compose`, Generate/Refine author model, per-project AI voice, and token/cost accounting on `/usage`. Image gen still deferred._
 
 ---
 
@@ -86,24 +86,32 @@ _Last reviewed: after AI extraction to ai-service (specs/20) — Tier-1 generati
 
 ## AI generation — ai-service (FastAPI `:8000`) + core-service metering
 
-AI content generation runs in the standalone Python `ai-service`: prompt building, temperature, and
-`select` option validation/retry live there. core-service owns the DB-bound work — quota reserve
-(advisory lock), the `ai_generations` audit row, field/Tier-1 validation — and calls ai-service over
-HTTP behind an `AiClient` seam (`AI_SERVICE_URL` + `INTERNAL_SECRET`). The `core.ai.*` message
-patterns and gateway callers are unchanged (specs/19 built the seam; specs/20 extracted it).
+AI content generation runs in the standalone Python `ai-service`: prompt building,
+temperature, structured-output validation, and the `select`/`compose` repair retry live
+there. core-service owns the DB-bound work — quota reserve (advisory lock), the
+`ai_generations` audit row, field/Tier-1 validation, per-project voice profile, and
+cost accounting — and calls ai-service over HTTP behind an `AiClient` seam
+(`AI_SERVICE_URL` + `INTERNAL_SECRET`). Reshaped in specs/21 (supersedes specs/19 + 20).
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `ai-service` generation endpoint (`POST /generate`) | ✅ | FastAPI; prompt build + temperature + `select` retry; `openai` SDK → any OpenAI-compat endpoint (env-swapped) |
-| core → ai-service HTTP client (`AiClient` seam) | ✅ | axios; `X-Internal-Secret` auth; code-allowlist error mapping (specs/20) |
-| Text generation (`core.ai.generate`) — Tier 1 (text/richtext/select) | ✅ | gateway → core → ai-service; scoped entry context, current draft sent for refinements; single-value `select` validated + retried |
-| Co-Writer panel (apps/client) | ✅ | field-bound drafts/history, refine-before-apply, diff/regeneration comparison, replace/append/prepend, undo, and a mobile bottom sheet; richtext emits semantic HTML → ProseMirror JSON |
-| Plan-limit enforcement | ✅ | hard-enforce `aiTextRequestsPerMonth` (advisory-lock atomic reserve in core); stale reservations reclaimed; entitlement failure fails closed |
+| `ai-service` generation endpoint (`POST /generate`) | ✅ | FastAPI; per-operation prompt/temperature/token-cap; `select` + `compose` validate-and-repair-once; `extra="ignore"` for rolling-deploy safety |
+| core → ai-service HTTP client (`AiClient` seam) | ✅ | axios; `X-Internal-Secret`; code-allowlist error passthrough (`AI_INPUT_TOO_LARGE` stays actionable) |
+| Typed generation (`core.ai.generate`) | ✅ | response is `AiOutput` (`scalar` \| `record`); single-field generate/refine on Tier-1 + whole-entry `compose`; `truncated` surfaced from `finish_reason:'length'` |
+| Author model — Generate / Refine (+preset chips) | ✅ | replaced the 7-verb dropdown + tone input; per-operation tuning kept server-side (matters on a free model) |
+| Co-Writer panel (apps/client) | ✅ | per-field generate/refine + history + diff + apply modes + undo; **Draft whole entry** with per-field record preview and apply-selected |
+| Per-project AI voice | ✅ | brand voice + glossary + language (`ai_profiles`), edited in the content-types page, injected as a fenced `<voice_guide>`; never sent by the client on generate |
+| Per-field AI policy + privacy | ✅ | **one** control: `aiPrivate` (sensitive). `aiAssist`/`aiOperations` removed — eligibility is derived (Tier-1 ∧ single-value ∧ not sensitive). Opt-in `aiContextFields` under Advanced |
+| Token + cost accounting | ✅ | price resolved from the *returned* model (`*:free → 0`, never a guess); period `AiUsageStats` on `/usage` + `WorkspaceStatsView.aiText` (requests=succeeded; tokens/cost=succeeded+failed; `cost.complete` honesty flag) |
+| Plan-limit enforcement | ✅ | hard-enforce `aiTextRequestsPerMonth` (advisory-lock atomic reserve); stale reservations reclaimed; entitlement failure fails closed; gateway 40s timeout backstop |
 | Image generation | 🔲 | later (different model/cost) |
-| Per-field AI policy + privacy | ✅ | builder controls `aiAssist`, allowed actions, sensitive fields, and opt-in sibling-context allowlists; server enforces scope before any provider call |
-| AI reliability / audit | ✅ | idempotency keys, persisted replay, revision provenance, bounded audit redaction, token/context/output budgets, correlation IDs, readiness and private metrics |
+| AI reliability / audit | ✅ | idempotency keys, persisted replay, revision provenance (+ `applied_field_keys` for compose), bounded audit redaction, token/context/output budgets, correlation IDs, readiness and private metrics |
 
-> `ai_generations` meters usage (row-count vs the plan limit), audits each generation, persists an idempotent successful output until retention redaction, links explicitly applied drafts to the saved revision, and stores provider/latency metadata alongside token totals.
+> `ai_generations` meters usage (row-count vs the plan limit), audits each generation
+> (typed output, target_kind, tokens, per-model cost, latency), persists an idempotent
+> successful output until retention redaction, links explicitly applied drafts to the
+> saved revision, and records compose field provenance. A compose is **one** generation
+> = one quota unit regardless of how many fields it fills.
 > Provider key (`AI_API_KEY`) lives in **ai-service** env only — never gateway/core/frontend.
 
 ## Frontend (`apps/client`, Next.js 16)
@@ -126,7 +134,7 @@ patterns and gateway callers are unchanged (specs/19 built the seam; specs/20 ex
 | Member invitations (workspace + project, accept page) | ✅ | pending list, accept-on-signup, guest role (specs/05) |
 | Webhooks UI (project settings: add/list/pause/delete, secret once) | ✅ | `webhookApi`; HMAC verify documented inline |
 | **Usage page** (requests + storage vs plan limits) | ✅ | `useUsage` → `GET /usage`; replaces the prior mock analytics page (specs/14) |
-| **Workspace + project stats** (real aggregate counts) | ✅ | `GET /stats/workspace` + `/stats/project` → themed stat grids; replaces every hardcoded project-dashboard number. Bandwidth/AI `used` null (unmetered) (specs/17) |
+| **Workspace + project stats** (real aggregate counts) | ✅ | `GET /stats/workspace` + `/stats/project` → themed stat grids; replaces every hardcoded project-dashboard number. Bandwidth `used` null (unmetered); AI text reports requests + tokens + cost (specs/17, specs/21) |
 | Email verification page (`/verify-email?token=`) | ✅ | auto-verifies on load; success/error states |
 | **RBAC gating** (`useCan()`, `<Can>`, `<RequirePermission>`) | ✅ | nav + action buttons + management routes gated by `Permission` via the shared `effectivePermissions` cascade (specs/13) |
 
@@ -134,5 +142,5 @@ patterns and gateway callers are unchanged (specs/19 built the seam; specs/20 ex
 
 - Consumer **SDK / npm package** + published Delivery API docs.
 - **Frontend billing page** — Checkout redirect, Billing Portal link, replace the mock pricing page; consumes `/billing/*`. Unblocks the live Stripe e2e (the hosted Checkout page also needs the sandbox account configured: `pk_test_` publishable key + Managed Payments provisioned/disabled).
-- **AI generation** — Tier 1 shipped (specs/19 + specs/20); image generation and reference-field RAG remain.
+- **AI generation** — redesigned and shipped (specs/21): typed `AiOutput`, whole-entry `compose`, Generate/Refine author model, per-project AI voice, token/cost accounting. Remaining: streaming, embeddings/RAG grounding, async job queue (bulk/translate), image generation, token-based plan limits.
 - Deploy (Docker Compose on VPS) + CI.

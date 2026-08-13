@@ -70,15 +70,17 @@ export class AiServiceClient implements AiClient {
   /**
    * Collapse any axios failure into an {@link AiClientError}. Code allowlist:
    * if ai-service returned a known code (`AI_NOT_CONFIGURED` /
-   * `AI_GENERATION_FAILED`) in the body, pass it through unchanged so the
-   * gateway emits the right one. Everything else (401 secret mismatch, unmapped
-   * 5xx, network/timeout) → `AI_GENERATION_FAILED`. Never rethrow raw axios —
-   * it can carry the request URL/headers.
+   * `AI_GENERATION_FAILED` / `AI_INPUT_TOO_LARGE`) in the body, pass it through
+   * unchanged so the gateway emits the right one — an over-budget request must
+   * stay actionable instead of degrading to a generic failure. Everything else
+   * (401 secret mismatch, unmapped 5xx, network/timeout) → `AI_GENERATION_FAILED`.
+   * Never rethrow raw axios — it can carry the request URL/headers.
    */
   private toClientError(err: unknown): AiClientError {
     const ALLOWED: readonly AiClientErrorCode[] = [
       'AI_NOT_CONFIGURED',
       'AI_GENERATION_FAILED',
+      'AI_INPUT_TOO_LARGE',
     ];
 
     if (axios.isAxiosError(err)) {

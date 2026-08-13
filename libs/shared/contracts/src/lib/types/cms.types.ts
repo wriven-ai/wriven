@@ -1,5 +1,3 @@
-import type { AiOperation } from '../dto/ai.dto';
-
 /** Field types a content type can declare. */
 export type FieldType =
   | 'text'
@@ -37,11 +35,11 @@ export interface FieldDef {
   options?: string[];
   /** Target content type id for `reference`. */
   refTypeId?: string;
-  /** Allow AI generation on this field. Only meaningful for text|richtext|select. */
-  aiAssist?: boolean;
-  /** Allowed text-AI actions. Omitted keeps the legacy all-actions behavior. */
-  aiOperations?: AiOperation[];
-  /** Sensitive data: never send this field to an AI provider, as target or context. */
+  /**
+   * Sensitive data: never send this field to an AI provider, as target or
+   * context. The only AI control an author configures per field — eligibility is
+   * otherwise derived (Tier-1 type, single-value, not sensitive). See specs/21.
+   */
   aiPrivate?: boolean;
   /** Explicit sibling-field allowlist used as context for this AI target. */
   aiContextFields?: string[];

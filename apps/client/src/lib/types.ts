@@ -154,9 +154,14 @@ export type FieldType =
   | 'select'
   | 'reference';
 
-/** Text-AI actions. Mirrors `@wriven/contracts` without importing decorators client-side. */
-export type AiOperation =
-  | 'generate'
+/**
+ * AI request surface. Mirrors `@wriven/contracts` without importing decorators
+ * client-side. The author picks a target + intent (+ an optional preset chip);
+ * core derives the persisted operation, so the client never sends one.
+ */
+export type AiTargetKind = 'field' | 'entry';
+export type AiIntent = 'generate' | 'refine';
+export type AiRefinePreset =
   | 'expand'
   | 'shorten'
   | 'rewrite'
@@ -165,6 +170,18 @@ export type AiOperation =
   | 'continue';
 
 export type EntryStatus = 'draft' | 'published' | 'archived';
+
+/** Per-project AI voice configuration (brand voice, glossary, language). */
+export interface AiGlossaryTerm {
+  term: string;
+  prefer: string;
+}
+export interface AiProfileView {
+  brandVoice: string | null;
+  glossary: AiGlossaryTerm[];
+  language: string | null;
+  updatedAt: string | null;
+}
 
 export interface FieldDef {
   key: string;
@@ -175,11 +192,11 @@ export interface FieldDef {
   multiple?: boolean;
   options?: string[];
   refTypeId?: string;
-  /** Allow AI generation on this field (text|richtext|select). */
-  aiAssist?: boolean;
-  /** Allowed text-AI actions. Omitted preserves the legacy all-actions behavior. */
-  aiOperations?: AiOperation[];
-  /** Sensitive data is never sent to the AI provider. */
+  /**
+   * Sensitive data is never sent to the AI provider, as target or context. The
+   * only per-field AI control — eligibility is otherwise derived from the field
+   * type.
+   */
   aiPrivate?: boolean;
   /** Explicit sibling-field allowlist for this target's AI prompt context. */
   aiContextFields?: string[];
@@ -464,12 +481,25 @@ export interface UsagePeriod {
 
 /**
  * Current-period workspace usage vs plan limits. `limit: null` = the plan
- * dimension is unlimited. Backed by `GET /usage` (specs/14).
+ * dimension is unlimited. Backed by `GET /usage` (specs/14, specs/21).
  */
 export interface UsageView {
   period: UsagePeriod;
   requests: { used: number; limit: number | null };
   storage: { usedMb: number; limitMb: number | null };
+  ai: AiUsageStats;
+}
+
+/**
+ * AI usage for the period (mirrors @wriven/contracts). `requests.used` is
+ * succeeded generations; `tokens`/`cost` include failed ones (they still burn
+ * tokens). `cost.complete` is false when a model had no known price — the UI
+ * then hides the dollar figure rather than showing a wrong one. See specs/21.
+ */
+export interface AiUsageStats {
+  requests: { used: number; limit: number | null };
+  tokens: { prompt: number; completion: number; total: number };
+  cost: { microusd: number; complete: boolean; unpricedGenerations: number };
 }
 
 /** Entry counts split by status (mirrors @wriven/contracts). */
@@ -480,7 +510,7 @@ export interface EntryStatusCounts {
   archived: number;
 }
 
-/** Workspace aggregate stats (mirrors @wriven/contracts). See specs/17. */
+/** Workspace aggregate stats (mirrors @wriven/contracts). See specs/17, specs/21. */
 export interface WorkspaceStatsView {
   projects: number;
   members: number;
@@ -492,7 +522,7 @@ export interface WorkspaceStatsView {
   apiRequests: { used: number; limit: number | null };
   period: UsagePeriod;
   bandwidthGb: { usedGb: null; limitGb: number | null };
-  aiText: { used: null; limit: number | null };
+  aiText: AiUsageStats;
   aiImage: { used: null; limit: number | null };
 }
 

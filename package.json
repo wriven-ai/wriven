@@ -6,6 +6,7 @@
     "dev:auth": "pnpm nx serve auth-service",
     "dev:core": "pnpm nx serve core-service",
     "dev:gateway": "pnpm nx serve api-gateway",
+    "dev:ai": "pnpm nx serve @wriven/ai-service",
     "dev:client": "pnpm nx dev client",
     "dev:all": "pnpm nx run-many -t serve dev --parallel",
     "build": "pnpm nx run-many -t build",

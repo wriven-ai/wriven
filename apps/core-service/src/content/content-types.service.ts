@@ -5,7 +5,6 @@ import {
   FieldDef,
   Paginated,
   UpdateContentTypeDto,
-  AI_OPERATIONS,
 } from '@wriven/contracts';
 import { DRIZZLE, dbError } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
@@ -17,7 +16,6 @@ import { CoreEntitlementsService } from '../entitlements/core-entitlements.servi
 const { contentTypes } = schema;
 type ContentTypeRow = typeof contentTypes.$inferSelect;
 const AI_ASSIST_FIELD_TYPES = new Set<FieldDef['type']>(['text', 'richtext', 'select']);
-const AI_OPERATION_SET = new Set(AI_OPERATIONS);
 
 @Injectable()
 export class ContentTypesService {
@@ -206,59 +204,24 @@ export class ContentTypesService {
         );
       }
 
-      // The current output contract produces one scalar value. A multi-select
-      // needs a dedicated multi-value/suggestions operation, not a string that
-      // happens to be assigned into an array field.
-      if (
-        field.aiAssist === true &&
-        (!AI_ASSIST_FIELD_TYPES.has(field.type) || field.multiple)
-      ) {
-        throw rpcError(
-          'VALIDATION_ERROR',
-          `AI assist is only supported for text, richtext, and single-value select fields ("${field.key}").`,
-        );
-      }
-      if (
-        (field.aiOperations && field.aiOperations.length === 0) ||
-        field.aiOperations?.some((operation) => !AI_OPERATION_SET.has(operation)) ||
-        (field.aiOperations && new Set(field.aiOperations).size !== field.aiOperations.length)
-      ) {
-        throw rpcError('VALIDATION_ERROR', `AI actions for "${field.key}" are invalid.`);
-      }
-      if (
-        field.aiOperations?.length &&
-        (!AI_ASSIST_FIELD_TYPES.has(field.type) || field.multiple)
-      ) {
-        throw rpcError(
-          'VALIDATION_ERROR',
-          `AI actions can only be configured for text, richtext, and single-value select fields ("${field.key}").`,
-        );
-      }
-      if (
-        field.type === 'select' &&
-        field.aiOperations?.some((operation) => operation !== 'generate')
-      ) {
-        throw rpcError(
-          'VALIDATION_ERROR',
-          `A select field only supports the generate AI action ("${field.key}").`,
-        );
-      }
-
+      // Sensitivity is the only AI control an author configures per field.
+      // Eligibility is derived (Tier-1 ∧ single-value ∧ not sensitive), so there
+      // is no enable flag or per-field action list to validate. See specs/21.
       if (
         field.aiPrivate &&
-        (field.aiAssist === true || field.aiOperations?.length || field.aiContextFields?.length)
+        field.aiContextFields?.length
       ) {
         throw rpcError(
           'VALIDATION_ERROR',
-          `Sensitive field "${field.key}" cannot enable AI or use AI context.`,
+          `Sensitive field "${field.key}" cannot use AI context.`,
         );
       }
 
       if (field.aiContextFields?.length) {
-        if (!AI_ASSIST_FIELD_TYPES.has(field.type) || field.multiple || field.aiAssist === false) {
+        if (!AI_ASSIST_FIELD_TYPES.has(field.type) || field.multiple) {
           throw rpcError(
             'VALIDATION_ERROR',
-            `Only AI-enabled scalar text, richtext, or select fields can configure AI context ("${field.key}").`,
+            `Only scalar text, richtext, or select fields can configure AI context ("${field.key}").`,
           );
         }
         const contextKeys = new Set(field.aiContextFields);

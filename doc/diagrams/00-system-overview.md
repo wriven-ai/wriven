@@ -16,7 +16,7 @@ Wriven at a glance: one HTTP edge, three NestJS microservices behind it (TCP), a
 | client → gateway | HTTP | cookie-based auth (httpOnly access+refresh, in-memory CSRF double-submit) |
 | gateway → auth-service | **TCP** | NestJS microservice; `@wriven/contracts` message patterns |
 | gateway → core-service | **TCP** | same |
-| core-service → ai-service | **HTTP** | the **only** NestJS↔non-NestJS hop; `core.ai.generate` → `POST /generate` (`X-Internal-Secret` auth). Prompt build + `select` retry live in ai-service; quota/audit in core. |
+| core-service → ai-service | **HTTP** | the **only** NestJS↔non-NestJS hop; `core.ai.generate` → `POST /generate` (`X-Internal-Secret` auth). Prompt build + `select`/`compose` validate-and-repair live in ai-service; quota, audit, per-project voice, and cost live in core (specs/21). |
 | Stripe → gateway | HTTP POST | `/webhooks/stripe` (raw body, forwards to auth-service) |
 
 ## Who owns what
@@ -26,7 +26,7 @@ Wriven at a glance: one HTTP edge, three NestJS microservices behind it (TCP), a
 | **api-gateway** | HTTP edge, JWT validation, workspace/project membership validation, RBAC enforcement for **core** routes | any tables |
 | **auth-service** | `auth_svc` (users, workspaces, projects, members, invitations, sessions, tokens, subscriptions), the RBAC resolver | HTTP surface |
 | **core-service** | `core_svc` (content types, entries, media assets, api keys, webhooks) | authZ — trusts gateway-injected identity |
-| **ai-service** | AI content generation (prompt build, temperature, `select` retry) | any tables (stateless LLM proxy; quota/audit stay in core) |
+| **ai-service** | AI content generation (prompt build, temperature, `select`/`compose` validate-and-repair) | no tables (stateless LLM proxy; quota/audit/profile/cost stay in core) |
 | **client** | UI, state, cookie handling | backend secrets |
 
 ## Hard rules this diagram encodes

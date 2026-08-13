@@ -7,6 +7,7 @@ code straight through):
   - `AI_NOT_CONFIGURED`   503  — provider key missing on this service
   - `AI_GENERATION_FAILED` 502 — provider error / timeout / upstream 429 /
                                   `select` option miss after retry
+  - `AI_INPUT_TOO_LARGE`   422 — aggregate input exceeds the context budget
   - `INVALID_INTERNAL_SECRET` 401 — missing/mismatched `X-Internal-Secret`
 
 Messages are short and leak-free (never the raw provider payload). Unhandled
@@ -100,12 +101,88 @@ class SelectMissError(AiServiceError):
         )
 
 
+class ComposeMissError(AiServiceError):
+    """Whole-entry `compose` could not produce a valid JSON record after retry.
+
+    Same metering contract as {@link SelectMissError}: the provider completed
+    (tokens spent), but the structured output was unusable, so core records the
+    spend on a `failed` row and charges no request quota.
+    """
+
+    code = "AI_GENERATION_FAILED"
+    status_code = 502
+
+    def __init__(
+        self,
+        *,
+        model: str,
+        usage: Usage,
+        provider_request_id: str | None,
+        finish_reason: str | None,
+        attempt_count: int,
+    ) -> None:
+        super().__init__(
+            "The model could not draft a valid entry. Please try again.",
+            model=model,
+            usage=usage,
+            provider_request_id=provider_request_id,
+            finish_reason=finish_reason,
+            attempt_count=attempt_count,
+        )
+
+
+class TextGuardrailError(AiServiceError):
+    """Free-text output stayed unusable (reasoning / prompt echo) after one retry.
+
+    Same metering contract as the structured-output misses: the provider
+    completed (tokens spent), but the answer was not usable field content, so
+    core records the spend on a `failed` row and charges no request quota.
+    """
+
+    code = "AI_GENERATION_FAILED"
+    status_code = 502
+
+    def __init__(
+        self,
+        *,
+        model: str,
+        usage: Usage,
+        provider_request_id: str | None,
+        finish_reason: str | None,
+        attempt_count: int,
+    ) -> None:
+        super().__init__(
+            "The model could not produce usable field content. Please try again.",
+            model=model,
+            usage=usage,
+            provider_request_id=provider_request_id,
+            finish_reason=finish_reason,
+            attempt_count=attempt_count,
+        )
+
+
 class InvalidSecretError(AiServiceError):
     code = "INVALID_INTERNAL_SECRET"
     status_code = 401
 
     def __init__(self) -> None:
         super().__init__("Missing or invalid internal secret.")
+
+
+class InputTooLarge(AiServiceError):
+    """Aggregate user-controlled input exceeds the configured context budget.
+
+    Distinct from a generic failure so the author gets an actionable message
+    ("shorten the draft or clear the conversation") instead of "try again".
+    """
+
+    code = "AI_INPUT_TOO_LARGE"
+    status_code = 422
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This request is too large. Shorten the field content or clear the conversation."
+        )
 
 
 def _body(code: str, message: str, **extra: object) -> dict[str, object]:

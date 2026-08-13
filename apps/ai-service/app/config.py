@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # Hard service-wide ceilings. Operation policy can lower the output ceiling,
     # but never raise it. These protect provider spend even if core is bypassed.
     ai_max_input_chars: int = Field(default=24_000, ge=1_000, le=100_000)
-    ai_max_output_tokens: int = Field(default=1_200, ge=64, le=8_000)
+    ai_max_output_tokens: int = Field(default=8_000, ge=64, le=8_000)
     ai_headers: str = ""
     internal_secret: str = ""
     environment: str = "development"

@@ -10,18 +10,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  AuthUser,
-  CORE_PATTERNS,
-  CreateContentTypeDto,
-  CreateEntryDto,
-  ListEntriesQueryDto,
-  Permission,
-  SERVICE_TOKENS,
-  UpdateContentTypeDto,
-  UpdateEntryDto,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -36,21 +26,21 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 export class ContentController {
   constructor(
-    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   // ── Content types ───────────────────────────────────────────────────────────
 
   @Post('types')
-  @RequirePermission(Permission.CONTENT_TYPE_MANAGE)
+  @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
   createType(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
-    @Body() dto: CreateContentTypeDto,
+    @Body() dto: contracts.CreateContentTypeDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_CREATE, {
+      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
@@ -60,7 +50,7 @@ export class ContentController {
   }
 
   @Get('types')
-  @RequirePermission(Permission.PROJECT_VIEW)
+  @RequirePermission(contracts.Permission.PROJECT_VIEW)
   listTypes(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -68,7 +58,7 @@ export class ContentController {
     @Query('limit') limit?: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_LIST, {
+      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_LIST, {
         workspaceId,
         projectId,
         page: page ? Number(page) : undefined,
@@ -78,27 +68,27 @@ export class ContentController {
   }
 
   @Get('types/:id')
-  @RequirePermission(Permission.PROJECT_VIEW)
+  @RequirePermission(contracts.Permission.PROJECT_VIEW)
   getType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_GET, { workspaceId, projectId, id }),
+      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_GET, { workspaceId, projectId, id }),
     );
   }
 
   @Patch('types/:id')
-  @RequirePermission(Permission.CONTENT_TYPE_MANAGE)
+  @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
   updateType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
-    @Body() dto: UpdateContentTypeDto,
+    @Body() dto: contracts.UpdateContentTypeDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_UPDATE, {
+      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_UPDATE, {
         workspaceId,
         projectId,
         id,
@@ -108,29 +98,29 @@ export class ContentController {
   }
 
   @Delete('types/:id')
-  @RequirePermission(Permission.CONTENT_TYPE_MANAGE)
+  @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
   deleteType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.CONTENT_TYPE_DELETE, { workspaceId, projectId, id }),
+      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_DELETE, { workspaceId, projectId, id }),
     );
   }
 
   // ── Entries ───────────────────────────────────────────────────────────────
 
   @Post('entries')
-  @RequirePermission(Permission.CONTENT_ENTRY_CREATE)
+  @RequirePermission(contracts.Permission.CONTENT_ENTRY_CREATE)
   createEntry(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
-    @Body() dto: CreateEntryDto,
+    @Body() dto: contracts.CreateEntryDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_CREATE, {
+      this.core.send(contracts.CORE_PATTERNS.ENTRY_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
@@ -140,40 +130,40 @@ export class ContentController {
   }
 
   @Get('entries')
-  @RequirePermission(Permission.PROJECT_VIEW)
+  @RequirePermission(contracts.Permission.PROJECT_VIEW)
   listEntries(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
-    @Query() query: ListEntriesQueryDto,
+    @Query() query: contracts.ListEntriesQueryDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_LIST, { workspaceId, projectId, query }),
+      this.core.send(contracts.CORE_PATTERNS.ENTRY_LIST, { workspaceId, projectId, query }),
     );
   }
 
   @Get('entries/:id')
-  @RequirePermission(Permission.PROJECT_VIEW)
+  @RequirePermission(contracts.Permission.PROJECT_VIEW)
   getEntry(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_GET, { workspaceId, projectId, id }),
+      this.core.send(contracts.CORE_PATTERNS.ENTRY_GET, { workspaceId, projectId, id }),
     );
   }
 
   @Patch('entries/:id')
-  @RequirePermission(Permission.CONTENT_ENTRY_UPDATE)
+  @RequirePermission(contracts.Permission.CONTENT_ENTRY_UPDATE)
   updateEntry(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
-    @Body() dto: UpdateEntryDto,
+    @Body() dto: contracts.UpdateEntryDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_UPDATE, {
+      this.core.send(contracts.CORE_PATTERNS.ENTRY_UPDATE, {
         workspaceId,
         projectId,
         userId: user.userId,
@@ -184,15 +174,15 @@ export class ContentController {
   }
 
   @Post('entries/:id/publish')
-  @RequirePermission(Permission.CONTENT_ENTRY_PUBLISH)
+  @RequirePermission(contracts.Permission.CONTENT_ENTRY_PUBLISH)
   publishEntry(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_PUBLISH, {
+      this.core.send(contracts.CORE_PATTERNS.ENTRY_PUBLISH, {
         workspaceId,
         projectId,
         userId: user.userId,
@@ -202,26 +192,26 @@ export class ContentController {
   }
 
   @Delete('entries/:id')
-  @RequirePermission(Permission.CONTENT_ENTRY_DELETE)
+  @RequirePermission(contracts.Permission.CONTENT_ENTRY_DELETE)
   deleteEntry(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_DELETE, { workspaceId, projectId, id }),
+      this.core.send(contracts.CORE_PATTERNS.ENTRY_DELETE, { workspaceId, projectId, id }),
     );
   }
 
   @Get('entries/:id/revisions')
-  @RequirePermission(Permission.PROJECT_VIEW)
+  @RequirePermission(contracts.Permission.PROJECT_VIEW)
   listRevisions(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_REVISIONS, {
+      this.core.send(contracts.CORE_PATTERNS.ENTRY_REVISIONS, {
         workspaceId,
         projectId,
         entryId: id,
@@ -230,16 +220,16 @@ export class ContentController {
   }
 
   @Post('entries/:id/revisions/:version/restore')
-  @RequirePermission(Permission.CONTENT_ENTRY_UPDATE)
+  @RequirePermission(contracts.Permission.CONTENT_ENTRY_UPDATE)
   restoreRevision(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Param('version') version: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.ENTRY_REVISION_RESTORE, {
+      this.core.send(contracts.CORE_PATTERNS.ENTRY_REVISION_RESTORE, {
         workspaceId,
         projectId,
         userId: user.userId,

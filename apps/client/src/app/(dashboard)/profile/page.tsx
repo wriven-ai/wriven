@@ -85,71 +85,75 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Photo */}
-      <section className="space-y-4 rounded-xl border border-brand-border bg-brand-surface p-6">
-        <h2 className="font-mono text-sm font-bold text-text-primary">Photo</h2>
-        <div className="flex items-center gap-5">
-          <UserAvatar
-            name={user.name}
-            src={user.avatar}
-            size={64}
-            className="rounded-full"
-          />
-          <div className="flex flex-wrap gap-2">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={onPick}
-            />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={photoMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-accent px-4 py-2 font-mono text-sm font-bold text-white transition-all hover:bg-brand-accent-hover disabled:opacity-60"
-            >
-              {photoMutation.isPending && photoMutation.variables ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Camera className="size-3.5" />
-              )}
-              Change photo
-            </button>
-            <button
-              type="button"
-              onClick={() => photoMutation.mutate(null)}
-              disabled={!user.avatar || photoMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-lg border border-status-error/40 px-4 py-2 font-mono text-sm font-bold text-status-error transition-colors hover:bg-status-error/10 disabled:opacity-40"
-            >
-              <Trash2 className="size-3.5" />
-              Remove
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Display name */}
+      {/* Profile photo + display name — one card, compact photo actions */}
       <form
-        className="space-y-4 rounded-xl border border-brand-border bg-brand-surface p-6"
+        className="space-y-5 rounded-xl border border-brand-border bg-brand-surface p-6"
         onSubmit={(e) => {
           e.preventDefault();
           if (dirty) nameMutation.mutate(name.trim());
         }}
       >
-        <h2 className="font-mono text-sm font-bold text-text-primary">
-          Display name
-        </h2>
-        <label className="block space-y-1.5">
-          <span className="font-mono text-xs text-text-muted">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={inputCls}
-            maxLength={80}
-            placeholder="Your name"
-          />
-        </label>
+        <h2 className="font-mono text-sm font-bold text-text-primary">Profile</h2>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+          {/* Avatar + photo actions */}
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <UserAvatar
+                name={user.name}
+                src={user.avatar}
+                size={64}
+                className="rounded-full"
+              />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onPick}
+              />
+              {/* Compact camera badge — change photo on click */}
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={photoMutation.isPending}
+                title="Change photo"
+                aria-label="Change photo"
+                className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-brand-accent text-white shadow-sm ring-2 ring-brand-surface transition-all hover:bg-brand-accent-hover hover:scale-110 active:scale-95 disabled:opacity-60"
+              >
+                {photoMutation.isPending && photoMutation.variables ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Camera className="size-3" />
+                )}
+              </button>
+            </div>
+            {/* Small muted link, only when a photo exists */}
+            {user.avatar && (
+              <button
+                type="button"
+                onClick={() => photoMutation.mutate(null)}
+                disabled={photoMutation.isPending}
+                title="Remove photo"
+                className="inline-flex items-center gap-1 font-mono text-xs text-text-muted transition-colors hover:text-status-error disabled:opacity-50"
+              >
+                <Trash2 className="size-3" />
+                Remove photo
+              </button>
+            )}
+          </div>
+
+          {/* Display name */}
+          <label className="block flex-1 space-y-1.5">
+            <span className="font-mono text-xs text-text-muted">Display name</span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputCls}
+              maxLength={80}
+              placeholder="Your name"
+            />
+          </label>
+        </div>
         <div className="flex justify-end">
           <button
             type="submit"

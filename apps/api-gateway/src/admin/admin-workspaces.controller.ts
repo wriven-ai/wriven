@@ -9,14 +9,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  ADMIN_PATTERNS,
-  AdminAuthUser,
-  AdminListQueryDto,
-  AssignPlanDto,
-  SERVICE_TOKENS,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRoles } from './admin-roles.decorator';
@@ -31,17 +25,17 @@ import { CurrentAdmin } from './current-admin.decorator';
 @Controller('admin/workspaces')
 export class AdminWorkspacesController {
   constructor(
-    @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
   ) {}
 
   @Get()
-  list(@Query() query: AdminListQueryDto) {
-    return firstValueFrom(this.auth.send(ADMIN_PATTERNS.WORKSPACES_LIST, query));
+  list(@Query() query: contracts.AdminListQueryDto) {
+    return firstValueFrom(this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_LIST, query));
   }
 
   @Get(':id')
   get(@Param('id') id: string) {
-    return firstValueFrom(this.auth.send(ADMIN_PATTERNS.WORKSPACES_GET, { id }));
+    return firstValueFrom(this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_GET, { id }));
   }
 
   @AdminRoles('admin')
@@ -49,11 +43,11 @@ export class AdminWorkspacesController {
   @Put(':id/plan')
   setPlan(
     @Param('id') id: string,
-    @Body() dto: AssignPlanDto,
-    @CurrentAdmin() admin: AdminAuthUser,
+    @Body() dto: contracts.AssignPlanDto,
+    @CurrentAdmin() admin: contracts.AdminAuthUser,
   ) {
     return firstValueFrom(
-      this.auth.send(ADMIN_PATTERNS.WORKSPACES_SET_PLAN, {
+      this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_SET_PLAN, {
         workspaceId: id,
         dto,
         adminUserId: admin.adminUserId,

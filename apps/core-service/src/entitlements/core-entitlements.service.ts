@@ -6,7 +6,7 @@ import {
   SERVICE_TOKENS,
   WorkspaceEntitlements,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB } from '@wriven/database';
 import { and, eq, isNull } from 'drizzle-orm';
 import { firstValueFrom, timeout } from 'rxjs';
 import { rpcError } from '../common/rpc-error';

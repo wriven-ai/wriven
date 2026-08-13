@@ -96,7 +96,7 @@ All reads scoped by `workspace_id` and exclude soft-deleted rows.
 
 `core.contentType.{create,list,get,update,delete}` · `core.entry.{create,list,get,update,delete,publish}` · `core.ping`. Defined as `CORE_PATTERNS` in `@wriven/contracts`.
 
-**AI generation** (`AI_PATTERNS`, specs/19 + specs/20): `core.ai.generate` — the `AiModule` handler builds the context payload, reserves quota, and calls the injected `AiClient` (an HTTP client to the standalone `ai-service`). Prompt build, temperature, and `select` retry live in ai-service; the pattern + gateway callers stay unchanged.
+**AI generation** (`AI_PATTERNS`, specs/21 — supersedes specs/19 + 20): `core.ai.generate` derives the operation from `(targetKind, intent, preset)`, validates the target (Tier-1, single-value, not sensitive) or assembles `composeFields` for a whole-entry draft, loads the per-project AI voice profile (`ai_profiles`), reserves quota (advisory lock), and calls the injected `AiClient` (HTTP to the standalone `ai-service`). It returns a typed `AiOutput` (`scalar` \| `record`). `core.ai.profile.read`/`profile.update` expose the voice profile. Prompt build, temperature, and `select`/`compose` validate-and-repair live in ai-service; the gateway callers are unchanged. Cost is priced from the returned model (`core/ai/ai-model-prices.ts`).
 
 **Usage metering** (`USAGE_PATTERNS`, specs/14): `core.usage.record` (batched atomic increment from the gateway's in-process buffer) · `core.usage.read` (composes the current-period `UsageView`: request count from `usage_buckets` + live media SUM + effective plan limits via `CoreEntitlementsService`). Limits stay in auth-service; core is the usage authority because it owns the metered resources (api_keys, delivery, media).
 
@@ -119,5 +119,5 @@ AI_OUTPUT_COST_MICROUSD_PER_MILLION_TOKENS=
 
 ## Not yet built
 
-- **AI image generation** — Tier-1 text/richtext/select generation shipped (specs/19, now running in ai-service via specs/20); image gen deferred (different model/cost).
+- **AI image generation** — text generation (single-field + whole-entry compose) shipped in specs/21 (running in ai-service); image gen deferred (different model/cost).
 - **AI image generation** requires its own asset lifecycle, moderation, R2 provenance, and separate job/queue policy; it is intentionally not a variant of text generation.

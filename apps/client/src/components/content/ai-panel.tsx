@@ -5,24 +5,37 @@ import { generateHTML, generateJSON } from '@tiptap/html';
 import Link from '@tiptap/extension-link';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { RefreshCw, Sparkles, Wand2 } from 'lucide-react';
+import { AlertTriangle, FileText, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { aiApi } from '@/lib/api';
+import type { AiIntent, AiRefinePreset } from '@/lib/types';
 
 /** One turn of multi-turn refinement (client-held). Mirrors contracts AiTurn. */
 type AiTurn = { role: 'user' | 'assistant'; content: string };
 
-const OPERATIONS = [
-  { key: 'generate', label: 'Generate' },
-  { key: 'expand', label: 'Expand' },
+/**
+ * Refine shortcuts. These only prefill the author's intent — the server maps each
+ * to a tuned prompt, so they are chips beside one instruction box rather than a
+ * list of co-equal modes.
+ */
+const REFINE_PRESETS: { key: AiRefinePreset; label: string }[] = [
   { key: 'shorten', label: 'Shorten' },
+  { key: 'expand', label: 'Expand' },
   { key: 'rewrite', label: 'Rewrite' },
   { key: 'tone', label: 'Change tone' },
   { key: 'summarize', label: 'Summarize' },
   { key: 'continue', label: 'Continue' },
-] as const;
+];
 
-type Operation = (typeof OPERATIONS)[number]['key'];
+/** Placeholder copy per preset, so the instruction box always tells the author what to type. */
+const PRESET_HINTS: Record<AiRefinePreset, string> = {
+  shorten: 'e.g. cut it to two sentences',
+  expand: 'e.g. add a paragraph about pricing',
+  rewrite: 'e.g. make it clearer for beginners',
+  tone: 'Describe the tone — e.g. confident and concise',
+  summarize: 'e.g. summarize as three bullets',
+  continue: 'e.g. keep going for one more paragraph',
+};
 
 type Result = {
   generationId: string;
@@ -30,9 +43,11 @@ type Result = {
   model: string;
   usage: { promptTokens: number; completionTokens: number; totalTokens: number };
   remaining: number | null;
+  truncated?: boolean;
   targetKey: string;
   targetType: string;
-  operation: Operation;
+  intent: AiIntent;
+  preset?: AiRefinePreset;
   instruction: string;
   sourceContent?: string;
 };
@@ -42,9 +57,9 @@ type GenerationInput = {
   targetKey: string;
   targetType: string;
   sourceContent?: string;
-  operation: Operation;
+  intent: AiIntent;
+  preset?: AiRefinePreset;
   instruction: string;
-  tone?: string;
   history: AiTurn[];
 };
 
@@ -53,12 +68,15 @@ type ApplyMode = 'replace' | 'append' | 'prepend';
 const TIER1 = ['text', 'richtext', 'select'];
 
 /**
- * AI Co-Writer panel. Generates/refines a Tier-1 field (text | richtext |
+ * AI Co-Writer panel. Generates or refines a Tier-1 field (text | richtext |
  * select), multi-turn (client-held history), then applies the result to the
  * entry form. Richtext: AI emits semantic HTML → parsed to ProseMirror JSON via
  * `generateJSON` on apply (structure preserved: headings, lists, links). The
  * preview is a read-only TipTap instance so only schema-valid HTML renders
- * (scripts/unknown tags dropped — safe). See ai content generation feature.
+ * (scripts/unknown tags dropped — safe).
+ *
+ * Eligibility is derived, not configured: any single-value text/richtext/select
+ * field that isn't marked sensitive. See specs/21.
  */
 export function AiPanel({
   contentTypeId,
@@ -77,8 +95,6 @@ export function AiPanel({
     type: string;
     options?: string[];
     multiple?: boolean;
-    aiAssist?: boolean;
-    aiOperations?: Operation[];
     aiPrivate?: boolean;
   }[];
   fieldValues: Record<string, unknown>;
@@ -87,31 +103,39 @@ export function AiPanel({
   onApplied?: (generationId: string) => void;
   onUnapplied?: (generationId: string) => void;
 }) {
-  // Tier-1 fields with AI not explicitly disabled.
+  // Tier-1, single-value, non-sensitive fields.
   const targets = useMemo(
-    () =>
-      fields.filter(
-        (f) => TIER1.includes(f.type) && !f.multiple && !f.aiPrivate && f.aiAssist !== false,
-      ),
+    () => fields.filter((f) => TIER1.includes(f.type) && !f.multiple && !f.aiPrivate),
     [fields],
   );
   const defaultTarget = targets.find((t) => t.type === 'richtext')?.key ?? targets[0]?.key ?? '';
 
   const [targetKey, setTargetKey] = useState(defaultTarget);
-  const [operation, setOperation] = useState<Operation>('generate');
+  const [intent, setIntent] = useState<AiIntent>('generate');
+  const [preset, setPreset] = useState<AiRefinePreset | undefined>(undefined);
   const [instruction, setInstruction] = useState('');
-  const [tone, setTone] = useState('');
   const [histories, setHistories] = useState<Record<string, AiTurn[]>>({});
   const [result, setResult] = useState<Result | null>(null);
   const [alternates, setAlternates] = useState<Result[]>([]);
   const [applied, setApplied] = useState(false);
   const [applyMode, setApplyMode] = useState<ApplyMode>('replace');
   const [cancelled, setCancelled] = useState(false);
+  // Whole-entry compose is a separate, self-contained flow from the per-field one.
+  const [composeBrief, setComposeBrief] = useState('');
+  const [composeResult, setComposeResult] = useState<{
+    generationId: string;
+    fields: { key: string; label: string; type: string; value: string }[];
+    remaining: number | null;
+    truncated?: boolean;
+  } | null>(null);
+  const [composeSelected, setComposeSelected] = useState<Set<string>>(new Set());
+  const [composeApplied, setComposeApplied] = useState(false);
   const lastAttemptRef = useRef<GenerationInput | null>(null);
   const requestInFlightRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const undoRef = useRef<{ key: string; value: unknown } | null>(null);
   const resultRef = useRef<Result | null>(null);
+  const instructionRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     resultRef.current = result;
@@ -124,42 +148,57 @@ export function AiPanel({
 
   const target = targets.find((t) => t.key === targetKey);
   const history = histories[targetKey] ?? [];
-  const availableOperations = useMemo(
-    () =>
-      target?.aiOperations?.length
-        ? OPERATIONS.filter((candidate) => target.aiOperations?.includes(candidate.key))
-        : target?.type === 'select'
-          ? OPERATIONS.filter((candidate) => candidate.key === 'generate')
-        : OPERATIONS,
-    [target],
-  );
+  // A select holds one allowed value: refining an enum choice is meaningless.
+  const canRefine = target?.type !== 'select';
+  const draft = serializeSourceContent(fieldValues[targetKey], target?.type ?? 'text');
+  const unAppliedDraft = result?.targetKey === targetKey && !applied ? result.text : undefined;
+  const sourceContent = unAppliedDraft ?? draft;
 
+  // Refine needs something to work on; fall back to generate when the field is empty.
   useEffect(() => {
-    setOperation((current) =>
-      availableOperations.some((candidate) => candidate.key === current)
-        ? current
-        : availableOperations[0]?.key ?? 'generate',
-    );
-  }, [availableOperations]);
+    if (!canRefine || (!draft && !unAppliedDraft)) {
+      setIntent('generate');
+      setPreset(undefined);
+    }
+  }, [canRefine, draft, unAppliedDraft]);
 
   const mutation = useMutation({
     mutationFn: (input: GenerationInput) => {
       const controller = new AbortController();
       abortRef.current = controller;
-      return aiApi.generate({
-        requestId: input.requestId,
-        contentTypeId,
-        entryId,
-        fieldKey: input.targetKey,
-        operation: input.operation,
-        instruction: input.instruction || undefined,
-        sourceContent: input.sourceContent,
-        tone: input.tone,
-        history: input.history.length ? input.history : undefined,
-      }, controller.signal);
+      return aiApi.generate(
+        {
+          requestId: input.requestId,
+          contentTypeId,
+          entryId,
+          targetKind: 'field',
+          fieldKey: input.targetKey,
+          intent: input.intent,
+          preset: input.preset,
+          instruction: input.instruction || undefined,
+          sourceContent: input.sourceContent,
+          history: input.history.length ? input.history : undefined,
+        },
+        controller.signal,
+      );
     },
     onSuccess: (data, input) => {
-      const next = { ...data, ...input };
+      // The field flow only ever targets one field, so output is always scalar.
+      const text = data.output.kind === 'scalar' ? data.output.text : '';
+      const next: Result = {
+        generationId: data.generationId,
+        text,
+        model: data.model,
+        usage: data.usage,
+        remaining: data.remaining,
+        truncated: data.truncated,
+        targetKey: input.targetKey,
+        targetType: input.targetType,
+        intent: input.intent,
+        preset: input.preset,
+        instruction: input.instruction,
+        sourceContent: input.sourceContent,
+      };
       const current = resultRef.current;
       if (current && current.targetKey === next.targetKey) {
         setAlternates((previous) => [current, ...previous].slice(0, 2));
@@ -171,8 +210,8 @@ export function AiPanel({
         ...previous,
         [input.targetKey]: [
           ...(previous[input.targetKey] ?? []),
-          { role: 'user', content: generationTurnLabel(input) },
-          { role: 'assistant', content: data.text },
+          { role: 'user' as const, content: generationTurnLabel(input) },
+          { role: 'assistant' as const, content: text },
         ].slice(-8),
       }));
       setApplied(false);
@@ -193,20 +232,75 @@ export function AiPanel({
     mutation.mutate(input);
   };
 
-  const generate = () => {
+  const run = () => {
     if (!target) return;
-    const unAppliedDraft = result?.targetKey === target.key && !applied ? result.text : undefined;
-    const input: GenerationInput = {
+    const refining = intent === 'refine' && canRefine;
+    submit({
       requestId: crypto.randomUUID(),
       targetKey: target.key,
       targetType: target.type,
-      sourceContent: unAppliedDraft ?? serializeSourceContent(fieldValues[target.key], target.type),
-      operation,
+      // Refine transforms the author's actual draft; generate starts fresh.
+      sourceContent: refining ? sourceContent : undefined,
+      intent: refining ? 'refine' : 'generate',
+      preset: refining ? preset : undefined,
       instruction,
-      tone: tone.trim() || undefined,
       history,
-    };
-    submit(input);
+    });
+  };
+
+  const composeMutation = useMutation({
+    mutationFn: (input: { requestId: string; instruction: string }) =>
+      aiApi.generate({
+        requestId: input.requestId,
+        contentTypeId,
+        entryId,
+        targetKind: 'entry',
+        intent: 'generate',
+        instruction: input.instruction || undefined,
+      }),
+    onSuccess: (data) => {
+      if (data.output.kind !== 'record') return;
+      const fields = Object.entries(data.output.fields).map(([key, value]) => {
+        const def = targets.find((t) => t.key === key);
+        return { key, label: def?.label ?? key, type: def?.type ?? 'text', value };
+      });
+      setComposeResult({
+        generationId: data.generationId,
+        fields,
+        remaining: data.remaining,
+        truncated: data.truncated,
+      });
+      // Default to applying every drafted field; the author unchecks any to skip.
+      setComposeSelected(new Set(fields.map((f) => f.key)));
+      setComposeApplied(false);
+    },
+  });
+
+  const runCompose = () => {
+    if (composeMutation.isPending) return;
+    setComposeApplied(false);
+    composeMutation.mutate({ requestId: crypto.randomUUID(), instruction: composeBrief });
+  };
+
+  const applyCompose = () => {
+    if (!composeResult) return;
+    for (const f of composeResult.fields) {
+      if (!composeSelected.has(f.key)) continue;
+      applyGeneratedField(setField, f.key, f.value, f.type);
+    }
+    setComposeApplied(true);
+    onApplied?.(composeResult.generationId);
+  };
+
+  const chooseIntent = (next: AiIntent) => {
+    setIntent(next);
+    if (next === 'generate') setPreset(undefined);
+  };
+
+  const choosePreset = (next: AiRefinePreset) => {
+    setIntent('refine');
+    setPreset((current) => (current === next ? undefined : next));
+    instructionRef.current?.focus();
   };
 
   const apply = () => {
@@ -220,8 +314,8 @@ export function AiPanel({
         const doc = generateJSON(output, [
           StarterKit,
           Link.configure({
-        HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer nofollow' },
-      }),
+            HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer nofollow' },
+          }),
         ]);
         setField(result.targetKey, doc);
       } catch {
@@ -251,7 +345,7 @@ export function AiPanel({
     return (
       <aside className="lg:col-span-4">
         <PanelShell>
-          <p className="text-sm font-mono text-text-muted leading-relaxed">
+          <p className="p-5 text-sm font-mono text-text-muted leading-relaxed">
             AI generation needs a text, richtext, or select field on this content type.
           </p>
         </PanelShell>
@@ -266,15 +360,105 @@ export function AiPanel({
     PLAN_LIMIT_REACHED: 'Monthly AI generation limit reached for your plan.',
     RATE_LIMITED: 'Too many AI requests — please slow down.',
     AI_GENERATION_FAILED: 'Generation failed. Try again or rephrase.',
+    AI_INPUT_TOO_LARGE:
+      'This request is too large. Shorten the field content or clear the conversation.',
     AI_GENERATION_IN_PROGRESS: 'This generation is still in progress. Retry safely in a moment.',
     IDEMPOTENCY_KEY_REUSED: 'That generation request cannot be reused. Start a new generation.',
     VALIDATION_ERROR: 'That field does not support AI generation.',
   };
 
+  const refineDisabled = !canRefine || (!draft && !unAppliedDraft);
+  const busy = mutation.isPending;
+
   return (
     <aside className="lg:col-span-4">
       <PanelShell>
         <div className="flex flex-col gap-3 p-5">
+          {/* Whole-entry compose — drafts every eligible field in one call. */}
+          <details className="border border-brand-border rounded-lg bg-brand-surface-soft/40">
+            <summary className="flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-text-secondary cursor-pointer select-none hover:text-text-primary">
+              <FileText className="w-3.5 h-3.5 text-brand-secondary" />
+              Draft whole entry
+            </summary>
+            <div className="p-3 pt-1 space-y-2">
+              <textarea
+                rows={2}
+                value={composeBrief}
+                onChange={(e) => setComposeBrief(e.target.value)}
+                placeholder="Brief — e.g. a launch post about our new pricing"
+                className="w-full text-sm font-mono bg-brand-surface border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-brand-accent resize-y"
+              />
+              <button
+                type="button"
+                onClick={runCompose}
+                disabled={composeMutation.isPending}
+                className="w-full inline-flex items-center justify-center gap-2 bg-brand-secondary/90 hover:bg-brand-secondary text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-2 px-4 rounded-lg transition-all cursor-pointer"
+              >
+                {composeMutation.isPending ? (
+                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Drafting…</>
+                ) : (
+                  <><Sparkles className="w-3.5 h-3.5" /> Draft entry</>
+                )}
+              </button>
+              {composeMutation.isError && (
+                <p className="text-xs font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-2.5 py-2">
+                  {errMsg[(composeMutation.error as { error?: { code?: string } })?.error?.code ?? ''] ??
+                    'Drafting failed. Try again or rephrase the brief.'}
+                </p>
+              )}
+              {composeResult && (
+                <div className="space-y-2 border-t border-brand-border pt-2">
+                  {composeResult.truncated && (
+                    <p className="flex items-start gap-1.5 text-xs font-mono text-status-warning bg-status-warning/10 border border-status-warning/20 rounded-lg px-2.5 py-2">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                      The draft was cut off at the length limit.
+                    </p>
+                  )}
+                  {composeResult.fields.map((f) => (
+                    <label
+                      key={f.key}
+                      className="flex gap-2 items-start text-xs font-mono text-text-secondary cursor-pointer select-none bg-brand-surface-soft border border-brand-border rounded-lg p-2.5"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={composeSelected.has(f.key)}
+                        onChange={(e) =>
+                          setComposeSelected((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(f.key);
+                            else next.delete(f.key);
+                            return next;
+                          })
+                        }
+                        className="mt-0.5 rounded border-brand-border text-brand-accent cursor-pointer focus:ring-0"
+                      />
+                      <span className="min-w-0">
+                        <span className="block font-bold text-text-primary">{f.label}</span>
+                        <span className="block text-text-muted truncate">
+                          {previewText(f.value, f.type) || <em>empty</em>}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={applyCompose}
+                    disabled={composeApplied || composeSelected.size === 0}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-2 px-4 rounded-lg transition-all cursor-pointer"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" />
+                    {composeApplied ? 'Applied' : `Apply ${composeSelected.size} field${composeSelected.size === 1 ? '' : 's'}`}
+                  </button>
+                  {composeResult.remaining != null && (
+                    <p className="text-xs font-mono text-text-muted text-right">
+                      {composeResult.remaining} left this month
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </details>
+
           {/* Target field */}
           <label className="space-y-1.5">
             <span className="block text-xs font-mono uppercase tracking-wider text-text-muted">Field</span>
@@ -286,6 +470,7 @@ export function AiPanel({
                 setAlternates([]);
                 setApplied(false);
                 setApplyMode('replace');
+                setPreset(undefined);
               }}
               className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2 text-text-primary focus:outline-none focus:border-brand-accent"
             >
@@ -297,67 +482,106 @@ export function AiPanel({
             </select>
           </label>
 
-          {/* Operation */}
-          <label className="space-y-1.5">
-            <span className="block text-xs font-mono uppercase tracking-wider text-text-muted">Operation</span>
-            <select
-              value={operation}
-              onChange={(e) => setOperation(e.target.value as Operation)}
-              className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2 text-text-primary focus:outline-none focus:border-brand-accent"
-            >
-              {availableOperations.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* Intent — the whole action model is these two choices. */}
+          <div
+            role="group"
+            aria-label="What should AI do"
+            className="grid grid-cols-2 gap-1 p-1 bg-brand-surface-soft border border-brand-border rounded-lg"
+          >
+            {(['generate', 'refine'] as const).map((option) => {
+              const disabled = option === 'refine' && refineDisabled;
+              const active = intent === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={active}
+                  disabled={disabled}
+                  onClick={() => chooseIntent(option)}
+                  title={
+                    disabled
+                      ? canRefine
+                        ? 'Add some content to this field first'
+                        : 'A select field can only be generated'
+                      : undefined
+                  }
+                  className={`text-sm font-mono font-bold py-1.5 rounded transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
+                    active
+                      ? 'bg-brand-surface text-brand-accent border border-brand-border'
+                      : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  {option === 'generate' ? 'Generate' : 'Refine'}
+                </button>
+              );
+            })}
+          </div>
 
-          {operation === 'tone' && (
-            <label className="space-y-1.5">
-              <span className="block text-xs font-mono uppercase tracking-wider text-text-muted">Target tone</span>
-              <input
-                type="text"
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
-                placeholder="e.g. confident and concise"
-                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3 py-2 text-text-primary focus:outline-none focus:border-brand-accent"
-              />
-            </label>
+          {/* Refine presets — shortcuts, not modes. */}
+          {intent === 'refine' && !refineDisabled && (
+            <div className="flex flex-wrap gap-1.5">
+              {REFINE_PRESETS.map((option) => {
+                const active = preset === option.key;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => choosePreset(option.key)}
+                    className={`text-xs font-mono font-bold px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+                      active
+                        ? 'bg-brand-secondary/15 text-brand-secondary border-brand-secondary/40'
+                        : 'bg-brand-surface-soft text-text-muted border-brand-border hover:text-text-secondary hover:border-brand-accent/40'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           )}
 
           {/* Instruction */}
           <label className="space-y-1.5">
             <span className="block text-xs font-mono uppercase tracking-wider text-text-muted">
-              Instruction <span className="normal-case text-text-muted/70">— optional</span>
+              Instruction{' '}
+              <span className="normal-case text-text-muted/70">
+                {preset === 'tone' ? '— required' : '— optional'}
+              </span>
             </span>
             <textarea
+              ref={instructionRef}
               rows={4}
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
-              placeholder="e.g. Add 3 bullet points about pricing"
+              placeholder={
+                intent === 'refine' && preset
+                  ? PRESET_HINTS[preset]
+                  : 'e.g. Add 3 bullet points about pricing'
+              }
               className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-3 text-text-primary focus:outline-none focus:border-brand-accent leading-relaxed resize-y"
             />
           </label>
 
           <button
             type="button"
-            onClick={generate}
+            onClick={run}
             disabled={
-              mutation.isPending ||
-              !targetKey ||
-              (operation === 'tone' && !tone.trim())
+              busy || !targetKey || (intent === 'refine' && preset === 'tone' && !instruction.trim())
             }
             className="w-full inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-2.5 px-4 rounded-lg transition-all cursor-pointer neo-shadow"
           >
-            {mutation.isPending ? (
-              <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Generating…</>
+            {busy ? (
+              <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Working…</>
             ) : (
-              <><Sparkles className="w-3.5 h-3.5" /> {result?.targetKey === targetKey && !applied ? 'Refine draft' : 'Generate'}</>
+              <>
+                <Sparkles className="w-3.5 h-3.5" />{' '}
+                {intent === 'refine' ? 'Refine' : result?.targetKey === targetKey && !applied ? 'Regenerate' : 'Generate'}
+              </>
             )}
           </button>
 
-          {mutation.isPending && (
+          {busy && (
             <button
               type="button"
               onClick={stopWaiting}
@@ -394,7 +618,7 @@ export function AiPanel({
             <button
               type="button"
               onClick={() => submit(lastAttemptRef.current as GenerationInput)}
-              disabled={mutation.isPending}
+              disabled={busy}
               className="text-xs font-mono text-brand-secondary hover:text-brand-accent transition-colors cursor-pointer text-left disabled:opacity-50"
             >
               Retry the same request safely
@@ -410,6 +634,12 @@ export function AiPanel({
                   <span className="text-xs font-mono text-text-muted">{result.remaining} left this month</span>
                 )}
               </div>
+              {result.truncated && (
+                <p className="flex items-start gap-1.5 text-xs font-mono text-status-warning bg-status-warning/10 border border-status-warning/20 rounded-lg px-2.5 py-2">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  This response was cut off at the length limit — refine with “Continue” or shorten the input.
+                </p>
+              )}
               {result.targetType === 'richtext' ? (
                 <RichTextPreview html={result.text} />
               ) : (
@@ -509,6 +739,41 @@ function serializeSourceContent(value: unknown, fieldType: string): string | und
   }
 }
 
+/**
+ * Apply one generated value to a field (replace semantics), converting richtext
+ * HTML to ProseMirror JSON. Shared by the whole-entry compose apply.
+ */
+function applyGeneratedField(
+  setField: (key: string, value: unknown) => void,
+  key: string,
+  value: string,
+  type: string,
+): void {
+  if (type === 'richtext') {
+    try {
+      setField(
+        key,
+        generateJSON(value, [
+          StarterKit,
+          Link.configure({
+            HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer nofollow' },
+          }),
+        ]),
+      );
+    } catch {
+      setField(key, value);
+    }
+  } else {
+    setField(key, value.trim());
+  }
+}
+
+/** Plain-text preview of a possibly-HTML generated value, for the compose list. */
+function previewText(value: string, type: string): string {
+  const text = type === 'richtext' ? value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : value;
+  return text.length > 140 ? `${text.slice(0, 140)}…` : text;
+}
+
 /** Keep application explicit: structured/select values only support replacement. */
 function combineContent(
   existing: string,
@@ -524,8 +789,8 @@ function combineContent(
 }
 
 function generationTurnLabel(input: GenerationInput): string {
-  const detail = input.operation === 'tone' ? input.tone : input.instruction;
-  return `${input.operation}${detail ? `: ${detail}` : ''}`.slice(0, 2_000);
+  const action = input.intent === 'refine' ? input.preset ?? 'refine' : 'generate';
+  return `${action}${input.instruction ? `: ${input.instruction}` : ''}`.slice(0, 2_000);
 }
 
 /** Compact character diff for plain-text generations; richtext remains rendered safely above. */

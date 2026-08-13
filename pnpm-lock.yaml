@@ -260,6 +260,8 @@ importers:
         specifier: ^5.1.4
         version: 5.1.4(webpack-dev-server@5.2.5)(webpack@5.107.2)
 
+  apps/ai-service: {}
+
   apps/api-gateway:
     dependencies:
       '@nestjs/common':
@@ -564,6 +566,10 @@ importers:
       next:
         specifier: '>=14'
         version: 16.2.9(@babel/core@7.29.7(supports-color@8.1.1))(babel-plugin-macros@3.1.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(sass@1.100.0)
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.9
 
   packages/react:
     devDependencies:

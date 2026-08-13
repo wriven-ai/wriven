@@ -46,6 +46,9 @@
   "peerDependencies": {
     "next": ">=14"
   },
+  "devDependencies": {
+    "@types/node": "^20"
+  },
   "publishConfig": {
     "access": "public"
   },

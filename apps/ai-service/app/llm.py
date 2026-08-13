@@ -26,14 +26,16 @@ logger = logging.getLogger("ai-service.llm")
 # Product policy: bounded output per action. AI_MAX_OUTPUT_TOKENS is the
 # deployment-wide ceiling; an operation may only lower it. Keep verbose actions
 # bounded even if an operator increases the global ceiling for another use case.
-_OPERATION_OUTPUT_TOKEN_CAPS: dict[Operation, int] = {
-    "generate": 1_200,
-    "expand": 1_600,
-    "shorten": 800,
-    "rewrite": 1_200,
-    "tone": 1_200,
-    "summarize": 800,
-    "continue": 1_200,
+_OPERATION_OUTPUT_TOKEN_CAPS: dict[str, int] = {
+    "generate": 3_000,
+    "compose": 6_000,
+    "refine": 3_000,
+    "expand": 4_000,
+    "shorten": 1_200,
+    "rewrite": 3_000,
+    "tone": 2_400,
+    "summarize": 1_200,
+    "continue": 3_000,
 }
 
 
@@ -90,7 +92,11 @@ class LlmClient:
                 temperature=temperature,
                 max_tokens=min(
                     settings.ai_max_output_tokens,
-                    _OPERATION_OUTPUT_TOKEN_CAPS[operation],
+                    # `.get` (not `[…]`) so adding an operation to the contract can
+                    # never turn into a KeyError -> opaque 502 at request time.
+                    _OPERATION_OUTPUT_TOKEN_CAPS.get(
+                        operation, settings.ai_max_output_tokens
+                    ),
                 ),
             )
         except RateLimitError:

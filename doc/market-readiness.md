@@ -224,13 +224,16 @@ So the gaps read in context. ✅ = working.
   content-history diff UI. Now: none (last-write-wins; revisions stored but no diff
   UI/locking).
 
-### AI generation (the "AI-native" promise) — **M** (Tier-1 shipped)
-- Tier-1 text/richtext/select generation shipped (specs/19) and was extracted to the standalone
-  Python `ai-service` (specs/20): prompt build, temperature, and `select` retry run in ai-service;
-  core-service calls it over HTTP behind an `AiClient` seam (the only NestJS↔non-NestJS hop). The
-  Co-Writer panel is live in the editor, and the content-type builder can enable AI per field and
-  restrict text actions. **Remaining:** image generation and richer assist (RAG over `reference`
-  fields).
+### AI generation (the "AI-native" promise) — **M** (text shipped, image + RAG pending)
+- Text generation shipped and redesigned in specs/21 (supersedes specs/19 + 20): a typed
+  `AiOutput` (`scalar` \| `record`) covering single-field generate/refine **and** whole-entry
+  `compose`, a Generate/Refine author model (per-operation tuning kept server-side), a
+  per-project AI voice profile (brand voice/glossary/language), and token/cost accounting on
+  `/usage` (priced from the returned model; `*:free → 0`). Prompt build, temperature, and
+  `select`/`compose` validate-and-repair run in the standalone Python `ai-service`, called over
+  HTTP behind an `AiClient` seam (the only NestJS↔non-NestJS hop). The Co-Writer panel is live.
+  **Remaining:** streaming, embeddings/RAG grounding over `reference` fields, async job queue
+  (bulk/translate), and image generation.
 
 ### Webhook management depth — **M**
 - Delivery logs + retry history UI, more event types, signature docs, test-send.
@@ -320,5 +323,5 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 | Admin panel UI | P1 | L | in progress |
 | SSO/SAML | P2 | L | flag only |
 | Granular RBAC seam | P2 | M | typed perms + cascade shipped (specs/12, 13); custom roles + field-level remain |
-| AI generation | P2 | L→XL | Tier-1 text/richtext/select shipped (specs/19) + extracted to ai-service (specs/20); image gen + RAG remain |
+| AI generation | P2 | L→XL | Redesigned + shipped (specs/21): typed `AiOutput`, whole-entry compose, Generate/Refine model, AI voice profile, token/cost accounting; streaming + RAG + image gen remain |
 | Real-time collab | P2 | XL | none |

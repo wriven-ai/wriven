@@ -467,6 +467,8 @@ export class EntriesService {
         id: aiGenerations.id,
         entryId: aiGenerations.entryId,
         appliedRevisionId: aiGenerations.appliedRevisionId,
+        targetKind: aiGenerations.targetKind,
+        output: aiGenerations.output,
       })
       .from(aiGenerations)
       .where(
@@ -493,6 +495,25 @@ export class EntriesService {
       .update(aiGenerations)
       .set({ entryId: p.entryId, appliedRevisionId: p.revisionId })
       .where(inArray(aiGenerations.id, ids));
+
+    // For a whole-entry `compose`, record which fields it produced as the applied
+    // set. The exact subset the author kept isn't sent on save, so this uses the
+    // generated record's keys — an honest audit signal of what the compose filled.
+    for (const row of rows) {
+      if (row.targetKind !== 'entry' || !row.output) continue;
+      let keys: string[] = [];
+      try {
+        keys = Object.keys(JSON.parse(row.output) as Record<string, unknown>);
+      } catch {
+        keys = [];
+      }
+      if (keys.length > 0) {
+        await tx
+          .update(aiGenerations)
+          .set({ appliedFieldKeys: keys })
+          .where(eq(aiGenerations.id, row.id));
+      }
+    }
   }
 
   /** Slug from the first text field value, else the type name — with a suffix. */

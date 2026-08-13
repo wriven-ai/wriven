@@ -6,6 +6,7 @@ import {
   Image as ImageIcon,
   KeyRound,
   Layers,
+  Sparkles,
   Users,
   Webhook,
   Zap,
@@ -88,6 +89,15 @@ export function WorkspaceStatsGrid() {
           : `of ${data.apiRequests.limit.toLocaleString()} / mo`,
       Icon: Zap,
     },
+    {
+      label: 'AI Generations',
+      value: data.aiText.requests.used.toLocaleString(),
+      sub:
+        data.aiText.requests.limit == null
+          ? `${data.aiText.tokens.total.toLocaleString()} tokens`
+          : `of ${data.aiText.requests.limit.toLocaleString()} / mo · ${data.aiText.tokens.total.toLocaleString()} tokens`,
+      Icon: Sparkles,
+    },
   ];
 
   return (
@@ -115,9 +125,10 @@ export function WorkspaceStatsGrid() {
           </div>
         ))}
       </div>
-      {/* Unmetered dimensions — present but not yet reported (specs/17). */}
+      {/* Still-unmetered dimensions. AI text IS metered now (the card above +
+          the Usage page); only bandwidth + AI image remain forward. */}
       <p className="font-mono text-2xs text-text-muted">
-        Bandwidth, AI text &amp; image usage — not yet reported.
+        Bandwidth &amp; AI image usage — not yet reported. AI text usage is detailed on the Usage page.
       </p>
     </div>
   );

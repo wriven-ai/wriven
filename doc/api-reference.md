@@ -150,6 +150,24 @@ Errors: `CONFLICT` 409 (duplicate `apiId` within the project), `NOT_FOUND` 404, 
 
 > A starter **Post** content type is auto-seeded on project creation (idempotent).
 
+### AI generation — `/content/ai/*`
+
+Same guard chain as other `/content/*` routes (JWT + workspace + project). The generate route additionally requires `AI_GENERATE` and a per-workspace burst throttle (~10/min); profile routes require `CONTENT_TYPE_MANAGE`. Specs/21.
+
+| Method | Route | Body | Result |
+|--------|-------|------|--------|
+| POST | `/content/ai/generate` | `AiGenerateDto` | `AiGenerateResult` |
+| GET | `/content/ai/profile` | — | `AiProfileView` |
+| PATCH | `/content/ai/profile` | `UpdateAiProfileDto` | `AiProfileView` |
+
+`AiGenerateDto`: `{ requestId, contentTypeId, entryId?, targetKind:'field'\|'entry', fieldKey?, intent:'generate'\|'refine', preset?, instruction?, sourceContent?, history? }`. `targetKind:'entry'` runs a whole-entry `compose` (drafts every AI-eligible field in one call = one quota unit). `preset` ∈ `expand\|shorten\|rewrite\|tone\|summarize\|continue` (refine only). Refine requires `sourceContent`; `tone` requires `instruction`.
+
+`AiGenerateResult`: `{ generationId, output, model, usage:{promptTokens,completionTokens,totalTokens}, remaining, truncated? }` where `output` is `{kind:'scalar',text}` or `{kind:'record',fields:{[key]:string}}`. `truncated` is set when the provider hit the output cap.
+
+`AiProfileView`: `{ brandVoice, glossary:[{term,prefer}], language, updatedAt }`. The profile is resolved server-side and injected into every prompt; the client never sends it on generate.
+
+Errors: `PLAN_LIMIT_REACHED` 403, `RATE_LIMITED` 429, `AI_NOT_CONFIGURED` 503, `AI_QUOTA_UNAVAILABLE` 503, `AI_GENERATION_FAILED` 502 (incl. `select`/`compose` repair-miss), `AI_INPUT_TOO_LARGE` 422, `AI_GENERATION_IN_PROGRESS` 409, `IDEMPOTENCY_KEY_REUSED` 409. Save the entry with `aiGenerationIds` to record apply-provenance.
+
 ### Media library
 
 R2-backed; presigned **direct** upload (browser PUTs to R2). Keys-only. See specs/03.
@@ -218,7 +236,7 @@ Current-period Delivery API consumption for the active workspace. **Protected** 
 |--------|------|------|----------|
 | GET | `/usage` | — | `UsageView` — current-period requests used/limit + storage used/limit |
 
-`UsageView`: `{ period: { start, end }, requests: { used, limit }, storage: { usedMb, limitMb } }` (ISO timestamps; `limit: null` = the plan dimension is unlimited).
+`UsageView`: `{ period: { start, end }, requests: { used, limit }, storage: { usedMb, limitMb }, ai: AiUsageStats }` (ISO timestamps; `limit: null` = the plan dimension is unlimited). `ai` = `{ requests: { used, limit }, tokens: { prompt, completion, total }, cost: { microusd, complete, unpricedGenerations } }` — requests count `succeeded`; tokens/cost sum `succeeded+failed`; `complete:false` means some generation used an unpriced model.
 
 - Period is the calendar month (UTC midnight boundaries). `requests.used` counts Delivery API requests authenticated by a `Bearer wrk_…` key (one increment per HTTP request, counted on success); `storage.usedMb` is the live sum of media bytes across the workspace's projects.
 - The gateway batches increments off the hot path and flushes to core-service, so `used` lags real-time by up to the flush interval (~15s).
@@ -234,7 +252,7 @@ Read-only aggregate counts for the dashboard. Header-scoped like `/usage` (the g
 | GET | `/stats/workspace` | — | `WorkspaceStatsView` — projects, members, entries split, content types, API keys, webhooks, media, API requests vs limit |
 | GET | `/stats/project` | — | `ProjectStatsView` — entries split, content types, API keys, webhooks, media (this project) |
 
-`WorkspaceStatsView`: `{ projects, members, entries: { total, published, draft, archived }, contentTypes, apiKeys, webhooks, media: { count, usedMb, limitMb }, apiRequests: { used, limit }, period, bandwidthGb: { usedGb, limitGb }, aiText: { used, limit }, aiImage: { used, limit } }`.
+`WorkspaceStatsView`: `{ projects, members, entries: { total, published, draft, archived }, contentTypes, apiKeys, webhooks, media: { count, usedMb, limitMb }, apiRequests: { used, limit }, period, bandwidthGb: { usedGb, limitGb }, aiText: AiUsageStats, aiImage: { used, limit } }` (see `/usage` for the `AiUsageStats` shape).
 
 - Counts exclude soft-deleted entries/content-types/media and revoked API keys. `entries.total === published + draft + archived`.
 - `/stats/workspace` merges auth-service (projects + members) with core-service (the rest) at the gateway.

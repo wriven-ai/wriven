@@ -1,5 +1,11 @@
 # Spec: AI Content Generation
 
+> **⚠️ SUPERSEDED by [specs/21 — AI Generation Redesign](./21-ai-generation-redesign.md).**
+> The field model, operation surface, and contracts here were reshaped: `aiAssist`/
+> `aiOperations` removed, the author UI collapsed to Generate/Refine (+presets),
+> the response became a typed `AiOutput` union with whole-entry `compose`, and
+> token/cost accounting was added. Kept for history only.
+
 > Priority: P2 · Area: core · ai · client · cross · Status: drafted
 
 ## Overview

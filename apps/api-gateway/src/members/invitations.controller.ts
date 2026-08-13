@@ -8,14 +8,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  AuthUser,
-  CreateProjectInvitationDto,
-  CreateWorkspaceInvitationDto,
-  INVITATION_PATTERNS,
-  SERVICE_TOKENS,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -23,7 +17,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller()
 export class InvitationsController {
   constructor(
-    @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
   ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────────
@@ -31,12 +25,12 @@ export class InvitationsController {
   @Post('workspaces/:workspaceId/invitations')
   @UseGuards(JwtAuthGuard)
   createWorkspace(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
-    @Body() dto: CreateWorkspaceInvitationDto,
+    @Body() dto: contracts.CreateWorkspaceInvitationDto,
   ) {
     return firstValueFrom(
-      this.auth.send(INVITATION_PATTERNS.CREATE, {
+      this.auth.send(contracts.INVITATION_PATTERNS.CREATE, {
         callerUserId: user.userId,
         scope: 'workspace',
         workspaceId,
@@ -49,12 +43,12 @@ export class InvitationsController {
   @Post('projects/:projectId/invitations')
   @UseGuards(JwtAuthGuard)
   createProject(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
-    @Body() dto: CreateProjectInvitationDto,
+    @Body() dto: contracts.CreateProjectInvitationDto,
   ) {
     return firstValueFrom(
-      this.auth.send(INVITATION_PATTERNS.CREATE, {
+      this.auth.send(contracts.INVITATION_PATTERNS.CREATE, {
         callerUserId: user.userId,
         scope: 'project',
         projectId,
@@ -69,11 +63,11 @@ export class InvitationsController {
   @Get('workspaces/:workspaceId/invitations')
   @UseGuards(JwtAuthGuard)
   listWorkspace(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
   ) {
     return firstValueFrom(
-      this.auth.send(INVITATION_PATTERNS.LIST, {
+      this.auth.send(contracts.INVITATION_PATTERNS.LIST, {
         callerUserId: user.userId,
         scope: 'workspace',
         workspaceId,
@@ -84,11 +78,11 @@ export class InvitationsController {
   @Get('projects/:projectId/invitations')
   @UseGuards(JwtAuthGuard)
   listProject(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
   ) {
     return firstValueFrom(
-      this.auth.send(INVITATION_PATTERNS.LIST, {
+      this.auth.send(contracts.INVITATION_PATTERNS.LIST, {
         callerUserId: user.userId,
         scope: 'project',
         projectId,
@@ -100,9 +94,9 @@ export class InvitationsController {
 
   @Delete('invitations/:id')
   @UseGuards(JwtAuthGuard)
-  revoke(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  revoke(@CurrentUser() user: contracts.AuthUser, @Param('id') id: string) {
     return firstValueFrom(
-      this.auth.send(INVITATION_PATTERNS.REVOKE, {
+      this.auth.send(contracts.INVITATION_PATTERNS.REVOKE, {
         callerUserId: user.userId,
         id,
       }),
@@ -111,9 +105,9 @@ export class InvitationsController {
 
   @Post('invitations/:id/resend')
   @UseGuards(JwtAuthGuard)
-  resend(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  resend(@CurrentUser() user: contracts.AuthUser, @Param('id') id: string) {
     return firstValueFrom(
-      this.auth.send(INVITATION_PATTERNS.RESEND, {
+      this.auth.send(contracts.INVITATION_PATTERNS.RESEND, {
         callerUserId: user.userId,
         id,
       }),
@@ -126,15 +120,15 @@ export class InvitationsController {
   @Get('invitations/token/:token')
   preview(@Param('token') token: string) {
     return firstValueFrom(
-      this.auth.send(INVITATION_PATTERNS.PREVIEW, { token }),
+      this.auth.send(contracts.INVITATION_PATTERNS.PREVIEW, { token }),
     );
   }
 
   @Post('invitations/token/:token/accept')
   @UseGuards(JwtAuthGuard)
-  accept(@CurrentUser() user: AuthUser, @Param('token') token: string) {
+  accept(@CurrentUser() user: contracts.AuthUser, @Param('token') token: string) {
     return firstValueFrom(
-      this.auth.send(INVITATION_PATTERNS.ACCEPT, {
+      this.auth.send(contracts.INVITATION_PATTERNS.ACCEPT, {
         token,
         userId: user.userId,
       }),

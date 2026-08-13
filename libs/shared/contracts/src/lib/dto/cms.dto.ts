@@ -19,8 +19,6 @@ import {
 } from 'class-validator';
 import { FIELD_TYPES } from '../types/cms.types';
 import type { FieldType } from '../types/cms.types';
-import { AI_OPERATIONS } from './ai.dto';
-import type { AiOperation } from './ai.dto';
 
 const API_ID = /^[a-z][a-z0-9_]*$/;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -62,17 +60,6 @@ export class FieldDefDto {
   @IsOptional()
   @IsString()
   refTypeId?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  aiAssist?: boolean;
-
-  @IsOptional()
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(AI_OPERATIONS.length)
-  @IsIn(AI_OPERATIONS, { each: true })
-  aiOperations?: AiOperation[];
 
   /** Marks a field as sensitive: it cannot be a target or AI context source. */
   @IsOptional()

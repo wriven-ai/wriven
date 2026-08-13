@@ -1,5 +1,10 @@
 import type {
   ApiError,
+  AiIntent,
+  AiProfileView,
+  AiGlossaryTerm,
+  AiRefinePreset,
+  AiTargetKind,
   ApiKeyScope,
   ApiKeyView,
   AssignableWorkspaceRole,
@@ -366,27 +371,28 @@ export const contentApi = {
 };
 
 export const aiApi = {
-  generate: (dto: {
-    requestId: string;
-    contentTypeId: string;
-    entryId?: string;
-    fieldKey: string;
-    operation:
-      | 'generate'
-      | 'expand'
-      | 'shorten'
-      | 'rewrite'
-      | 'tone'
-      | 'summarize'
-      | 'continue';
-    instruction?: string;
-    sourceContent?: string;
-    tone?: string;
-    history?: { role: 'user' | 'assistant'; content: string }[];
-  }, signal?: AbortSignal) =>
+  generate: (
+    dto: {
+      requestId: string;
+      contentTypeId: string;
+      entryId?: string;
+      targetKind: AiTargetKind;
+      /** Required when `targetKind` is `'field'`. */
+      fieldKey?: string;
+      intent: AiIntent;
+      /** Refine shortcut; only valid with `intent: 'refine'` on a field. */
+      preset?: AiRefinePreset;
+      instruction?: string;
+      sourceContent?: string;
+      history?: { role: 'user' | 'assistant'; content: string }[];
+    },
+    signal?: AbortSignal,
+  ) =>
     request<{
       generationId: string;
-      text: string;
+      output:
+        | { kind: 'scalar'; text: string }
+        | { kind: 'record'; fields: Record<string, string> };
       model: string;
       usage: {
         promptTokens: number;
@@ -394,12 +400,27 @@ export const aiApi = {
         totalTokens: number;
       };
       remaining: number | null;
+      /** Provider hit the output cap — the result is incomplete. */
+      truncated?: boolean;
     }>('/content/ai/generate', {
       method: 'POST',
       body: dto,
       workspace: true,
       project: true,
       signal,
+    }),
+  getProfile: () =>
+    request<AiProfileView>('/content/ai/profile', { workspace: true, project: true }),
+  updateProfile: (dto: {
+    brandVoice?: string | null;
+    glossary?: AiGlossaryTerm[];
+    language?: string | null;
+  }) =>
+    request<AiProfileView>('/content/ai/profile', {
+      method: 'PATCH',
+      body: dto,
+      workspace: true,
+      project: true,
     }),
 };
 

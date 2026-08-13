@@ -3,11 +3,12 @@
  * from existing tables (no metering of its own; requests/storage come from the
  * usage module, specs/14). See specs/17.
  *
- * Dimensions Wriven bills on but does NOT yet meter — bandwidth (R2/CDN
- * egress), AI text, AI image — are present as forward-compatible fields with
- * `used: null`. They flip live when their metering lands; the UI renders
- * "not yet reported" until then. Do not fabricate a proxy value.
+ * Bandwidth and AI image remain forward-compatible `used: null` fields until
+ * their metering lands. AI text is now fully metered (specs/21): it reports
+ * requests, tokens, and known cost via {@link AiUsageStats}.
  */
+
+import type { AiUsageStats } from './usage.types';
 
 /** Entry counts split by status. `total` is non-deleted; the split reconciles. */
 export interface EntryStatusCounts {
@@ -36,7 +37,8 @@ export interface WorkspaceStatsView {
   period: { start: string; end: string }; // current calendar month (UTC)
   // forward-compatible — unmetered today; `used` null until metering lands
   bandwidthGb: { usedGb: null; limitGb: number | null };
-  aiText: { used: number | null; limit: number | null };
+  // AI text is metered (specs/21): requests + tokens + known cost.
+  aiText: AiUsageStats;
   aiImage: { used: null; limit: number | null };
 }
 

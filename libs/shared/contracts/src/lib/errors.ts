@@ -39,6 +39,10 @@ export const ERROR_CODES = {
   // AI usage is a paid resource: do not submit a provider request when the
   // workspace allowance cannot be verified.
   AI_QUOTA_UNAVAILABLE: { code: 'AI_QUOTA_UNAVAILABLE', statusCode: 503 },
+  // Aggregate user-controlled input (draft + history + context) exceeds the
+  // context budget. Actionable, unlike the generic failure it used to collapse
+  // into — the author can shorten the draft or clear the conversation.
+  AI_INPUT_TOO_LARGE: { code: 'AI_INPUT_TOO_LARGE', statusCode: 422 },
   // The same idempotency key is already executing. Reuse the key only for a
   // safe retry of the same request; start a new generation with a new key.
   AI_GENERATION_IN_PROGRESS: { code: 'AI_GENERATION_IN_PROGRESS', statusCode: 409 },

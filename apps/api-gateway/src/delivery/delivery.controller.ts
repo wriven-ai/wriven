@@ -7,14 +7,8 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  ApiKeyResolution,
-  CORE_PATTERNS,
-  DeliveryQueryDto,
-  ERROR_CODES,
-  SERVICE_TOKENS,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import type { Response } from 'express';
 import { firstValueFrom } from 'rxjs';
 import { ApiKeyGuard } from '../auth/api-key.guard';
@@ -23,7 +17,7 @@ import { UsageBufferService } from '../usage/usage-buffer.service';
 import { UsageEnforceService } from '../usage/usage-enforce.service';
 
 /** Read keys see published only; preview/manage keys also see drafts. */
-const isPreview = (key: ApiKeyResolution): boolean => key.scope !== 'read';
+const isPreview = (key: contracts.ApiKeyResolution): boolean => key.scope !== 'read';
 
 /**
  * Public Content Delivery API. Authenticated by a project-scoped API key
@@ -35,24 +29,24 @@ const isPreview = (key: ApiKeyResolution): boolean => key.scope !== 'read';
 @UseGuards(ApiKeyGuard)
 export class DeliveryController {
   constructor(
-    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
     private readonly usageEnforce: UsageEnforceService,
     private readonly usageBuffer: UsageBufferService,
   ) {}
 
   @Get('content/:apiId')
   async list(
-    @CurrentApiKey() key: ApiKeyResolution,
+    @CurrentApiKey() key: contracts.ApiKeyResolution,
     @Param('projectId') projectId: string,
     @Param('apiId') apiId: string,
-    @Query() query: DeliveryQueryDto,
+    @Query() query: contracts.DeliveryQueryDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     this.assertProject(key, projectId);
     await this.usageEnforce.assertRequests(key.workspaceId);
     const preview = isPreview(key);
     const result = await firstValueFrom<{ items: Array<{ id: string }> }>(
-      this.core.send(CORE_PATTERNS.DELIVERY_LIST, {
+      this.core.send(contracts.CORE_PATTERNS.DELIVERY_LIST, {
         projectId: key.projectId,
         apiId,
         query,
@@ -73,18 +67,18 @@ export class DeliveryController {
 
   @Get('content/:apiId/:slug')
   async get(
-    @CurrentApiKey() key: ApiKeyResolution,
+    @CurrentApiKey() key: contracts.ApiKeyResolution,
     @Param('projectId') projectId: string,
     @Param('apiId') apiId: string,
     @Param('slug') slug: string,
-    @Query() query: DeliveryQueryDto,
+    @Query() query: contracts.DeliveryQueryDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     this.assertProject(key, projectId);
     await this.usageEnforce.assertRequests(key.workspaceId);
     const preview = isPreview(key);
     const result = await firstValueFrom<{ id: string }>(
-      this.core.send(CORE_PATTERNS.DELIVERY_GET, {
+      this.core.send(contracts.CORE_PATTERNS.DELIVERY_GET, {
         projectId: key.projectId,
         apiId,
         slug,
@@ -118,10 +112,10 @@ export class DeliveryController {
   }
 
   /** The path project must be the key's project — reject mismatches. */
-  private assertProject(key: ApiKeyResolution, pathProjectId: string): void {
+  private assertProject(key: contracts.ApiKeyResolution, pathProjectId: string): void {
     if (key.projectId !== pathProjectId) {
       throw {
-        ...ERROR_CODES.FORBIDDEN,
+        ...contracts.ERROR_CODES.FORBIDDEN,
         message: 'This API key cannot access the requested project.',
       };
     }

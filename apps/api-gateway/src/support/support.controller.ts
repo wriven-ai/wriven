@@ -9,17 +9,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  AuthUser,
-  CloseTicketDto,
-  CORE_PATTERNS,
-  CreateTicketDto,
-  CreateTicketMessageDto,
-  ListTicketsQueryDto,
-  PresignTicketAttachmentDto,
-  SERVICE_TOKENS,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
@@ -31,17 +22,17 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 @UseGuards(JwtAuthGuard, WorkspaceGuard)
 export class SupportController {
   constructor(
-    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Post('attachments/presign')
   presign(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
-    @Body() dto: PresignTicketAttachmentDto,
+    @Body() dto: contracts.PresignTicketAttachmentDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.SUPPORT_PRESIGN, {
+      this.core.send(contracts.CORE_PATTERNS.SUPPORT_PRESIGN, {
         workspaceId,
         userId: user.userId,
         dto,
@@ -51,12 +42,12 @@ export class SupportController {
 
   @Post()
   create(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
-    @Body() dto: CreateTicketDto,
+    @Body() dto: contracts.CreateTicketDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.SUPPORT_CREATE, {
+      this.core.send(contracts.CORE_PATTERNS.SUPPORT_CREATE, {
         workspaceId,
         userId: user.userId,
         dto,
@@ -66,13 +57,13 @@ export class SupportController {
 
   @Get()
   list(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentWorkspaceRole() workspaceRole: string,
-    @Query() dto: ListTicketsQueryDto,
+    @Query() dto: contracts.ListTicketsQueryDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.SUPPORT_LIST, {
+      this.core.send(contracts.CORE_PATTERNS.SUPPORT_LIST, {
         workspaceId,
         userId: user.userId,
         workspaceRole,
@@ -83,13 +74,13 @@ export class SupportController {
 
   @Get(':id')
   get(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentWorkspaceRole() workspaceRole: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.SUPPORT_GET, {
+      this.core.send(contracts.CORE_PATTERNS.SUPPORT_GET, {
         workspaceId,
         userId: user.userId,
         workspaceRole,
@@ -100,13 +91,13 @@ export class SupportController {
 
   @Post(':id/messages')
   reply(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @Param('id') id: string,
-    @Body() dto: CreateTicketMessageDto,
+    @Body() dto: contracts.CreateTicketMessageDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.SUPPORT_REPLY, {
+      this.core.send(contracts.CORE_PATTERNS.SUPPORT_REPLY, {
         workspaceId,
         userId: user.userId,
         id,
@@ -117,13 +108,13 @@ export class SupportController {
 
   @Patch(':id')
   close(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @Param('id') id: string,
-    @Body() _dto: CloseTicketDto,
+    @Body() _dto: contracts.CloseTicketDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.SUPPORT_CLOSE, {
+      this.core.send(contracts.CORE_PATTERNS.SUPPORT_CLOSE, {
         workspaceId,
         userId: user.userId,
         id,

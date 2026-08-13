@@ -13,6 +13,8 @@ Visual mental models of the Wriven system. Each entry is an `.svg` (the diagram)
 | 07 | [Admin Panel](./07-admin-panel.md) | platform console · separate RBAC axis |
 | 08 | [Frontend](./08-frontend.md) | cookie auth · URL scope · nav brain · RBAC mirror |
 | 09 | [Usage Metering](./09-usage-metering.md) | Delivery request counter · batched flush · `/usage` read · soft overage gate |
+| 10 | [AI Generation — Flow](./10-ai-generation-flow.md) | gateway → core (quota + cost) → ai-service (prompt) → provider · typed `AiOutput` · one generation = one quota unit |
+| 11 | [AI Output Model](./11-ai-output-model.md) | Generate/Refine/Compose → derived operation → typed `AiOutput` · select & compose validated + repaired once |
 
 > Start at [00](./00-system-overview.md), then [01](./01-auth-rbac.md) (the RBAC mental model). Numbers skip 03 — the request lifecycle is covered by 01a (backend flow) + 08 (client 401-refresh).
 

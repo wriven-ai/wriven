@@ -14,12 +14,50 @@ import {
 /**
  * AI content generation contracts. Core-service validates scope, policy, quota,
  * and audit state, then calls the standalone Python ai-service behind an
- * `AiClient` seam.
+ * `AiClient` seam. See specs/21.
+ *
+ * The author-facing surface is deliberately small: pick a **target** (one field,
+ * or the whole entry), pick an **intent** (create or transform), optionally pick
+ * a **preset** shortcut. Core derives the persisted {@link AiOperation} from that
+ * triple — the operation selects the prompt template, temperature, and output
+ * token cap, all of which stay per-verb because a weak free model follows a
+ * tight template far better than one generic instruction.
  */
 
-/** Operations the generator supports (Tier-1 fields: text | richtext | select). */
+/** What a generation acts on: a single field, or every eligible field of an entry. */
+export const AI_TARGET_KINDS = ['field', 'entry'] as const;
+export type AiTargetKind = (typeof AI_TARGET_KINDS)[number];
+
+/** Create new content, or transform what the author already has. */
+export const AI_INTENTS = ['generate', 'refine'] as const;
+export type AiIntent = (typeof AI_INTENTS)[number];
+
+/**
+ * Refine shortcuts surfaced as chips in the editor. A preset only prefills the
+ * author's intent — it is not a separate UI mode, and omitting it leaves a
+ * freeform `refine` driven by `instruction` alone.
+ */
+export const AI_REFINE_PRESETS = [
+  'expand',
+  'shorten',
+  'rewrite',
+  'tone',
+  'summarize',
+  'continue',
+] as const;
+export type AiRefinePreset = (typeof AI_REFINE_PRESETS)[number];
+
+/**
+ * Server-derived operation persisted on the audit row. Selects the prompt
+ * template, temperature, and output-token cap in ai-service.
+ *
+ * KEEP IN SYNC with `OPERATIONS` in `apps/ai-service/app/schemas.py` (a parity
+ * test in ai-service reads this file and asserts the two match).
+ */
 export const AI_OPERATIONS = [
   'generate',
+  'compose',
+  'refine',
   'expand',
   'shorten',
   'rewrite',
@@ -51,24 +89,40 @@ export class AiGenerateDto {
   @IsUUID()
   requestId!: string;
 
-  /** Content type owning the target field (field-def lookup + prompt context). */
+  /** Content type owning the target (field-def lookup + prompt context). */
   @IsString()
   contentTypeId!: string;
 
-  /** Existing entry whose sibling field values seed the prompt. */
+  /** Existing entry whose allowlisted sibling values seed the prompt. */
   @IsOptional()
   @IsString()
   entryId?: string;
 
-  /** Target field (must be Tier-1, scalar, and allowed by its AI policy). */
+  /** Whether this targets one field or the whole entry. */
+  @IsIn(AI_TARGET_KINDS)
+  targetKind!: AiTargetKind;
+
+  /**
+   * Target field key. Required when `targetKind === 'field'`; must be absent for
+   * `'entry'`. Enforced in `AiService` so the error is domain-specific.
+   */
+  @IsOptional()
   @IsString()
   @MaxLength(60)
-  fieldKey!: string;
+  fieldKey?: string;
 
-  @IsIn(AI_OPERATIONS)
-  operation!: AiOperation;
+  @IsIn(AI_INTENTS)
+  intent!: AiIntent;
 
-  /** Freeform refinement note (e.g. "make it punchier", a tone target). */
+  /**
+   * Refine shortcut. Only valid with `targetKind:'field'` + `intent:'refine'`;
+   * omitting it yields a freeform `refine` from `instruction`.
+   */
+  @IsOptional()
+  @IsIn(AI_REFINE_PRESETS)
+  preset?: AiRefinePreset;
+
+  /** Freeform note (e.g. "make it punchier", or the tone target for `preset:'tone'`). */
   @IsOptional()
   @IsString()
   @MaxLength(2000)
@@ -76,19 +130,13 @@ export class AiGenerateDto {
 
   /**
    * Current target-field content supplied by the editor. Required by core for
-   * refinement operations so the model transforms the author's actual draft,
-   * including unsaved changes that are not yet stored on the entry.
+   * every refine intent so the model transforms the author's actual draft,
+   * including unsaved changes not yet stored on the entry.
    */
   @IsOptional()
   @IsString()
-  @MaxLength(8000)
+  @MaxLength(24000)
   sourceContent?: string;
-
-  /** Optional tone hint. */
-  @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  tone?: string;
 
   /** Prior turns for multi-turn refinement; capped client-side to the last ~8. */
   @IsOptional()
@@ -106,15 +154,76 @@ export interface AiTokenUsage {
   totalTokens: number;
 }
 
+/**
+ * The typed result of a generation.
+ *
+ * - `scalar` — one field's content (`text`/`richtext`, or a `select` value already
+ *   validated against its options; a select is just a constrained scalar, so it
+ *   needs no separate variant and stays trivially replayable from the audit row).
+ * - `record` — a whole-entry `compose`: a map of field key → generated value the
+ *   editor previews and applies per field.
+ */
+export type AiOutput =
+  | { kind: 'scalar'; text: string }
+  | { kind: 'record'; fields: Record<string, string> };
+
 /** Response view for `core.ai.generate`. */
 export interface AiGenerateResult {
-  /** Audit-row id; used by later apply-provenance and job-status workflows. */
+  /** Audit-row id; carried back on save to record apply-provenance. */
   generationId: string;
-  /** Generated/refined content. For `select`: a member of the field's `options[]`. */
-  text: string;
-  /** The model actually used (`response.model` — may differ from `AI_MODEL` for `openrouter/free`). */
+  /** The generated content, typed by target (single field vs whole entry). */
+  output: AiOutput;
+  /** The model actually used (`response.model` — varies per call on `openrouter/free`). */
   model: string;
   usage: AiTokenUsage;
   /** Requests left in the billing period; `null` when the workspace is unmetered. */
   remaining: number | null;
+  /** Provider stopped on the token cap — the output is incomplete. */
+  truncated?: boolean;
+}
+
+/** A preferred-terminology entry in a project's AI glossary. */
+export interface AiGlossaryTerm {
+  term: string;
+  prefer: string;
+}
+
+/** Per-project AI voice configuration (brand voice, glossary, language). */
+export interface AiProfileView {
+  brandVoice: string | null;
+  glossary: AiGlossaryTerm[];
+  language: string | null;
+  updatedAt: string | null;
+}
+
+class AiGlossaryTermDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  term!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  prefer!: string;
+}
+
+/** Upsert body for `PATCH /content/ai/profile` → `core.ai.profile.update`. */
+export class UpdateAiProfileDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  brandVoice?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => AiGlossaryTermDto)
+  glossary?: AiGlossaryTerm[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  language?: string | null;
 }

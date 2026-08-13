@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  AiUsageStats,
   EntryStatusCounts,
   ProjectStatsView,
   UsageBucket,
@@ -8,7 +9,8 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, sql } from 'drizzle-orm';
+import { currentPeriod } from '../common/period';
 import * as schema from '../db/schema';
 import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 
@@ -79,7 +81,7 @@ export class UsageService {
   async read(payload: { workspaceId: string }): Promise<UsageView> {
     const period = currentPeriod();
 
-    const [reqRow, storageRow, limits] = await Promise.all([
+    const [reqRow, storageRow, limits, aiStats] = await Promise.all([
       this.db.query.usageBuckets.findFirst({
         where: and(
           eq(usageBuckets.workspaceId, payload.workspaceId),
@@ -89,6 +91,7 @@ export class UsageService {
       }),
       this.storageSum(payload.workspaceId),
       this.entitlements.effectiveLimits(payload.workspaceId),
+      this.aiUsage(payload.workspaceId),
     ]);
 
     return {
@@ -104,6 +107,13 @@ export class UsageService {
         usedMb: Math.round(storageRow / (1024 * 1024)),
         limitMb: limits?.storageMb ?? null,
       },
+      ai: {
+        ...aiStats,
+        requests: {
+          ...aiStats.requests,
+          limit: limits?.aiTextRequestsPerMonth ?? null,
+        },
+      },
     };
   }
 
@@ -118,16 +128,52 @@ export class UsageService {
     return Number(row?.total ?? 0);
   }
 
-  /** Succeeded AI text generations this billing period — the `aiText.used` stat. */
-  private async aiTextUsed(workspaceId: string): Promise<number> {
-    return this.db.$count(
-      aiGenerations,
-      and(
-        eq(aiGenerations.workspaceId, workspaceId),
-        eq(aiGenerations.status, 'succeeded'),
-        sql`${aiGenerations.createdAt} >= date_trunc('month', now())`,
-      ),
-    );
+  /**
+   * AI usage for the current period in one pass. `requests.used` counts
+   * `succeeded` only (the billed unit); tokens and cost sum `succeeded` AND
+   * `failed`, because a failed provider call still burned tokens. A generation
+   * with an unknown price (null cost) is counted so the caller can flag the
+   * period's dollar total as incomplete. `requests.limit` is filled by the
+   * caller from the resolved plan. See specs/21.
+   */
+  private async aiUsage(workspaceId: string): Promise<AiUsageStats> {
+    const done = sql`${aiGenerations.status} in ('succeeded','failed')`;
+    // A row only counts as "unpriced" when the provider was actually called
+    // (total_tokens is not null) but its model had no known price. A failed row
+    // that never reached the provider (e.g. AI_INPUT_TOO_LARGE) has null tokens
+    // and null cost — it must NOT poison the period's `cost.complete` flag.
+    const reachedProvider = sql`${aiGenerations.totalTokens} is not null`;
+    const [row] = await this.db
+      .select({
+        used: sql<number>`count(*) filter (where ${aiGenerations.status} = 'succeeded')::int`,
+        prompt: sql<number>`coalesce(sum(${aiGenerations.promptTokens}) filter (where ${done}), 0)::bigint`,
+        completion: sql<number>`coalesce(sum(${aiGenerations.completionTokens}) filter (where ${done}), 0)::bigint`,
+        total: sql<number>`coalesce(sum(${aiGenerations.totalTokens}) filter (where ${done}), 0)::bigint`,
+        cost: sql<number>`coalesce(sum(${aiGenerations.costMicrousd}) filter (where ${done}), 0)::bigint`,
+        unpriced: sql<number>`count(*) filter (where ${aiGenerations.costMicrousd} is null and ${reachedProvider} and ${done})::int`,
+      })
+      .from(aiGenerations)
+      .where(
+        and(
+          eq(aiGenerations.workspaceId, workspaceId),
+          // Shared UTC boundary — must match the AI quota reserve exactly.
+          gte(aiGenerations.createdAt, currentPeriod().start),
+        ),
+      );
+    const unpriced = Number(row?.unpriced ?? 0);
+    return {
+      requests: { used: Number(row?.used ?? 0), limit: null },
+      tokens: {
+        prompt: Number(row?.prompt ?? 0),
+        completion: Number(row?.completion ?? 0),
+        total: Number(row?.total ?? 0),
+      },
+      cost: {
+        microusd: Number(row?.cost ?? 0),
+        complete: unpriced === 0,
+        unpricedGenerations: unpriced,
+      },
+    };
   }
 
   /**
@@ -144,7 +190,7 @@ export class UsageService {
     const usage = await this.read({ workspaceId: ws });
     const limits = await this.entitlements.effectiveLimits(ws);
 
-    const [entries, contentTypesCount, apiKeysCount, webhooksCount, media, aiTextCount] =
+    const [entries, contentTypesCount, apiKeysCount, webhooksCount, media] =
       await Promise.all([
         this.entryCounts({ workspaceId: ws }),
         this.db.$count(
@@ -157,7 +203,6 @@ export class UsageService {
         ),
         this.db.$count(webhooks, eq(webhooks.workspaceId, ws)),
         this.mediaAggregate({ workspaceId: ws }),
-        this.aiTextUsed(ws),
       ]);
 
     return {
@@ -175,7 +220,8 @@ export class UsageService {
       apiRequests: usage.requests,
       period: usage.period,
       bandwidthGb: { usedGb: null, limitGb: limits?.assetBandwidthGb ?? null },
-      aiText: { used: aiTextCount, limit: limits?.aiTextRequestsPerMonth ?? null },
+      // Full AI usage (requests + tokens + known cost) — reuses read()'s `ai`.
+      aiText: usage.ai,
       aiImage: { used: null, limit: limits?.aiImageRequestsPerMonth ?? null },
     };
   }
@@ -267,10 +313,11 @@ export class UsageService {
   }
 }
 
-/** Current billing window: calendar month, UTC midnight boundaries. */
-export function currentPeriod(): { start: Date; end: Date } {
-  const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  return { start, end };
-}
+/**
+ * Current billing window: calendar month, UTC midnight boundaries.
+ *
+ * Re-exported from `common/period` so existing importers keep working while the
+ * single definition lives next to the other shared helpers — AI quota, `/usage`,
+ * and stats must all agree on the boundary.
+ */
+export { currentPeriod };

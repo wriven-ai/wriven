@@ -9,16 +9,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  AuthUser,
-  CORE_PATTERNS,
-  CreateMediaDto,
-  DeleteMediaBulkDto,
-  Permission,
-  PresignUploadDto,
-  SERVICE_TOKENS,
-} from '@wriven/contracts';
+import type { ClientProxy } from '@nestjs/microservices';
+import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -33,19 +25,19 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 export class MediaController {
   constructor(
-    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Post('presign')
-  @RequirePermission(Permission.MEDIA_MANAGE)
+  @RequirePermission(contracts.Permission.MEDIA_MANAGE)
   presign(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
-    @Body() dto: PresignUploadDto,
+    @Body() dto: contracts.PresignUploadDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.MEDIA_PRESIGN, {
+      this.core.send(contracts.CORE_PATTERNS.MEDIA_PRESIGN, {
         workspaceId,
         projectId,
         userId: user.userId,
@@ -55,15 +47,15 @@ export class MediaController {
   }
 
   @Post()
-  @RequirePermission(Permission.MEDIA_MANAGE)
+  @RequirePermission(contracts.Permission.MEDIA_MANAGE)
   create(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
-    @Body() dto: CreateMediaDto,
+    @Body() dto: contracts.CreateMediaDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.MEDIA_CREATE, {
+      this.core.send(contracts.CORE_PATTERNS.MEDIA_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
@@ -73,7 +65,7 @@ export class MediaController {
   }
 
   @Get()
-  @RequirePermission(Permission.PROJECT_VIEW)
+  @RequirePermission(contracts.Permission.PROJECT_VIEW)
   list(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -83,7 +75,7 @@ export class MediaController {
     @Query('sort') sort?: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.MEDIA_LIST, {
+      this.core.send(contracts.CORE_PATTERNS.MEDIA_LIST, {
         workspaceId,
         projectId,
         page: page ? Number(page) : undefined,
@@ -95,39 +87,39 @@ export class MediaController {
   }
 
   @Get(':id')
-  @RequirePermission(Permission.PROJECT_VIEW)
+  @RequirePermission(contracts.Permission.PROJECT_VIEW)
   get(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.MEDIA_GET, { workspaceId, projectId, id }),
+      this.core.send(contracts.CORE_PATTERNS.MEDIA_GET, { workspaceId, projectId, id }),
     );
   }
 
   @Delete(':id')
-  @RequirePermission(Permission.MEDIA_MANAGE)
+  @RequirePermission(contracts.Permission.MEDIA_MANAGE)
   remove(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.MEDIA_DELETE, { workspaceId, projectId, id }),
+      this.core.send(contracts.CORE_PATTERNS.MEDIA_DELETE, { workspaceId, projectId, id }),
     );
   }
 
   /** Bulk delete — atomic DB soft-delete (scoped to the project) + R2 cleanup. */
   @Post('bulk-delete')
-  @RequirePermission(Permission.MEDIA_MANAGE)
+  @RequirePermission(contracts.Permission.MEDIA_MANAGE)
   removeMany(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
-    @Body() dto: DeleteMediaBulkDto,
+    @Body() dto: contracts.DeleteMediaBulkDto,
   ) {
     return firstValueFrom(
-      this.core.send(CORE_PATTERNS.MEDIA_DELETE_BULK, {
+      this.core.send(contracts.CORE_PATTERNS.MEDIA_DELETE_BULK, {
         workspaceId,
         projectId,
         ids: dto.ids,

@@ -119,7 +119,7 @@ services:
       - key: AI_MAX_INPUT_CHARS
         value: "24000"
       - key: AI_MAX_OUTPUT_TOKENS
-        value: "1200"
+        value: "8000"
       # Optional JSON of extra provider headers (e.g. OpenRouter attribution).
       - key: AI_HEADERS
         sync: false

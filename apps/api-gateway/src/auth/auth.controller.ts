@@ -8,24 +8,9 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import type { ClientProxy } from '@nestjs/microservices';
 import { AuthGuard } from '@nestjs/passport';
-import {
-  AUTH_PATTERNS,
-  AuthResult,
-  AuthUser,
-  ERROR_CODES,
-  ForgotPasswordDto,
-  GoogleProfile,
-  LoginDto,
-  RefreshResult,
-  RegisterDto,
-  ResetPasswordDto,
-  SERVICE_TOKENS,
-  ServiceError,
-  VerifyEmailDto,
-  WORKSPACE_PATTERNS,
-} from '@wriven/contracts';
+import * as contracts from '@wriven/contracts';
 import { Throttle } from '@nestjs/throttler';
 import { randomBytes } from 'crypto';
 import type { Request, Response } from 'express';
@@ -49,17 +34,17 @@ const ACCESS_COOKIE_MAX_AGE = 15 * MINUTE; // matches JWT_ACCESS_TTL
 @Controller('auth')
 export class AuthController {
   constructor(
-    @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
+    @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
   ) {}
 
   @Throttle({ default: { limit: 5, ttl: MINUTE } })
   @Post('register')
   async register(
-    @Body() dto: RegisterDto,
+    @Body() dto: contracts.RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await firstValueFrom(
-      this.auth.send<AuthResult>(AUTH_PATTERNS.REGISTER, dto),
+      this.auth.send<contracts.AuthResult>(contracts.AUTH_PATTERNS.REGISTER, dto),
     );
     return this.completeAuth(res, result);
   }
@@ -67,11 +52,11 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: MINUTE } })
   @Post('login')
   async login(
-    @Body() dto: LoginDto,
+    @Body() dto: contracts.LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await firstValueFrom(
-      this.auth.send<AuthResult>(AUTH_PATTERNS.LOGIN, dto),
+      this.auth.send<contracts.AuthResult>(contracts.AUTH_PATTERNS.LOGIN, dto),
     );
     return this.completeAuth(res, result);
   }
@@ -86,7 +71,7 @@ export class AuthController {
       throw this.error('INVALID_REFRESH_TOKEN', 'No refresh token provided.');
     }
     const result = await firstValueFrom(
-      this.auth.send<RefreshResult>(AUTH_PATTERNS.REFRESH, {
+      this.auth.send<contracts.RefreshResult>(contracts.AUTH_PATTERNS.REFRESH, {
         refreshToken: token,
       }),
     );
@@ -103,7 +88,7 @@ export class AuthController {
     const token = req.cookies?.[REFRESH_COOKIE];
     if (token) {
       await firstValueFrom(
-        this.auth.send(AUTH_PATTERNS.LOGOUT, { refreshToken: token }),
+        this.auth.send(contracts.AUTH_PATTERNS.LOGOUT, { refreshToken: token }),
       );
     }
     res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
@@ -114,30 +99,30 @@ export class AuthController {
 
   @Throttle({ default: { limit: 3, ttl: MINUTE } })
   @Post('forgot-password')
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+  async forgotPassword(@Body() dto: contracts.ForgotPasswordDto) {
     return firstValueFrom(
-      this.auth.send(AUTH_PATTERNS.FORGOT_PASSWORD, dto),
+      this.auth.send(contracts.AUTH_PATTERNS.FORGOT_PASSWORD, dto),
     );
   }
 
   @Throttle({ default: { limit: 5, ttl: MINUTE } })
   @Post('reset-password')
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    return firstValueFrom(this.auth.send(AUTH_PATTERNS.RESET_PASSWORD, dto));
+  async resetPassword(@Body() dto: contracts.ResetPasswordDto) {
+    return firstValueFrom(this.auth.send(contracts.AUTH_PATTERNS.RESET_PASSWORD, dto));
   }
 
   @Throttle({ default: { limit: 10, ttl: MINUTE } })
   @Post('verify-email')
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
-    return firstValueFrom(this.auth.send(AUTH_PATTERNS.VERIFY_EMAIL, dto));
+  async verifyEmail(@Body() dto: contracts.VerifyEmailDto) {
+    return firstValueFrom(this.auth.send(contracts.AUTH_PATTERNS.VERIFY_EMAIL, dto));
   }
 
   @Throttle({ default: { limit: 3, ttl: MINUTE } })
   @UseGuards(JwtAuthGuard)
   @Post('resend-verification')
-  async resendVerification(@CurrentUser() user: AuthUser) {
+  async resendVerification(@CurrentUser() user: contracts.AuthUser) {
     return firstValueFrom(
-      this.auth.send(AUTH_PATTERNS.RESEND_VERIFICATION, {
+      this.auth.send(contracts.AUTH_PATTERNS.RESEND_VERIFICATION, {
         userId: user.userId,
       }),
     );
@@ -145,9 +130,9 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@CurrentUser() user: AuthUser, @Req() req: Request) {
+  async me(@CurrentUser() user: contracts.AuthUser, @Req() req: Request) {
     const session = await firstValueFrom(
-      this.auth.send(AUTH_PATTERNS.GET_SESSION, { userId: user.userId }),
+      this.auth.send(contracts.AUTH_PATTERNS.GET_SESSION, { userId: user.userId }),
     );
     // Hand the SPA the current CSRF token on reload (the cookie is httpOnly).
     return { ...(session as object), csrfToken: req.cookies?.[CSRF_COOKIE] ?? null };
@@ -155,9 +140,9 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('workspaces')
-  async workspaces(@CurrentUser() user: AuthUser) {
+  async workspaces(@CurrentUser() user: contracts.AuthUser) {
     return firstValueFrom(
-      this.auth.send(WORKSPACE_PATTERNS.LIST_WORKSPACES, {
+      this.auth.send(contracts.WORKSPACE_PATTERNS.LIST_WORKSPACES, {
         userId: user.userId,
       }),
     );
@@ -176,9 +161,9 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
-    const profile = req.user as GoogleProfile;
+    const profile = req.user as contracts.GoogleProfile;
     const result = await firstValueFrom(
-      this.auth.send<AuthResult>(AUTH_PATTERNS.GOOGLE_LOGIN, profile),
+      this.auth.send<contracts.AuthResult>(contracts.AUTH_PATTERNS.GOOGLE_LOGIN, profile),
     );
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
     this.setAccessCookies(res, result.accessToken);
@@ -192,7 +177,7 @@ export class AuthController {
   /** Set the session cookies and return the client-facing payload. The CSRF
    *  token is returned in the body (synchronizer-token pattern) because the SPA
    *  and gateway are different hosts — JS can't read the cookie cross-host. */
-  private completeAuth(res: Response, result: AuthResult) {
+  private completeAuth(res: Response, result: contracts.AuthResult) {
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
     const csrfToken = this.setAccessCookies(res, result.accessToken);
     return {
@@ -237,9 +222,9 @@ export class AuthController {
   }
 
   private error(
-    key: keyof typeof ERROR_CODES,
+    key: keyof typeof contracts.ERROR_CODES,
     message: string,
-  ): ServiceError {
-    return { ...ERROR_CODES[key], message };
+  ): contracts.ServiceError {
+    return { ...contracts.ERROR_CODES[key], message };
   }
 }

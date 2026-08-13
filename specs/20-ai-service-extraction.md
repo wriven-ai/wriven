@@ -1,5 +1,10 @@
 # Spec: Extract AI Generation to Python ai-service
 
+> **⚠️ SUPERSEDED by [specs/21 — AI Generation Redesign](./21-ai-generation-redesign.md).**
+> The extraction seam (`AiClient`, `INTERNAL_SECRET` hop, Python prompt/select-retry)
+> is retained; the request/response shapes it carries were reshaped (typed `AiOutput`,
+> `compose`, per-project AI profile, `operation`/`targetKind`). Kept for history only.
+
 > Priority: P2 · Area: cross · Status: drafted
 
 ## Overview
