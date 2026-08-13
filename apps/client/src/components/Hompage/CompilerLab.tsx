@@ -162,7 +162,7 @@ export default function CompilerLab() {
                     <div>Flush duration:</div>
                     <div className="text-text-primary font-bold">12ms (Completed)</div>
                     <div>Query payload:</div>
-                    <div className="text-brand-accent font-bold">GET /api/v1/posts/sovereign</div>
+                    <div className="text-brand-accent font-bold">GET /v1/posts/sovereign</div>
                   </div>
                   <div className="text-sm bg-brand-surface-soft text-text-primary p-4 border border-brand-border rounded-lg overflow-x-auto font-mono">
                     {"{\"cached\": true, \"age\": \"0s\", \"payload\": {\"title\": \"Sovereign Headless\"}}"}

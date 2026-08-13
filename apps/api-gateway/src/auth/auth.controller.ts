@@ -21,14 +21,14 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 const MINUTE = 60000;
 
 const REFRESH_COOKIE = 'refresh_token';
-const REFRESH_COOKIE_PATH = '/api/v1/auth';
+const REFRESH_COOKIE_PATH = '/v1/auth';
 
 // Access JWT + CSRF token ride cookies scoped to the whole API. The access
 // cookie is httpOnly (JS can't read it); the CSRF cookie is readable so the SPA
 // can echo it back in a header (double-submit). Both share the access TTL.
 const ACCESS_COOKIE = 'access_token';
 const CSRF_COOKIE = 'csrf_token';
-const API_COOKIE_PATH = '/api/v1';
+const API_COOKIE_PATH = '/v1';
 const ACCESS_COOKIE_MAX_AGE = 15 * MINUTE; // matches JWT_ACCESS_TTL
 
 @Controller('auth')

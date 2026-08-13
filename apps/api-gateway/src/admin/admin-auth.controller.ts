@@ -22,8 +22,8 @@ const MINUTE = 60000;
 const ADMIN_ACCESS_COOKIE = 'admin_access_token';
 const ADMIN_REFRESH_COOKIE = 'admin_refresh_token';
 const ADMIN_CSRF_COOKIE = 'admin_csrf_token';
-const ADMIN_API_PATH = '/api/v1/admin';
-const ADMIN_REFRESH_PATH = '/api/v1/admin/auth';
+const ADMIN_API_PATH = '/v1/admin';
+const ADMIN_REFRESH_PATH = '/v1/admin/auth';
 const ACCESS_COOKIE_MAX_AGE = 15 * MINUTE; // matches ADMIN_JWT_ACCESS_TTL
 
 @Controller('admin/auth')

@@ -65,7 +65,7 @@ A thin `fetch` wrapper that speaks the gateway's [response envelope](../conventi
 - Unwraps `{ success, data }` → returns `data`; on `{ success, error }` throws `ApiRequestError` carrying the error object.
 - **Scope headers:** `workspace`/`project` options attach `X-Workspace-Id` / `X-Project-Id` from the auth store.
 - **Credentials** ride automatically (`credentials: 'include'`).
-- Base URL: `NEXT_PUBLIC_API_URL` (default `http://localhost:5000/api/v1`).
+- Base URL: `NEXT_PUBLIC_API_URL` (default `http://localhost:5000/v1`).
 
 API modules: `authApi`, `contentApi` (types/entries/revisions), `apiKeyApi`, `webhookApi`, `mediaApi` (+ `uploadMedia`), `workspaceApi`, `memberApi`, `projectApi`, `projectMemberApi`, `invitationApi`. Google OAuth starts via a full-page navigation to `googleAuthUrl`.
 
@@ -85,7 +85,7 @@ The URL is the single source of truth for active scope (`/w/[wsSlug]/p/[projSlug
 
 | Var | Purpose |
 |-----|---------|
-| `NEXT_PUBLIC_API_URL` | Gateway base URL (`/api/v1`) |
+| `NEXT_PUBLIC_API_URL` | Gateway base URL (`/v1`) |
 | `NEXT_PUBLIC_USE_NGROK` | `true` attaches `ngrok-skip-browser-warning` (local tunneling) |
 
 Per-service env only — the client has no backend secrets. See [Conventions §Environment](../conventions.md).

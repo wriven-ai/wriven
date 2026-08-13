@@ -23,12 +23,12 @@ async function bootstrap() {
   (app.getHttpAdapter().getInstance() as { set: (k: string, v: unknown) => void })
     .set('query parser', 'extended');
 
-  const globalPrefix = 'api/v1';
+  const globalPrefix = 'v1';
   // The public Content Delivery API is its own versioned surface mounted at
-  // /v1/projects/:projectId/... (per specs/01 and the @wriven-ai/client SDK) —
-  // separate from the dashboard/management routes under /api/v1. Exclude it from
-  // the global prefix, otherwise the DeliveryController's `v1/projects/...` path
-  // gets doubled to /api/v1/v1/projects/... . Wildcard syntax is path-to-regexp v8.
+  // /v1/projects/:projectId/... (per specs/01 and the @wriven-ai/client SDK). It
+  // shares the /v1 root with the management routes, so exclude it from the global
+  // prefix — otherwise the DeliveryController's `v1/projects/...` path gets
+  // doubled to /v1/v1/projects/... . Wildcard syntax is path-to-regexp v8.
   app.setGlobalPrefix(globalPrefix, {
     exclude: ['v1/projects/*splat'],
   });

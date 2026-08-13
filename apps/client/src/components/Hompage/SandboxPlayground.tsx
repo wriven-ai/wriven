@@ -226,7 +226,7 @@ export default function SandboxPlayground() {
               <div className="absolute top-4 right-4 flex gap-2 select-none">
                 <span className="inline-flex items-center gap-1 text-sm font-mono font-bold tracking-wider bg-brand-surface-soft text-brand-accent border border-brand-border px-2 py-1 rounded">
                   <Code className="w-3 h-3" />
-                  GET /api/v1/content
+                  GET /v1/content
                 </span>
               </div>
               

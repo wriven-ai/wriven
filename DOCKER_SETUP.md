@@ -59,14 +59,14 @@ docker compose logs -f
 
 Services available at:
 - Client: http://localhost:3000
-- API Gateway: http://localhost:5000/api/v1
+- API Gateway: http://localhost:5000/v1
 - Auth Service (TCP): localhost:5001
 - Core Service (TCP): localhost:5002
 
 > **Note on health checks:** Only the API Gateway (`:5000`) and Client (`:3000`) expose
 > HTTP endpoints. `auth-service` and `core-service` are pure TCP microservices with no
 > HTTP server, so you cannot `curl` their ports. Verify them via the gateway:
-> `curl -sf http://localhost:5000/api/v1/health`, or check container status with
+> `curl -sf http://localhost:5000/v1/health`, or check container status with
 > `docker compose ps`.
 
 ### 4. Database Migrations
@@ -94,7 +94,7 @@ All Dockerfiles follow the same multi-stage build:
 |---------|------------|------|--------------|---------|
 | auth-service | node:20-alpine | 5001 TCP | `/health` | TCP microservice |
 | core-service | node:20-alpine | 5002 TCP | `/health` | TCP microservice |
-| api-gateway | node:20-alpine | 5000 HTTP | `/api/v1/health` | Public entry |
+| api-gateway | node:20-alpine | 5000 HTTP | `/v1/health` | Public entry |
 | client | node:20-alpine | 3000 HTTP | `/api/health` | Next.js SSR |
 | ai-service | python:3.12-slim | 8000 HTTP | `/health` | FastAPI (optional) |
 

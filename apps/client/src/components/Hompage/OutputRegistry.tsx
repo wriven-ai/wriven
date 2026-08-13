@@ -232,7 +232,7 @@ export default function OutputRegistry() {
                     className="w-full bg-brand-bg border border-brand-border rounded-lg p-5 shadow-sm text-left font-mono text-sm overflow-x-auto relative"
                   >
                     <div className="flex items-center justify-between pb-3 border-b border-brand-border mb-3 text-text-muted">
-                      <span>GET /api/v1/posts/wearables-wellness</span>
+                      <span>GET /v1/posts/wearables-wellness</span>
                       <span className="text-brand-accent">200 OK</span>
                     </div>
 

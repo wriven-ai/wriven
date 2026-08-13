@@ -40,7 +40,7 @@ User ──< workspace_members >── Workspace ──< projects ── project
 ## Tokens
 
 - **Access token**: JWT (HS256), payload `{ sub, email }`, TTL `JWT_ACCESS_TTL` (default `15m`). Signed with `JWT_SECRET`. Validated locally by the gateway.
-- **Refresh token**: opaque random (48 bytes hex), stored **sha256-hashed**. TTL `JWT_REFRESH_TTL` (`7d`) or `JWT_REFRESH_TTL_REMEMBER` (`30d`). Delivered to the client in an **HttpOnly cookie** (`refresh_token`, path `/api/v1/auth`, SameSite=lax, Secure in prod).
+- **Refresh token**: opaque random (48 bytes hex), stored **sha256-hashed**. TTL `JWT_REFRESH_TTL` (`7d`) or `JWT_REFRESH_TTL_REMEMBER` (`30d`). Delivered to the client in an **HttpOnly cookie** (`refresh_token`, path `/v1/auth`, SameSite=lax, Secure in prod).
 - Durations are human strings (`15m`/`7d`/`30d`/`1h`) parsed by `common/duration.ts`; `@nestjs/jwt` parses them natively for signing.
 
 ## Flows

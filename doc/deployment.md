@@ -90,7 +90,7 @@ a shared env group. To use it:
 4. Pick a **region** (`oreregon`/`frankfurt`/…) closest to your users; keep all three
    in the same region.
 5. Render builds each service from its Dockerfile and starts them. The gateway's
-   `healthCheckPath: /api/v1/health` gates go-live.
+   `healthCheckPath: /v1/health` gates go-live.
 
 ### Internal service discovery
 
@@ -143,7 +143,7 @@ hostname, and paste it into the gateway's `AUTH_SERVICE_HOST` / `CORE_SERVICE_HO
 2. **Root Directory** = `apps/client`. Framework preset = **Next.js** (auto-detected).
 3. Build from repo root so pnpm + `libs/` resolve (Vercel handles the workspace).
 4. Environment variables:
-   - `NEXT_PUBLIC_API_URL` = `https://api.wriven.tech/api/v1`
+   - `NEXT_PUBLIC_API_URL` = `https://api.wriven.tech/v1`
    - `NEXT_PUBLIC_GOOGLE_CLIENT_ID` = (same as gateway's `GOOGLE_CLIENT_ID`)
 5. **Domains** → add `wriven.tech` (and `www` if used). Vercel gives DNS records;
    set them. Vercel issues TLS.
@@ -156,7 +156,7 @@ hostname, and paste it into the gateway's `AUTH_SERVICE_HOST` / `CORE_SERVICE_HO
 
 In your Google OAuth app (Cloud Console → APIs & Services → Credentials):
 
-- **Authorized redirect URI:** `https://api.wriven.tech/api/v1/auth/google/callback`
+- **Authorized redirect URI:** `https://api.wriven.tech/v1/auth/google/callback`
 - **Authorized JavaScript origin:** `https://wriven.tech`
 
 `GOOGLE_CLIENT_ID` (shared) + `GOOGLE_CLIENT_SECRET` (on `wriven-auth`) come from
@@ -205,11 +205,11 @@ genuinely cross-site.)
 
 ```bash
 # 1. Gateway health (confirms TCP wiring to auth + core)
-curl https://api.wriven.tech/api/v1/health
+curl https://api.wriven.tech/v1/health
 # → { "success": true, "data": { "gateway": "ok", "auth": "ok", "core": "ok" } }
 
 # 2. Public plan catalog (no auth)
-curl https://api.wriven.tech/api/v1/plans
+curl https://api.wriven.tech/v1/plans
 
 # 3. Delivery API read (needs a project + read key + published entry)
 curl "https://api.wriven.tech/v1/projects/$PROJECT_ID/content/post?limit=3" \
@@ -228,7 +228,7 @@ type → publish an entry → confirm the dashboard works end to end.
 | `/health` returns `auth`/`core` ≠ `ok` | gateway can't reach a pserv | check `AUTH_SERVICE_HOST`/`CORE_SERVICE_HOST` = pserv internal hostname (Connect tab); same region; pserv is up |
 | Login "works" but instantly logged out / 401 on refresh | cookie not attaching | confirm both sites `https`; `credentials: 'include'`; same-site (shared domain) — see §10 |
 | `401` on every delivery request | bad/expired/revoked key | recreate the read key; check `Authorization: Bearer wrk_live_…` |
-| Google OAuth `redirect_uri_mismatch` | console URIs wrong | exact match `https://api.wriven.tech/api/v1/auth/google/callback` (§8) |
+| Google OAuth `redirect_uri_mismatch` | console URIs wrong | exact match `https://api.wriven.tech/v1/auth/google/callback` (§8) |
 | Gateway 502 / unhealthy on Render | service crashed on boot | check `NODE_ENV=production` + all `sync:false` vars filled; read Render logs |
 | Cold starts / dropped webhooks (Stripe) | free plan sleeping | upgrade gateway to `starter`+ |
 | Migration errors | wrong URL mode | `DATABASE_URL` = pooled (6543), `DIRECT_URL` = direct (5432); rerun `db:migrate` |
