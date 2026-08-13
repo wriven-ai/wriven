@@ -32,6 +32,7 @@
     "sdk:publish": "pnpm -r --filter \"./packages/*\" publish --access public"
   },
   "private": true,
+  "packageManager": "pnpm@11.15.1",
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.4",
     "@eslint/js": "^9.8.0",
