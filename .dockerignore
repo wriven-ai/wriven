@@ -1,55 +1,50 @@
-# Dependencies
-node_modules
-.pnpm-store
+# ── Wriven .dockerignore (applies to every Dockerfile; render.yaml uses context ".") ─
+# Goals: keep build context lean, speed up remote/local builds, and PREVENT baking
+# local secrets (.env) or stale artifacts (node_modules, dist) into image layers.
 
-# Build outputs
-dist
-.next
-out
-build
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Git
+# Version control / metadata
 .git
 .gitignore
+.gitattributes
 
-# IDE
+# Dependencies — installed inside the image, never copy host copies
+**/node_modules
+
+# Build output — produced inside the image
+**/dist
+**/.next
+**/.turbo
+**/.nx
+
+# Secrets — NEVER bake into images. Keep .env.example templates (different name).
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Python caches / venvs
+**/__pycache__
+**/*.pyc
+**/.venv
+
+# Tests, coverage, tooling caches (not needed to build/run)
+**/*.spec.ts
+**/*.test.ts
+**/coverage
+**/.eslintcache
+
+# Logs / runtime artifacts
+**/*.log
+**/npm-debug.log*
+
+# Editor / OS noise
 .vscode
 .idea
-*.swp
-*.swo
-
-# Logs
-logs
-*.log
-npm-debug.log*
-pnpm-debug.log*
-
-# OS
 .DS_Store
-Thumbs.db
 
-# Docker
-Dockerfile
-docker-compose.yml
-.dockerignore
-
-# Docs
+# Render / docs / planning (not needed in image)
+render.yaml
+render.yml
 doc
-*.md
-
-# Tests (exclude from production build)
-**/*.test.ts
-**/*.test.tsx
-**/*.spec.ts
-coverage
-.nyc_output
-
-# Misc
-.cache
-*.tmp
-.tmp
+specs
+plans
+.claude

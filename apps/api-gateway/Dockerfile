@@ -1,52 +1,53 @@
-# ── Builder ───────────────────────────────────────────────────────────────────────
-# Node 22 required: pnpm 11 imports `node:sqlite` (built-in since Node 22.5).
-# Node 20 throws ERR_UNKNOWN_BUILTIN_MODULE during `pnpm install`.
+# Node 22 — pnpm 11 needs node:sqlite
 FROM node:22-alpine AS builder
 
 WORKDIR /build
 
-# Install pnpm (pinned via packageManager in root package.json)
 RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
 
-# Copy package files (for dependency caching)
+# Dep manifests first for layer cache
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY tsconfig.base.json nx.json ./
 COPY apps/api-gateway/package.json ./apps/api-gateway/
-COPY libs/*/package.json ./libs/*/
+COPY libs/shared/common/package.json ./libs/shared/common/
+COPY libs/shared/constants/package.json ./libs/shared/constants/
+COPY libs/shared/contracts/package.json ./libs/shared/contracts/
+COPY libs/shared/database/package.json ./libs/shared/database/
+COPY libs/shared/types/package.json ./libs/shared/types/
 
-# Install dependencies
 RUN pnpm install --frozen-lockfile --prefer-offline
 
-# Copy source
 COPY apps/api-gateway ./apps/api-gateway
 COPY libs/shared ./libs/shared
 
-# Build
-RUN pnpm nx build api-gateway
+# tsc -b first (composite refs), then nx build
+ENV NX_DAEMON=false
+ENV CI=true
+RUN pnpm exec tsc -b \
+      libs/shared/contracts/tsconfig.lib.json \
+      libs/shared/database/tsconfig.lib.json \
+      libs/shared/types/tsconfig.lib.json \
+      libs/shared/common/tsconfig.lib.json \
+      libs/shared/constants/tsconfig.lib.json && \
+    pnpm nx build api-gateway --skip-sync
 
-# ── Runner ───────────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Install dumb-init for signal handling
 RUN apk add --no-cache dumb-init
 
-# Create non-root user
 RUN addgroup -g 1001 -S wriven && \
     adduser -S -D -H -u 1001 -s /sbin/nologin -G wriven -g wriven wriven
 
-# Copy built artifacts
 COPY --from=builder /build/apps/api-gateway/dist ./dist
 COPY --from=builder /build/apps/api-gateway/package.json ./
 COPY --from=builder /build/node_modules ./node_modules
 
-# Switch to non-root user
 USER wriven
 
-# Expose HTTP port
 EXPOSE 5000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:5000/v1/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
