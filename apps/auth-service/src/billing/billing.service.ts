@@ -309,7 +309,7 @@ export class BillingService {
       input.billingCycle === current.billingCycle
     ) {
       if (pending?.scheduleId) {
-        await this.stripe.subscription_schedules.release(pending.scheduleId);
+        await this.stripe.subscriptionSchedules.release(pending.scheduleId);
       }
       if (current.cancelAtPeriodEnd) {
         await this.stripe.subscriptions.update(current.stripeSubscriptionId, {
@@ -331,7 +331,7 @@ export class BillingService {
     // Any other change must first release a pending downgrade's schedule — a
     // scheduled subscription rejects direct `subscriptions.update`.
     if (pending?.scheduleId) {
-      await this.stripe.subscription_schedules.release(pending.scheduleId);
+      await this.stripe.subscriptionSchedules.release(pending.scheduleId);
       await this.clearPendingChange(current.id);
     }
 
@@ -381,7 +381,7 @@ export class BillingService {
     // phase 1 holds the current price until period end, phase 2 applies the
     // lower price at renewal. Keeps access through the paid period.
     if (tierDelta < 0) {
-      const schedule = await this.stripe.subscription_schedules.create({
+      const schedule = await this.stripe.subscriptionSchedules.create({
         from_subscription: current.stripeSubscriptionId,
         proration_behavior: 'none',
         phases: [
