@@ -7,15 +7,9 @@ export const STRIPE_CLIENT = 'STRIPE_CLIENT';
 
 /**
  * Configured Stripe client. Reads `STRIPE_SECRET_KEY` from auth-service `.env`.
- * Fail-fast at boot: ConfigModule has no Joi schema, so a missing/empty key
- * throws here rather than failing on the first Stripe call.
- *
- * `apiVersion` is pinned to the version the bundled SDK types target
- * (2026-06-24.dahlia) so the runtime object shapes match what TypeScript
- * type-checks against — leaving it unset lets the account default drift
- * independently and silently null-reads renamed/moved fields. The Stripe
- * Dashboard webhook endpoint must be registered under the SAME version.
- * See specs/08 (Phase 5 setup).
+ * Fail-fast at boot if key missing. `apiVersion` uses Stripe.API_VERSION so it
+ * stays in lockstep with the installed SDK types. Register the Dashboard
+ * webhook endpoint under the same version (specs/08).
  */
 export const stripeClientProvider: Provider = {
   provide: STRIPE_CLIENT,
@@ -24,7 +18,7 @@ export const stripeClientProvider: Provider = {
     const key = cfg.get<string>('STRIPE_SECRET_KEY');
     if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
     return new Stripe(key, {
-      apiVersion: '2026-06-24.dahlia',
+      apiVersion: Stripe.API_VERSION,
       appInfo: { name: 'wriven-auth-service' },
     });
   },
