@@ -8,7 +8,7 @@ import {
   Paginated,
   UpdateAdminDto,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB } from '@wriven/database';
 import * as bcrypt from 'bcrypt';
 import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';

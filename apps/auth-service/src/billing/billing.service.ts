@@ -364,10 +364,10 @@ export class BillingService {
     );
     const item = stripeSub.items.data[0];
     const currentPriceId = item?.price?.id;
-    // current_period_end lives on the SubscriptionItem in stripe@22, not on
-    // Subscription (see StripeWebhookService.syncSubscription) — fall back to the
-    // Sub-level field for older API versions.
-    const periodEnd = item?.current_period_end ?? stripeSub.current_period_end;
+    // current_period_end lives on the SubscriptionItem in stripe@22 — the
+    // top-level Subscription field was removed. (See StripeWebhookService.
+    // syncSubscription for the same item-level read.)
+    const periodEnd = item?.current_period_end;
     if (!item?.id || !currentPriceId || !periodEnd) {
       throw rpcError(
         'INTERNAL_ERROR',
@@ -383,9 +383,16 @@ export class BillingService {
     if (tierDelta < 0) {
       const schedule = await this.stripe.subscriptionSchedules.create({
         from_subscription: current.stripeSubscriptionId,
-        proration_behavior: 'none',
         phases: [
-          { items: [{ price: currentPriceId }], end_date: periodEnd },
+          // stripe@22 moved proration_behavior off the top-level create params
+          // onto each phase. 'none' on the entry (holding) phase suppresses any
+          // proration when the schedule takes over the subscription — the price
+          // is unchanged here, so this is belt-and-suspenders.
+          {
+            items: [{ price: currentPriceId }],
+            proration_behavior: 'none',
+            end_date: periodEnd,
+          },
           { items: [{ price: priceId }] },
         ],
       });

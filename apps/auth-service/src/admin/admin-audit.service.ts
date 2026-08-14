@@ -5,7 +5,7 @@ import {
   AuditWritePayload,
   Paginated,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB } from '@wriven/database';
 import { desc, eq } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
