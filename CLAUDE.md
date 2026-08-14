@@ -1,16 +1,17 @@
 # Wriven — Agent Instructions
 
-**Wriven** is an AI-native headless CMS SaaS. Nx + pnpm monorepo: NestJS microservices behind a single HTTP gateway, a Next.js client, and a Python AI service (FastAPI, content generation). Frontend deploys to Vercel; all backend services run in Docker on a VPS.
+**Wriven** is an AI-native headless CMS SaaS. Nx + pnpm monorepo: NestJS microservices behind a single HTTP gateway, a Next.js client, a Python AI service (FastAPI, content generation), and publishable delivery-SDK packages (`packages/*`, `@wriven-ai/*`). Frontend deploys to Vercel; all backend services run in Docker on a VPS.
 
 ## Source of truth
 
 The maintained reference docs live under **[`doc/`](./doc/)** — start at [`doc/README.md`](./doc/README.md). Read the relevant doc before changing a subsystem:
 
+- Root: [`DOCKER_SETUP.md`](./DOCKER_SETUP.md) (prod Docker deployment) · [`apps/ai-service/README.md`](./apps/ai-service/README.md) (uv workflow, health endpoints)
 - [`doc/overview`](./doc/overview.md) · [`doc/architecture`](./doc/architecture.md) · [`doc/database`](./doc/database.md)
 - [`doc/api-reference`](./doc/api-reference.md) · [`doc/conventions`](./doc/conventions.md) · [`doc/status`](./doc/status.md)
 - Per service: [`api-gateway`](./doc/api-gateway/) · [`auth-service`](./doc/auth-service/) · [`core-service`](./doc/core-service/) · [`admin-panel`](./doc/admin-panel/) · [`frontend`](./doc/frontend/)
-- Feature design docs: [`specs/`](./specs/) (every feature gets a spec before implementation)
-- Execution plans: [`plans/`](./plans/) (opt-in, large features — derived from a spec via `/create-plan`)
+- Feature design docs: [`specs/`](./specs/) (every feature gets a spec before implementation, `NN-<slug>.md`)
+- Execution plans: [`plans/`](./plans/) (opt-in, large features — derived from a spec via `/create-plan`; plan numbering is independent of spec numbering, e.g. specs/21 ↔ plans/14)
 
 If a doc and the code disagree, **the code wins** — fix the doc.
 
@@ -22,11 +23,11 @@ If a doc and the code disagree, **the code wins** — fix the doc.
   - `api-gateway` (HTTP `:5000`) — public edge, validates JWT **locally**, validates workspace/project membership, owns no tables.
   - `auth-service` (TCP `:5001`) — identity + tenancy (users, workspaces, projects, members, invitations).
   - `core-service` (TCP `:5002`) — CMS (content types, entries, media, webhooks, delivery API).
-   - `ai-service` (FastAPI `:8000`) — **AI content generation**. Prompt building, temperature, and `select`/`compose` structured-output validation+repair live here; core-service calls it over HTTP behind an `AiClient` seam (the only NestJS↔non-NestJS HTTP call). core keeps the DB-bound work (quota reserve, audit row, per-project AI voice profile, token/cost accounting, field validation); the provider key (`AI_API_KEY`) lives only in ai-service env. All NestJS↔NestJS is TCP. See specs/21.
+   - `ai-service` (`apps/ai-service`, FastAPI `:8000`, Python + **uv**) — **AI content generation**. Prompt building, temperature, and `select`/`compose` structured-output validation+repair live here; core-service calls it over HTTP behind an `AiClient` seam (the only NestJS↔non-NestJS HTTP call). core keeps the DB-bound work (quota reserve, audit row, per-project AI voice profile, token/cost accounting, field validation); the provider key (`AI_API_KEY`) lives only in ai-service env. All NestJS↔NestJS is TCP. See specs/21.
 - **Gateway injects identity** — after JWT validation it puts `userId` + scope into every TCP payload; downstream services trust it (no re-validation).
 - **Response envelope** — `{ success, data }` / `{ success, error }`. Use error codes from `@wriven/contracts/errors.ts`; never leak stack traces, internal service names, or DB errors.
 - **Message patterns** — dot-namespaced constants from `@wriven/contracts/messages.ts`; never hardcode pattern strings.
-- **Database** — single shared Postgres, isolated by schema (`auth_svc`, `core_svc`). Drizzle ORM; each service migrates its own schema. `api-gateway` and `ai-service` own no tables.
+- **Database** — single shared Postgres, isolated by schema (`auth_svc`, `core_svc`). Local dev: `docker-compose.yml` (Postgres-only); prod: Supabase. Drizzle ORM; each service migrates its own schema. `api-gateway` and `ai-service` own no tables.
 - **Auth security** — never reveal whether an email exists (forgot-password always 200; login always `INVALID_CREDENTIALS`); revoke all sessions on password reset; bcrypt rounds 12.
 - **Frontend** (`apps/client`, Next.js 16) — cookie-based auth (httpOnly access+refresh, in-memory CSRF double-submit). See [`doc/frontend/frontend.md`](./doc/frontend/frontend.md).
 
@@ -36,6 +37,41 @@ If a doc and the code disagree, **the code wins** — fix the doc.
 - **Plans** — for large features, `/create-plan <spec>` drafts an execution plan in `plans/NN-<slug>.md`; small features skip straight to plan mode.
 - **Tasks** — run everything through `pnpm nx <target> <project>` (build/lint/typecheck/test), never the raw tooling.
 - **Commits** — one-line Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`), no body unless essential. Keep frontend and backend changes in **separate commits**. **Never** add an AI/Claude co-author trailer.
+
+## Commands
+
+All via `pnpm` + `nx` (root `package.json` scripts wrap the common ones). Project config lives in each `package.json` `nx` block + plugin inference — **no `project.json` files**.
+
+```bash
+# Dev
+pnpm dev:gateway        # api-gateway (:5000)
+pnpm dev:auth           # auth-service (:5001)
+pnpm dev:core           # core-service (:5002)
+pnpm dev:ai             # ai-service (uv run uvicorn, :8000)
+pnpm dev:client         # Next.js client
+pnpm dev:all            # everything in parallel
+
+# Build / lint / typecheck / test
+pnpm nx build|lint|typecheck|test <project>   # any project
+pnpm nx run-many -t build lint typecheck      # whole workspace
+pnpm nx affected -t lint test                 # changed code only
+
+# Database (drizzle-kit, per service)
+pnpm db:auth:generate | migrate | push | studio
+pnpm db:core:generate | migrate | push | studio
+pnpm db:auth:seed       # tsx --env-file=apps/auth-service/.env
+
+# Single test file
+cd apps/ai-service && uv run pytest tests/test_guardrails.py   # ai-service (pytest)
+cd packages/client && pnpm tsx --test test/client.test.ts      # SDK packages (node:test via tsx)
+
+# SDK packages
+pnpm sdk:build | sdk:test | sdk:check | sdk:publish
+```
+
+Notes:
+- ai-service deps managed with **uv** (`uv lock` to update, `uv run` to execute) — see [`apps/ai-service/README.md`](./apps/ai-service/README.md).
+- Jest is wired at root but apps/libs currently have no spec files; the real suites are ai-service (pytest) and `packages/*` (node:test).
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
