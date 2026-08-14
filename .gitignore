@@ -91,9 +91,11 @@ BACKEND.md
 PROJECT.md
 .codex
 .opencode
+.opencode/**
 .gemini
 .cursor
 .commandcode
 
 # Local-only scripts (may contain secrets — never commit)
 publish-sdk.sh
+.env*

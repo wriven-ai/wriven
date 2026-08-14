@@ -1,0 +1,6 @@
+# Nx project-graph exclusions. .opencode holds the opencode AI tool's plugin
+# manifest (package.json with no `name`) — harmless to git/pnpm but breaks Nx's
+# project inference when it lands in a fresh CI checkout (Vercel uploads files
+# the nested .opencode/.gitignore doesn't cover). See 2026-08-14 Vercel deploy.
+.opencode
+.opencode/**
