@@ -21,7 +21,7 @@ import {
   WorkspaceRole,
   WorkspaceView,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB, dbError } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB, dbError } from '@wriven/database';
 import * as bcrypt from 'bcrypt';
 import { and, eq } from 'drizzle-orm';
 import { resolveAvatarUrl } from '../common/avatar';

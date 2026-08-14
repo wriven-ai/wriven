@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB } from '@wriven/database';
 import { lt } from 'drizzle-orm';
 import * as schema from '../db/schema';
 

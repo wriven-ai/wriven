@@ -7,7 +7,7 @@ import {
   PlanLimits,
   UpdatePlanDto,
 } from '@wriven/contracts';
-import { DRIZZLE, DrizzleDB } from '@wriven/database';
+import { DRIZZLE, type DrizzleDB } from '@wriven/database';
 import { asc, eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { rpcError } from '../common/rpc-error';
