@@ -28,6 +28,7 @@ import { AuditInterceptor } from './audit.interceptor';
 export class AdminProjectsController {
   constructor(
     @Inject(SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
+    @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Get()
@@ -38,6 +39,14 @@ export class AdminProjectsController {
   @Get(':id')
   get(@Param('id') id: string) {
     return firstValueFrom(this.auth.send(ADMIN_PATTERNS.PROJECTS_GET, { id }));
+  }
+
+  /** Aggregated per-project usage (core-owned tables: content, media, keys, webhooks, AI). */
+  @Get(':id/usage')
+  usage(@Param('id') id: string) {
+    return firstValueFrom(
+      this.core.send(ADMIN_PATTERNS.PROJECT_USAGE, { projectId: id }),
+    );
   }
 
   @AdminRoles('admin')

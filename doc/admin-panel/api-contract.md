@@ -54,6 +54,7 @@ On boot call `GET /admin/auth/me` to hydrate session; 401 → redirect `/login`.
 ### Projects
 | GET | `/admin/projects?page&limit&q&workspaceId?` | any | — | `Paginated<AdminProjectRow>` |
 | GET | `/admin/projects/:id` | any | — | `AdminProjectRow` |
+| GET | `/admin/projects/:id/usage` | any | — | `AdminProjectUsage` |
 | DELETE | `/admin/projects/:id` | `[admin]` | — | `{ success: true }` (soft-delete) |
 
 ### Content moderation
@@ -153,6 +154,15 @@ export interface AdminProjectRow {
   id: string; name: string; slug: string;
   workspaceId: string; workspaceName: string | null;
   createdBy: string; deleted: boolean; createdAt: string;
+}
+export interface AdminProjectUsage {
+  projectId: string; contentTypes: number;
+  entries: { total: number; published: number; draft: number; archived: number };
+  media: { assetCount: number; totalBytes: number };
+  apiKeys: { total: number; active: number };
+  webhooks: { total: number; active: number };
+  ai: { generations: number; succeeded: number; failed: number;
+        totalTokens: number; costMicrousd: number | null };
 }
 
 // ── Content / media / keys / webhooks ───────────────────────────

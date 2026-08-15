@@ -215,6 +215,7 @@ export const ADMIN_PATTERNS = {
   APIKEYS_REVOKE: 'admin.apiKeys.revoke',
   WEBHOOKS_LIST: 'admin.webhooks.list',
   WEBHOOKS_DISABLE: 'admin.webhooks.disable',
+  PROJECT_USAGE: 'admin.projects.usage',
 
   // Metrics (auth-side + core-side, merged at the gateway)
   METRICS_AUTH: 'admin.metrics.auth',

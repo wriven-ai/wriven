@@ -223,6 +223,24 @@ export interface AdminContentTypeRow {
   updatedAt: string;
 }
 
+/** Aggregated per-project usage for the admin Project detail screen (core-service). */
+export interface AdminProjectUsage {
+  projectId: string;
+  contentTypes: number;
+  entries: { total: number; published: number; draft: number; archived: number };
+  media: { assetCount: number; totalBytes: number };
+  apiKeys: { total: number; active: number };
+  webhooks: { total: number; active: number };
+  ai: {
+    generations: number;
+    succeeded: number;
+    failed: number;
+    totalTokens: number;
+    /** Sum of known provider spend in USD × 1,000,000; null when no priced rows. */
+    costMicrousd: number | null;
+  };
+}
+
 /** A media asset row in the admin Media view. */
 export interface AdminMediaRow {
   id: string;
