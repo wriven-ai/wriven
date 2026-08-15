@@ -71,6 +71,8 @@ async function main() {
       sortOrder: 1,
       priceMonthly: 1000,
       priceYearly: 10_800,
+      yearlyDiscountPercent: 10,
+      yearlyDiscountAmount: 1_200,
       trialDays: 0,
       limits: {
         projects: 5,
@@ -104,6 +106,8 @@ async function main() {
       sortOrder: 2,
       priceMonthly: 1800,
       priceYearly: 19_440,
+      yearlyDiscountPercent: 10,
+      yearlyDiscountAmount: 2_160,
       trialDays: 0,
       limits: {
         projects: 15,
@@ -144,6 +148,8 @@ async function main() {
           sortOrder: p.sortOrder,
           priceMonthly: p.priceMonthly,
           priceYearly: p.priceYearly,
+          yearlyDiscountPercent: p.yearlyDiscountPercent,
+          yearlyDiscountAmount: p.yearlyDiscountAmount,
           trialDays: p.trialDays,
           limits: p.limits,
           features: p.features,
