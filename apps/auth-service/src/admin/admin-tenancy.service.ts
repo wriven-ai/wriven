@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   AdminListQueryDto,
   AdminProjectRow,
+  AdminProjectsQueryDto,
   AdminUpdateUserDto,
   AdminUserDetail,
   AdminUserRow,
@@ -247,16 +248,18 @@ export class AdminTenancyService {
   // ── Projects ────────────────────────────────────────────────────────────────
 
   async listProjects(
-    query: AdminListQueryDto,
+    query: AdminProjectsQueryDto,
   ): Promise<Paginated<AdminProjectRow>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const where = query.q
-      ? or(
-          ilike(projects.name, `%${query.q}%`),
-          ilike(projects.slug, `%${query.q}%`),
-        )
-      : undefined;
+    const conds = [];
+    if (query.workspaceId)
+      conds.push(eq(projects.workspaceId, query.workspaceId));
+    if (query.q)
+      conds.push(
+        or(ilike(projects.name, `%${query.q}%`), ilike(projects.slug, `%${query.q}%`)),
+      );
+    const where = conds.length ? and(...conds) : undefined;
 
     const [rows, total] = await Promise.all([
       this.db.query.projects.findMany({

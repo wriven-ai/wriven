@@ -11,7 +11,7 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import {
   ADMIN_PATTERNS,
-  AdminListQueryDto,
+  AdminProjectsQueryDto,
   SERVICE_TOKENS,
 } from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
@@ -31,7 +31,7 @@ export class AdminProjectsController {
   ) {}
 
   @Get()
-  list(@Query() query: AdminListQueryDto) {
+  list(@Query() query: AdminProjectsQueryDto) {
     return firstValueFrom(this.auth.send(ADMIN_PATTERNS.PROJECTS_LIST, query));
   }
 

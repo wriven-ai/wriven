@@ -52,7 +52,7 @@ On boot call `GET /admin/auth/me` to hydrate session; 401 → redirect `/login`.
 | PUT | `/admin/workspaces/:id/plan` | `[admin]` | `AssignPlanDto` | `{ success, planKey, status }` |
 
 ### Projects
-| GET | `/admin/projects?page&limit&q` | any | — | `Paginated<AdminProjectRow>` |
+| GET | `/admin/projects?page&limit&q&workspaceId?` | any | — | `Paginated<AdminProjectRow>` |
 | GET | `/admin/projects/:id` | any | — | `AdminProjectRow` |
 | DELETE | `/admin/projects/:id` | `[admin]` | — | `{ success: true }` (soft-delete) |
 
@@ -62,6 +62,12 @@ On boot call `GET /admin/auth/me` to hydrate session; 401 → redirect `/login`.
 | PATCH | `/admin/content/:id` | `[admin, moderator]` | `{ status: 'draft' \| 'archived' }` | `AdminEntryRow` |
 
 `status` filter ∈ `draft|published|archived`. PATCH = takedown (also purges CDN).
+
+### Content types
+| GET | `/admin/content-types?page&limit&workspaceId?&projectId?` | any | — | `Paginated<AdminContentTypeRow>` |
+
+Read-only oversight of content-type definitions (`fields` = full `FieldDef[]`).
+Soft-deleted types are excluded.
 
 ### Media
 | GET | `/admin/media?page&limit&workspaceId?&projectId?` | any | — | `Paginated<AdminMediaRow>` |
@@ -157,6 +163,11 @@ export interface AdminEntryRow {
 }
 export interface AdminEntryDetail extends AdminEntryRow {
   data: Record<string, unknown>;
+}
+export interface AdminContentTypeRow {
+  id: string; workspaceId: string; projectId: string;
+  name: string; apiId: string; fields: FieldDef[];
+  createdAt: string; updatedAt: string;
 }
 export interface AdminMediaRow {
   id: string; workspaceId: string; projectId: string; kind: string;

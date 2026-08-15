@@ -247,3 +247,10 @@ export class AdminListQueryDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   q?: string;
 }
+
+/** Admin projects list — pagination/search plus optional workspace scope. */
+export class AdminProjectsQueryDto extends AdminListQueryDto {
+  @IsOptional()
+  @IsString()
+  workspaceId?: string;
+}

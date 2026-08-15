@@ -4,6 +4,7 @@ import {
   ADMIN_PATTERNS,
   AdminListQueryDto,
   AdminLoginDto,
+  AdminProjectsQueryDto,
   AdminUpdateUserDto,
   AssignPlanDto,
   type AuditWritePayload,
@@ -132,7 +133,7 @@ export class AdminController {
   }
 
   @MessagePattern(ADMIN_PATTERNS.PROJECTS_LIST)
-  listProjects(@Payload() query: AdminListQueryDto) {
+  listProjects(@Payload() query: AdminProjectsQueryDto) {
     return this.tenancy.listProjects(query);
   }
 
