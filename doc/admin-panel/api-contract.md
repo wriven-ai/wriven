@@ -39,7 +39,7 @@ On boot call `GET /admin/auth/me` to hydrate session; 401 → redirect `/login`.
 | GET | `/admin/metrics/overview` | any | — | `AdminMetricsOverview` |
 
 ### Tenant users
-| GET | `/admin/users?page&limit&q` | any | — | `Paginated<AdminUserRow>` |
+| GET | `/admin/users?page&limit&q&suspended?` | any | — | `Paginated<AdminUserRow>` |
 | GET | `/admin/users/:id` | any | — | `AdminUserDetail` |
 | PATCH | `/admin/users/:id` | `[admin, moderator]` | `{ suspended?, emailVerified? }` | `AdminUserRow` |
 | DELETE | `/admin/users/:id` | `[admin]` | — | `{ success: true }` |

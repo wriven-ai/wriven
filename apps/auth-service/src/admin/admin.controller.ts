@@ -5,6 +5,7 @@ import {
   AdminListQueryDto,
   AdminLoginDto,
   AdminProjectsQueryDto,
+  AdminUsersQueryDto,
   AdminUpdateUserDto,
   AssignPlanDto,
   type AuditWritePayload,
@@ -103,7 +104,7 @@ export class AdminController {
   // ── Tenant oversight ────────────────────────────────────────────────────────
 
   @MessagePattern(ADMIN_PATTERNS.USERS_LIST)
-  listUsers(@Payload() query: AdminListQueryDto) {
+  listUsers(@Payload() query: AdminUsersQueryDto) {
     return this.tenancy.listUsers(query);
   }
 

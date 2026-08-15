@@ -3,6 +3,7 @@ import {
   AdminListQueryDto,
   AdminProjectRow,
   AdminProjectsQueryDto,
+  AdminUsersQueryDto,
   AdminUpdateUserDto,
   AdminUserDetail,
   AdminUserRow,
@@ -11,7 +12,7 @@ import {
   Paginated,
 } from '@wriven/contracts';
 import { DRIZZLE, type DrizzleDB } from '@wriven/database';
-import { and, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 
@@ -33,15 +34,17 @@ export class AdminTenancyService {
 
   // ── Users ───────────────────────────────────────────────────────────────────
 
-  async listUsers(query: AdminListQueryDto): Promise<Paginated<AdminUserRow>> {
+  async listUsers(query: AdminUsersQueryDto): Promise<Paginated<AdminUserRow>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const where = query.q
-      ? or(
-          ilike(users.email, `%${query.q}%`),
-          ilike(users.name, `%${query.q}%`),
-        )
-      : undefined;
+    const conds = [];
+    if (query.q)
+      conds.push(or(ilike(users.email, `%${query.q}%`), ilike(users.name, `%${query.q}%`)));
+    if (query.suspended !== undefined)
+      conds.push(
+        query.suspended ? isNotNull(users.suspendedAt) : isNull(users.suspendedAt),
+      );
+    const where = conds.length ? and(...conds) : undefined;
 
     const [rows, total] = await Promise.all([
       this.db.query.users.findMany({

@@ -13,8 +13,8 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import {
   ADMIN_PATTERNS,
-  AdminListQueryDto,
   AdminUpdateUserDto,
+  AdminUsersQueryDto,
   SERVICE_TOKENS,
 } from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
@@ -34,7 +34,7 @@ export class AdminUsersController {
   ) {}
 
   @Get()
-  list(@Query() query: AdminListQueryDto) {
+  list(@Query() query: AdminUsersQueryDto) {
     return firstValueFrom(this.auth.send(ADMIN_PATTERNS.USERS_LIST, query));
   }
 

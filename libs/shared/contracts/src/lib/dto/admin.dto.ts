@@ -254,3 +254,11 @@ export class AdminProjectsQueryDto extends AdminListQueryDto {
   @IsString()
   workspaceId?: string;
 }
+
+/** Admin users list — pagination/search plus optional suspension filter. */
+export class AdminUsersQueryDto extends AdminListQueryDto {
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  suspended?: boolean;
+}
