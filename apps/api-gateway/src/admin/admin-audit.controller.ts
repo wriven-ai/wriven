@@ -2,7 +2,7 @@ import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   ADMIN_PATTERNS,
-  AdminListQueryDto,
+  AdminAuditQueryDto,
   SERVICE_TOKENS,
 } from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
@@ -18,7 +18,7 @@ export class AdminAuditController {
   ) {}
 
   @Get()
-  list(@Query() query: AdminListQueryDto) {
+  list(@Query() query: AdminAuditQueryDto) {
     return firstValueFrom(this.auth.send(ADMIN_PATTERNS.AUDIT_LIST, query));
   }
 }

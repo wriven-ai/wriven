@@ -2,6 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   ADMIN_PATTERNS,
+  AdminAuditQueryDto,
   AdminListQueryDto,
   AdminLoginDto,
   AdminProjectsQueryDto,
@@ -90,7 +91,7 @@ export class AdminController {
   }
 
   @MessagePattern(ADMIN_PATTERNS.AUDIT_LIST)
-  listAudit(@Payload() query: AdminListQueryDto) {
+  listAudit(@Payload() query: AdminAuditQueryDto) {
     return this.audit.list(query);
   }
 

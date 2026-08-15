@@ -255,6 +255,17 @@ export class AdminProjectsQueryDto extends AdminListQueryDto {
   workspaceId?: string;
 }
 
+/** Admin audit log list — pagination/search plus action/target filters. */
+export class AdminAuditQueryDto extends AdminListQueryDto {
+  @IsOptional()
+  @IsString()
+  action?: string;
+
+  @IsOptional()
+  @IsString()
+  targetType?: string;
+}
+
 /** Admin users list — pagination/search plus optional suspension filter. */
 export class AdminUsersQueryDto extends AdminListQueryDto {
   @IsOptional()

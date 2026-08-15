@@ -12,7 +12,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   SUPPORT_PRIORITIES,
   SUPPORT_SCOPES,
@@ -134,6 +134,12 @@ export class AdminTicketListQueryDto {
   @IsOptional()
   @IsUUID()
   assignedAdminId?: string;
+
+  /** Filter to tickets with no assignee (admin panel "Unassigned" preset). */
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  unassigned?: boolean;
 
   @IsOptional()
   @IsString()
