@@ -44,12 +44,41 @@ export class AdminPlansService {
     if (
       dto.key !== 'free' &&
       dto.priceMonthly == null &&
-      dto.priceYearly == null
+      dto.priceYearly == null &&
+      dto.yearlyDiscountPercent == null
     ) {
       throw rpcError(
         'VALIDATION_ERROR',
         'A paid plan needs at least one price (priceMonthly or priceYearly).',
       );
+    }
+    // Discount path: percent drives the yearly price — monthly is the base and
+    // an explicit yearly price would conflict with the computed one.
+    if (dto.yearlyDiscountPercent != null) {
+      if (dto.priceMonthly == null) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          'A yearly discount requires a monthly price to discount from.',
+        );
+      }
+      if (dto.priceYearly != null) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          'Send either priceYearly or yearlyDiscountPercent, not both — the yearly price is computed from the discount.',
+        );
+      }
+    }
+
+    // Server-authoritative yearly computation: Stripe gets the FINAL cents;
+    // the DB keeps the breakdown (percent + cents saved).
+    let priceYearly = dto.priceYearly ?? null;
+    let yearlyDiscountAmount: number | null = null;
+    if (dto.yearlyDiscountPercent != null && dto.priceMonthly != null) {
+      const fullYear = dto.priceMonthly * 12;
+      priceYearly = Math.round(
+        fullYear * (1 - dto.yearlyDiscountPercent / 100),
+      );
+      yearlyDiscountAmount = fullYear - priceYearly;
     }
 
     // Stripe-first for paid plans: create Product + Prices, capture ids, THEN
@@ -72,7 +101,8 @@ export class AdminPlansService {
           'usd',
           dto.key,
           dto.priceMonthly,
-          dto.priceYearly,
+          priceYearly,
+          dto.yearlyDiscountPercent,
         );
         stripeIds = { productId: product.id, ...prices };
       } catch {
@@ -90,7 +120,9 @@ export class AdminPlansService {
         name: dto.name,
         description: dto.description ?? null,
         priceMonthly: dto.priceMonthly ?? null,
-        priceYearly: dto.priceYearly ?? null,
+        priceYearly,
+        yearlyDiscountPercent: dto.yearlyDiscountPercent ?? null,
+        yearlyDiscountAmount,
         limits: dto.limits ?? {},
         features: dto.features ?? {},
         stripeProductId: stripeIds.productId,
@@ -150,6 +182,7 @@ export class AdminPlansService {
     planKey: string,
     monthlyCents?: number | null,
     yearlyCents?: number | null,
+    yearlyDiscountPercent?: number | null,
   ): Promise<{ monthlyId: string | null; yearlyId: string | null }> {
     const [monthly, yearly] = await Promise.all([
       monthlyCents != null
@@ -167,7 +200,13 @@ export class AdminPlansService {
             currency,
             unit_amount: yearlyCents,
             recurring: { interval: 'year', usage_type: 'licensed' },
-            metadata: { planKey, billingCycle: 'yearly' },
+            metadata: {
+              planKey,
+              billingCycle: 'yearly',
+              ...(yearlyDiscountPercent != null
+                ? { yearlyDiscountPercent: String(yearlyDiscountPercent) }
+                : {}),
+            },
           })
         : Promise.resolve(null),
     ]);
@@ -253,6 +292,8 @@ export class AdminPlansService {
       active: p.active,
       priceMonthly: p.priceMonthly,
       priceYearly: p.priceYearly,
+      yearlyDiscountPercent: p.yearlyDiscountPercent,
+      yearlyDiscountAmount: p.yearlyDiscountAmount,
       currency: p.currency,
       trialDays: p.trialDays,
       limits: (p.limits ?? {}) as PlanLimits,

@@ -167,6 +167,19 @@ export class CreatePlanDto {
   @Min(0)
   priceYearly?: number;
 
+  /**
+   * Yearly discount percent (0–100). When set, `priceMonthly` is required and
+   * `priceYearly` must NOT also be sent — the server computes the final yearly
+   * price (`round(monthly × 12 × (1 − percent/100))` cents) and stores the
+   * breakdown (`yearlyDiscountPercent` + `yearlyDiscountAmount`).
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  yearlyDiscountPercent?: number;
+
   @IsOptional()
   limits?: Record<string, number | null>;
 

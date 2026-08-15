@@ -105,7 +105,14 @@ export interface PlanView {
   isPublic: boolean;
   active: boolean;
   priceMonthly: number | null; // cents
-  priceYearly: number | null; // cents
+  priceYearly: number | null; // cents — FINAL yearly amount Stripe charges
+  /**
+   * Yearly pricing breakdown (create-only). Percent given → priceYearly was
+   * computed server-side; `yearlyDiscountAmount` = cents saved vs monthly×12.
+   * Both null = explicit/absent yearly price, no discount.
+   */
+  yearlyDiscountPercent: number | null;
+  yearlyDiscountAmount: number | null;
   currency: string;
   trialDays: number;
   limits: PlanLimits;
