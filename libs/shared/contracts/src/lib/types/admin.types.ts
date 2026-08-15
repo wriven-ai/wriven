@@ -1,5 +1,7 @@
 /** Shapes for the platform admin panel — exchanged auth/core ↔ gateway over TCP. */
 
+import type { FieldDef } from './cms.types';
+
 /** Platform staff role (distinct from tenant roles). */
 export type AdminRole = 'admin' | 'moderator' | 'member';
 
@@ -207,6 +209,18 @@ export interface AdminEntryRow {
 /** Full entry detail (includes the data payload) for moderation review. */
 export interface AdminEntryDetail extends AdminEntryRow {
   data: Record<string, unknown>;
+}
+
+/** A content type row in the admin workspace Content Types view (core-service). */
+export interface AdminContentTypeRow {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  name: string;
+  apiId: string;
+  fields: FieldDef[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** A media asset row in the admin Media view. */

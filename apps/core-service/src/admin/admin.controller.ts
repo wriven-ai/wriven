@@ -7,6 +7,7 @@ import {
   AdminTakedownDto,
 } from '@wriven/contracts';
 import { AdminContentService } from './admin-content.service';
+import { AdminContentTypesService } from './admin-content-types.service';
 import { AdminKeysService } from './admin-keys.service';
 import { AdminMediaService } from './admin-media.service';
 import { AdminMetricsService } from './admin-metrics.service';
@@ -18,6 +19,7 @@ export class AdminController {
   constructor(
     private readonly metrics: AdminMetricsService,
     private readonly content: AdminContentService,
+    private readonly contentTypes: AdminContentTypesService,
     private readonly media: AdminMediaService,
     private readonly keys: AdminKeysService,
     private readonly webhooks: AdminWebhooksService,
@@ -43,6 +45,11 @@ export class AdminController {
   @MessagePattern(ADMIN_PATTERNS.CONTENT_TAKEDOWN)
   takedownContent(@Payload() payload: { id: string; dto: AdminTakedownDto }) {
     return this.content.takedown(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.CONTENT_TYPES_LIST)
+  listContentTypes(@Payload() query: AdminScopedQueryDto) {
+    return this.contentTypes.list(query);
   }
 
   // ── Media ─────────────────────────────────────────────────────────────────

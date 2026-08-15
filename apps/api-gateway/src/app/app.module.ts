@@ -11,6 +11,7 @@ import { AdminApiKeysController } from '../admin/admin-apikeys.controller';
 import { AdminAuditController } from '../admin/admin-audit.controller';
 import { AdminAuthController } from '../admin/admin-auth.controller';
 import { AdminContentController } from '../admin/admin-content.controller';
+import { AdminContentTypesController } from '../admin/admin-content-types.controller';
 import { AdminJwtGuard } from '../admin/admin-jwt.guard';
 import { AdminMediaController } from '../admin/admin-media.controller';
 import { AdminMetricsController } from '../admin/admin-metrics.controller';
@@ -121,6 +122,7 @@ import { AppService } from './app.service';
     AdminWorkspacesController,
     AdminProjectsController,
     AdminContentController,
+    AdminContentTypesController,
     AdminMediaController,
     AdminApiKeysController,
     AdminWebhooksController,
