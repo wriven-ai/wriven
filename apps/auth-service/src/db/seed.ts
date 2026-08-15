@@ -38,6 +38,8 @@ async function main() {
       sortOrder: 0,
       priceMonthly: 0,
       priceYearly: 0,
+      yearlyDiscountPercent: null,
+      yearlyDiscountAmount: null,
       trialDays: 0,
       limits: {
         projects: 2,
