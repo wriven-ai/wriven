@@ -113,3 +113,67 @@ test('rejects an already-aborted signal', async () => {
     client.getEntry('post', 'x', { signal: AbortSignal.abort() }),
   );
 });
+
+test('a caller abort mid-flight is never retried', async () => {
+  let calls = 0;
+  const client = createClient({
+    projectId: 'p',
+    token: 't',
+    retries: 2,
+    fetch: (_u, init) => {
+      calls++;
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new Error('aborted')), {
+          once: true,
+        });
+      });
+    },
+  });
+  const controller = new AbortController();
+  const pending = client.getEntry('post', 'x', { signal: controller.signal });
+  setTimeout(() => controller.abort(), 10);
+  await assert.rejects(
+    () => pending,
+    (err: unknown) => err instanceof WrivenError && err.code === 'ABORTED',
+  );
+  assert.equal(calls, 1); // no retry — the caller cancelled
+});
+
+test('getAllEntries follows pagination to the end', async () => {
+  const pages = [
+    { items: [{ id: '1' }, { id: '2' }], page: 1, limit: 2, total: 3 },
+    { items: [{ id: '3' }], page: 2, limit: 2, total: 3 },
+  ];
+  let call = 0;
+  const urls: string[] = [];
+  const client = createClient({
+    projectId: 'p',
+    token: 't',
+    fetch: async (u) => {
+      urls.push(String(u));
+      return ok(pages[call++]);
+    },
+  });
+  const all = await client.getAllEntries('post', { select: ['title'] });
+  assert.equal(all.length, 3);
+  assert.deepEqual(all.map((e) => e.id), ['1', '2', '3']);
+  assert.match(urls[0], /limit=100/);
+  assert.match(urls[0], /page=1/);
+  assert.match(urls[1], /page=2/);
+});
+
+test('iterateEntries yields lazily page by page', async () => {
+  const pages = [
+    { items: [{ id: 'a' }, { id: 'b' }], page: 1, limit: 2, total: 2 },
+  ];
+  let calls = 0;
+  const client = createClient({
+    projectId: 'p',
+    token: 't',
+    fetch: async () => ok(pages[calls++]),
+  });
+  const seen: string[] = [];
+  for await (const entry of client.iterateEntries('post')) seen.push(entry.id);
+  assert.deepEqual(seen, ['a', 'b']);
+  assert.equal(calls, 1); // one page — no over-fetch
+});

@@ -55,9 +55,12 @@ export interface QueryOptions {
 export interface ClientOptions {
   /** Project id (from the dashboard → API Keys). */
   projectId: string;
-  /** A delivery token: `wrk_live_…` (published) or `wrk_preview_…` (drafts). */
+  /**
+   * A delivery token. `wrk_live_…` (read — published only), `wrk_preview_…`
+   * (preview — also drafts), or `wrk_admin_…` (manage — also drafts).
+   */
   token: string;
-  /** Delivery API base URL. Default: https://api.wriven.com */
+  /** Delivery API base URL. Default: https://api.wriven.tech */
   baseUrl?: string;
   /** Custom fetch (SSR/edge/tests). Defaults to the global `fetch`. */
   fetch?: typeof fetch;
@@ -79,4 +82,14 @@ export interface WrivenClient {
     type: string,
     query?: QueryOptions,
   ): Promise<Paginated<WrivenEntry<TData>>>;
+  /** Every entry of a type, following pagination to the end. */
+  getAllEntries<TData = Record<string, unknown>>(
+    type: string,
+    query?: QueryOptions,
+  ): Promise<WrivenEntry<TData>[]>;
+  /** Lazily yield every entry of a type, fetching pages as you consume. */
+  iterateEntries<TData = Record<string, unknown>>(
+    type: string,
+    query?: QueryOptions,
+  ): AsyncGenerator<WrivenEntry<TData>, void, unknown>;
 }

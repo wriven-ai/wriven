@@ -7,7 +7,7 @@ import type {
   WrivenEntry,
 } from './types';
 
-const DEFAULT_BASE_URL = 'https://api.wriven.com';
+const DEFAULT_BASE_URL = 'https://api.wriven.tech';
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_RETRIES = 2;
 
@@ -90,7 +90,11 @@ export function createClient(options: ClientOptions): WrivenClient {
         return (body?.data ?? body) as T;
       } catch (err) {
         if (err instanceof WrivenError) throw err;
-        // Network/timeout/abort → retry, else give up.
+        // A caller-initiated abort must never be retried — surface it at once.
+        if (query?.signal?.aborted) {
+          throw new WrivenError('Request aborted by caller.', 0, 'ABORTED');
+        }
+        // Network/timeout → retry, else give up.
         lastError = new WrivenError(
           err instanceof Error ? err.message : 'Network request failed.',
           0,
@@ -118,6 +122,24 @@ export function createClient(options: ClientOptions): WrivenClient {
     },
     getEntries<TData = Record<string, unknown>>(type: string, query?: QueryOptions) {
       return request<Paginated<WrivenEntry<TData>>>(encodeURIComponent(type), query);
+    },
+    async getAllEntries<TData = Record<string, unknown>>(type: string, query?: QueryOptions) {
+      const all: WrivenEntry<TData>[] = [];
+      for await (const entry of this.iterateEntries<TData>(type, query)) all.push(entry);
+      return all;
+    },
+    async *iterateEntries<TData = Record<string, unknown>>(type: string, query?: QueryOptions) {
+      // Page size caps at the API maximum; `limit` on a pagination helper would
+      // mean "stop early", which callers express by breaking out of the loop.
+      const pageSize = 100;
+      for (let page = 1; ; page++) {
+        const result = await request<Paginated<WrivenEntry<TData>>>(
+          encodeURIComponent(type),
+          { ...query, page, limit: pageSize },
+        );
+        for (const entry of result.items) yield entry;
+        if (page * result.limit >= result.total) return;
+      }
     },
   };
 }

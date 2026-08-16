@@ -47,3 +47,24 @@ test('renders an image node with the resolved src', () => {
 test('returns null for an empty value', () => {
   assert.equal(WrivenRichText({ value: null }), null);
 });
+
+test('skips an image whose asset was not resolved (src null)', () => {
+  const doc = {
+    type: 'doc',
+    content: [
+      { type: 'paragraph', content: [{ type: 'text', text: 'keep' }] },
+      { type: 'image', attrs: { src: null, alt: 'gone' } },
+    ],
+  };
+  const imgs = findByType(WrivenRichText({ value: doc }), 'img');
+  assert.equal(imgs.length, 0);
+});
+
+test('clamps a malformed heading level instead of rendering hNaN', () => {
+  const doc = {
+    type: 'doc',
+    content: [{ type: 'heading', attrs: { level: 'abc' }, content: [{ type: 'text', text: 't' }] }],
+  };
+  const headings = findByType(WrivenRichText({ value: doc }), 'h2');
+  assert.equal(headings.length, 1);
+});
