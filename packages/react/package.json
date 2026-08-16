@@ -1,7 +1,7 @@
 {
   "name": "@wriven-ai/react",
-  "version": "0.1.0",
-  "description": "React renderer for Wriven rich-text (ProseMirror JSON), including inline media — for the Wriven headless CMS.",
+  "version": "0.1.1",
+  "description": "React renderer for Wriven rich-text (ProseMirror JSON), including inline media \u2014 for the Wriven headless CMS.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
