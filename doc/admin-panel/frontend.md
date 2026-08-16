@@ -232,9 +232,9 @@ Shared conventions for all:
     RHF+zod. Assignment happens on the workspace detail screen.
     - **List** shows the Stripe link per row (`AdminPlanView.stripeProductId` /
       `stripePriceIdMonthly` / `stripePriceIdYearly` — `null` ⇒ not linked / free).
-    - **Create** (paid plan) takes `priceMonthly`/`priceYearly` (cents, ≥1 required
-      when `key !== 'free'`) → the backend also creates the Stripe Product + Prices.
-      A paid plan with no price → `VALIDATION_ERROR` 422.
+    - **Create** (paid plan) takes `priceMonthly` (USD dollars — the DTO converts
+      to cents; ≥1 required when `key !== 'free'`) → the backend also creates the
+      Stripe Product + Prices. A paid plan with no price → `VALIDATION_ERROR` 422.
     - **Edit** form is **name/description/limits/features/active only** — prices are
       **read-only** after create (`UpdatePlanDto` has no price fields; show the
       amount as read-only). Setting `active:false` retires the plan and archives it

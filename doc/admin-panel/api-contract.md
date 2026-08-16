@@ -261,7 +261,9 @@ interface AdminTakedownDto { status: 'draft' | 'archived'; }
 // POST /admin/plans
 interface CreatePlanDto {
   key: string; name: string; description?: string;
-  priceMonthly?: number; priceYearly?: number; // cents — required for paid plans (key !== 'free')
+  // USD dollars on the wire (e.g. 9.99) — the DTO transforms to integer cents;
+  // required for paid plans (key !== 'free'). priceYearly XOR yearlyDiscountPercent.
+  priceMonthly?: number; priceYearly?: number; yearlyDiscountPercent?: number;
   limits?: Record<string, number | null>; features?: Record<string, unknown>;
 }
 // PATCH /admin/plans/:id  — prices are read-only after create (Stripe owns them)
@@ -286,7 +288,8 @@ interface AssignPlanDto {
   Build nav + action gating on these. `member` = read-only everywhere.
 - **Plans carry `limits` + `features` (open objects) + billing columns.** The Plans
   editor and the Workspace→Plan assignment use `PlanView` / `AssignPlanDto` above.
-  Prices are in **cents**.
+  Create requests send prices in **USD dollars** (DTO converts to cents); responses
+  and storage are in **cents**.
 - **Login is single-step** (no TOTP yet) — don't build the MFA step; the `me`
   response has no `mfaRequired`.
 - **Workspace plan assignment** lives on the workspace detail screen

@@ -22,6 +22,7 @@ The docs split into three layers:
 | [API Reference](./api-reference.md) | Every gateway endpoint: method, auth, headers, body, responses |
 | [Conventions](./conventions.md) | Response envelope, error codes, rate limits, env, commands, commit style |
 | [AI Governance](./ai-governance.md) | AI data controls, retention, billing/retry policy, and monitoring |
+| [Plan Config](./plan-config.md) | Plan tiers (`free`/`starter`/`pro`): pricing, limits, features — managed via the admin panel (not seeded) |
 | [Support Tickets](./support-ticket/README.md) | Workspace-level support ticketing: subject + description + ≤3 images + scope dropdown, threaded user↔staff conversation, status/priority. Separate plans: [backend](./support-ticket/backend.md) · [client](./support-ticket/client.md) · [admin-panel](./support-ticket/admin-panel.md) |
 
 **Status & planning**
