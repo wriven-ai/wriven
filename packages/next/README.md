@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@wriven-ai/next)](https://www.npmjs.com/package/@wriven-ai/next)
 [![license](https://img.shields.io/npm/l/@wriven-ai/next)](./LICENSE)
 
-Next.js helpers for [Wriven](https://wriven.com): a signature-verified
+Next.js helpers for [Wriven](https://wriven.tech): a signature-verified
 webhook → ISR revalidation route handler, plus the raw signature verifier for
 custom handling.
 

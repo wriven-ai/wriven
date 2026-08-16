@@ -1,6 +1,6 @@
 {
   "name": "@wriven-ai/react",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "React renderer for Wriven rich-text (ProseMirror JSON), including inline media \u2014 for the Wriven headless CMS.",
   "type": "module",
   "license": "MIT",
@@ -54,7 +54,7 @@
   "engines": {
     "node": ">=18"
   },
-  "homepage": "https://wriven.com",
+  "homepage": "https://wriven.tech",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wriven-ai/wriven.git",

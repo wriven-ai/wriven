@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@wriven-ai/react)](https://www.npmjs.com/package/@wriven-ai/react)
 [![license](https://img.shields.io/npm/l/@wriven-ai/react)](./LICENSE)
 
-React renderer for [Wriven](https://wriven.com) rich-text. Turns a `richtext`
+React renderer for [Wriven](https://wriven.tech) rich-text. Turns a `richtext`
 field's ProseMirror JSON — including inline images hydrated by the Delivery
 API — into React elements.
 

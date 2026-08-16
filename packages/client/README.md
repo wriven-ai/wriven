@@ -4,7 +4,7 @@
 [![license](https://img.shields.io/npm/l/@wriven-ai/client)](./LICENSE)
 [![types](https://img.shields.io/badge/types-included-blue)](#typed-entries)
 
-Official client for the [Wriven](https://wriven.com) headless CMS **Content
+Official client for the [Wriven](https://wriven.tech) headless CMS **Content
 Delivery API**. Fetch published content from any JS/TS runtime — Node 18+,
 browsers, edge, Bun, Deno.
 
