@@ -10,7 +10,7 @@ export default function ProblemStatement() {
         <div className="space-y-8">
           <div className="text-center space-y-3">
             <span className="text-sm font-mono tracking-widest text-brand-accent font-bold uppercase bg-brand-surface-soft border border-brand-border px-3 py-1.5 rounded-md inline-block">
-              MANIFEST 01. THE DISCONNECTED GRAPH
+              THE DISCONNECTED WORKFLOW
             </span>
             <h2 className="font-display font-medium tracking-tight text-text-primary text-3xl sm:text-4xl" id="problem-title">
               Content workflows are fragmented.
@@ -33,12 +33,11 @@ export default function ProblemStatement() {
             <div className="md:col-span-5 bg-brand-surface-soft border border-brand-border p-5 rounded-lg space-y-4 font-sans">
               <Bookmark className="w-5 h-5 text-brand-accent" />
               <p className="text-sm text-text-primary leading-relaxed" id="problem-solution-prompt">
-                &ldquo;Wriven weaves the entire workflow. We believe that structured content models, layout drafting, and integrated copywriters belong on the same physical desktop layout.&rdquo;
+                &ldquo;Wriven weaves the entire workflow. Structured content models, AI-assisted drafting, media management, and publishing belong in the same workspace.&rdquo;
               </p>
               <div className="h-[1px] bg-brand-border" />
               <div className="flex justify-between items-center text-sm font-mono text-text-muted">
-                <span>— THE WRIVEN EDITORIAL COMMITTEE</span>
-                <span>JUNE 2026</span>
+                <span>— THE WRIVEN TEAM</span>
               </div>
             </div>
           </div>

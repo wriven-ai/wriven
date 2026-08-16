@@ -13,7 +13,7 @@ export default function BottomCta() {
           <span className="text-brand-accent font-normal">digital platforms?</span>
         </h2>
         <p className="text-text-secondary text-sm sm:text-base max-w-xl mx-auto font-light leading-relaxed" id="bottom-paragraph">
-          Create your organization workspace in seconds. Design content frameworks, leverage connected drafting tools, and fetch high-speed static JSON instantly.
+          Create your organization workspace in seconds. Design content models, draft with the AI co-writer, and publish to a clean REST delivery API.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3" id="bottom-actions">
           <Link
