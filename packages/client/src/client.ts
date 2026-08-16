@@ -120,8 +120,12 @@ export function createClient(options: ClientOptions): WrivenClient {
         query,
       );
     },
-    getEntries<TData = Record<string, unknown>>(type: string, query?: QueryOptions) {
-      return request<Paginated<WrivenEntry<TData>>>(encodeURIComponent(type), query);
+    async getEntries<TData = Record<string, unknown>>(type: string, query?: QueryOptions) {
+      const result = await request<Paginated<WrivenEntry<TData>>>(
+        encodeURIComponent(type),
+        query,
+      );
+      return { ...result, hasNextPage: result.page * result.limit < result.total };
     },
     async getAllEntries<TData = Record<string, unknown>>(type: string, query?: QueryOptions) {
       const all: WrivenEntry<TData>[] = [];

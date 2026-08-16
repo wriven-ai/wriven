@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createClient, WrivenError } from '../src/index';
+import { createClient, WrivenError, isWrivenError } from '../src/index';
 
 const ok = (data: unknown, status = 200) =>
   new Response(JSON.stringify({ success: true, data }), {
@@ -176,4 +176,38 @@ test('iterateEntries yields lazily page by page', async () => {
   for await (const entry of client.iterateEntries('post')) seen.push(entry.id);
   assert.deepEqual(seen, ['a', 'b']);
   assert.equal(calls, 1); // one page — no over-fetch
+});
+
+test('getEntries computes hasNextPage from page/limit/total', async () => {
+  let call = 0;
+  const pages = [
+    { items: [{ id: '1' }], page: 1, limit: 1, total: 2 },
+    { items: [{ id: '2' }], page: 2, limit: 1, total: 2 },
+  ];
+  const client = createClient({
+    projectId: 'p',
+    token: 't',
+    fetch: async () => ok(pages[call++]),
+  });
+  const first = await client.getEntries('post');
+  assert.equal(first.hasNextPage, true);
+  const last = await client.getEntries('post');
+  assert.equal(last.hasNextPage, false);
+});
+
+test('isWrivenError separates SDK errors from foreign errors', async () => {
+  const client = createClient({
+    projectId: 'p',
+    token: 't',
+    fetch: async () =>
+      new Response(JSON.stringify({ success: false, error: { code: 'NOT_FOUND', message: 'nope', statusCode: 404 } }), { status: 404 }),
+  });
+  try {
+    await client.getEntry('post', 'x');
+    assert.fail('should have thrown');
+  } catch (err) {
+    assert.equal(isWrivenError(err), true);
+    assert.equal(isWrivenError(new Error('plain')), false);
+    assert.equal(isWrivenError('string'), false);
+  }
 });

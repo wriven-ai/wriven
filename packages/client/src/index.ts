@@ -1,5 +1,5 @@
 export { createClient } from './client';
-export { WrivenError } from './errors';
+export { WrivenError, isWrivenError } from './errors';
 export type {
   ClientOptions,
   Paginated,

@@ -20,6 +20,8 @@ export interface Paginated<T> {
   page: number;
   limit: number;
   total: number;
+  /** Convenience flag computed by the SDK: `page * limit < total`. */
+  hasNextPage: boolean;
 }
 
 /** Resolved shape of a `media` field (or array member) in delivery responses. */

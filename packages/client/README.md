@@ -169,28 +169,27 @@ post.data.cover?.url;    // string | undefined
 
 ## Pagination
 
-`getEntries` returns one page. For "give me everything", use the helpers —
-`getAllEntries` follows pagination to the end, `iterateEntries` yields entries
-lazily page by page (100 per fetch):
+Most of the time you don't paginate at all — ask for what you need:
 
 ```ts
+// Everything (fetches pages internally)
 const posts = await wriven.getAllEntries<Post>('blog_post');
+
+// A UI page
+const { items, hasNextPage } = await wriven.getEntries<Post>('blog_post', { page: 1, limit: 10 });
+```
+
+Streaming large sets entry by entry (100 per fetch, lazily):
+
+```ts
 for await (const post of wriven.iterateEntries<Post>('blog_post')) render(post);
 ```
 
-To walk pages yourself:
+Walking pages yourself is just `page` + `hasNextPage`:
 
 ```ts
-const limit = 50;
-let page = 1;
-let total = Infinity;
-
-while ((page - 1) * limit < total) {
-  const res = await wriven.getEntries('blog_post', { page, limit });
-  total = res.total;
-  for (const entry of res.items) render(entry);
-  page++;
-}
+const res = await wriven.getEntries<Post>('blog_post', { page: 2, limit: 10 });
+if (res.hasNextPage) loadMore();
 ```
 
 ## Reference expansion
@@ -213,12 +212,12 @@ Unresolved references remain the raw id string — check with
 Every failure throws a typed `WrivenError`:
 
 ```ts
-import { WrivenError } from '@wriven-ai/client';
+import { isWrivenError } from '@wriven-ai/client';
 
 try {
   await wriven.getEntry('blog_post', 'missing');
 } catch (err) {
-  if (err instanceof WrivenError) {
+  if (isWrivenError(err)) {
     err.status;  // 404 — HTTP status (0 for network/timeout/abort)
     err.code;    // 'NOT_FOUND' — machine-readable code
     err.message; // human-readable message
