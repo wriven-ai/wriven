@@ -8,7 +8,7 @@ import {
   UpdatePlanDto,
 } from '@wriven/contracts';
 import { DRIZZLE, type DrizzleDB } from '@wriven/database';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, max } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
@@ -32,6 +32,14 @@ export class AdminPlansService {
   }
 
   async create(dto: CreatePlanDto): Promise<AdminPlanView> {
+    // Dollars → integer cents, exactly once, HERE. Not in the DTO: both the
+    // gateway (HTTP) and this service (TCP) validate CreatePlanDto with
+    // transform pipes, so a @Transform there would convert twice.
+    const monthlyCents =
+      dto.priceMonthly != null ? Math.round(dto.priceMonthly * 100) : null;
+    const yearlyCentsInput =
+      dto.priceYearly != null ? Math.round(dto.priceYearly * 100) : null;
+
     const existing = await this.db.query.plans.findFirst({
       where: eq(plans.key, dto.key),
       columns: { id: true },
@@ -43,8 +51,8 @@ export class AdminPlansService {
     // Product with no Prices (unpurchasable + orphaned). Free plan has no price.
     if (
       dto.key !== 'free' &&
-      dto.priceMonthly == null &&
-      dto.priceYearly == null &&
+      monthlyCents == null &&
+      yearlyCentsInput == null &&
       dto.yearlyDiscountPercent == null
     ) {
       throw rpcError(
@@ -55,7 +63,7 @@ export class AdminPlansService {
     // Discount path: percent drives the yearly price — monthly is the base and
     // an explicit yearly price would conflict with the computed one.
     if (dto.yearlyDiscountPercent != null) {
-      if (dto.priceMonthly == null) {
+      if (monthlyCents == null) {
         throw rpcError(
           'VALIDATION_ERROR',
           'A yearly discount requires a monthly price to discount from.',
@@ -71,15 +79,24 @@ export class AdminPlansService {
 
     // Server-authoritative yearly computation: Stripe gets the FINAL cents;
     // the DB keeps the breakdown (percent + cents saved).
-    let priceYearly = dto.priceYearly ?? null;
+    let priceYearly = yearlyCentsInput;
     let yearlyDiscountAmount: number | null = null;
-    if (dto.yearlyDiscountPercent != null && dto.priceMonthly != null) {
-      const fullYear = dto.priceMonthly * 12;
+    if (dto.yearlyDiscountPercent != null && monthlyCents != null) {
+      const fullYear = monthlyCents * 12;
       priceYearly = Math.round(
         fullYear * (1 - dto.yearlyDiscountPercent / 100),
       );
       yearlyDiscountAmount = fullYear - priceYearly;
     }
+
+    // Tier rank: explicit wins, else append above the current highest tier so
+    // a new plan can never silently land at 0 (= free tier, breaks upgrade/
+    // downgrade math everywhere sortOrder is compared).
+    const sortOrder =
+      dto.sortOrder ??
+      ((await this.db
+        .select({ max: max(plans.sortOrder) })
+        .from(plans))[0]?.max ?? -1) + 1;
 
     // Stripe-first for paid plans: create Product + Prices, capture ids, THEN
     // insert the row — so a Stripe failure can't leave a half-linked plan.
@@ -100,7 +117,7 @@ export class AdminPlansService {
           product.id,
           'usd',
           dto.key,
-          dto.priceMonthly,
+          monthlyCents,
           priceYearly,
           dto.yearlyDiscountPercent,
         );
@@ -119,12 +136,13 @@ export class AdminPlansService {
         key: dto.key,
         name: dto.name,
         description: dto.description ?? null,
-        priceMonthly: dto.priceMonthly ?? null,
+        priceMonthly: monthlyCents,
         priceYearly,
         yearlyDiscountPercent: dto.yearlyDiscountPercent ?? null,
         yearlyDiscountAmount,
         limits: dto.limits ?? {},
         features: dto.features ?? {},
+        sortOrder,
         stripeProductId: stripeIds.productId,
         stripePriceIdMonthly: stripeIds.monthlyId,
         stripePriceIdYearly: stripeIds.yearlyId,
@@ -165,6 +183,7 @@ export class AdminPlansService {
     if (d.active !== undefined) patch.active = d.active;
     if (d.limits !== undefined) patch.limits = d.limits;
     if (d.features !== undefined) patch.features = d.features;
+    if (d.sortOrder !== undefined) patch.sortOrder = d.sortOrder;
 
     const [plan] = await this.db
       .update(plans)
