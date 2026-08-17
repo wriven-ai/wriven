@@ -219,10 +219,9 @@ export class BillingService {
         cancel_url: cancelUrl,
       },
       {
-        // Per workspace+plan+cycle+day: dedupes double-clicks within a day but
-        // allows a fresh session tomorrow (a permanent key would return a stale
-        // session on legitimate retry).
-        idempotencyKey: `checkout:${input.workspaceId}:${plan.key}:${input.billingCycle}:${new Date().toISOString().slice(0, 10)}`,
+        // Dedupe rapid double-clicks (10-second window) without locking out retries
+        // if parameters change later in the day.
+        idempotencyKey: `checkout:${input.workspaceId}:${plan.key}:${input.billingCycle}:${Math.floor(Date.now() / 10000)}`,
       },
     );
     return { url: session.url as string, sessionId: session.id };
