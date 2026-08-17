@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { contentApi } from '@/lib/api';
 import type { ContentTypeView, EntryStatus } from '@/lib/types';
 import {
@@ -29,6 +29,7 @@ import {
 import { FieldRow, isFieldEmpty, STATUS_COLORS } from './fields';
 import { AiPanel } from './ai-panel';
 import { RevisionsDrawer } from './revisions-drawer';
+import { useSidebar } from '@/components/ui/sidebar';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
 
@@ -76,6 +77,36 @@ export function ContentEditor({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [appliedGenerationIds, setAppliedGenerationIds] = useState<string[]>([]);
+  // Bumped when the entry changes underneath the editor (revision restore,
+  // external save) — remounts the AI panel so stale previews and conversation
+  // history can't be re-applied onto restored content.
+  const [panelEpoch, setPanelEpoch] = useState(0);
+  const prevEntryTouchedRef = useRef<string | undefined>(undefined);
+  // Which breakpoint owns the (single) AiPanel instance. `null` until measured
+  // so the panel never mounts twice with independent state.
+  const [isDesktopViewport, setIsDesktopViewport] = useState<boolean | null>(null);
+
+  // Collapse the nav sidebar while the editor is mounted — the writing surface
+  // and the AI panel get the width. The author's previous sidebar state is
+  // restored when they leave the editor. (A manual re-expand during editing is
+  // respected: the cleanup only fires the restore, never a second collapse.)
+  const sidebar = useSidebar();
+  const sidebarSnapshot = useRef(sidebar);
+  sidebarSnapshot.current = sidebar;
+  useEffect(() => {
+    const { isMobile, open, setOpen } = sidebarSnapshot.current;
+    if (isMobile || !open) return;
+    setOpen(false);
+    return () => sidebarSnapshot.current.setOpen(true);
+  }, []);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktopViewport(mql.matches);
+    mql.addEventListener('change', onChange);
+    onChange();
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
 
   // Populate when an existing entry loads.
   useEffect(() => {
@@ -85,6 +116,13 @@ export function ContentEditor({
       setIsDirty(false);
       setFieldErrors({});
       setAppliedGenerationIds([]);
+      if (
+        prevEntryTouchedRef.current !== undefined &&
+        prevEntryTouchedRef.current !== entry.updatedAt
+      ) {
+        setPanelEpoch((epoch) => epoch + 1);
+      }
+      prevEntryTouchedRef.current = entry.updatedAt;
     }
   }, [entry]);
 
@@ -181,6 +219,36 @@ export function ContentEditor({
       !f.multiple &&
       !f.aiPrivate,
   );
+
+  /** Lets the editor link an explicitly applied AI draft to the next saved revision. */
+  const linkAppliedGeneration = (generationId: string) =>
+    setAppliedGenerationIds((current) =>
+      current.includes(generationId) ? current : [...current, generationId],
+    );
+  const unlinkAppliedGeneration = (generationId: string) =>
+    setAppliedGenerationIds((current) => current.filter((id) => id !== generationId));
+
+  // Per-field sparkle targeting: aim the Co-Writer at a field from its own row.
+  // The nonce makes repeat clicks on the same field re-fire the panel effect.
+  const [requestedAiTarget, setRequestedAiTarget] = useState<{ key: string; nonce: number }>();
+  const aiTargetNonceRef = useRef(0);
+  const targetAiField = (key: string) => {
+    aiTargetNonceRef.current += 1;
+    setRequestedAiTarget({ key, nonce: aiTargetNonceRef.current });
+    if (isDesktopViewport === false) setAiOpen(true);
+    else document.getElementById('wriven-ai-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  const aiTargetableKeys = new Set(
+    allFields
+      .filter(
+        (f) =>
+          (f.type === 'text' || f.type === 'richtext' || f.type === 'select') &&
+          !f.multiple &&
+          !f.aiPrivate,
+      )
+      .map((f) => f.key),
+  );
+  const aiTargets = hasAiTarget ? aiTargetableKeys : new Set<string>();
 
   return (
     <div className="space-y-6 text-left">
@@ -344,6 +412,7 @@ export function ContentEditor({
                 value={formData[field.key]}
                 onChange={(v) => setField(field.key, v)}
                 error={fieldErrors[field.key]}
+                aiTarget={aiTargets.has(field.key) ? { onClick: () => targetAiField(field.key) } : undefined}
               />
             ))}
 
@@ -357,6 +426,7 @@ export function ContentEditor({
                     value={formData[field.key]}
                     onChange={(v) => setField(field.key, v)}
                     error={fieldErrors[field.key]}
+                    aiTarget={aiTargets.has(field.key) ? { onClick: () => targetAiField(field.key) } : undefined}
                   />
                 ))}
               </div>
@@ -377,48 +447,40 @@ export function ContentEditor({
           )}
         </div>
 
-        {/* Right: AI Co-Writer — shown when there's an AI-eligible field */}
-        {hasAiTarget && (
-          <div className="hidden lg:contents">
+        {/* Right: AI Co-Writer — ONE instance. Desktop: grid aside. Mobile:
+            bottom sheet. Never mounted twice — the pair used to carry fully
+            independent state. */}
+        {hasAiTarget && isDesktopViewport === true && (
           <AiPanel
+            key={panelEpoch}
             contentTypeId={activeTypeId}
             entryId={entryId}
             fields={allFields}
             fieldValues={formData}
             setField={setField}
-            onApplied={(generationId) =>
-              setAppliedGenerationIds((current) =>
-                current.includes(generationId) ? current : [...current, generationId],
-              )
-            }
-            onUnapplied={(generationId) =>
-              setAppliedGenerationIds((current) => current.filter((id) => id !== generationId))
-            }
+            onApplied={linkAppliedGeneration}
+            onUnapplied={unlinkAppliedGeneration}
+            requestedTarget={requestedAiTarget}
           />
-          </div>
         )}
       </div>
 
-      {hasAiTarget && (
+      {hasAiTarget && isDesktopViewport === false && (
         <Sheet open={aiOpen} onOpenChange={setAiOpen}>
           <SheetContent
             side="bottom"
-            className="lg:hidden bg-brand-surface border-brand-border max-h-[90vh] overflow-y-auto p-0"
+            className="bg-brand-surface border-brand-border max-h-[90vh] overflow-y-auto p-0"
           >
             <AiPanel
+              key={panelEpoch}
               contentTypeId={activeTypeId}
               entryId={entryId}
               fields={allFields}
               fieldValues={formData}
               setField={setField}
-              onApplied={(generationId) =>
-                setAppliedGenerationIds((current) =>
-                  current.includes(generationId) ? current : [...current, generationId],
-                )
-              }
-              onUnapplied={(generationId) =>
-                setAppliedGenerationIds((current) => current.filter((id) => id !== generationId))
-              }
+              onApplied={linkAppliedGeneration}
+              onUnapplied={unlinkAppliedGeneration}
+              requestedTarget={requestedAiTarget}
             />
           </SheetContent>
         </Sheet>

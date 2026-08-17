@@ -1,13 +1,11 @@
 'use client';
 
 import Placeholder from '@tiptap/extension-placeholder';
-import Link from '@tiptap/extension-link';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { JSONContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useState } from 'react';
 import { EditorToolbar } from './editor-toolbar';
-import { MediaImage } from './extensions/media-image';
+import { RICH_TEXT_EXTENSIONS } from './extensions';
 import { MediaPickerDialog } from './media-picker-dialog';
 
 const EMPTY_DOC: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] };
@@ -70,11 +68,7 @@ export function RichTextEditor({
   const editor = useEditor({
     immediatelyRender: false, // avoid SSR hydration mismatch in Next.js
     extensions: [
-      StarterKit,
-      Link.configure({
-        HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' },
-      }),
-      MediaImage,
+      ...RICH_TEXT_EXTENSIONS,
       Placeholder.configure({ placeholder: placeholder ?? 'Write…' }),
     ],
     content: toDoc(value),

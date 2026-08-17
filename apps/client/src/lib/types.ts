@@ -481,7 +481,7 @@ export interface UsagePeriod {
 
 /**
  * Current-period workspace usage vs plan limits. `limit: null` = the plan
- * dimension is unlimited. Backed by `GET /usage` (specs/14, specs/21).
+ * dimension is unlimited. Backed by `GET /usage`.
  */
 export interface UsageView {
   period: UsagePeriod;
@@ -494,7 +494,7 @@ export interface UsageView {
  * AI usage for the period (mirrors @wriven/contracts). `requests.used` is
  * succeeded generations; `tokens`/`cost` include failed ones (they still burn
  * tokens). `cost.complete` is false when a model had no known price — the UI
- * then hides the dollar figure rather than showing a wrong one. See specs/21.
+ * then hides the dollar figure rather than showing a wrong one.
  */
 export interface AiUsageStats {
   requests: { used: number; limit: number | null };
@@ -510,7 +510,7 @@ export interface EntryStatusCounts {
   archived: number;
 }
 
-/** Workspace aggregate stats (mirrors @wriven/contracts). See specs/17, specs/21. */
+/** Workspace aggregate stats (mirrors @wriven/contracts). */
 export interface WorkspaceStatsView {
   projects: number;
   members: number;
@@ -526,7 +526,7 @@ export interface WorkspaceStatsView {
   aiImage: { used: null; limit: number | null };
 }
 
-/** Project-scoped aggregate stats (mirrors @wriven/contracts). See specs/17. */
+/** Project-scoped aggregate stats (mirrors @wriven/contracts). */
 export interface ProjectStatsView {
   entries: EntryStatusCounts;
   contentTypes: number;

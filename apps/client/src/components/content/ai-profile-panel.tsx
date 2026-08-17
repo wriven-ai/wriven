@@ -7,17 +7,25 @@ import { aiApi } from '@/lib/api';
 import type { AiGlossaryTerm } from '@/lib/types';
 
 /**
- * Per-project AI voice configuration (specs/21): brand voice, glossary, and
+ * Per-project AI voice configuration: brand voice, glossary, and
  * default language — injected into every generation's system prompt on the
  * server, so the client never has to send it with each generate call.
  *
  * Gated at the route on `CONTENT_TYPE_MANAGE`. Load + edit only; an absent
  * profile simply means "no guidance" (today's neutral behavior).
  */
-export function AiProfilePanel({ canManage }: { canManage: boolean }) {
+export function AiProfilePanel({
+  canManage,
+  scopeKey,
+}: {
+  canManage: boolean;
+  /** Project identity (`wsSlug/projSlug`). Scopes the cache so switching
+   *  projects can never show the previous project's voice profile. */
+  scopeKey: string;
+}) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
-    queryKey: ['ai-profile'],
+    queryKey: ['ai-profile', scopeKey],
     queryFn: aiApi.getProfile,
   });
 
@@ -38,7 +46,7 @@ export function AiProfilePanel({ canManage }: { canManage: boolean }) {
     mutationFn: aiApi.updateProfile,
     onSuccess: () => {
       setDirty(false);
-      qc.invalidateQueries({ queryKey: ['ai-profile'] });
+      qc.invalidateQueries({ queryKey: ['ai-profile', scopeKey] });
     },
   });
 
@@ -65,7 +73,7 @@ export function AiProfilePanel({ canManage }: { canManage: boolean }) {
       <div className="flex items-center gap-2 pb-2 border-b border-brand-border">
         <Sparkles className="w-4 h-4 text-brand-secondary" />
         <h2 className="text-sm font-mono font-bold tracking-wider text-text-primary">
-          AI Voice Settings
+          AI Settings
         </h2>
         <span className="ml-auto text-xs font-mono text-text-muted">
           Applied to every generation
@@ -80,6 +88,7 @@ export function AiProfilePanel({ canManage }: { canManage: boolean }) {
           rows={3}
           value={brandVoice}
           disabled={!canManage}
+          maxLength={2000}
           onChange={(e) => {
             setBrandVoice(e.target.value);
             setDirty(true);
@@ -135,6 +144,7 @@ export function AiProfilePanel({ canManage }: { canManage: boolean }) {
                   type="text"
                   value={row.term}
                   disabled={!canManage}
+                  maxLength={80}
                   onChange={(e) => {
                     setGlossary((prev) =>
                       prev.map((item, idx) =>
@@ -151,6 +161,7 @@ export function AiProfilePanel({ canManage }: { canManage: boolean }) {
                   type="text"
                   value={row.prefer}
                   disabled={!canManage}
+                  maxLength={80}
                   onChange={(e) => {
                     setGlossary((prev) =>
                       prev.map((item, idx) =>

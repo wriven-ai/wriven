@@ -166,7 +166,14 @@ Same guard chain as other `/content/*` routes (JWT + workspace + project). The g
 
 `AiProfileView`: `{ brandVoice, glossary:[{term,prefer}], language, updatedAt }`. The profile is resolved server-side and injected into every prompt; the client never sends it on generate.
 
-Errors: `PLAN_LIMIT_REACHED` 403, `RATE_LIMITED` 429, `AI_NOT_CONFIGURED` 503, `AI_QUOTA_UNAVAILABLE` 503, `AI_GENERATION_FAILED` 502 (incl. `select`/`compose` repair-miss), `AI_INPUT_TOO_LARGE` 422, `AI_GENERATION_IN_PROGRESS` 409, `IDEMPOTENCY_KEY_REUSED` 409. Save the entry with `aiGenerationIds` to record apply-provenance.
+Errors: `PLAN_LIMIT_REACHED` 403, `RATE_LIMITED` 429, `AI_NOT_CONFIGURED` 503, `AI_QUOTA_UNAVAILABLE` 503, `AI_GENERATION_FAILED` 502 (incl. `select`/`compose` repair-miss), `AI_INPUT_TOO_LARGE` 422, `AI_GENERATION_IN_PROGRESS` 409, `IDEMPOTENCY_KEY_REUSED` 409, `AI_RESULT_EXPIRED` 410. Save the entry with `aiGenerationIds` to record apply-provenance.
+
+Retry semantics (specs/22): re-sending a **failed** `requestId` rethrows that
+row's original error code (a 422 stays 422 — the code is persisted in
+`ai_generations.error_code`); re-sending a **succeeded** key replays the stored
+result, but once retention has redacted it the replay returns `AI_RESULT_EXPIRED`
+410 — start a new generation. Same-key retry is only ever useful for
+`AI_GENERATION_IN_PROGRESS` (409) or after a client-side stop-waiting abort.
 
 ### Media library
 

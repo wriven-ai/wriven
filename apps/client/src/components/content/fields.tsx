@@ -1,5 +1,6 @@
 'use client';
 
+import { Sparkles } from 'lucide-react';
 import type { EntryStatus, FieldDef } from '@/lib/types';
 import { RichTextEditor } from '@/components/editor/rich-text-editor';
 import { MediaField } from '@/components/editor/media-field';
@@ -142,11 +143,15 @@ export function FieldRow({
   value,
   onChange,
   error,
+  aiTarget,
 }: {
   field: FieldDef;
   value: unknown;
   onChange: (v: unknown) => void;
   error?: string;
+  /** When set (Tier-1 eligible field with the Co-Writer open), renders the
+   *  sparkle affordance that aims the AI panel at this field. */
+  aiTarget?: { onClick: () => void };
 }) {
   return (
     <div className="space-y-1.5">
@@ -154,7 +159,19 @@ export function FieldRow({
         <label className="flex items-center gap-1.5 text-sm font-mono text-text-secondary">
           <span className={error ? 'text-status-error font-bold' : undefined}>{field.label}</span>
           {field.required && <span className="text-brand-accent font-bold">*</span>}
-          <span className="text-sm text-text-muted uppercase ml-auto">[{field.type}]</span>
+          <span className="flex items-center gap-1.5 ml-auto">
+            {aiTarget && (
+              <button
+                type="button"
+                onClick={aiTarget.onClick}
+                title="Draft or refine this field with AI"
+                className="text-text-muted hover:text-brand-secondary transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <span className="text-sm text-text-muted uppercase">[{field.type}]</span>
+          </span>
         </label>
       )}
       <FieldInput field={field} value={value} onChange={onChange} invalid={!!error} />
