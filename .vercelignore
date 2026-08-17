@@ -1,0 +1,43 @@
+# ── Dependencies & caches (installed on Vercel via installCommand) ──
+node_modules
+.nx
+.next
+dist
+
+# ── Python ai-service (not deployed to Vercel) ──
+apps/ai-service
+.venv
+__pycache__
+
+# ── Backend services (not deployed to Vercel) ──
+apps/api-gateway
+apps/auth-service
+apps/core-service
+
+# ── Docker / CI (irrelevant for Vercel) ──
+docker-compose*.yml
+Dockerfile
+.dockerignore
+.github
+render.yaml
+DOCKER_SETUP.md
+
+# ── IDE / editor / agent config ──
+.vscode
+.idea
+.claude
+.codex
+.commandcode
+.opencode
+.gemini
+.agents
+.git
+.cursor
+
+# ── Misc ──
+coverage
+test-output
+*.log
+.env*
+plans
+specs
