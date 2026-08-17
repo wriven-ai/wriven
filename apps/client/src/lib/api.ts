@@ -240,6 +240,11 @@ export const authApi = {
     }),
   resendVerification: () =>
     request<{ success: true }>('/auth/resend-verification', { method: 'POST' }),
+  verifyEmailCode: (code: string) =>
+    request<{ success: true }>('/auth/verify-email-code', {
+      method: 'POST',
+      body: { code },
+    }),
   // Self-service profile (specs/18). User-scoped — no workspace header.
   updateProfile: (dto: { name?: string; avatar?: string | null }) =>
     request<UserView>('/users/me', { method: 'PATCH', body: dto }),

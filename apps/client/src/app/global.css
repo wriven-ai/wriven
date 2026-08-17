@@ -232,6 +232,21 @@ body {
   animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Caret blink for the OTP input slots */
+@keyframes otp-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-otp-blink {
+  animation: otp-blink 1s step-end infinite;
+}
+
 /* Notched "identity tag" badge used for the small uppercase eyebrow labels */
 .id-tag {
   clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
