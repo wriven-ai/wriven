@@ -14,9 +14,11 @@ cost on a `failed` row and charges no request quota.
 """
 
 import json
+import logging
 
 from app.config import settings
 from app.exceptions import (
+    AiServiceError,
     ComposeMissError,
     InputTooLarge,
     NotConfigured,
@@ -36,6 +38,11 @@ from app.schemas import (
     UsageOut,
 )
 
+# Step-level trace logger. The correlation id (`request_id=…`) is attached by
+# the HTTP middleware and matches core's and the gateway's logs for the same
+# generation. Never log field content, instructions, or provider payloads.
+logger = logging.getLogger("ai-service.generate")
+
 
 def add_usage(*usages: Usage) -> Usage:
     """Aggregate every provider attempt so audit usage reflects real spend."""
@@ -44,6 +51,41 @@ def add_usage(*usages: Usage) -> Usage:
         completion_tokens=sum(usage.completion_tokens for usage in usages),
         total_tokens=sum(usage.total_tokens for usage in usages),
     )
+
+
+def _attach_spend(
+    exc: AiServiceError,
+    *,
+    usage: Usage,
+    model: str,
+    provider_request_id: str | None,
+    finish_reason: str | None,
+) -> None:
+    """Fill the metering fields a transport-level failure leaves empty.
+
+    When a REPAIR call dies provider-side (timeout, upstream error), the first
+    attempt's spend would otherwise be discarded — violating "a failed provider
+    call still burns tokens" (doc/ai-governance.md). Fill only empty fields so
+    an error that already carries its own usage is never overwritten.
+    """
+    if exc.usage is None:
+        exc.usage = usage
+    if exc.model is None:
+        exc.model = model
+    if exc.provider_request_id is None:
+        exc.provider_request_id = provider_request_id
+    if exc.finish_reason is None:
+        exc.finish_reason = finish_reason
+    if exc.attempt_count is None:
+        exc.attempt_count = 1
+
+
+# Fixed framing allowance on top of the user-content cap: `input_chars()` also
+# counts operation/content-type/label/profile framing, so budgeting the raw
+# aggregate against `ai_max_input_chars` made an exactly-at-cap request always
+# overshoot (an effective cap of ~23 994). The wrapper adds a small constant,
+# bounded overhead.
+_WRAPPER_ALLOWANCE_CHARS = 512
 
 
 def _parse_record(text: str, allowed_keys: set[str]) -> dict[str, str] | None:
@@ -71,15 +113,24 @@ def _parse_record(text: str, allowed_keys: set[str]) -> dict[str, str] | None:
         return None
     out: dict[str, str] = {}
     for key, value in parsed.items():
-        if key in allowed_keys and isinstance(value, (str, int, float, bool)):
-            out[key] = str(value)
+        if key not in allowed_keys:
+            continue
+        # Coerce JSON scalars to their JSON literal text — Python `str()` on a
+        # bool yields "True", which is not what a CMS field should store. Only
+        # scalars are accepted; nested objects/arrays are dropped.
+        if isinstance(value, bool):  # first: bool is an int subclass
+            out[key] = "true" if value else "false"
+        elif isinstance(value, (int, float)):
+            out[key] = json.dumps(value)
+        elif isinstance(value, str):
+            out[key] = value
     return out or None
 
 
 # Correction turns appended on a structured-output miss. Free models that fail a
 # constrained request once usually fail the identical prompt again — feeding back
 # the invalid answer + the exact constraint turns the retry into a real repair
-# rather than a dice re-roll. (specs/21 review bug #1.)
+# rather than a dice re-roll.
 _COMPOSE_CORRECTION = (
     "Your previous answer was not a valid JSON object with the required keys. "
     "Return ONLY a JSON object (no prose, no markdown, no code fence) whose keys "
@@ -98,10 +149,23 @@ async def generate(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
     if not client.configured():
         raise NotConfigured()
 
+    logger.info(
+        "generate start op=%s target=%s field=%s",
+        req.operation,
+        req.target_kind,
+        req.field.key if req.field else f"compose:{len(req.compose_fields or [])} fields",
+    )
+
     # Enforced here rather than in the Pydantic validator so an over-budget
     # request surfaces as AI_INPUT_TOO_LARGE (actionable) instead of collapsing
     # into a generic schema rejection. Checked before any provider spend.
-    if req.input_chars() > settings.ai_max_input_chars:
+    if req.input_chars() > settings.ai_max_input_chars + _WRAPPER_ALLOWANCE_CHARS:
+        logger.warning(
+            "generate rejected op=%s reason=input-too-large chars=%d budget=%d",
+            req.operation,
+            req.input_chars(),
+            settings.ai_max_input_chars,
+        )
         raise InputTooLarge()
 
     if req.operation == "compose":
@@ -123,6 +187,7 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
 
     if req.field.type == "select" and req.field.options:
         if text.strip() not in req.field.options:
+            logger.info("select repair op=%s reason=option-miss", operation)
             first_usage = usage
             # Repair, not a re-roll: echo the invalid answer back and restate the
             # exact constraint so the model corrects course.
@@ -130,12 +195,25 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
                 {"role": "assistant", "content": text},
                 {"role": "user", "content": _select_correction(req.field.options)},
             ]
-            text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
-                retry_messages, temperature, operation
-            )
+            try:
+                text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
+                    retry_messages, temperature, operation
+                )
+            except AiServiceError as exc:
+                # The repair died transport-level — attempt 1's spend must still
+                # reach core's failed audit row.
+                _attach_spend(
+                    exc,
+                    usage=usage,
+                    model=model,
+                    provider_request_id=provider_request_id,
+                    finish_reason=finish_reason,
+                )
+                raise
             usage = add_usage(first_usage, retry_usage)
             attempt_count += 1
         if text.strip() not in req.field.options:
+            logger.warning("select failed op=%s reason=double-miss attempts=2", operation)
             record_generation_tokens(usage.total_tokens)
             raise SelectMissError(
                 model=model,
@@ -152,18 +230,32 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
     if req.field.type != "select":
         text = sanitize(text, req.field.type)
         if is_unusable(text):
+            logger.info("guardrail repair op=%s reason=unusable-output", operation)
             first_usage = usage
             retry_messages = messages + [
                 {"role": "assistant", "content": text},
                 {"role": "user", "content": text_correction(req.field.label)},
             ]
-            text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
-                retry_messages, temperature, operation
-            )
+            try:
+                text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
+                    retry_messages, temperature, operation
+                )
+            except AiServiceError as exc:
+                # The repair died transport-level — attempt 1's spend must still
+                # reach core's failed audit row.
+                _attach_spend(
+                    exc,
+                    usage=usage,
+                    model=model,
+                    provider_request_id=provider_request_id,
+                    finish_reason=finish_reason,
+                )
+                raise
             usage = add_usage(first_usage, retry_usage)
             attempt_count += 1
             text = sanitize(text, req.field.type)
             if is_unusable(text):
+                logger.warning("guardrail failed op=%s reason=double-miss attempts=2", operation)
                 record_generation_tokens(usage.total_tokens)
                 raise TextGuardrailError(
                     model=model,
@@ -197,20 +289,34 @@ async def _compose(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
     attempt_count = 1
 
     if fields is None:
+        logger.info("compose repair reason=invalid-json")
         first_usage = usage
         # Repair: echo the invalid output + restate the JSON-only constraint.
         retry_messages = messages + [
             {"role": "assistant", "content": text},
             {"role": "user", "content": _COMPOSE_CORRECTION},
         ]
-        text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
-            retry_messages, temperature, "compose"
-        )
+        try:
+            text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
+                retry_messages, temperature, "compose"
+            )
+        except AiServiceError as exc:
+            # The repair died transport-level — attempt 1's spend must still
+            # reach core's failed audit row.
+            _attach_spend(
+                exc,
+                usage=usage,
+                model=model,
+                provider_request_id=provider_request_id,
+                finish_reason=finish_reason,
+            )
+            raise
         usage = add_usage(first_usage, retry_usage)
         attempt_count += 1
         fields = _parse_record(text, allowed)
 
     if fields is None:
+        logger.warning("compose failed reason=double-miss attempts=2")
         record_generation_tokens(usage.total_tokens)
         raise ComposeMissError(
             model=model,

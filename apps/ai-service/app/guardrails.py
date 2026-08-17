@@ -33,6 +33,8 @@ _PROMPT_LEAK_MARKERS: tuple[str, ...] = (
     "Keep it accurate and concise",
     "content assistant for a CMS",
     "Return ONLY a JSON object",
+    "publishable field content shaped",
+    "publishable entry content shaped",
     "<voice_guide>",
     "<target_content>",
     "<entry_context>",

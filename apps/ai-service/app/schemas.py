@@ -144,6 +144,9 @@ class GenerateRequest(CamelModel):
             if not self.compose_fields:
                 raise ValueError("compose requires compose_fields")
             return self
+        # Only compose drafts the whole entry; everything else is field-scoped.
+        if self.target_kind != "field":
+            raise ValueError("only the compose operation targets a whole entry")
         # Every non-compose operation targets one field.
         if self.field is None:
             raise ValueError("a target field is required")
@@ -208,8 +211,11 @@ class GenerateResponse(CamelModel):
     attempt_count: int = Field(ge=1)
 
 
-# Re-exported for `app.llm` (internal construction, not serialized directly).
-class Usage(BaseModel):
+# Re-exported for `app.llm` (internal construction, but also serialized — the
+# exception handlers dump it onto ERROR bodies, so it must carry the camelCase
+# aliases like `UsageOut`. It shipped as a plain BaseModel once and failed rows
+# reached core with snake_case keys.
+class Usage(CamelModel):
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
