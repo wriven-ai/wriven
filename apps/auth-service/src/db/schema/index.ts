@@ -97,6 +97,12 @@ export const emailVerificationTokens = authSchema.table(
       .references(() => users.id, { onDelete: 'cascade' }),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     used: boolean('used').notNull().default(false),
+    // OTP path alongside the link token: 6-digit code hash (HMAC, peppered) +
+    // its own shorter TTL + failed-attempt counter. Nullable legacy rows —
+    // set on every issue together with the link token.
+    codeHash: text('code_hash'),
+    codeExpiresAt: timestamp('code_expires_at', { withTimezone: true }),
+    attempts: integer('attempts').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

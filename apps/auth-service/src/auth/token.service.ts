@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, createHmac, randomBytes, randomInt } from 'crypto';
 import { durationToMs } from '../common/duration';
 
 @Injectable()
@@ -32,6 +32,25 @@ export class TokenService {
 
   hash(raw: string): string {
     return createHash('sha256').update(raw).digest('hex');
+  }
+
+  /** A new 6-digit numeric verification code (crypto-random, zero-padded). */
+  newVerificationCode(): string {
+    return randomInt(0, 1_000_000).toString().padStart(6, '0');
+  }
+
+  /**
+   * HMAC-SHA256 of a short verification code with a server-side pepper. A
+   * plain hash of a 6-digit value is brute-forceable offline from a DB dump;
+   * the pepper (env `OTP_PEPPER`, falling back to `JWT_SECRET`) makes the
+   * stored digests useless without the app server itself.
+   */
+  hashVerificationCode(code: string): string {
+    const pepper =
+      this.config.get<string>('OTP_PEPPER') ??
+      this.config.get<string>('JWT_SECRET') ??
+      '';
+    return createHmac('sha256', pepper).update(code).digest('hex');
   }
 
   /** Refresh TTL in ms, longer when "remember me" is set. Values like `7d`/`30d`. */

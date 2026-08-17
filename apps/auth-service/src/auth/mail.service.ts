@@ -72,11 +72,15 @@ export class MailService {
     this.logger.log(`Invitation email sent to ${to} (id: ${info.messageId})`);
   }
 
-  async sendVerification(to: string, link: string): Promise<void> {
+  async sendVerification(to: string, link: string, code: string): Promise<void> {
     const { subject, text, html } = renderVerification({
       link,
+      code,
       expiresIn: durationToHuman(
         this.config.get<string>('EMAIL_VERIFY_TTL', '24h'),
+      ),
+      codeExpiresIn: durationToHuman(
+        this.config.get<string>('OTP_TTL', '10m'),
       ),
     });
     const info = await this.transporter.sendMail({

@@ -39,8 +39,11 @@ Public. Body: `{ token, newPassword }`. Updates password, revokes all sessions.
 ### POST `/auth/verify-email`
 Public. Body: `{ token }`. → `{ success: true }`. Error: `INVALID_VERIFICATION_TOKEN` 400. Rate limit 10/min.
 
+### POST `/auth/verify-email-code`
+**Protected** (JWT). Body: `{ code }` — 6-digit OTP from the verification email (10-min TTL, 5 attempts). → `{ success: true }`. Error: `INVALID_VERIFICATION_CODE` 400. Rate limit 10/min.
+
 ### POST `/auth/resend-verification`
-**Protected** (JWT). Re-sends verification for the current user (idempotent). → `{ success: true }`. Rate limit 3/min.
+**Protected** (JWT). Re-sends verification for the current user (idempotent); invalidates the previous code + link. → `{ success: true }`. Rate limit 3/min.
 
 ### GET `/auth/me`
 **Protected** (JWT). Full session for restoring client state. → `{ user, workspaces[], projects[] }` where `user = { id, email, name, avatar, provider, emailVerified, createdAt }`, each workspace `{ id, name, slug, createdBy, role }`, each project `{ id, workspaceId, name, slug, createdBy, createdAt, updatedAt, role }`. Error: `UNAUTHORIZED` 401.

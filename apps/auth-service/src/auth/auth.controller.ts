@@ -93,6 +93,11 @@ export class AuthController {
     return this.auth.verifyEmail(dto);
   }
 
+  @MessagePattern(AUTH_PATTERNS.VERIFY_EMAIL_CODE)
+  verifyEmailCode(@Payload() payload: { userId: string; code: string }) {
+    return this.auth.verifyEmailCode(payload);
+  }
+
   @MessagePattern(AUTH_PATTERNS.RESEND_VERIFICATION)
   resendVerification(@Payload() payload: { userId: string }) {
     return this.auth.resendVerification(payload);
