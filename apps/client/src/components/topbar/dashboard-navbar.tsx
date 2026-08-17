@@ -11,7 +11,7 @@ import {
   ChevronRight,
   ExternalLink,
   Moon,
-  Search,
+  // Search, // quick search temporarily disabled
   Sun,
   User,
 } from 'lucide-react';
@@ -54,7 +54,8 @@ export function DashboardNavbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="hidden sm:flex items-center gap-2 bg-brand-surface-soft border border-brand-border px-3 py-1.5 rounded-lg max-w-[190px]">
+        {/* Quick search (⌘K) — temporarily disabled */}
+        {/* <div className="hidden sm:flex items-center gap-2 bg-brand-surface-soft border border-brand-border px-3 py-1.5 rounded-lg max-w-[190px]">
           <Search className="w-3.5 h-3.5 text-text-muted shrink-0" />
           <input
             type="text"
@@ -62,7 +63,7 @@ export function DashboardNavbar() {
             className="bg-transparent border-none text-sm font-mono outline-hidden w-full placeholder:text-text-muted/65 text-text-primary"
             disabled
           />
-        </div>
+        </div> */}
 
         <button
           onClick={toggleTheme}
