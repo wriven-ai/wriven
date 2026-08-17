@@ -219,9 +219,13 @@ export class BillingService {
         cancel_url: cancelUrl,
       },
       {
-        // Dedupe rapid double-clicks (10-second window) without locking out retries
-        // if parameters change later in the day.
-        idempotencyKey: `checkout:${input.workspaceId}:${plan.key}:${input.billingCycle}:${Math.floor(Date.now() / 10000)}`,
+        // Per workspace+customer+plan+cycle+day: dedupes double-clicks within a
+        // day but allows a fresh session tomorrow (a permanent key would return
+        // a stale session on legitimate retry). The customer is part of the key
+        // so the same key is never replayed with different params (Stripe
+        // rejects key reuse with changed params — e.g. after the local customer
+        // link is lost and a NEW Stripe customer is created same-day).
+        idempotencyKey: `checkout:${input.workspaceId}:${customerId}:${plan.key}:${input.billingCycle}:${new Date().toISOString().slice(0, 10)}`,
       },
     );
     return { url: session.url as string, sessionId: session.id };
