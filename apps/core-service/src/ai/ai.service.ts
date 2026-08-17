@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AiGenerateDto,
   AiGenerateResult,
+  ERROR_CODES,
   type AiOperation,
   type AiOutput,
   type AiTargetKind,
+  type ErrorCodeKey,
   type FieldDef,
   type FieldType,
 } from '@wriven/contracts';
@@ -33,11 +35,12 @@ const { contentTypes, contentEntries, aiGenerations } = schema;
 /** Fields eligible for AI generation (Tier 1). */
 const TIER1: readonly FieldType[] = ['text', 'richtext', 'select'];
 const STALE_RESERVATION_SQL = sql`now() - interval '5 minutes'`;
-// Bumped to v3: a last-position output guardrail appended to the user message —
-// free models ignored the system-prompt rule and leaked their reasoning into the
-// field. v2 injected the per-project AI profile (brand voice / glossary /
-// language) into the system prompt as a fenced <voice_guide>.
-const TEXT_PROMPT_VERSION = 'text-v3';
+// Bumped to v4: a topical anchor added to both prompts — whatever the
+// instruction asks, the answer is publishable field/entry content, never chat
+// (off-topic or injected instructions included). v3 added the last-position
+// output guardrail; v2 injected the per-project AI profile (brand voice /
+// glossary / language) as a fenced <voice_guide>.
+const TEXT_PROMPT_VERSION = 'text-v4';
 
 type Reservation =
   | { kind: 'reserved'; generationId: string; remaining: number | null }
@@ -73,11 +76,18 @@ function deriveOperation(dto: AiGenerateDto): AiOperation {
 
 @Injectable()
 export class AiService {
+  /**
+   * Step-level trace logger. The browser's requestId correlates a generation
+   * across all three hops (gateway → core → ai-service logs it too). Log only
+   * ids, enums, tokens, durations, and outcome codes — never field content,
+   * instructions, or provider payloads.
+   */
+  private readonly logger = new Logger('AiService');
   private readonly auditRetentionDays: number;
   /**
    * Env-configured list price for the deployment's default model, used only as a
    * fallback when the returned model has no rule in `ai-model-prices`. Both
-   * halves must be set or it is null (never a half-price). See specs/21.
+   * halves must be set or it is null (never a half-price).
    */
   private readonly envDefaultPrice: ModelPrice | null;
 
@@ -89,9 +99,12 @@ export class AiService {
     cfg: ConfigService,
   ) {
     const configured = Number(cfg.get<string>('AI_AUDIT_RETENTION_DAYS') ?? '30');
-    this.auditRetentionDays = Number.isInteger(configured)
-      ? Math.min(Math.max(configured, 1), 365)
-      : 30;
+    // Blank/NaN env → 30: `Number('')` is 0, which would otherwise clamp to a
+    // 1-day retention window on a stray `AI_AUDIT_RETENTION_DAYS=` line.
+    this.auditRetentionDays =
+      Number.isInteger(configured) && configured >= 1
+        ? Math.min(configured, 365)
+        : 30;
     const inputRate = configuredTokenRate(
       cfg.get<string>('AI_INPUT_COST_MICROUSD_PER_MILLION_TOKENS'),
     );
@@ -139,7 +152,8 @@ export class AiService {
 
     // 3. Load the per-project AI profile (brand voice / glossary / language)
     //    before reserving quota. Absent profile = empty guidance; never blocks.
-    const profile: AiProfile = await this.profiles.resolve(projectId);
+    //    One indexed single-row read — deliberately uncached.
+    const profile: AiProfile = await this.profiles.read(projectId);
 
     // 4. Validate the target + build the ai-service request per target kind.
     //    Eligibility is derived, not configured: a field is a valid target when
@@ -158,6 +172,34 @@ export class AiService {
           'VALIDATION_ERROR',
           'Whole-entry drafting can only generate a new draft.',
         );
+      }
+      if (dto.preset) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          'Refine actions apply to a single field, not a whole entry.',
+        );
+      }
+      if (dto.fieldKey) {
+        throw rpcError(
+          'VALIDATION_ERROR',
+          'Whole-entry drafting does not target a field.',
+        );
+      }
+      // The compose path never reads entry data (no sibling context), so the
+      // entry's existence/scope must be checked explicitly — an arbitrary id
+      // must not land in the audit/provenance row.
+      if (dto.entryId) {
+        const entry = await this.db.query.contentEntries.findFirst({
+          where: and(
+            eq(contentEntries.id, dto.entryId),
+            eq(contentEntries.workspaceId, workspaceId),
+            eq(contentEntries.projectId, projectId),
+            eq(contentEntries.contentTypeId, type.id),
+            isNull(contentEntries.deletedAt),
+          ),
+          columns: { id: true },
+        });
+        if (!entry) throw rpcError('NOT_FOUND', 'Content entry not found.');
       }
       const composeFields = fields.filter(isEligible).map((f) => ({
         key: f.key,
@@ -257,6 +299,10 @@ export class AiService {
 
     // 5. Atomic quota reserve (advisory lock + pending row). Limit resolves
     //    OUTSIDE the lock so an auth round-trip never extends the lock hold.
+    this.logger.log(
+      `ai.generate step=validated request_id=${dto.requestId} operation=${operation} ` +
+        `target=${targetFieldKey ?? 'entry'} content_type=${type.id} profile=${profile.brandVoice ? 'set' : 'empty'}`,
+    );
     const limit = await this.entitlements.aiTextLimit(workspaceId);
     const reservation = await this.reserveQuota({
       workspaceId,
@@ -271,6 +317,9 @@ export class AiService {
       requestHash,
     });
     if (reservation.kind === 'replay') {
+      this.logger.log(
+        `ai.generate step=reserved request_id=${dto.requestId} outcome=replay generation=${reservation.generationId}`,
+      );
       return {
         generationId: reservation.generationId,
         output: reservation.output,
@@ -283,9 +332,18 @@ export class AiService {
 
     // 6. Generate via ai-service (HTTP). Prompt building, temperature, and
     //    `select`/`compose` output validation + retry all live in Python now.
+    this.logger.log(
+      `ai.generate step=reserved request_id=${dto.requestId} outcome=reserved ` +
+        `generation=${reservation.generationId} remaining=${reservation.remaining ?? 'unlimited'}`,
+    );
     const startedAt = Date.now();
     try {
       const result = await this.client.generate(req);
+      this.logger.log(
+        `ai.generate step=provider-complete request_id=${dto.requestId} ` +
+          `model=${result.model} total_tokens=${result.usage.totalTokens} ` +
+          `finish_reason=${result.finishReason ?? 'unknown'} attempts=${result.attemptCount}`,
+      );
       await this.finalize(reservation.generationId, 'succeeded', result.model, result.usage, {
         // Persist a canonical text form for idempotent replay: the scalar text,
         // or the record serialized as JSON (reconstructed on replay by targetKind).
@@ -296,6 +354,10 @@ export class AiService {
         providerRequestId: result.providerRequestId,
         finishReason: result.finishReason,
       });
+      this.logger.log(
+        `ai.generate step=finalized request_id=${dto.requestId} outcome=succeeded ` +
+          `generation=${reservation.generationId} latency_ms=${Date.now() - startedAt}`,
+      );
       return {
         generationId: reservation.generationId,
         output: result.output,
@@ -314,8 +376,14 @@ export class AiService {
       if (err instanceof AiClientError) {
         // err.model/err.usage present only when the LLM call succeeded but the
         // turn failed (select miss) — record the spent tokens on the failed row.
+        this.logger.warn(
+          `ai.generate step=provider-failed request_id=${dto.requestId} code=${err.code} ` +
+            `model=${err.model ?? 'unknown'} total_tokens=${err.usage?.totalTokens ?? 0} ` +
+            `attempts=${err.attemptCount ?? 1} duration_ms=${Date.now() - startedAt}`,
+        );
         await this.finalize(reservation.generationId, 'failed', err.model, err.usage, {
           error: err.message,
+          errorCode: err.code,
           latencyMs: Date.now() - startedAt,
           attemptCount: err.attemptCount,
           providerRequestId: err.providerRequestId,
@@ -345,8 +413,10 @@ export class AiService {
           or(isNotNull(aiGenerations.output), isNotNull(aiGenerations.requestHash)),
         ),
       )
-      .returning({ id: aiGenerations.id });
-    return rows.length;
+      // Window count instead of materializing every redacted id into Node —
+      // retention days can touch thousands of rows.
+      .returning({ n: sql<number>`count(*) over ()` });
+    return rows[0]?.n ?? 0;
   }
 
   /**
@@ -431,6 +501,7 @@ export class AiService {
           totalTokens: aiGenerations.totalTokens,
           finishReason: aiGenerations.finishReason,
           error: aiGenerations.error,
+          errorCode: aiGenerations.errorCode,
         })
         .from(aiGenerations)
         .where(
@@ -444,18 +515,36 @@ export class AiService {
 
       if (existing) {
         if (existing.requestHash && existing.requestHash !== requestHash) {
+          this.logger.warn(
+            `ai.generate step=reserve request_id=${dto.requestId} outcome=rejected reason=idempotency-key-reused`,
+          );
           throw rpcError(
             'IDEMPOTENCY_KEY_REUSED',
             'This request key was already used for different generation input.',
           );
         }
         if (existing.status === 'pending') {
+          this.logger.warn(
+            `ai.generate step=reserve request_id=${dto.requestId} outcome=rejected reason=still-in-progress generation=${existing.id}`,
+          );
           throw rpcError(
             'AI_GENERATION_IN_PROGRESS',
             'This generation is still in progress. Retry the same request shortly.',
           );
         }
-        if (existing.status === 'succeeded' && existing.output != null) {
+        if (existing.status === 'succeeded') {
+          if (existing.output == null) {
+            // Retention redacted the stored result — the replay window for this
+            // key is over. Distinct from a failure: never report a
+            // succeeded-but-expired request as a generic error.
+            this.logger.warn(
+              `ai.generate step=reserve request_id=${dto.requestId} outcome=rejected reason=result-expired generation=${existing.id}`,
+            );
+            throw rpcError(
+              'AI_RESULT_EXPIRED',
+              'The stored result for this request has expired. Start a new generation.',
+            );
+          }
           const remaining =
             limit == null ? null : Math.max(limit - (await reservedThisPeriod()), 0);
           return {
@@ -473,8 +562,17 @@ export class AiService {
             truncated: existing.finishReason === 'length',
           };
         }
+        // Failed row: rethrow the ORIGINAL code so a retried key keeps its
+        // status class (422 input-too-large stays 422 on retry). Rows written
+        // before the error_code column existed carry no stored code, and an
+        // unknown stored value must never crash the registry lookup.
+        const storedCode = existing.errorCode;
+        const replayCode: ErrorCodeKey =
+          storedCode && storedCode in ERROR_CODES
+            ? (storedCode as ErrorCodeKey)
+            : 'AI_GENERATION_FAILED';
         throw rpcError(
-          'AI_GENERATION_FAILED',
+          replayCode,
           existing.error ?? 'The previous generation request failed. Start a new generation to retry.',
         );
       }
@@ -506,6 +604,9 @@ export class AiService {
       const n = await reservedThisPeriod();
 
       if (n > limit) {
+        this.logger.warn(
+          `ai.generate step=reserve request_id=${dto.requestId} outcome=rejected reason=plan-limit-reached limit=${limit}`,
+        );
         throw rpcError(
           'PLAN_LIMIT_REACHED',
           `Your plan allows ${limit} AI generations per month. Upgrade for more.`,
@@ -523,6 +624,9 @@ export class AiService {
     usage?: { promptTokens: number; completionTokens: number; totalTokens: number },
     opts?: {
       error?: string;
+      /** Contract error code persisted beside `error` so a retried failed key
+       *  rethrows with its original status class. */
+      errorCode?: string;
       output?: string;
       promptVersion?: string;
       latencyMs?: number;
@@ -547,6 +651,7 @@ export class AiService {
         finishReason: opts?.finishReason ?? null,
         costMicrousd: costMicrousdFor(usage, resolveModelPrice(model, this.envDefaultPrice)),
         error: opts?.error ?? null,
+        errorCode: opts?.errorCode ?? null,
         completedAt: new Date(),
       })
       .where(eq(aiGenerations.id, pendingId));

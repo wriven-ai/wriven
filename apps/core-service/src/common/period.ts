@@ -4,7 +4,7 @@
  * Calendar month with **UTC** midnight boundaries. This must be the only
  * definition: `date_trunc('month', now())` resolves in the database session
  * timezone, so mixing the two lets AI quota, `/usage`, and stats disagree about
- * which month a generation belongs to on a non-UTC connection. See specs/21.
+ * which month a generation belongs to on a non-UTC connection.
  */
 export function currentPeriod(): { start: Date; end: Date } {
   const now = new Date();

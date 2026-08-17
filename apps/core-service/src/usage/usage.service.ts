@@ -28,7 +28,7 @@ const {
  * Workspace usage metering. Owns the Delivery API request counter
  * (`usage_buckets`) and composes the current-period UsageView from it + the
  * live media SUM + effective plan limits. The gateway batches increments off
- * the hot path and flushes via `record()`. See specs/14.
+ * the hot path and flushes via `record()`.
  */
 @Injectable()
 export class UsageService {
@@ -134,7 +134,7 @@ export class UsageService {
    * `failed`, because a failed provider call still burned tokens. A generation
    * with an unknown price (null cost) is counted so the caller can flag the
    * period's dollar total as incomplete. `requests.limit` is filled by the
-   * caller from the resolved plan. See specs/21.
+   * caller from the resolved plan.
    */
   private async aiUsage(workspaceId: string): Promise<AiUsageStats> {
     const done = sql`${aiGenerations.status} in ('succeeded','failed')`;
@@ -180,8 +180,9 @@ export class UsageService {
    * Workspace aggregate stats. Reuses `read()` for requests/storage/period and
    * adds content/media/key/webhook counts. `projects`/`members` are auth-owned
    * → returned as 0 here; the gateway overwrites them from auth-service's
-   * `auth.workspace.stats` response. Unmetered dimensions (bandwidth, AI text,
-   * AI image) ship `used: null` with their plan limit. See specs/17.
+   * `auth.workspace.stats` response. Unmetered dimensions (bandwidth, AI
+   * image) ship `used: null` with their plan limit; AI text ships the full
+   * `AiUsageStats` block (requests + tokens + cost).
    */
   async workspaceStats(payload: {
     workspaceId: string;
@@ -228,7 +229,7 @@ export class UsageService {
 
   /**
    * Project-scoped aggregate (core-only). No requests/bandwidth/AI — those are
-   * workspace-billing-unit dimensions, not project-scoped. See specs/17.
+   * workspace-billing-unit dimensions, not project-scoped.
    */
   async projectStats(payload: {
     projectId: string;

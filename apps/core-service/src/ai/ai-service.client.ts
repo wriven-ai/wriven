@@ -54,17 +54,51 @@ export class AiServiceClient implements AiClient {
   }
 
   async generate(req: AiGenerateRequest): Promise<AiClientResult> {
+    let data: unknown;
     try {
       const { requestId, ...payload } = req;
-      const { data } = await this.http.post<AiClientResult>(
-        '/generate',
-        payload,
-        { headers: { 'X-Request-ID': requestId } },
-      );
-      return data;
+      const res = await this.http.post<unknown>('/generate', payload, {
+        headers: { 'X-Request-ID': requestId },
+      });
+      data = res.data;
     } catch (err) {
-      throw this.toClientError(err);
+      throw this.toClientError(err, req.requestId);
     }
+    return this.assertWellFormed(data);
+  }
+
+  /**
+   * A 2xx is not a contract: a proxy, a stale deployment, or a wrong
+   * `AI_SERVICE_URL` can answer 200 with HTML or a legacy body. Validate the
+   * essentials before returning so a malformed success takes the normal
+   * `failed`-row path instead of crashing mid-`finalize` with the reservation
+   * stuck `pending` until the stale reclaim.
+   */
+  private assertWellFormed(data: unknown): AiClientResult {
+    const malformed = () =>
+      new AiClientError('AI_GENERATION_FAILED', 'AI generation failed.');
+    if (!data || typeof data !== 'object') throw malformed();
+    const d = data as Record<string, unknown>;
+    const output = d.output as Record<string, unknown> | undefined;
+    const outputOk =
+      !!output &&
+      (output.kind === 'scalar'
+        ? typeof output.text === 'string'
+        : output.kind === 'record' &&
+          typeof output.fields === 'object' &&
+          output.fields !== null &&
+          Object.values(output.fields).every((v) => typeof v === 'string'));
+    const usage = d.usage as Partial<AiTokenUsage> | undefined;
+    const usageOk =
+      !!usage &&
+      (['promptTokens', 'completionTokens', 'totalTokens'] as const).every(
+        (k) => typeof usage[k] === 'number' && Number.isFinite(usage[k]),
+      );
+    if (!outputOk || typeof d.model !== 'string' || !usageOk) {
+      this.logger.warn('ai-service returned a malformed 2xx body');
+      throw malformed();
+    }
+    return d as unknown as AiClientResult;
   }
 
   /**
@@ -76,7 +110,7 @@ export class AiServiceClient implements AiClient {
    * (401 secret mismatch, unmapped 5xx, network/timeout) → `AI_GENERATION_FAILED`.
    * Never rethrow raw axios — it can carry the request URL/headers.
    */
-  private toClientError(err: unknown): AiClientError {
+  private toClientError(err: unknown, requestId: string): AiClientError {
     const ALLOWED: readonly AiClientErrorCode[] = [
       'AI_NOT_CONFIGURED',
       'AI_GENERATION_FAILED',
@@ -97,12 +131,17 @@ export class AiServiceClient implements AiClient {
 
       // No response → network error / timeout (ECONNABORTED).
       if (!err.response) {
-        this.logger.warn(`ai-service unreachable: ${shortReason(err)}`);
+        this.logger.warn(
+          `ai-service unreachable request_id=${requestId}: ${shortReason(err)}`,
+        );
         return new AiClientError('AI_GENERATION_FAILED', 'AI generation failed.');
       }
 
       if (code && ALLOWED.includes(code)) {
         // ai-service gave us a contract code — pass it (and its message/model/usage) through.
+        this.logger.warn(
+          `ai-service error request_id=${requestId} status=${status} code=${code}`,
+        );
         return new AiClientError(
           code,
           message ?? 'AI generation failed.',
@@ -116,11 +155,13 @@ export class AiServiceClient implements AiClient {
       }
 
       // 401 secret mismatch / unmapped status — collapse to a generic failure.
-      this.logger.warn(`ai-service returned status=${status}: ${shortReason(err)}`);
+      this.logger.warn(
+        `ai-service returned unmapped status=${status} request_id=${requestId}: ${shortReason(err)}`,
+      );
       return new AiClientError('AI_GENERATION_FAILED', 'AI generation failed.', status);
     }
 
-    this.logger.warn(`ai-service call failed: ${shortReason(err)}`);
+    this.logger.warn(`ai-service call failed request_id=${requestId}: ${shortReason(err)}`);
     return new AiClientError('AI_GENERATION_FAILED', 'AI generation failed.');
   }
 }

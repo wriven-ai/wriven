@@ -15,7 +15,7 @@ import { CoreEntitlementsService } from '../entitlements/core-entitlements.servi
 
 const { contentTypes } = schema;
 type ContentTypeRow = typeof contentTypes.$inferSelect;
-const AI_ASSIST_FIELD_TYPES = new Set<FieldDef['type']>(['text', 'richtext', 'select']);
+const AI_ELIGIBLE_FIELD_TYPES = new Set<FieldDef['type']>(['text', 'richtext', 'select']);
 
 @Injectable()
 export class ContentTypesService {
@@ -206,7 +206,7 @@ export class ContentTypesService {
 
       // Sensitivity is the only AI control an author configures per field.
       // Eligibility is derived (Tier-1 ∧ single-value ∧ not sensitive), so there
-      // is no enable flag or per-field action list to validate. See specs/21.
+      // is no enable flag or per-field action list to validate.
       if (
         field.aiPrivate &&
         field.aiContextFields?.length
@@ -218,7 +218,7 @@ export class ContentTypesService {
       }
 
       if (field.aiContextFields?.length) {
-        if (!AI_ASSIST_FIELD_TYPES.has(field.type) || field.multiple) {
+        if (!AI_ELIGIBLE_FIELD_TYPES.has(field.type) || field.multiple) {
           throw rpcError(
             'VALIDATION_ERROR',
             `Only scalar text, richtext, or select fields can configure AI context ("${field.key}").`,
@@ -237,6 +237,15 @@ export class ContentTypesService {
             throw rpcError(
               'VALIDATION_ERROR',
               `AI context for "${field.key}" cannot include unknown or sensitive field "${contextKey}".`,
+            );
+          }
+          // Context values must be scalars: the generation path forwards only
+          // string/number/boolean sibling values, so an allowlisted multi-value
+          // field would silently vanish from the prompt.
+          if (contextField.multiple) {
+            throw rpcError(
+              'VALIDATION_ERROR',
+              `AI context for "${field.key}" cannot include multi-value field "${contextKey}".`,
             );
           }
         }
