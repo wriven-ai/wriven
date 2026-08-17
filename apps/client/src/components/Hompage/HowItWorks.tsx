@@ -15,7 +15,7 @@ export default function HowItWorks() {
             The Wriven Technique
           </h2>
           <p className="text-text-secondary text-sm font-light">
-            Transition seamlessly from initial raw models to served global CDN records in three elegant phases.
+            From an empty project to published, queryable JSON in three phases.
           </p>
         </div>
 
@@ -26,10 +26,10 @@ export default function HowItWorks() {
           <div className="text-left space-y-4" id="how-step-1">
             <div className="text-4xl font-display font-medium text-brand-accent select-none">01/</div>
             <h3 className="text-sm font-mono font-bold uppercase text-text-primary">
-              Structure Collection Codes
+              Define Your Content Model
             </h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
-              Create custom models with simple dropdown blocks. Form text fields, rich markdown entries, media collections, or references. Wriven registers edge API routers automatically.
+              Build content types with the visual field builder — text, rich text, media, and reference fields, with unique and multiple constraints. Every entry is validated against your schema.
             </p>
           </div>
 
@@ -37,10 +37,10 @@ export default function HowItWorks() {
           <div className="text-left space-y-4 md:border-l md:border-brand-border md:pl-10" id="how-step-2">
             <div className="text-4xl font-display font-medium text-brand-accent select-none">02/</div>
             <h3 className="text-sm font-mono font-bold uppercase text-text-primary">
-              Weave & Refine Copy
+              Draft With the AI Co-Writer
             </h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
-              Input content blocks manually or direct the inline copy assistant. Instantly refine tone structures, write localized variants, and review visual templates side-by-side.
+              Write manually, or use per-field Generate and Refine to draft faster. Compose an entire entry in one pass, guided by your project's brand voice, glossary, and language.
             </p>
           </div>
 
@@ -48,10 +48,10 @@ export default function HowItWorks() {
           <div className="text-left space-y-4 md:border-l md:border-brand-border md:pl-10" id="how-step-3">
             <div className="text-4xl font-display font-medium text-brand-accent select-none">03/</div>
             <h3 className="text-sm font-mono font-bold uppercase text-text-primary">
-              Query Edge JSON APIs
+              Publish &amp; Query the Delivery API
             </h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
-              Establish secret API access tokens instantly. Retrieve JSON content rapidly over edge servers to power react cards, mobile interfaces, or static site servers securely.
+              Create a project API key, publish your entries, and fetch clean JSON over REST — with field selection, filtering, sorting, pagination, and reference expansion. Signed webhooks fire on every publish.
             </p>
           </div>
 

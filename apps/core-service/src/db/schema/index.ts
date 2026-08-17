@@ -337,7 +337,7 @@ export const supportTicketAttachments = coreSchema.table(
  * (`ON CONFLICT … request_count + n`). `workspace_id` has no cross-schema FK
  * (auth_svc boundary — same denormalized pattern as content_entries). The
  * gateway batches increments off the hot path and flushes via core.usage.record.
- * See specs/14.
+ *
  */
 export const usageBuckets = coreSchema.table(
   'usage_buckets',
@@ -378,7 +378,7 @@ export const usageBuckets = coreSchema.table(
  *
  * `target_kind` distinguishes a single-field generation from a whole-entry
  * `compose`; for `compose`, `field_key` is null and `applied_field_keys` records
- * which fields of the returned record the author actually applied. See specs/21.
+ * which fields of the returned record the author actually applied.
  */
 export const aiGenerations = coreSchema.table(
   'ai_generations',
@@ -402,7 +402,7 @@ export const aiGenerations = coreSchema.table(
     totalTokens: integer('total_tokens'),
     /** Generated content kept only long enough to replay an idempotent request. */
     output: text('output'),
-    promptVersion: text('prompt_version').notNull().default('text-v2'),
+    promptVersion: text('prompt_version').notNull().default('text-v4'),
     latencyMs: integer('latency_ms'),
     attemptCount: integer('attempt_count').notNull().default(1),
     providerRequestId: text('provider_request_id'),
@@ -415,6 +415,9 @@ export const aiGenerations = coreSchema.table(
     appliedFieldKeys: jsonb('applied_field_keys').$type<string[]>(),
     status: text('status').notNull().default('pending'), // pending|succeeded|failed
     error: text('error'),
+    /** Contract error code on failed rows (e.g. AI_INPUT_TOO_LARGE) — replay
+     *  rethrows it so the retried request keeps its original status class. */
+    errorCode: text('error_code'),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     createdBy: uuid('created_by').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -442,7 +445,7 @@ export const aiGenerations = coreSchema.table(
 );
 
 /**
- * Per-project AI "voice" configuration (specs/21). Operator-authored guidance
+ * Per-project AI "voice" configuration. Operator-authored guidance
  * injected into the generation system prompt: a brand voice description, a
  * glossary of preferred terms, and a default output language. One row per
  * project (absent row = no guidance = today's neutral behavior). This is

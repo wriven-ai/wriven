@@ -8,6 +8,7 @@ dist
 tmp
 out-tsc
 *.tsbuildinfo
+commandcode
 
 # dependencies
 node_modules
@@ -91,9 +92,11 @@ BACKEND.md
 PROJECT.md
 .codex
 .opencode
+.opencode/**
 .gemini
 .cursor
 .commandcode
 
 # Local-only scripts (may contain secrets — never commit)
 publish-sdk.sh
+.env*

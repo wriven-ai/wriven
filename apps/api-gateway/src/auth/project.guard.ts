@@ -23,6 +23,10 @@ interface ScopedRequest extends Request {
   workspaceId?: string;
   workspaceRole?: string;
   projectId?: string;
+  /** Workspace owning the project, resolved from the project row by
+   *  auth-service — the authoritative binding, unlike the client's
+   *  `X-Workspace-Id` header. */
+  projectWorkspaceId?: string;
   projectRole?: ProjectRole | null;
   projectPermissions?: Set<Permission>;
 }
@@ -62,6 +66,7 @@ export class ProjectGuard implements CanActivate {
     );
 
     req.projectId = membership.projectId;
+    req.projectWorkspaceId = membership.workspaceId;
     req.projectRole = membership.role;
     req.projectPermissions = new Set(membership.permissions);
     return true;

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PenTool, Image as ImageIcon, LayoutGrid, TrendingUp } from 'lucide-react';
+import { PenTool, Image as ImageIcon, LayoutGrid, Webhook } from 'lucide-react';
 
 export default function CoreFeaturesWireframe() {
   return (
@@ -26,10 +26,10 @@ export default function CoreFeaturesWireframe() {
           </h2>
           <div className="space-y-1 text-[#99A6A0] text-sm md:text-base font-light leading-relaxed max-w-2xl" id="wireframe-features-description">
             <p>
-              3-4 feature cards, each with an icon, short name, and one-line description.
+              Four pillars of the platform — all shipped and working today.
             </p>
             <p>
-              Covers the main pillars: AI writing, image generation, CMS publishing, and maybe analytics/SEO.
+              AI writing, media management, headless modeling, and developer-grade delivery.
             </p>
           </div>
         </div>
@@ -52,7 +52,7 @@ export default function CoreFeaturesWireframe() {
               </h3>
             </div>
             <p className="text-sm text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-1">
-              Draft, edit, and rewrite with one prompt
+              Generate, refine, and compose entries in your brand voice
             </p>
           </div>
 
@@ -67,11 +67,11 @@ export default function CoreFeaturesWireframe() {
                 <ImageIcon className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-white tracking-tight" id="card-title-2">
-                Image gen
+                Media library
               </h3>
             </div>
             <p className="text-sm text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-2">
-              Generate on-brand visuals instantly
+              Upload, organize, and reference assets per project
             </p>
           </div>
 
@@ -86,30 +86,30 @@ export default function CoreFeaturesWireframe() {
                 <LayoutGrid className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-white tracking-tight" id="card-title-3">
-                CMS
+                Headless CMS
               </h3>
             </div>
             <p className="text-sm text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-3">
-              Publish and manage all your content
+              Model content types, draft, and publish entries
             </p>
           </div>
 
-          {/* Card 4: Analytics */}
-          <div 
+          {/* Card 4: Webhooks */}
+          <div
             className="group bg-[#111815] border border-[#21322B] rounded-xl p-6 flex flex-col justify-between min-h-[190px] transition-all duration-300 hover:border-[#0FAF7B]/40 hover:-translate-y-1 hover:shadow-lgCard"
             style={{ contentVisibility: 'auto' }}
             id="wireframe-card-4"
           >
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-lg bg-[#0FAF7B]/5 border border-[#0FAF7B]/15 flex items-center justify-center text-[#0FAF7B] group-hover:bg-[#0FAF7B]/10 transition-all" id="card-icon-4">
-                <TrendingUp className="w-5 h-5" />
+                <Webhook className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-white tracking-tight" id="card-title-4">
-                Analytics
+                Webhooks
               </h3>
             </div>
             <p className="text-sm text-[#99A6A0] font-light mt-4 leading-relaxed" id="card-desc-4">
-              Track reach, SEO, and engagement
+              Signed hooks fire on publish, unpublish, and delete
             </p>
           </div>
 

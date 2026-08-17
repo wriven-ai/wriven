@@ -4,18 +4,18 @@ import React from 'react';
 
 export default function WeaveRegistry() {
   const steps = [
-    { num: '01', name: 'SCHEMA', label: 'STRUCTURED_MODEL' },
-    { num: '02', name: 'SYNAPSE', label: 'AI_COWRITING' },
-    { num: '03', name: 'REFINERY', label: 'COPY_CRAFT' },
-    { num: '04', name: 'COMPILER', label: 'PAYLOAD_GEN' },
-    { num: '05', name: 'DISTRIBUTE', label: 'EDGE_SHIPPED' }
+    { num: '01', name: 'MODEL', label: 'CONTENT_TYPES' },
+    { num: '02', name: 'DRAFT', label: 'AI_COWRITER' },
+    { num: '03', name: 'PUBLISH', label: 'REVISIONS' },
+    { num: '04', name: 'DELIVER', label: 'REST_JSON' },
+    { num: '05', name: 'REACT', label: 'SIGNED_WEBHOOKS' }
   ];
 
   return (
     <section className="relative bg-brand-surface-soft py-10 border-b border-brand-border" id="social-proof">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         <p className="text-center text-sm font-mono tracking-widest text-[#99A6A0] uppercase mb-5" id="logos-title">
-          THE WRIVEN SYNCHRONOUS ENGINE COMPILER
+          THE WRIVEN CONTENT PIPELINE
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 max-w-5xl mx-auto text-center" id="logos-flex">
           {steps.map((step) => (

@@ -59,6 +59,8 @@ function toPlanView(p: typeof plans.$inferSelect): PlanView {
     active: p.active,
     priceMonthly: p.priceMonthly,
     priceYearly: p.priceYearly,
+    yearlyDiscountPercent: p.yearlyDiscountPercent,
+    yearlyDiscountAmount: p.yearlyDiscountAmount,
     currency: p.currency,
     trialDays: p.trialDays,
     limits: (p.limits ?? {}) as PlanLimits,

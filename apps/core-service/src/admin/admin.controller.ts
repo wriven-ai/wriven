@@ -7,6 +7,8 @@ import {
   AdminTakedownDto,
 } from '@wriven/contracts';
 import { AdminContentService } from './admin-content.service';
+import { AdminContentTypesService } from './admin-content-types.service';
+import { AdminProjectUsageService } from './admin-project-usage.service';
 import { AdminKeysService } from './admin-keys.service';
 import { AdminMediaService } from './admin-media.service';
 import { AdminMetricsService } from './admin-metrics.service';
@@ -18,9 +20,11 @@ export class AdminController {
   constructor(
     private readonly metrics: AdminMetricsService,
     private readonly content: AdminContentService,
+    private readonly contentTypes: AdminContentTypesService,
     private readonly media: AdminMediaService,
     private readonly keys: AdminKeysService,
     private readonly webhooks: AdminWebhooksService,
+    private readonly projectUsage: AdminProjectUsageService,
   ) {}
 
   @MessagePattern(ADMIN_PATTERNS.METRICS_CONTENT)
@@ -43,6 +47,18 @@ export class AdminController {
   @MessagePattern(ADMIN_PATTERNS.CONTENT_TAKEDOWN)
   takedownContent(@Payload() payload: { id: string; dto: AdminTakedownDto }) {
     return this.content.takedown(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.CONTENT_TYPES_LIST)
+  listContentTypes(@Payload() query: AdminScopedQueryDto) {
+    return this.contentTypes.list(query);
+  }
+
+  // ── Project usage (aggregated, core-owned tables) ────────────────────────────
+
+  @MessagePattern(ADMIN_PATTERNS.PROJECT_USAGE)
+  getProjectUsage(@Payload() payload: { projectId: string }) {
+    return this.projectUsage.get(payload);
   }
 
   // ── Media ─────────────────────────────────────────────────────────────────

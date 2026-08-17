@@ -56,7 +56,7 @@ export default function UsageStatsPage() {
         <UsageBody data={data} />
       ) : null}
 
-      {/* Workspace aggregate stats (specs/17). Loads independently. */}
+      {/* Workspace aggregate stats. Loads independently. */}
       <div className="space-y-3 pt-2">
         <h2 className="text-sm font-mono font-bold tracking-wider text-text-muted uppercase">
           Workspace Stats
@@ -109,7 +109,7 @@ function UsageBody({ data }: { data: UsageView }) {
  * Tokens + cost caption for the AI card. Tokens always show (they include failed
  * generations, which still burn tokens). Cost only shows when every generation
  * this period had a known price — otherwise we'd render a confidently-wrong
- * dollar figure, so we say how many are unpriced instead. See specs/21.
+ * dollar figure, so we say how many are unpriced instead.
  */
 function aiSublabel(ai: UsageView['ai']): string {
   const tokens = `${fmtCount(ai.tokens.total)} tokens`;

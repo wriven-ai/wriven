@@ -14,7 +14,7 @@ import {
 /**
  * AI content generation contracts. Core-service validates scope, policy, quota,
  * and audit state, then calls the standalone Python ai-service behind an
- * `AiClient` seam. See specs/21.
+ * `AiClient` seam.
  *
  * The author-facing surface is deliberately small: pick a **target** (one field,
  * or the whole entry), pick an **intent** (create or transform), optionally pick
@@ -90,12 +90,12 @@ export class AiGenerateDto {
   requestId!: string;
 
   /** Content type owning the target (field-def lookup + prompt context). */
-  @IsString()
+  @IsUUID()
   contentTypeId!: string;
 
   /** Existing entry whose allowlisted sibling values seed the prompt. */
   @IsOptional()
-  @IsString()
+  @IsUUID()
   entryId?: string;
 
   /** Whether this targets one field or the whole entry. */

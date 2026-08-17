@@ -21,7 +21,7 @@ export default function Hero() {
               </h1>
 
               <p className="text-sm sm:text-base text-text-secondary leading-relaxed max-w-lg font-light" id="hero-subheadline">
-                The intellectual workspace for structured modern content. Craft beautiful layouts, compile pristine assets, inscribe copy with inline algorithms, and stream instant edge JSON globally.
+                The AI-native headless CMS. Define your own content model, draft with a built-in AI co-writer, and publish to a clean REST delivery API for any framework.
               </p>
             </div>
 
@@ -44,8 +44,8 @@ export default function Hero() {
             </div>
 
             <div className="flex items-center gap-6 pt-2 text-sm font-mono text-text-muted" id="hero-badges">
-              <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-brand-accent stroke-[3.5]" /> EDGE METRIC PUSHES</div>
-              <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-brand-accent stroke-[3.5]" /> ZERO DEPLOY RUNTIME</div>
+              <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-brand-accent stroke-[3.5]" /> AI TEXT GENERATION</div>
+              <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-brand-accent stroke-[3.5]" /> REST DELIVERY API</div>
             </div>
           </div>
 
@@ -79,44 +79,44 @@ export default function Hero() {
               {/* Item 01 */}
               <div className="border-b border-brand-border pb-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">STRUCTURAL METADATA</span>
+                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">CONTENT MODEL</span>
                   <span className="h-[1px] bg-brand-border flex-grow" />
                 </div>
                 <div className="text-sm font-light text-text-secondary leading-relaxed">
-                  Wriven translates raw editorial text into organized JSON attributes. Fully typed schema structures keep client layers, build servers, and compilers perfectly aligned.
+                  Define content types with a visual field builder — text, rich text, media, and references with unique and multiple constraints. Every entry is validated against your schema.
                 </div>
               </div>
 
               {/* Item 02 */}
               <div className="border-b border-brand-border pb-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">SYMMETRIC GRID METRIC</span>
+                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">AI CO-WRITER</span>
                   <span className="h-[1px] bg-brand-border flex-grow" />
                 </div>
                 <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight leading-tight mb-2">
-                  Where composition transcends automation.
+                  Drafting that respects your voice.
                 </h2>
                 <div className="flex gap-4 text-sm font-mono text-text-muted">
-                  <span>BASELINE: 8PX MODULAR</span>
-                  <span>FONT: MANROPE HIGH-FIDELITY</span>
+                  <span>GENERATE · REFINE · COMPOSE</span>
+                  <span>PER-PROJECT BRAND VOICE</span>
                 </div>
               </div>
 
               {/* Item 03 */}
               <div className="pb-4">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">LIVE EDGE DEPLOYMENT</span>
+                  <span className="font-mono text-sm font-bold text-brand-accent tracking-widest">PUBLISH &amp; DELIVER</span>
                   <span className="h-[1px] bg-brand-border flex-grow" />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-mono font-bold text-text-primary bg-brand-surface-soft border border-brand-border px-3 py-1 rounded">
-                    COMPILER: ONLINE
+                    STATUS: PUBLISHED
                   </span>
                   <span className="text-sm font-mono font-bold text-text-primary bg-brand-surface-soft border border-brand-border px-3 py-1 rounded">
-                    LATENCY: 12ms
+                    CACHE: S-MAXAGE=60
                   </span>
                   <span className="text-sm font-mono font-bold text-brand-accent bg-brand-accent/5 border border-brand-accent/20 px-3 py-1 rounded">
-                    ACTIVE CACHE: 99.45%
+                    PURGE: ON PUBLISH
                   </span>
                 </div>
               </div>

@@ -166,17 +166,14 @@ export const subscriptions = authSchema.table('subscriptions', {
 > defensively. Suspending a **user** sets `users.suspendedAt` (login blocked).
 
 **Seed** (`apps/auth-service/src/db/seed.ts`, run `pnpm db:auth:seed`):
-- Three plans, upserted on `key` (definitions are config, source of truth = seed):
-  - **free** — projects 2, members 3, 100 MB, 10 content types, 1k entries,
-    community support. $0.
-  - **pro** — projects 10, members 10, 5 GB, 50 content types, 50k entries,
-    scheduled publishing + revisions + preview, email support. ~$29/mo.
-  - **business** — unlimited projects/types/keys, members 50, 50 GB, SSO +
-    custom roles + audit log, priority support. ~$99/mo.
+- Plans are **not seeded** — create/manage them from the admin Plans UI
+  (`POST /admin/plans`, prices in USD dollars; paid plans get their Stripe
+  Product/Prices created server-side). See [`doc/plan-config.md`](../plan-config.md)
+  for the intended tier configuration.
 - One bootstrap `admin` from env (`ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`) —
   hashed at seed time; never commit a plaintext password.
-- Workspaces with no `workspace_plans` row resolve to `free` in code.
-- Prices/limits are placeholders — tune in the seed or later via the admin Plans UI.
+- Workspaces with no `subscriptions` row (or no `free` plan row yet) resolve to
+  the baked-in `FREE_FALLBACK` limits in `EntitlementsService` — fail closed.
 
 ---
 

@@ -63,6 +63,14 @@ These are deliberate deviations recorded during build, not scope changes:
   genuine "provider called but model unpriced" rows.
 - **`AiBurstGuard` is route-scoped to `POST /content/ai/generate`.** It was
   controller-level, which throttled profile reads/edits (10/min shared with generations).
+- **Corrections recorded by specs/22 (the hardening pass):** output-token caps
+  shipped **generous** (`compose` 6 000, `refine` 3 000 — this spec's text said
+  2 400/1 200) and stay that way deliberately: on the free provider, spend is
+  $0 while truncation is a direct UX hit. `promptVersion` is **`text-v3`**
+  (v3 added a last-position output guardrail; this spec's refinement note said
+  v2 — the `prompt_version` column default was fixed to match in migration
+  0013). The **profile cache described here was never built and is dropped** —
+  `read()` is one indexed single-row query per generation.
 
 ## Depends on
 

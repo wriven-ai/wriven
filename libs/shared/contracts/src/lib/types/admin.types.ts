@@ -1,5 +1,7 @@
 /** Shapes for the platform admin panel — exchanged auth/core ↔ gateway over TCP. */
 
+import type { FieldDef } from './cms.types';
+
 /** Platform staff role (distinct from tenant roles). */
 export type AdminRole = 'admin' | 'moderator' | 'member';
 
@@ -105,7 +107,14 @@ export interface PlanView {
   isPublic: boolean;
   active: boolean;
   priceMonthly: number | null; // cents
-  priceYearly: number | null; // cents
+  priceYearly: number | null; // cents — FINAL yearly amount Stripe charges
+  /**
+   * Yearly pricing breakdown (create-only). Percent given → priceYearly was
+   * computed server-side; `yearlyDiscountAmount` = cents saved vs monthly×12.
+   * Both null = explicit/absent yearly price, no discount.
+   */
+  yearlyDiscountPercent: number | null;
+  yearlyDiscountAmount: number | null;
   currency: string;
   trialDays: number;
   limits: PlanLimits;
@@ -200,6 +209,36 @@ export interface AdminEntryRow {
 /** Full entry detail (includes the data payload) for moderation review. */
 export interface AdminEntryDetail extends AdminEntryRow {
   data: Record<string, unknown>;
+}
+
+/** A content type row in the admin workspace Content Types view (core-service). */
+export interface AdminContentTypeRow {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  name: string;
+  apiId: string;
+  fields: FieldDef[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Aggregated per-project usage for the admin Project detail screen (core-service). */
+export interface AdminProjectUsage {
+  projectId: string;
+  contentTypes: number;
+  entries: { total: number; published: number; draft: number; archived: number };
+  media: { assetCount: number; totalBytes: number };
+  apiKeys: { total: number; active: number };
+  webhooks: { total: number; active: number };
+  ai: {
+    generations: number;
+    succeeded: number;
+    failed: number;
+    totalTokens: number;
+    /** Sum of known provider spend in USD × 1,000,000; null when no priced rows. */
+    costMicrousd: number | null;
+  };
 }
 
 /** A media asset row in the admin Media view. */

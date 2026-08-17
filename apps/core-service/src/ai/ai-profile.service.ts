@@ -14,9 +14,9 @@ const { aiProfiles } = schema;
  * {@link upsert} creates on first edit.
  *
  * `projects` is an auth-service table, so this service cannot re-verify the
- * project/workspace binding; the gateway's ProjectGuard already did. The
- * workspaceId is threaded from that resolution so the row is scoped correctly
- * without trusting the client for it.
+ * project/workspace binding; the gateway resolves the authoritative workspace
+ * from the project record and injects it into the TCP payload —
+ * the client's `X-Workspace-Id` header is never persisted for this row.
  */
 @Injectable()
 export class AiProfileService {
@@ -40,13 +40,17 @@ export class AiProfileService {
     userId: string;
     dto: UpdateAiProfileDto;
   }): Promise<AiProfileView> {
+    // `glossary` is a NOT NULL jsonb column: `@IsOptional()` lets `null` past
+    // the DTO, so treat null as "clear" in BOTH paths — the conflict branch
+    // previously wrote a raw NULL and 500'd on Postgres 23502.
+    const glossary = p.dto.glossary ?? [];
     const [row] = await this.db
       .insert(aiProfiles)
       .values({
         workspaceId: p.workspaceId,
         projectId: p.projectId,
         brandVoice: p.dto.brandVoice ?? null,
-        glossary: p.dto.glossary ?? [],
+        glossary,
         language: p.dto.language ?? null,
         updatedBy: p.userId,
       })
@@ -54,7 +58,7 @@ export class AiProfileService {
         target: aiProfiles.projectId,
         set: {
           ...(p.dto.brandVoice !== undefined ? { brandVoice: p.dto.brandVoice } : {}),
-          ...(p.dto.glossary !== undefined ? { glossary: p.dto.glossary } : {}),
+          ...(p.dto.glossary !== undefined ? { glossary } : {}),
           ...(p.dto.language !== undefined ? { language: p.dto.language } : {}),
           updatedBy: p.userId,
           updatedAt: new Date(),
@@ -62,11 +66,6 @@ export class AiProfileService {
       })
       .returning();
     return this.toView(row);
-  }
-
-  /** Resolve a profile for the generation path (no 404 — empty view when absent). */
-  async resolve(projectId: string): Promise<AiProfileView> {
-    return this.read(projectId);
   }
 
   private toView(row: typeof aiProfiles.$inferSelect): AiProfileView {

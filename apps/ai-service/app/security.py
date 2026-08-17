@@ -20,5 +20,10 @@ async def verify_internal_secret(x_internal_secret: str | None = Header(default=
     # development, and comparing an empty configured secret would be unsafe.
     if not settings.internal_secret or not x_internal_secret:
         raise InvalidSecretError()
-    if not compare_digest(x_internal_secret, settings.internal_secret):
+    # Compare UTF-8 bytes: the str overload raises TypeError on non-ASCII
+    # input, which would collapse a bad secret into a generic 502 instead of
+    # the contract's 401.
+    if not compare_digest(
+        x_internal_secret.encode("utf-8"), settings.internal_secret.encode("utf-8")
+    ):
         raise InvalidSecretError()

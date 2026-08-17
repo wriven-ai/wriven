@@ -125,7 +125,7 @@ Expiry phrasing comes from the configured TTLs (`RESET_TOKEN_TTL`,
 `BillingService` + `StripeWebhookService` own the payment path (patterns `auth.billing.*`). Entitlements/quotas already read the `subscriptions` row, so the integration changes **zero enforcement call sites** — it only keeps the row in sync with Stripe.
 
 ### Schema (`auth_svc`)
-- **plans** — `key` (free/pro/business), prices (cents), `stripe_product_id` / `stripe_price_id_monthly` / `stripe_price_id_yearly` (backfilled after creating Stripe Products/Prices; the seed's `onConflictDoUpdate` omits these so reseeds don't clobber them), `trial_days` (0 — trials removed), `limits` + `features` (jsonb).
+- **plans** — `key` (free/starter/pro), prices (cents), `stripe_product_id` / `stripe_price_id_monthly` / `stripe_price_id_yearly` (created alongside the row via the admin panel — Stripe-first, so a Stripe failure can't leave a half-linked plan), `trial_days` (0 — trials removed), `limits` + `features` (jsonb). Rows are managed from the admin Plans UI, not the seed.
 - **subscriptions** — one row per workspace (created `free`/`active` on signup). Stripe linkage (`stripe_customer_id`, `stripe_subscription_id`), `status` (CHECK: active/trialing/past_due/canceled/paused/incomplete), `billing_cycle`, `current_period_start/end`, `trial_ends_at`, `cancel_at_period_end`, `canceled_at`, `stripe_event_created_at` (last applied event time — stale-event guard), `overrides` (admin per-customer limit bump), `updated_by`.
 - **stripe_events** — webhook idempotency log: `event_id` (Stripe `evt_…`, unique dedupe key), `event_type`, `event_created_at` (Stripe's `event.created`), `payload` (raw, for debug/replay).
 

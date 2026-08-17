@@ -52,11 +52,18 @@ context allowlists are the enforced controls today.
   (one quota unit) regardless of how many fields it fills.
 - A failed provider call does **not** consume the customer's monthly *request*
   allowance. Its provider-reported token usage is retained on the failed audit
-  row, so Wriven can measure the actual cost. A manual retry starts a new intent
-  and may be billable if it succeeds.
-- The synchronous text path has provider retries disabled. Only a constrained
-  `select` correction or a `compose` JSON repair makes a second provider call, and
-  both attempts' tokens are aggregated.
+  row, so Wriven can measure the actual cost. The row also persists the contract
+  error **code** (`ai_generations.error_code`, specs/22), so re-sending a failed
+  key rethrows the original status class instead of a generic 502. A manual
+  retry starts a new intent and may be billable if it succeeds.
+- Replaying a **succeeded** key after retention redacted its stored output
+  returns `AI_RESULT_EXPIRED` (410) — the client starts a new generation. A
+  success is never reported as a failure.
+- The synchronous text path has provider retries disabled. Only three
+  constrained second calls exist — a `select` option correction, a `compose`
+  JSON repair, and a free-text guardrail correction — and every attempt's
+  tokens are aggregated, including when the second call itself fails
+  transport-side.
 
 ## Monitoring
 

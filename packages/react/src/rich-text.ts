@@ -75,7 +75,8 @@ function renderNode(
     case 'paragraph':
       return createElement('p', { key }, ...renderChildren(node, components));
     case 'heading': {
-      const level = Math.min(6, Math.max(1, Number(node.attrs?.level ?? 2)));
+      // `|| 2` also catches NaN from a malformed level attr (e.g. "abc").
+      const level = Math.min(6, Math.max(1, Number(node.attrs?.level ?? 2) || 2));
       return createElement(`h${level}`, { key }, ...renderChildren(node, components));
     }
     case 'bulletList':
@@ -97,9 +98,12 @@ function renderNode(
     case 'hardBreak':
       return createElement('br', { key });
     case 'image':
+      // The Delivery API sets `src: null` when the asset was deleted — render
+      // nothing rather than a broken <img>.
+      if (!node.attrs?.src) return null;
       return createElement('img', {
         key,
-        src: node.attrs?.src as string | undefined,
+        src: node.attrs?.src as string,
         alt: (node.attrs?.alt as string | undefined) ?? '',
         width: node.attrs?.width as number | undefined,
         height: node.attrs?.height as number | undefined,

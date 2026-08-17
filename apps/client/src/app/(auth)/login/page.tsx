@@ -10,10 +10,15 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
+const demoLoginEnabled = Boolean(demoEmail && demoPassword);
+
 export const LoginPage = () => {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isDemoSubmitting, setIsDemoSubmitting] = useState(false);
 
   const {
     register,
@@ -24,7 +29,7 @@ export const LoginPage = () => {
     defaultValues: { email: '', password: '', rememberMe: false },
   });
 
-  const onSubmit = async (values: LoginValues) => {
+  const login = async (values: LoginValues) => {
     setServerError(null);
     try {
       const result = await authApi.login(values);
@@ -43,6 +48,22 @@ export const LoginPage = () => {
           ? err.message
           : 'Something went wrong. Please try again.',
       );
+    }
+  };
+
+  const onSubmit = (values: LoginValues) => login(values);
+
+  const onDemoLogin = async () => {
+    if (!demoLoginEnabled) return;
+    setIsDemoSubmitting(true);
+    try {
+      await login({
+        email: demoEmail as string,
+        password: demoPassword as string,
+        rememberMe: false,
+      });
+    } finally {
+      setIsDemoSubmitting(false);
     }
   };
 
@@ -222,6 +243,18 @@ export const LoginPage = () => {
               </svg>
               <span>Continue with Google</span>
             </a>
+
+            {demoLoginEnabled && (
+              <button
+                type="button"
+                onClick={onDemoLogin}
+                disabled={isDemoSubmitting || isSubmitting}
+                className="w-full inline-flex items-center justify-center gap-2 mt-3 bg-brand-surface-soft hover:bg-brand-border border border-brand-accent text-text-primary text-sm font-mono font-bold uppercase tracking-wider py-3.5 px-4 rounded-lg transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                id="login-demo-btn"
+              >
+                {isDemoSubmitting ? 'Signing in…' : 'Demo Login'}
+              </button>
+            )}
           </div>
 
           <p

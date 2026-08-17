@@ -2,8 +2,11 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   ADMIN_PATTERNS,
+  AdminAuditQueryDto,
   AdminListQueryDto,
   AdminLoginDto,
+  AdminProjectsQueryDto,
+  AdminUsersQueryDto,
   AdminUpdateUserDto,
   AssignPlanDto,
   type AuditWritePayload,
@@ -88,7 +91,7 @@ export class AdminController {
   }
 
   @MessagePattern(ADMIN_PATTERNS.AUDIT_LIST)
-  listAudit(@Payload() query: AdminListQueryDto) {
+  listAudit(@Payload() query: AdminAuditQueryDto) {
     return this.audit.list(query);
   }
 
@@ -102,7 +105,7 @@ export class AdminController {
   // ── Tenant oversight ────────────────────────────────────────────────────────
 
   @MessagePattern(ADMIN_PATTERNS.USERS_LIST)
-  listUsers(@Payload() query: AdminListQueryDto) {
+  listUsers(@Payload() query: AdminUsersQueryDto) {
     return this.tenancy.listUsers(query);
   }
 
@@ -132,7 +135,7 @@ export class AdminController {
   }
 
   @MessagePattern(ADMIN_PATTERNS.PROJECTS_LIST)
-  listProjects(@Payload() query: AdminListQueryDto) {
+  listProjects(@Payload() query: AdminProjectsQueryDto) {
     return this.tenancy.listProjects(query);
   }
 

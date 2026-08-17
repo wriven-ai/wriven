@@ -14,3 +14,8 @@ export class WrivenError extends Error {
     Object.setPrototypeOf(this, WrivenError.prototype);
   }
 }
+
+/** Type guard — separates Wriven failures from unrelated errors in catch blocks. */
+export function isWrivenError(err: unknown): err is WrivenError {
+  return err instanceof WrivenError;
+}

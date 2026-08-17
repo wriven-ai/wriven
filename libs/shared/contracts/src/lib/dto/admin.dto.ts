@@ -4,6 +4,7 @@ import {
   IsEmail,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
@@ -17,6 +18,14 @@ import { SUBSCRIPTION_STATUSES, type SubscriptionStatus } from '../types/billing
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
 const PASSWORD_MESSAGE =
   'Password must be at least 8 characters with one uppercase letter and one special character';
+
+/**
+ * Admin-entered prices stay USD dollars on the wire (e.g. `9.99`).
+ * Dollars→cents conversion deliberately does NOT live in a `@Transform`:
+ * BOTH the gateway's HTTP pipe and the auth-service's TCP pipe validate this
+ * DTO with `transform: true`, so a transform would apply TWICE
+ * ($10 → 1000 → 100000). The auth-service's AdminPlansService converts once.
+ */
 
 const ADMIN_ROLES = ['admin', 'moderator', 'member'] as const;
 
@@ -155,23 +164,45 @@ export class CreatePlanDto {
   @MaxLength(200)
   description?: string;
 
+  /** USD dollars on the wire (≤2 decimals) — the auth-service converts to cents. */
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   priceMonthly?: number;
 
+  /** USD dollars on the wire (≤2 decimals) — the auth-service converts to cents. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  priceYearly?: number;
+
+  /**
+   * Yearly discount percent (0–100). When set, `priceMonthly` is required and
+   * `priceYearly` must NOT also be sent — the server computes the final yearly
+   * price (`round(monthly × 12 × (1 − percent/100))` cents) and stores the
+   * breakdown (`yearlyDiscountPercent` + `yearlyDiscountAmount`).
+   */
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  priceYearly?: number;
+  @Max(100)
+  yearlyDiscountPercent?: number;
 
   @IsOptional()
   limits?: Record<string, number | null>;
 
   @IsOptional()
   features?: Record<string, unknown>;
+
+  /** Tier rank — higher = more expensive. Drives upgrade/downgrade semantics
+   *  (client CTA labels, swap deferral) and catalog ordering. Defaults to
+   *  max(existing) + 1 on the service side when omitted. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  sortOrder?: number;
 }
 
 /** Update a plan (admin). All fields optional. Prices are read-only after
@@ -196,6 +227,13 @@ export class UpdatePlanDto {
 
   @IsOptional()
   features?: Record<string, unknown>;
+
+  /** Tier rank — higher = more expensive (see CreatePlanDto.sortOrder). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  sortOrder?: number;
 }
 
 /** Assign a plan to a workspace (admin). Identify the plan by key. */
@@ -233,4 +271,30 @@ export class AdminListQueryDto {
   @MaxLength(120)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   q?: string;
+}
+
+/** Admin projects list — pagination/search plus optional workspace scope. */
+export class AdminProjectsQueryDto extends AdminListQueryDto {
+  @IsOptional()
+  @IsString()
+  workspaceId?: string;
+}
+
+/** Admin audit log list — pagination/search plus action/target filters. */
+export class AdminAuditQueryDto extends AdminListQueryDto {
+  @IsOptional()
+  @IsString()
+  action?: string;
+
+  @IsOptional()
+  @IsString()
+  targetType?: string;
+}
+
+/** Admin users list — pagination/search plus optional suspension filter. */
+export class AdminUsersQueryDto extends AdminListQueryDto {
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  suspended?: boolean;
 }

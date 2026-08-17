@@ -48,6 +48,9 @@ export class AdminSupportService {
     if (query.assignedAdminId) {
       conditions.push(eq(supportTickets.assignedAdminId, query.assignedAdminId));
     }
+    if (query.unassigned) {
+      conditions.push(isNull(supportTickets.assignedAdminId));
+    }
     if (query.q) {
       const term = `%${query.q}%`;
       conditions.push(

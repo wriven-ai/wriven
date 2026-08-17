@@ -72,7 +72,7 @@ def render_prometheus_metrics() -> str:
         lines.append(f'wriven_ai_provider_duration_ms_count{{outcome="{outcome}"}} {count}')
     lines.extend(
         [
-            "# HELP wriven_ai_generation_tokens_total Provider-reported generated and prompt tokens.",
+            "# HELP wriven_ai_generation_tokens_total Provider-reported tokens (prompt + completion) across all generation attempts.",
             "# TYPE wriven_ai_generation_tokens_total counter",
             f"wriven_ai_generation_tokens_total {_generation_tokens_total}",
             "# HELP wriven_ai_provider_throttles_total Provider rate-limit responses.",
@@ -107,11 +107,18 @@ def install_request_observability(app: FastAPI) -> None:
         try:
             response = await call_next(request)
         except Exception:
+            duration_ms = int((time.perf_counter() - started_at) * 1000)
+            # Count the failed request too — an unhandled exception previously
+            # produced no `wriven_ai_http_requests_total` sample at all.
+            path = request.url.path
+            _http_requests[(path, 500)] = _http_requests.get((path, 500), 0) + 1
+            count, total = _http_duration_ms.get(path, (0, 0))
+            _http_duration_ms[path] = (count + 1, total + duration_ms)
             logger.exception(
                 "event=http_request_failed method=%s path=%s duration_ms=%d",
                 request.method,
-                request.url.path,
-                int((time.perf_counter() - started_at) * 1000),
+                path,
+                duration_ms,
             )
             raise
         else:

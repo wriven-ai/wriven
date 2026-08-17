@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  AdminListQueryDto,
+  AdminAuditQueryDto,
   AuditLogView,
   AuditWritePayload,
   Paginated,
 } from '@wriven/contracts';
 import { DRIZZLE, type DrizzleDB } from '@wriven/database';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ilike } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
 const { adminAuditLog, adminUsers } = schema;
@@ -30,9 +30,15 @@ export class AdminAuditService {
     return { success: true };
   }
 
-  async list(query: AdminListQueryDto): Promise<Paginated<AuditLogView>> {
+  async list(query: AdminAuditQueryDto): Promise<Paginated<AuditLogView>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+
+    const conds = [];
+    if (query.action) conds.push(eq(adminAuditLog.action, query.action));
+    if (query.targetType) conds.push(eq(adminAuditLog.targetType, query.targetType));
+    if (query.q) conds.push(ilike(adminAuditLog.action, `%${query.q}%`));
+    const where = conds.length ? and(...conds) : undefined;
 
     const [rows, total] = await Promise.all([
       this.db
@@ -49,10 +55,11 @@ export class AdminAuditService {
         })
         .from(adminAuditLog)
         .leftJoin(adminUsers, eq(adminAuditLog.adminUserId, adminUsers.id))
+        .where(where)
         .orderBy(desc(adminAuditLog.createdAt))
         .limit(limit)
         .offset((page - 1) * limit),
-      this.db.$count(adminAuditLog),
+      this.db.$count(adminAuditLog, where),
     ]);
 
     const items: AuditLogView[] = rows.map((r) => ({

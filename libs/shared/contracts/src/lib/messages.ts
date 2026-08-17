@@ -207,6 +207,7 @@ export const ADMIN_PATTERNS = {
   CONTENT_LIST: 'admin.content.list',
   CONTENT_GET: 'admin.content.get',
   CONTENT_TAKEDOWN: 'admin.content.takedown',
+  CONTENT_TYPES_LIST: 'admin.contentTypes.list',
   MEDIA_LIST: 'admin.media.list',
   MEDIA_USAGE: 'admin.media.usage',
   MEDIA_PURGE: 'admin.media.purge',
@@ -214,6 +215,7 @@ export const ADMIN_PATTERNS = {
   APIKEYS_REVOKE: 'admin.apiKeys.revoke',
   WEBHOOKS_LIST: 'admin.webhooks.list',
   WEBHOOKS_DISABLE: 'admin.webhooks.disable',
+  PROJECT_USAGE: 'admin.projects.usage',
 
   // Metrics (auth-side + core-side, merged at the gateway)
   METRICS_AUTH: 'admin.metrics.auth',

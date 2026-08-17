@@ -440,7 +440,11 @@ export const plans = authSchema.table('plans', {
 
   // Billing (Stripe-ready; all nullable until billing lands). Prices in cents.
   priceMonthly: integer('price_monthly'),
+  // FINAL yearly amount (the cents Stripe charges) — computed server-side from
+  // the discount breakdown below when a percent is given at create.
   priceYearly: integer('price_yearly'),
+  yearlyDiscountPercent: integer('yearly_discount_percent'), // 0–100, null = none
+  yearlyDiscountAmount: integer('yearly_discount_amount'), // cents saved vs monthly×12
   currency: text('currency').notNull().default('usd'),
   stripeProductId: text('stripe_product_id'),
   stripePriceIdMonthly: text('stripe_price_id_monthly'),

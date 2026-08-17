@@ -15,7 +15,7 @@ export default function CoreCapabilities() {
             Weave, structure, and scale your digital assets
           </h2>
           <p className="text-text-secondary text-base font-light">
-            Everything you require from a high-end, high-contrast headless engine, built natively with integrated AI nodes.
+            Everything a modern headless CMS needs — structured modeling, AI-assisted drafting, media management, and a developer-grade delivery API.
           </p>
         </div>
 
@@ -25,27 +25,27 @@ export default function CoreCapabilities() {
           {/* Feature 1 */}
           <div className="space-y-4 text-left" id="feature-card-1">
             <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">01</div>
-            <h3 className="text-sm font-bold font-mono uppercase text-text-primary">Content Drafting</h3>
+            <h3 className="text-sm font-bold font-mono uppercase text-text-primary">AI Content Drafting</h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
-              Generate blog content pages, localized descriptions, meta definitions or specs list items directly on canvas. Invoke the Sparkle shortcut beside any input node for instant workflow integration.
+              Generate or refine any field with the built-in co-writer, or compose an entire entry in one pass — guided by a per-project brand voice, glossary, and language profile.
             </p>
           </div>
 
           {/* Feature 2 */}
           <div className="space-y-4 text-left md:border-l md:border-brand-border md:pl-10" id="feature-card-2">
             <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">02</div>
-            <h3 className="text-sm font-bold font-mono uppercase text-text-primary">Graphic Automation</h3>
+            <h3 className="text-sm font-bold font-mono uppercase text-text-primary">Media Library</h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
-              Direct Wriven backend nodes to construct beautifully composed abstract cover layouts or banner structures. High-contrast assets register with corresponding SEO tags instantly.
+              Upload images through presigned, direct-to-storage requests and reference them from any content type. Files are stored as object keys and resolved to URLs only at delivery time.
             </p>
           </div>
 
           {/* Feature 3 */}
           <div className="space-y-4 text-left md:border-l md:border-brand-border md:pl-10" id="feature-card-3">
             <div className="text-brand-accent text-sm font-mono font-bold tracking-wider">03</div>
-            <h3 className="text-sm font-bold font-mono uppercase text-text-primary">Secure Edge Delivery</h3>
+            <h3 className="text-sm font-bold font-mono uppercase text-text-primary">Delivery API</h3>
             <p className="text-sm text-text-secondary leading-relaxed font-light">
-              Fetch structured JSON packages secure at lightning-speed over cached global nodes. Feed content blocks securely to client frameworks, mobile apps or desktop interfaces.
+              Published entries served over a clean REST API with project-scoped keys. Select fields, filter, sort, paginate, and expand references in a single query — CDN-cacheable with tag-based purge on publish.
             </p>
           </div>
 

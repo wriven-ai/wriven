@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowDownAZ,
@@ -76,7 +77,7 @@ const AI_ELIGIBLE_TYPES: FieldType[] = ['text', 'richtext', 'select'];
 /**
  * Whether AI can act on this field at all. Derived from the field's shape — there
  * is deliberately no per-field "enable AI" flag or action allowlist to configure;
- * the only author-facing AI control is "Sensitive". See specs/21.
+ * the only author-facing AI control is "Sensitive".
  */
 function isAiEligible(type: FieldType, multiple = false): boolean {
   return AI_ELIGIBLE_TYPES.includes(type) && !multiple;
@@ -93,6 +94,7 @@ function hasValidSelectOptions(raw: string): boolean {
 
 export default function ContentTypesPage() {
   const qc = useQueryClient();
+  const { wsSlug, projSlug } = useParams<{ wsSlug: string; projSlug: string }>();
   const canManage = useCan()(Permission.CONTENT_TYPE_MANAGE);
 
   const [page, setPage] = useState(1);
@@ -821,13 +823,13 @@ export default function ContentTypesPage() {
 
        </div>
 
-       {/* Per-project AI voice settings (specs/21). Applies to every generation. */}
+       {/* Per-project AI voice settings. Applies to every generation. */}
        {canManage && (
          <div className="space-y-3 pt-2">
            <h2 className="text-sm font-mono font-bold tracking-wider text-text-muted uppercase">
-             AI Voice
+             AI Settings
            </h2>
-           <AiProfilePanel canManage={canManage} />
+           <AiProfilePanel canManage={canManage} scopeKey={`${wsSlug}/${projSlug}`} />
          </div>
        )}
 

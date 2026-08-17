@@ -12,7 +12,7 @@
  *
  * `null` means *unknown* and must never be guessed from a name; `0` is a fact
  * (a free model costs nothing). A period that contains any `null`-priced
- * generation is reported as `cost.complete = false` upstream. See specs/21.
+ * generation is reported as `cost.complete = false` upstream.
  */
 
 /** micro-USD per 1,000,000 tokens, split by prompt vs completion. */

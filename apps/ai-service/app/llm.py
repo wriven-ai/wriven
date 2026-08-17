@@ -26,6 +26,9 @@ logger = logging.getLogger("ai-service.llm")
 # Product policy: bounded output per action. AI_MAX_OUTPUT_TOKENS is the
 # deployment-wide ceiling; an operation may only lower it. Keep verbose actions
 # bounded even if an operator increases the global ceiling for another use case.
+# Caps are deliberately generous: on the default free provider
+# spend is $0 while a truncated answer is a direct UX hit — `compose` 6_000 and
+# `refine` 3_000 intentionally exceed spec 21's original 2_400/1_200.
 _OPERATION_OUTPUT_TOKEN_CAPS: dict[str, int] = {
     "generate": 3_000,
     "compose": 6_000,
@@ -48,11 +51,6 @@ def _parse_headers(raw: str) -> dict[str, str]:
         return parsed if isinstance(parsed, dict) else {}
     except json.JSONDecodeError:
         return {}
-
-
-def _short_reason(exc: Exception) -> str:
-    msg = str(exc)
-    return msg[:200]
 
 
 class LlmClient:
@@ -105,8 +103,11 @@ class LlmClient:
             record_provider_call("throttled", int((time.perf_counter() - started_at) * 1000))
             raise ProviderError("The AI provider is busy — try again shortly.")
         except OpenAIError as exc:
+            # Log the exception type only — `str(exc)` embeds the provider
+            # response body, which can quote request content (governance:
+            # never log raw provider error bodies).
             record_provider_call("error", int((time.perf_counter() - started_at) * 1000))
-            logger.warning("AI generation failed: %s", _short_reason(exc))
+            logger.warning("AI generation failed: %s", type(exc).__name__)
             raise ProviderError("AI generation failed.")
 
         if not res.choices:
@@ -115,6 +116,15 @@ class LlmClient:
             raise ProviderError("AI generation failed.")
 
         record_provider_call("success", int((time.perf_counter() - started_at) * 1000))
+        # Token totals and finish reason only — never prompt or completion text.
+        logger.info(
+            "provider ok op=%s model=%s duration_ms=%d tokens=%d finish=%s",
+            operation,
+            res.model,
+            int((time.perf_counter() - started_at) * 1000),
+            res.usage.total_tokens if res.usage else 0,
+            choice.finish_reason,
+        )
 
         choice = res.choices[0]
         text = choice.message.content or ""

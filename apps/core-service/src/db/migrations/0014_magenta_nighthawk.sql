@@ -1,0 +1,1 @@
+ALTER TABLE "core_svc"."ai_generations" ALTER COLUMN "prompt_version" SET DEFAULT 'text-v4';

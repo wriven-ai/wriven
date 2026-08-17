@@ -23,7 +23,7 @@ export default function OutputRegistry() {
                 Deploy contents to any framework instantly
               </h2>
               <p className="text-text-secondary text-sm font-light leading-relaxed">
-                Wriven decouples editorial copy from display logic. Stream pristine structured feeds directly into modern web frameworks, static sites, native applications, or developer CLI shells.
+                Wriven decouples editorial copy from display logic. Stream structured JSON from the REST delivery API directly into modern web frameworks, static sites, or native applications.
               </p>
             </div>
 
@@ -33,7 +33,7 @@ export default function OutputRegistry() {
                 { id: 'nextjs', name: 'NextJS Web Application', key: '01', desc: 'Sovereign client portals and reactive components', icon: Globe },
                 { id: 'ios', name: 'iOS Mobile Reader', key: '02', desc: 'Secure native app viewports and RSS cards', icon: Cpu },
                 { id: 'astro', name: 'Astro Static Publication', key: '03', desc: 'Ultra-fast optimized static pages', icon: Layers3 },
-                { id: 'json', name: 'Structural JSON payload', key: '04', desc: 'Raw verified content blocks over REST/GraphQL', icon: FileJson }
+                { id: 'json', name: 'Structural JSON payload', key: '04', desc: 'Raw verified content blocks over the REST API', icon: FileJson }
               ].map((target) => {
                 const isActive = activeOutputTab === target.id;
                 const IconComponent = target.icon;
@@ -66,9 +66,9 @@ export default function OutputRegistry() {
 
             <div className="pt-2 flex items-center gap-2 text-sm font-mono text-text-muted">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
-              <span>REGISTRY PIPELINE: ONLINE</span>
+              <span>DELIVERY: REST API</span>
               <span className="mx-1">•</span>
-              <span>DELIVERY NODES: 100% HEALTH</span>
+              <span>AUTH: BEARER WRK_…</span>
             </div>
           </div>
 
@@ -126,8 +126,8 @@ export default function OutputRegistry() {
                           W
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-text-primary">Wriven Editorial Compiler</div>
-                          <div className="text-sm text-text-muted font-mono">1.2k reads • Localized: EN-US</div>
+                          <div className="text-sm font-bold text-text-primary">Wriven Editorial Team</div>
+                          <div className="text-sm text-text-muted font-mono">Served by the Delivery API</div>
                         </div>
                       </div>
 
@@ -168,7 +168,7 @@ export default function OutputRegistry() {
                         <Layers className="w-8 h-8 text-brand-accent opacity-20 absolute" />
                         <div className="relative z-10 text-center space-y-1">
                           <span className="text-sm font-mono text-text-primary px-2 py-0.5 bg-brand-bg border border-brand-border rounded">Wriven App Feed</span>
-                          <div className="text-sm text-text-secondary mt-1">Ingested via Core CLI</div>
+                          <div className="text-sm text-text-secondary mt-1">Fetched via Delivery API</div>
                         </div>
                       </div>
 
@@ -182,7 +182,7 @@ export default function OutputRegistry() {
 
                       <div className="bg-brand-surface-soft p-2.5 rounded border border-brand-border flex items-center justify-between text-sm font-mono text-text-primary">
                         <span>RENDER: SWIFTUI</span>
-                        <span className="text-brand-accent font-bold">12ms</span>
+                        <span className="text-brand-accent font-bold">200 OK</span>
                       </div>
                     </div>
                   </motion.div>
@@ -208,15 +208,15 @@ export default function OutputRegistry() {
 
                     <div className="space-y-4 text-sm font-light tracking-wide text-text-secondary leading-relaxed font-sans">
                       <p>
-                        Static generation engines demand raw, pre-built structural records to optimize SEO indices perfectly. By compiling markdown models into static JSON blocks, Astro loaders build clean assets instantaneously.
+                        Static generation engines demand raw, pre-built structural records to optimize SEO indices perfectly. By fetching published entries as JSON from the delivery API, Astro loaders build clean assets at deploy time.
                       </p>
-                      
+
                       <blockquote className="border-l-2 border-brand-accent pl-4 text-text-primary italic font-serif my-4">
-                        &quot;Headless architectures render better when they omit complex runtime databases.&quot;
+                        &quot;Headless architectures render better when content arrives as clean, typed JSON.&quot;
                       </blockquote>
 
                       <p>
-                        Stream layouts globally without hydration locks or server overhead. The static pipeline triggers a clean purge in 12ms.
+                        Publish from Wriven and the affected CDN cache tags are purged automatically — rebuilds always see fresh content.
                       </p>
                     </div>
                   </motion.div>
@@ -232,32 +232,21 @@ export default function OutputRegistry() {
                     className="w-full bg-brand-bg border border-brand-border rounded-lg p-5 shadow-sm text-left font-mono text-sm overflow-x-auto relative"
                   >
                     <div className="flex items-center justify-between pb-3 border-b border-brand-border mb-3 text-text-muted">
-                      <span>GET /v1/posts/wearables-wellness</span>
+                      <span>GET /v1/projects/prj_2f9c/content/posts/wearables-wellness</span>
                       <span className="text-brand-accent">200 OK</span>
                     </div>
 
                     <pre className="text-text-primary leading-relaxed whitespace-pre-wrap max-h-72 overflow-y-auto font-mono">
 {`{
-  "id": "entry_771891",
-  "status": "published",
-  "contentType": "blog_post",
-  "meta": {
-    "tags": ["Aesthetics", "Headless", "Wellness"],
-    "slug": "wearables-wellness",
-    "updatedAt": "2026-06-10T16:19:20Z"
-  },
-  "fields": {
-    "title": "Unlocking Wellness: The Future of Smart Wearables",
-    "body_blocks": [
-      {
-        "type": "heading_2",
-        "value": "Pure print, raw metadata grids"
-      },
-      {
-        "type": "paragraph",
-        "value": "Structured content nodes compile flawlessly..."
-      }
-    ]
+  "success": true,
+  "data": {
+    "id": "entry_771891",
+    "status": "published",
+    "fields": {
+      "title": "Unlocking Wellness: The Future of Smart Wearables",
+      "slug": "wearables-wellness",
+      "body": "Structured fields arrive as clean JSON..."
+    }
   }
 }`}
                     </pre>
@@ -269,8 +258,8 @@ export default function OutputRegistry() {
 
             {/* Technical specifications footer */}
             <div className="pt-4 mt-6 border-t border-brand-border flex items-center justify-between text-sm font-mono text-text-muted">
-              <span>CACHED EDGE RECORD: HIT</span>
-              <span>SERVED LENGTH: 488 BYTES</span>
+              <span>CACHE-CONTROL: PUBLIC, S-MAXAGE=60</span>
+              <span>PURGED BY TAG ON PUBLISH</span>
             </div>
 
           </div>

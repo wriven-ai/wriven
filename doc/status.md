@@ -104,6 +104,7 @@ cost accounting — and calls ai-service over HTTP behind an `AiClient` seam
 | Per-field AI policy + privacy | ✅ | **one** control: `aiPrivate` (sensitive). `aiAssist`/`aiOperations` removed — eligibility is derived (Tier-1 ∧ single-value ∧ not sensitive). Opt-in `aiContextFields` under Advanced |
 | Token + cost accounting | ✅ | price resolved from the *returned* model (`*:free → 0`, never a guess); period `AiUsageStats` on `/usage` + `WorkspaceStatsView.aiText` (requests=succeeded; tokens/cost=succeeded+failed; `cost.complete` honesty flag) |
 | Plan-limit enforcement | ✅ | hard-enforce `aiTextRequestsPerMonth` (advisory-lock atomic reserve); stale reservations reclaimed; entitlement failure fails closed; gateway 40s timeout backstop |
+| Review hardening (specs/22) | ✅ | fixed the snake_case error-wire `usage` (NaN cost on failed rows), added 2xx body validation at the `AiClient` seam, honest retry semantics (`error_code` persisted; `AI_RESULT_EXPIRED` 410 on redacted replay), shared richtext TipTap schema (image fields no longer read empty / deleted on append), single-panel + shared-burst UI state, compose hero/preview/undo + per-field sparkle targeting, gateway env-guard + `GATEWAY_TIMEOUT` in the registry |
 | Image generation | 🔲 | later (different model/cost) |
 | AI reliability / audit | ✅ | idempotency keys, persisted replay, revision provenance (+ `applied_field_keys` for compose), bounded audit redaction, token/context/output budgets, correlation IDs, readiness and private metrics |
 

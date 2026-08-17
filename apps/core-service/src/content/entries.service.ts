@@ -499,20 +499,27 @@ export class EntriesService {
     // For a whole-entry `compose`, record which fields it produced as the applied
     // set. The exact subset the author kept isn't sent on save, so this uses the
     // generated record's keys — an honest audit signal of what the compose filled.
+    // One CASE-statement update for all compose rows, not one UPDATE per row.
+    const appliedKeysById = new Map<string, string[]>();
     for (const row of rows) {
       if (row.targetKind !== 'entry' || !row.output) continue;
-      let keys: string[] = [];
       try {
-        keys = Object.keys(JSON.parse(row.output) as Record<string, unknown>);
+        const keys = Object.keys(JSON.parse(row.output) as Record<string, unknown>);
+        if (keys.length > 0) appliedKeysById.set(row.id, keys);
       } catch {
-        keys = [];
+        // No usable keys — the row keeps its base update above.
       }
-      if (keys.length > 0) {
-        await tx
-          .update(aiGenerations)
-          .set({ appliedFieldKeys: keys })
-          .where(eq(aiGenerations.id, row.id));
-      }
+    }
+    if (appliedKeysById.size > 0) {
+      const branches = [...appliedKeysById].map(
+        ([id, keys]) => sql`WHEN ${id} THEN ${JSON.stringify(keys)}::jsonb`,
+      );
+      await tx
+        .update(aiGenerations)
+        .set({
+          appliedFieldKeys: sql`CASE ${aiGenerations.id} ${sql.join(branches, sql` `)} END`,
+        })
+        .where(inArray(aiGenerations.id, [...appliedKeysById.keys()]));
     }
   }
 

@@ -3,22 +3,59 @@
 import React, { useState } from 'react';
 import { Sparkles, Layers, Code } from 'lucide-react';
 
+/**
+ * Simulated playground. The real AI co-writer requires an account and project
+ * context (it runs through the gateway against the ai-service), so this demo
+ * produces canned output client-side — clearly labeled as a simulation.
+ */
+const SAMPLE_OUTPUTS: Record<string, Record<string, string>> = {
+  blog: {
+    Professional:
+      'Wearables have quietly moved from step counters to genuine health companions. This guide looks at what modern sensors actually measure, which metrics matter, and how to choose a device that fits your routine.',
+    Casual:
+      "Let's be honest — most of us bought a smartwatch for the notifications and stayed for the health tracking. Here's what all those heart-rate charts actually tell you (and what they don't).",
+    Creative:
+      'On your wrist sits a small, patient witness: every heartbeat logged, every sleepless night noted. The story of modern wearables is the story of listening to that witness.',
+  },
+  seo: {
+    Professional:
+      'Title: "Headless CMS in 2026: A Practical Guide" — Meta: "How a headless CMS separates content from presentation, why AI-assisted drafting changes editorial workflows, and what to check before you commit."',
+    Casual:
+      'Title: "So You Are Eyeing a Headless CMS" — Meta: "The no-jargon rundown of headless CMS: what it is, why developers love it, and how AI drafting fits in."',
+    Creative:
+      'Title: "Your Content, Unshackled" — Meta: "Content that lives apart from its presentation. A short field guide to headless publishing and the AI that drafts alongside you."',
+  },
+  ecom: {
+    Professional:
+      'Lightweight and sweat-resistant, this running headband pairs active noise cancellation with a secure fit — engineered for long training sessions where music matters and distractions do not.',
+    Casual:
+      "Runs better with music, no earbuds falling out mid-sprint. Noise cancellation blocks the gym noise; the fabric stays put even when you don't.",
+    Creative:
+      'The city hum fades. Your playlist takes its place. Built for the runner who moves to a beat, this headband carries sound like a second heartbeat.',
+  },
+};
+
 export default function SandboxPlayground() {
   const [activeSchema, setActiveSchema] = useState('blog');
-  const [promptInput, setPromptInput] = useState('Write an engaging SEO-optimized intro for a smart smartwatch article about health tracking.');
+  const [promptInput, setPromptInput] = useState('Write an engaging SEO-optimized intro for a smartwatch article about health tracking.');
   const [fieldTone, setFieldTone] = useState('Professional');
   const [isGenerating, setIsGenerating] = useState(false);
   const [editorResult, setEditorResult] = useState(
-    "Select a styling, instruction prompts, and click 'Weave with AI' to experience in-editor generation."
+    "Select a schema, a tone, adjust the prompt, and click 'Weave with AI' to preview a simulated generation."
   );
   const [jsonResponse, setJsonResponse] = useState(`{
-  "status": "draft",
-  "id": "entry_771891",
-  "contentType": "blog_post",
-  "fields": {
-    "title": "Unlocking Wellness: The Future of Smart wearables",
-    "slug": "future-of-smart-wearables",
-    "content": "Click Weave with AI above to generate the full article block."
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "entry_771891",
+        "status": "published",
+        "fields": {
+          "title": "Unlocking Wellness: The Future of Smart Wearables",
+          "slug": "future-of-smart-wearables"
+        }
+      }
+    ]
   }
 }`);
 
@@ -28,73 +65,56 @@ export default function SandboxPlayground() {
     { id: 'ecom', name: 'Product Highlight', desc: 'Specs, Copy blocks, Benefits indices' }
   ];
 
-  const handleWeaveGenerate = async () => {
+  const handleWeaveGenerate = () => {
     setIsGenerating(true);
     setEditorResult("Wriven inking engines at work...");
-    
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: promptInput,
-          fieldType: activeSchema === 'seo' ? 'SEO Tags' : 'Rich Text Block',
-          tone: fieldTone,
-        }),
-      });
 
-      const data = await response.json();
-      if (response.ok) {
-        setEditorResult(data.text);
-        
-        const formattedTitle = activeSchema === 'blog' 
-          ? "Unlocking Wellness: The Future of Smart wearables" 
-          : activeSchema === 'seo' 
-          ? "Optimized Health Trackers" 
-          : "Wriven Smart Air Pro";
-          
-        const formattedSlug = activeSchema === 'blog' 
-          ? "future-of-smart-wearables" 
-          : activeSchema === 'seo' 
-          ? "optimized-health-trackers" 
-          : "wriven-smart-air-pro";
+    // Simulated generation — canned copy per schema + tone
+    window.setTimeout(() => {
+      const output = SAMPLE_OUTPUTS[activeSchema]?.[fieldTone] ?? SAMPLE_OUTPUTS.blog.Professional;
+      setEditorResult(output);
 
-        setJsonResponse(JSON.stringify({
-          status: "published",
-          id: "entry_771891",
-          contentType: activeSchema === 'blog' ? 'blog_post' : activeSchema === 'seo' ? 'seo_metadata' : 'product_features',
-          meta: {
-            tone: fieldTone,
-            lastWeaved: new Date().toISOString(),
-            isFallbackResponse: !!data.isFallback
-          },
-          fields: {
-            title: formattedTitle,
-            slug: formattedSlug,
-            generated_content: data.text
-          }
-        }, null, 2));
+      const formattedTitle = activeSchema === 'blog'
+        ? "Unlocking Wellness: The Future of Smart Wearables"
+        : activeSchema === 'seo'
+        ? "Optimized Health Trackers"
+        : "Wriven Smart Air Pro";
 
-      } else {
-        setEditorResult("Generation failed: " + (data.error || "Please try again."));
-      }
-    } catch (err) {
-      setEditorResult("An error occurred during call. Try again.");
-    } finally {
+      const formattedSlug = activeSchema === 'blog'
+        ? "future-of-smart-wearables"
+        : activeSchema === 'seo'
+        ? "optimized-health-trackers"
+        : "wriven-smart-air-pro";
+
+      setJsonResponse(JSON.stringify({
+        success: true,
+        data: {
+          items: [
+            {
+              id: "entry_771891",
+              status: "published",
+              contentType: activeSchema === 'blog' ? 'posts' : activeSchema === 'seo' ? 'seo_metadata' : 'products',
+              fields: {
+                title: formattedTitle,
+                slug: formattedSlug,
+                generated_content: output
+              }
+            }
+          ]
+        }
+      }, null, 2));
       setIsGenerating(false);
-    }
+    }, 900);
   };
 
   const handleSetSchema = (schemaType: string) => {
     setActiveSchema(schemaType);
     if (schemaType === 'blog') {
-      setPromptInput('Write an engaging SEO-optimized intro for a smart smartwatch article about health tracking.');
+      setPromptInput('Write an engaging SEO-optimized intro for a smartwatch article about health tracking.');
     } else if (schemaType === 'seo') {
       setPromptInput('Generate 3 click-worthy title tags and high-converting meta descriptions for a modern headless CMS.');
     } else {
-      setPromptInput('Draft a compelling benefits-led description for a lightweight noise-cancelling active running headband.');
+      setPromptInput('Draft a compelling benefits-led description for a lightweight noise-cancelling running headband.');
     }
   };
 
@@ -109,26 +129,26 @@ export default function SandboxPlayground() {
             Draft content and parse instant JSON endpoints
           </h2>
           <p className="text-text-secondary text-sm font-light leading-relaxed">
-            Choose a structured schema model, customize the tone of your content, refine your instructional prompts, and weave. Instantly deliver JSON records secure for any API payload.
+            Choose a content type, set the tone, refine your prompt, and weave. Sign up to run the real co-writer against your own projects — this preview is simulated.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch" id="sandbox-grid">
-          
+
           {/* Settings Pane */}
           <div className="lg:col-span-5 bg-brand-surface border border-brand-border-button rounded-xl p-6 flex flex-col justify-between neo-shadow-lg" id="sandbox-setting-pane">
             <div className="space-y-6 text-left">
-              
+
               {/* Step 1 Schema Selector */}
               <div>
-                <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-3">1. Target Schema Model</label>
+                <label className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-3">1. Target Content Type</label>
                 <div className="grid grid-cols-1 gap-2">
                   {schemas.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => handleSetSchema(s.id)}
                       className={`w-full text-left p-3.5 rounded-lg border transition-all cursor-pointer ${
-                        activeSchema === s.id 
+                        activeSchema === s.id
                         ? 'border-brand-accent bg-brand-surface-soft text-text-primary'
                         : 'border-brand-border hover:border-brand-border-button bg-brand-surface text-text-secondary'
                       }`}
@@ -136,7 +156,7 @@ export default function SandboxPlayground() {
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-sm uppercase text-text-primary">{s.name}</span>
-                        <span className="text-sm font-mono text-brand-accent uppercase font-bold">ID: {s.id}</span>
+                        <span className="text-sm font-mono text-brand-accent uppercase font-bold">API: {s.id}</span>
                       </div>
                       <span className="block text-sm text-text-secondary mt-1 font-light">{s.desc}</span>
                     </button>
@@ -153,7 +173,7 @@ export default function SandboxPlayground() {
                       key={tone}
                       onClick={() => setFieldTone(tone)}
                       className={`py-2 text-sm font-mono font-bold uppercase rounded border transition-all cursor-pointer ${
-                        fieldTone === tone 
+                        fieldTone === tone
                         ? 'bg-brand-accent text-white border-brand-border-button'
                         : 'bg-brand-surface-soft text-text-secondary border-brand-border hover:border-brand-border-button'
                       }`}
@@ -189,20 +209,23 @@ export default function SandboxPlayground() {
                 <Sparkles className="w-4 h-4 text-white" />
                 {isGenerating ? 'WEAVING DRAFT...' : 'WEAVE WITH WRIVEN AI'}
               </button>
+              <p className="pt-3 text-center text-xs font-mono text-text-muted uppercase tracking-wider">
+                Simulated preview — the real co-writer runs inside the editor
+              </p>
             </div>
           </div>
 
           {/* Sandbox Outputs */}
           <div className="lg:col-span-7 flex flex-col gap-6" id="sandbox-preview-pane">
-            
+
             {/* Visual Draft Paper Sheet */}
             <div className="bg-brand-surface border border-brand-border-button rounded-xl p-6 flex flex-col justify-between relative neo-shadow-lg flex-1">
               <div className="flex items-center justify-between border-b border-brand-border pb-3 mb-4">
                 <span className="text-sm font-mono uppercase text-text-primary flex items-center gap-2 font-bold">
                   <Layers className="w-4 h-4 text-brand-accent" />
-                  CMS PREVIEWING SHEET: weaved_draft_content
+                  ENTRY PREVIEW: generated_draft
                 </span>
-                <span className="text-sm font-mono text-brand-accent bg-brand-surface-soft border border-brand-border px-1.5 py-0.5 rounded uppercase font-bold">STATE: AUTOSAVED</span>
+                <span className="text-sm font-mono text-brand-accent bg-brand-surface-soft border border-brand-border px-1.5 py-0.5 rounded uppercase font-bold">STATE: SIMULATED</span>
               </div>
 
               <div className="text-left flex-grow">
@@ -226,11 +249,11 @@ export default function SandboxPlayground() {
               <div className="absolute top-4 right-4 flex gap-2 select-none">
                 <span className="inline-flex items-center gap-1 text-sm font-mono font-bold tracking-wider bg-brand-surface-soft text-brand-accent border border-brand-border px-2 py-1 rounded">
                   <Code className="w-3 h-3" />
-                  GET /v1/content
+                  GET /v1/projects/:id/content/:apiId
                 </span>
               </div>
-              
-              <span className="block text-sm font-mono text-text-muted mb-2 uppercase tracking-widest font-bold">SECURE API RESPONSE (JSON)</span>
+
+              <span className="block text-sm font-mono text-text-muted mb-2 uppercase tracking-widest font-bold">DELIVERY API RESPONSE (JSON)</span>
               <div className="h-[120px] overflow-auto text-sm font-mono rounded bg-brand-surface-soft p-3 border border-brand-border" id="json-scroll">
                 <pre className="whitespace-pre-wrap text-text-primary">{jsonResponse}</pre>
               </div>

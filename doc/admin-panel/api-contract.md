@@ -39,7 +39,7 @@ On boot call `GET /admin/auth/me` to hydrate session; 401 → redirect `/login`.
 | GET | `/admin/metrics/overview` | any | — | `AdminMetricsOverview` |
 
 ### Tenant users
-| GET | `/admin/users?page&limit&q` | any | — | `Paginated<AdminUserRow>` |
+| GET | `/admin/users?page&limit&q&suspended?` | any | — | `Paginated<AdminUserRow>` |
 | GET | `/admin/users/:id` | any | — | `AdminUserDetail` |
 | PATCH | `/admin/users/:id` | `[admin, moderator]` | `{ suspended?, emailVerified? }` | `AdminUserRow` |
 | DELETE | `/admin/users/:id` | `[admin]` | — | `{ success: true }` |
@@ -52,8 +52,9 @@ On boot call `GET /admin/auth/me` to hydrate session; 401 → redirect `/login`.
 | PUT | `/admin/workspaces/:id/plan` | `[admin]` | `AssignPlanDto` | `{ success, planKey, status }` |
 
 ### Projects
-| GET | `/admin/projects?page&limit&q` | any | — | `Paginated<AdminProjectRow>` |
+| GET | `/admin/projects?page&limit&q&workspaceId?` | any | — | `Paginated<AdminProjectRow>` |
 | GET | `/admin/projects/:id` | any | — | `AdminProjectRow` |
+| GET | `/admin/projects/:id/usage` | any | — | `AdminProjectUsage` |
 | DELETE | `/admin/projects/:id` | `[admin]` | — | `{ success: true }` (soft-delete) |
 
 ### Content moderation
@@ -62,6 +63,12 @@ On boot call `GET /admin/auth/me` to hydrate session; 401 → redirect `/login`.
 | PATCH | `/admin/content/:id` | `[admin, moderator]` | `{ status: 'draft' \| 'archived' }` | `AdminEntryRow` |
 
 `status` filter ∈ `draft|published|archived`. PATCH = takedown (also purges CDN).
+
+### Content types
+| GET | `/admin/content-types?page&limit&workspaceId?&projectId?` | any | — | `Paginated<AdminContentTypeRow>` |
+
+Read-only oversight of content-type definitions (`fields` = full `FieldDef[]`).
+Soft-deleted types are excluded.
 
 ### Media
 | GET | `/admin/media?page&limit&workspaceId?&projectId?` | any | — | `Paginated<AdminMediaRow>` |
@@ -148,6 +155,15 @@ export interface AdminProjectRow {
   workspaceId: string; workspaceName: string | null;
   createdBy: string; deleted: boolean; createdAt: string;
 }
+export interface AdminProjectUsage {
+  projectId: string; contentTypes: number;
+  entries: { total: number; published: number; draft: number; archived: number };
+  media: { assetCount: number; totalBytes: number };
+  apiKeys: { total: number; active: number };
+  webhooks: { total: number; active: number };
+  ai: { generations: number; succeeded: number; failed: number;
+        totalTokens: number; costMicrousd: number | null };
+}
 
 // ── Content / media / keys / webhooks ───────────────────────────
 export interface AdminEntryRow {
@@ -157,6 +173,11 @@ export interface AdminEntryRow {
 }
 export interface AdminEntryDetail extends AdminEntryRow {
   data: Record<string, unknown>;
+}
+export interface AdminContentTypeRow {
+  id: string; workspaceId: string; projectId: string;
+  name: string; apiId: string; fields: FieldDef[];
+  createdAt: string; updatedAt: string;
 }
 export interface AdminMediaRow {
   id: string; workspaceId: string; projectId: string; kind: string;
@@ -240,7 +261,9 @@ interface AdminTakedownDto { status: 'draft' | 'archived'; }
 // POST /admin/plans
 interface CreatePlanDto {
   key: string; name: string; description?: string;
-  priceMonthly?: number; priceYearly?: number; // cents — required for paid plans (key !== 'free')
+  // USD dollars on the wire (e.g. 9.99) — the DTO transforms to integer cents;
+  // required for paid plans (key !== 'free'). priceYearly XOR yearlyDiscountPercent.
+  priceMonthly?: number; priceYearly?: number; yearlyDiscountPercent?: number;
   limits?: Record<string, number | null>; features?: Record<string, unknown>;
 }
 // PATCH /admin/plans/:id  — prices are read-only after create (Stripe owns them)
@@ -265,7 +288,8 @@ interface AssignPlanDto {
   Build nav + action gating on these. `member` = read-only everywhere.
 - **Plans carry `limits` + `features` (open objects) + billing columns.** The Plans
   editor and the Workspace→Plan assignment use `PlanView` / `AssignPlanDto` above.
-  Prices are in **cents**.
+  Create requests send prices in **USD dollars** (DTO converts to cents); responses
+  and storage are in **cents**.
 - **Login is single-step** (no TOTP yet) — don't build the MFA step; the `me`
   response has no `mfaRequired`.
 - **Workspace plan assignment** lives on the workspace detail screen

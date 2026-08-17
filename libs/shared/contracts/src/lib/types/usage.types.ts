@@ -2,7 +2,7 @@
  * Usage metering — current-period consumption for a workspace. Backed by
  * `core_svc.usage_buckets` (Delivery API request counter) + a live
  * `media_assets.size_bytes` SUM (storage). Limits come from the workspace's
- * effective plan (`auth.entitlements.resolve`). See specs/14.
+ * effective plan (`auth.entitlements.resolve`).
  *
  * v1 meters Delivery API requests at the gateway (one increment per HTTP
  * request authenticated by a `Bearer wrk_…` key). Storage is the current sum;
@@ -30,7 +30,7 @@ export interface UsageView {
 }
 
 /**
- * AI generation usage for the current period. See specs/21.
+ * AI generation usage for the current period.
  *
  * Note the deliberate status split, which must not be "simplified":
  * - `requests.used` counts **succeeded** generations only — the billed unit.
