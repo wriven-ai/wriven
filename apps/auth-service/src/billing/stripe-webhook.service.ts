@@ -222,31 +222,32 @@ export class StripeWebhookService {
     // event for an OLD subscription must not stomp a NEWER one that now owns the
     // workspace row — the by-sub-id lookup above can miss that case once the row
     // has moved on to a different stripe_subscription_id.
+    const rowValues = {
+      planId: plan.id,
+      status: mapStatus(sub.status),
+      billingCycle,
+      stripeCustomerId:
+        typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
+      stripeSubscriptionId: sub.id,
+      // current_period_start/end live on SubscriptionItem in stripe@22, not on
+      // Subscription. The past_due/incomplete grace (shouldRestrictToFree) and
+      // the tenant-facing period display both depend on these being written.
+      currentPeriodStart: item?.current_period_start
+        ? new Date(item.current_period_start * 1000)
+        : null,
+      currentPeriodEnd: item?.current_period_end
+        ? new Date(item.current_period_end * 1000)
+        : null,
+      trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+      cancelAtPeriodEnd: sub.cancel_at_period_end,
+      canceledAt: sub.canceled_at ? new Date(sub.canceled_at * 1000) : null,
+      stripeEventCreatedAt: incoming,
+      updatedBy: null,
+      ...clearPending,
+    };
     const updated = await tx
       .update(subscriptions)
-      .set({
-        planId: plan.id,
-        status: mapStatus(sub.status),
-        billingCycle,
-        stripeCustomerId:
-          typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
-        stripeSubscriptionId: sub.id,
-        // current_period_start/end live on SubscriptionItem in stripe@22, not on
-        // Subscription. The past_due/incomplete grace (shouldRestrictToFree) and
-        // the tenant-facing period display both depend on these being written.
-        currentPeriodStart: item?.current_period_start
-          ? new Date(item.current_period_start * 1000)
-          : null,
-        currentPeriodEnd: item?.current_period_end
-          ? new Date(item.current_period_end * 1000)
-          : null,
-        trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
-        cancelAtPeriodEnd: sub.cancel_at_period_end,
-        canceledAt: sub.canceled_at ? new Date(sub.canceled_at * 1000) : null,
-        stripeEventCreatedAt: incoming,
-        updatedBy: null,
-        ...clearPending,
-      })
+      .set(rowValues)
       .where(
         and(
           eq(subscriptions.workspaceId, workspaceId),
@@ -257,10 +258,27 @@ export class StripeWebhookService {
         ),
       )
       .returning({ id: subscriptions.id });
-    if (updated.length === 0) {
-      this.logger.warn(
-        `sub ${sub.id} sync skipped — workspace ${workspaceId} row holds a different stripe_subscription_id (a newer subscription likely owns it)`,
+    if (updated.length > 0) return;
+
+    // Update matched nothing → either the workspace has no subscriptions row at
+    // all (the "always exists, defaults to free" invariant can be broken for
+    // workspaces created before the seeding landed — the event metadata is the
+    // trusted mapping), or the row is owned by a NEWER subscription. The insert
+    // self-heals the missing-row case; onConflictDoNothing on the workspace
+    // unique index makes the owned-by-newer-sub case a safe no-op.
+    const insertedRow = await tx
+      .insert(subscriptions)
+      .values({ workspaceId, ...rowValues })
+      .onConflictDoNothing({ target: subscriptions.workspaceId })
+      .returning({ id: subscriptions.id });
+    if (insertedRow.length > 0) {
+      this.logger.log(
+        `created missing subscriptions row for workspace ${workspaceId} (self-healed from event)`,
       );
+      return;
     }
+    this.logger.warn(
+      `sub ${sub.id} sync skipped — workspace ${workspaceId} row holds a different stripe_subscription_id (a newer subscription likely owns it)`,
+    );
   }
 }

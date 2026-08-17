@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import {
@@ -9,6 +9,7 @@ import {
   Boxes,
   CalendarClock,
   Check,
+  Clock,
   CreditCard,
   Database,
   Download,
@@ -31,12 +32,12 @@ import {
   usePortal,
   usePlans,
   useSubscription,
-  useRefreshSubscription,
   useSwapPlan,
 } from '@/hooks/use-billing';
 import { ApiRequestError } from '@/lib/api';
 import { computeDowngradeBlocks } from '@/lib/downgrade';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { BlockedDowngradeDialog } from '@/components/ui/blocked-downgrade-dialog';
 import { ConfirmationDialog, type ConfirmVariant } from '@/components/ui/confirmation-dialog';
 import { Pagination } from '@/components/ui/pagination';
@@ -177,7 +178,6 @@ function BillingInner() {
   const subQuery = useSubscription();
   const invoicesQuery = useInvoices();
   const statsQuery = useWorkspaceStats();
-  const refreshSubscription = useRefreshSubscription();
 
   const checkout = useCheckout();
   const portal = usePortal();
@@ -201,6 +201,17 @@ function BillingInner() {
     planName: string;
     blocks: DowngradeBlock[];
   } | null>(null);
+  // Checkout return flow: poll the subscription until the webhook lands the
+  // paid plan, then show a detailed success dialog (not just a toast).
+  const [checkoutFlow, setCheckoutFlow] = useState<
+    'idle' | 'processing' | 'success' | 'timeout'
+  >('idle');
+  const checkoutPollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const finishCheckout = () => {
+    setCheckoutFlow('idle');
+    router.replace(billingPath);
+  };
 
   const subscription = subQuery.data;
   const hasPaidSub = !!subscription && subscription.planKey !== 'free';
@@ -225,14 +236,37 @@ function BillingInner() {
   const successUrl = `${origin}${billingPath}?checkout=success`;
   const cancelUrl = `${origin}${billingPath}?checkout=cancelled`;
 
-  // Handle the Stripe redirect-back (?checkout=success|cancelled). The webhook is
-  // the source of truth — refresh the subscription (flip may lag by a second).
+  // Handle the Stripe redirect-back (?checkout=success|cancelled). Success is
+  // NOT trusted from the URL — the webhook reconciler is the source of truth,
+  // so poll the subscription (every 2s, up to 10 tries) until the paid plan
+  // lands, then surface the detailed success dialog. On timeout the payment
+  // stands (Stripe has it) — the dialog says the plan will appear shortly.
   useEffect(() => {
-    if (checkoutParam === 'success') {
-      toast.success('Payment received — your plan is updating.');
-      refreshSubscription();
-      router.replace(billingPath);
-    } else if (checkoutParam === 'cancelled') {
+    if (checkoutParam !== 'success') return;
+    setCheckoutFlow('processing');
+    let attempts = 0;
+    const poll = async () => {
+      const res = await subQuery.refetch();
+      if (res.data && res.data.planKey !== 'free') {
+        setCheckoutFlow('success');
+        return;
+      }
+      if (++attempts >= 10) {
+        setCheckoutFlow('timeout');
+        return;
+      }
+      checkoutPollTimer.current = setTimeout(poll, 2000);
+    };
+    void poll();
+    return () => {
+      if (checkoutPollTimer.current) clearTimeout(checkoutPollTimer.current);
+    };
+    // subQuery.refetch is stable — poll only on the redirect param.
+  }, [checkoutParam]);
+
+  // Checkout cancelled → back to the page, no dialog needed.
+  useEffect(() => {
+    if (checkoutParam === 'cancelled') {
       toast('Checkout cancelled.');
       router.replace(billingPath);
     }
@@ -749,6 +783,70 @@ function BillingInner() {
         actionLabel="Done"
       />
 
+      {/* Checkout return: waiting on the webhook to land the paid plan. */}
+      <Dialog
+        open={checkoutFlow === 'processing'}
+        onOpenChange={() => {
+          /* locked: wait for the subscription sync (or timeout) */
+        }}
+      >
+        <DialogContent showCloseButton={false} className="font-mono">
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <Loader2 className="size-7 animate-spin text-brand-accent" />
+            <DialogTitle className="font-display text-sm font-bold tracking-tight text-text-primary">
+              Confirming your payment
+            </DialogTitle>
+            <DialogDescription className="font-light text-text-secondary">
+              Payment received — syncing your new plan with Stripe. This
+              usually takes a few seconds.
+            </DialogDescription>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Checkout return: the paid plan landed. */}
+      <SuccessModal
+        open={checkoutFlow === 'success'}
+        onOpenChange={(o) => {
+          if (!o) finishCheckout();
+        }}
+        title={`You're on ${plans.find((p) => p.key === subscription?.planKey)?.name ?? 'your new plan'}!`}
+        description={
+          <CheckoutSuccessDetails
+            plan={plans.find((p) => p.key === subscription?.planKey) ?? null}
+            cycle={subscription?.billingCycle ?? null}
+            periodEnd={subscription?.currentPeriodEnd ?? null}
+          />
+        }
+        actionLabel="Done"
+        onAction={finishCheckout}
+      />
+
+      {/* Checkout return: payment stands, sync is slow. */}
+      <Dialog
+        open={checkoutFlow === 'timeout'}
+        onOpenChange={(o) => {
+          if (!o) finishCheckout();
+        }}
+      >
+        <DialogContent showCloseButton={false} className="font-mono">
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <Clock className="size-7 text-amber-500" />
+            <DialogTitle className="font-display text-sm font-bold tracking-tight text-text-primary">
+              Payment received
+            </DialogTitle>
+            <DialogDescription className="font-light leading-relaxed text-text-secondary">
+              Your subscription is still syncing — it will appear within a
+              minute. If the plan hasn't changed after that, contact support
+              and we'll sort it out.
+            </DialogDescription>
+            <Button variant="default" onClick={finishCheckout}>
+              OK
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Downgrade blocked by over-limit resources (eager preview or server guard). */}
       <BlockedDowngradeDialog
         open={!!blocked}
@@ -769,6 +867,32 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between items-baseline">
       <span className="text-text-muted">{label}</span>
       <strong className="text-text-primary capitalize">{value}</strong>
+    </div>
+  );
+}
+
+/** Detail rows for the checkout-return success dialog (plan, cycle, price,
+ *  renewal date) — rendered inside the SuccessModal description. */
+function CheckoutSuccessDetails({
+  plan,
+  cycle,
+  periodEnd,
+}: {
+  plan: PlanView | null;
+  cycle: BillingCycle | null;
+  periodEnd: string | null;
+}) {
+  if (!plan) return null;
+  const price = cycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
+  return (
+    <div className="grid grid-cols-1 gap-1.5 py-1">
+      <span>
+        {plan.name} · {cycle === 'yearly' ? 'Annual' : 'Monthly'} billing
+      </span>
+      <span>
+        {price ? `${formatPrice(price, plan.currency)}/${cycle === 'yearly' ? 'yr' : 'mo'} charged today` : ''}
+      </span>
+      {periodEnd && <span>Renews {periodEnd.slice(0, 10)}</span>}
     </div>
   );
 }

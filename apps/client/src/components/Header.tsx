@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import WrivenLogo from './WrivenLogo';
-import { Menu, X, ArrowRight, Sun, Moon, LayoutDashboard } from 'lucide-react';
+import { Menu, X, ArrowRight, Sun, Moon } from 'lucide-react';
 import { useAuth, useLogout } from '../hooks/useAuth';
 
 export default function Header() {
@@ -31,9 +31,12 @@ export default function Header() {
     { name: 'Contact', href: '/contact' },
   ];
 
-  // Don't render auth CTAs until the session is resolved — avoids a flash of
-  // "Sign In" for a user who is actually logged in.
-  const authResolved = status !== 'loading';
+  // Auth CTAs: paint the guest variant immediately (SSR-safe default), then
+  // swap to Dashboard/Sign Out with a fade once the session bootstrap resolves.
+  // Fade only when the session resolved during this mount — after a client-side
+  // navigation the store is already resolved, so render without replaying it.
+  const resolvedDuringMount = useRef(status === 'loading');
+  const authedFade = resolvedDuringMount.current ? ' animate-fade-in' : '';
 
   const isActive = (path: string) => {
     if (path.startsWith('/#')) return false; // anchor link
@@ -86,44 +89,42 @@ export default function Header() {
                 <Moon className="w-4 h-4 text-brand-accent shrink-0" />
               )}
             </button>
-            {authResolved &&
-              (isAuthenticated ? (
-                <>
-                  <button
-                    onClick={() => logout()}
-                    className="text-sm font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2 cursor-pointer"
-                    id="header-logout-btn"
-                  >
-                    Sign Out
-                  </button>
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-sm uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
-                    id="header-dashboard-btn"
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5" />
-                    Dashboard
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="text-sm font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2"
-                    id="header-login-btn"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-sm uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
-                    id="header-signup-btn"
-                  >
-                    Get started free
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </>
-              ))}
+            {isAuthenticated ? (
+              <div className={'flex items-center gap-3' + authedFade}>
+                <button
+                  onClick={() => logout()}
+                  className="text-sm font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2 cursor-pointer"
+                  id="header-logout-btn"
+                >
+                  Sign Out
+                </button>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-sm uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
+                  id="header-dashboard-btn"
+                >
+                  Dashboard
+                </Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/login"
+                  className="text-sm font-mono font-bold uppercase tracking-wider text-text-secondary hover:text-brand-accent transition-colors duration-200 px-3 py-2"
+                  id="header-login-btn"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-1.5 bg-brand-accent text-white border border-brand-border-button hover:bg-brand-accent-hover font-mono font-bold text-sm uppercase tracking-wider px-4 py-2.5 rounded-lg neo-shadow transition-all duration-200"
+                  id="header-signup-btn"
+                >
+                  Get started free
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -183,8 +184,7 @@ export default function Header() {
                   </>
                 )}
               </button>
-              {authResolved &&
-                (isAuthenticated ? (
+              {isAuthenticated ? (
                   <>
                     <Link
                       href="/dashboard"
@@ -192,7 +192,6 @@ export default function Header() {
                       className="flex items-center justify-center gap-2 bg-brand-accent text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-3 rounded-lg neo-shadow transition-all"
                       id="mobile-nav-dashboard"
                     >
-                      <LayoutDashboard className="w-3.5 h-3.5" />
                       Dashboard
                     </Link>
                     <button
@@ -226,7 +225,7 @@ export default function Header() {
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </>
-                ))}
+              )}
             </div>
           </div>
         </div>
