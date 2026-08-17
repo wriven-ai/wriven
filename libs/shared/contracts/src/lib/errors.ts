@@ -48,6 +48,13 @@ export const ERROR_CODES = {
   AI_GENERATION_IN_PROGRESS: { code: 'AI_GENERATION_IN_PROGRESS', statusCode: 409 },
   // A client accidentally attached one idempotency key to two different inputs.
   IDEMPOTENCY_KEY_REUSED: { code: 'IDEMPOTENCY_KEY_REUSED', statusCode: 409 },
+  // The idempotency key's stored result was redacted by retention. The replay
+  // window is over — start a new generation with a new key. Distinct from a
+  // failure: never report a succeeded-but-expired request as an error state.
+  AI_RESULT_EXPIRED: { code: 'AI_RESULT_EXPIRED', statusCode: 410 },
+  // A gateway-routed backend call exceeded its deadline (no response from the
+  // downstream service). 504, not 502: the request never completed.
+  GATEWAY_TIMEOUT: { code: 'GATEWAY_TIMEOUT', statusCode: 504 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;
 

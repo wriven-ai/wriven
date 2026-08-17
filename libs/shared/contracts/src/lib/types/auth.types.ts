@@ -94,6 +94,12 @@ export interface WorkspaceMembership {
 /** Result of a project-membership check. */
 export interface ProjectMembership {
   projectId: string;
+  /**
+   * Workspace that owns the project, resolved from the project row by
+   * auth-service — the authoritative binding, unlike the client's
+   * `X-Workspace-Id` header (which other guards validate independently).
+   */
+  workspaceId: string;
   /** Project role, or null when access is derived from a workspace owner/admin role. */
   role: ProjectRole | null;
   /** Cascade-resolved permission set (auth-service computes; gateway enforces). */

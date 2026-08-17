@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Logger, Patch, Post, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   AI_PATTERNS,
@@ -10,8 +10,9 @@ import {
   UpdateAiProfileDto,
 } from '@wriven/contracts';
 import type { AuthUser, ServiceError } from '@wriven/contracts';
-import { catchError, firstValueFrom, throwError, timeout, TimeoutError } from 'rxjs';
+import { catchError, firstValueFrom, tap, throwError, timeout, TimeoutError } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
+import { CurrentProjectWorkspace } from '../auth/current-project-workspace.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -22,15 +23,23 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 import { AiBurstGuard } from './ai-burst.guard';
 
 /**
+ * Parse a millisecond deadline from env. A blank or non-numeric value must
+ * fall back to the default — `Number('')` is 0 and `timeout(0)` fails every
+ * request instantly, so an empty `.env` line must never reach rxjs.
+ */
+function envTimeoutMs(raw: string | undefined, fallback: number): number {
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+/**
  * Deadline for the whole generate round-trip. It must sit ABOVE core's own
  * core→ai-service hop (`AI_SERVICE_TIMEOUT_MS`, ~35s) so core normally wins the
  * race and returns a real error; this is the backstop that stops a wedged
  * downstream from pinning a gateway worker (and, under burst, exhausting the
  * pool) for as long as the TCP call hangs.
  */
-const AI_GATEWAY_TIMEOUT_MS = Number(
-  process.env.AI_GATEWAY_TIMEOUT_MS ?? '40000',
-);
+const AI_GATEWAY_TIMEOUT_MS = envTimeoutMs(process.env.AI_GATEWAY_TIMEOUT_MS, 40_000);
 
 /** The leak-free envelope the AllExceptionsFilter forwards verbatim. */
 const AI_TIMEOUT_ERROR: ServiceError = {
@@ -45,13 +54,11 @@ const AI_TIMEOUT_ERROR: ServiceError = {
  * pins a gateway worker with no deadline. 504 (not 502) because no generation
  * was attempted.
  */
-const AI_PROFILE_TIMEOUT_MS = Number(
-  process.env.AI_PROFILE_TIMEOUT_MS ?? '8000',
-);
+const AI_PROFILE_TIMEOUT_MS = envTimeoutMs(process.env.AI_PROFILE_TIMEOUT_MS, 8_000);
 const PROFILE_TIMEOUT_ERROR: ServiceError = {
-  code: 'GATEWAY_TIMEOUT',
+  code: ERROR_CODES.GATEWAY_TIMEOUT.code,
   message: 'AI profile request timed out.',
-  statusCode: 504,
+  statusCode: ERROR_CODES.GATEWAY_TIMEOUT.statusCode,
 };
 
 /**
@@ -71,6 +78,8 @@ const PROFILE_TIMEOUT_ERROR: ServiceError = {
   PermissionGuard,
 )
 export class AiController {
+  private readonly logger = new Logger('AiController');
+
   constructor(
     @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
@@ -84,6 +93,15 @@ export class AiController {
     @CurrentProject() projectId: string,
     @Body() dto: AiGenerateDto,
   ) {
+    // Trace step 1 of 3 (gateway → core → ai-service). The browser's requestId
+    // is the correlation key across every hop — same value as ai-service's
+    // X-Request-ID. Never log instruction/draft content.
+    this.logger.log(
+      `ai.generate step=gateway-accepted request_id=${dto.requestId} user=${user.userId} ` +
+        `workspace=${workspaceId} target=${dto.targetKind}${dto.fieldKey ? `:${dto.fieldKey}` : ''} ` +
+        `intent=${dto.intent}${dto.preset ? ` preset=${dto.preset}` : ''}`,
+    );
+    const startedAt = Date.now();
     return firstValueFrom(
       this.core
         .send(AI_PATTERNS.GENERATE, {
@@ -94,9 +112,25 @@ export class AiController {
         })
         .pipe(
           timeout(AI_GATEWAY_TIMEOUT_MS),
-          catchError((err) =>
-            throwError(() => (err instanceof TimeoutError ? AI_TIMEOUT_ERROR : err)),
+          tap(() =>
+            this.logger.log(
+              `ai.generate step=gateway-complete request_id=${dto.requestId} ` +
+                `outcome=ok duration_ms=${Date.now() - startedAt}`,
+            ),
           ),
+          catchError((err) => {
+            const code =
+              err instanceof TimeoutError
+                ? AI_TIMEOUT_ERROR.code
+                : ((err as ServiceError)?.code ?? 'UNMAPPED');
+            this.logger.warn(
+              `ai.generate step=gateway-complete request_id=${dto.requestId} ` +
+                `outcome=error code=${code} duration_ms=${Date.now() - startedAt}`,
+            );
+            return throwError(() =>
+              err instanceof TimeoutError ? AI_TIMEOUT_ERROR : err,
+            );
+          }),
         ),
     );
   }
@@ -120,7 +154,11 @@ export class AiController {
   @RequirePermission(Permission.CONTENT_TYPE_MANAGE)
   updateProfile(
     @CurrentUser() user: AuthUser,
-    @CurrentWorkspace() workspaceId: string,
+    // Authoritative workspace (resolved from the project record), NOT the
+    // client's X-Workspace-Id header — the header is only membership-validated
+    // and a member of two workspaces could otherwise mis-stamp the profile row
+    //.
+    @CurrentProjectWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: UpdateAiProfileDto,
   ): Promise<AiProfileView> {

@@ -502,8 +502,13 @@ export class AuthService {
     if (!hasAccess) {
       throw rpcError('FORBIDDEN', 'You do not have access to this project.');
     }
+    // Access implies the project row was found, so its owning workspace is set.
+    if (!roles.workspaceId) {
+      throw rpcError('NOT_FOUND', 'Project not found.');
+    }
     return {
       projectId: p.projectId,
+      workspaceId: roles.workspaceId,
       role: roles.projRole,
       permissions: [...roles.permissions],
     };

@@ -50,9 +50,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         };
       }
       if (status === ERROR_CODES.RATE_LIMITED.statusCode) {
+        // Forward the thrown message when present — the per-route guards
+        // (e.g. AiBurstGuard's workspace-scoped copy) are more specific than
+        // this generic fallback.
         return {
           code: ERROR_CODES.RATE_LIMITED.code,
-          message: 'Too many requests. Please slow down and try again shortly.',
+          message:
+            this.firstMessage(body) ??
+            'Too many requests. Please slow down and try again shortly.',
           statusCode: ERROR_CODES.RATE_LIMITED.statusCode,
         };
       }
