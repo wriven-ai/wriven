@@ -1,41 +1,114 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Sparkles, Layers, Code } from 'lucide-react';
 
 /**
  * Simulated playground. The real AI co-writer requires an account and project
  * context (it runs through the gateway against the ai-service), so this demo
  * produces canned output client-side — clearly labeled as a simulation.
+ * Each schema + tone pair holds a pool of variants that rotate per click so
+ * repeat generations feel dynamic.
  */
-const SAMPLE_OUTPUTS: Record<string, Record<string, string>> = {
+const SAMPLE_OUTPUTS: Record<string, Record<string, string[]>> = {
   blog: {
-    Professional:
+    Professional: [
       'Wearables have quietly moved from step counters to genuine health companions. This guide looks at what modern sensors actually measure, which metrics matter, and how to choose a device that fits your routine.',
-    Casual:
+      'Heart-rate variability, blood oxygen, sleep staging — the modern smartwatch tracks a clinic’s worth of vitals from your wrist. Here is how to read that data without a medical degree, and which numbers deserve your attention.',
+      'Health tracking has matured from novelty to necessity. This breakdown covers the sensors inside today’s wearables, the science behind their readings, and the practical questions to ask before you buy.',
+      'A decade ago, wearables counted steps. Today they flag irregular heart rhythms and estimate recovery. We looked at what current devices can genuinely tell you about your health — and where the marketing outruns the medicine.',
+      'Choosing a health wearable is now an exercise in priorities: battery life against accuracy, ecosystem against openness. This guide sorts the specs that matter from the ones that only sound impressive.',
+    ],
+    Casual: [
       "Let's be honest — most of us bought a smartwatch for the notifications and stayed for the health tracking. Here's what all those heart-rate charts actually tell you (and what they don't).",
-    Creative:
+      'Your watch knows you slept badly before you do. Weird? A little. Useful? Very. Here’s a plain-English tour of the health data your wrist has been quietly collecting.',
+      'Sleep scores, stress meters, “readiness” percentages — that’s a lot of numbers for a device that started life as a tiny phone. Let’s figure out which ones are actually worth checking.',
+      "I glanced at my heart rate on a hike and realized my watch had been paying closer attention to my health than I had. Here's what all that wrist data means once you strip away the jargon.",
+      'Smartwatches have become that friend who notices everything — every skipped workout, every restless night. Here’s how to use all that nosy data without obsessing over it.',
+    ],
+    Creative: [
       'On your wrist sits a small, patient witness: every heartbeat logged, every sleepless night noted. The story of modern wearables is the story of listening to that witness.',
+      'It counted the steps you took on the hardest day of the year. It noticed the night you never really slept. This is the quiet autobiography your smartwatch keeps — and how to read it.',
+      'A pulse, measured ten thousand times a day, becomes a kind of diary. Your watch does not just tell time anymore; it tells you.',
+      'Every beat of the heart, logged. Every rise and fall of sleep, charted. Somewhere between the step counter and the ECG, the wearable became a biographer.',
+      'There is a historian on your wrist. It remembers the morning runs and the midnight worries alike — a small machine keeping score of a life in progress.',
+    ],
   },
   seo: {
-    Professional:
+    Professional: [
       'Title: "Headless CMS in 2026: A Practical Guide" — Meta: "How a headless CMS separates content from presentation, why AI-assisted drafting changes editorial workflows, and what to check before you commit."',
-    Casual:
+      'Title: "What Is a Headless CMS? Architecture, Benefits, Trade-offs" — Meta: "A clear-eyed look at headless content management: API-first delivery, multi-channel publishing, and the costs nobody puts on the landing page."',
+      'Title: "Headless vs Traditional CMS: Which Fits Your Stack?" — Meta: "Compare editing experience, developer flexibility, and total cost of ownership across headless and monolithic platforms before you migrate."',
+      'Title: "The Engineering Case for Headless Content" — Meta: "Why product teams move content to the API layer: delivery speed, omnichannel reach, and a cleaner split between editors and engineers."',
+      'Title: "Choosing a Headless CMS: A 9-Point Checklist" — Meta: "Content modeling, versioning, permissions, delivery APIs — the criteria that separate a scalable CMS from a demo-day demo."',
+    ],
+    Casual: [
       'Title: "So You Are Eyeing a Headless CMS" — Meta: "The no-jargon rundown of headless CMS: what it is, why developers love it, and how AI drafting fits in."',
-    Creative:
+      'Title: "Headless CMS, Explained Like You Are Busy" — Meta: "Five minutes on what headless actually means, whether your team needs it, and what it really costs to switch."',
+      'Title: "Your Content, Everywhere: A Headless Primer" — Meta: "Same content, any screen — site, app, watch. Here’s how headless setups pull that off without the buzzword migraine."',
+      'Title: "Headless CMS: Worth the Hype?" — Meta: "An honest take on going headless — the wins, the gotchas, and the moment you know it is right for you."',
+      'Title: "Stop Rebuilding Your Blog Every Redesign" — Meta: "Content lives once and publishes anywhere. How a headless CMS ends the great content-migration ritual."',
+    ],
+    Creative: [
       'Title: "Your Content, Unshackled" — Meta: "Content that lives apart from its presentation. A short field guide to headless publishing and the AI that drafts alongside you."',
+      'Title: "The CMS With No Face" — Meta: "Headless means your content wears no single costume — it dresses for web, app, and whatever ships next."',
+      'Title: "Write Once, Roam Everywhere" — Meta: "Headless content is a passport: drafted once at the desk, fluent on every screen it meets."',
+      'Title: "Content Without a Cage" — Meta: "Why the best content has no fixed address — a small manifesto on API-first publishing."',
+      'Title: "Lose the Head, Keep the Content" — Meta: "A playful case for headless publishing: your words, freed from any single template."',
+    ],
   },
   ecom: {
-    Professional:
+    Professional: [
       'Lightweight and sweat-resistant, this running headband pairs active noise cancellation with a secure fit — engineered for long training sessions where music matters and distractions do not.',
-    Casual:
+      'Built for distance. The moisture-wicking knit holds its shape across seasons of training, while adaptive noise cancellation walks the line between awareness and immersion.',
+      'A training-grade audio headband: breathable knit exterior, IPX5 sweat resistance, and tunable noise cancellation tuned for road runners and gym floors alike.',
+      'A single-piece design eliminates cable drag and earbud dropout. Dual-driver audio with ambient passthrough keeps outdoor sessions situationally aware.',
+      'From warm-up to cooldown: the compression-fit fabric stays put at race pace, and the low-profile control module disappears under a hat or hood.',
+    ],
+    Casual: [
       "Runs better with music, no earbuds falling out mid-sprint. Noise cancellation blocks the gym noise; the fabric stays put even when you don't.",
-    Creative:
+      'Earbuds pop out, headphones get sweaty, but a soft headband with speakers inside? That just works. Press play and forget it is there.',
+      'Rain, sweat, that one brutal hill repeat — none of it bothers this thing. Music in, gym chaos out.',
+      'It is a headband. It is also your headphones. Somehow it is also the most comfortable thing you will wear on a run. Welcome to the good part of the future.',
+      'No wires to snag, no buds to re-seat, no “reconnecting…” mid-song. Just a comfy band, your playlist, and the road.',
+    ],
+    Creative: [
       'The city hum fades. Your playlist takes its place. Built for the runner who moves to a beat, this headband carries sound like a second heartbeat.',
+      'Dawn miles, wet pavement, the first song that finds your rhythm. The band holds the music close and lets the world blur past.',
+      'Some runners chase silence. You chase bass lines. This is sound woven into fabric — a rhythm section you wear.',
+      'Mile three. The city dissolves into drums. Somewhere under that soft knit, a soundtrack is keeping pace with your pulse.',
+      'It does not cancel the world so much as remix it — your breath, your steps, your song, arranged into something like flying.',
+    ],
   },
 };
 
+/** Entry metadata variants (id, title, slug) per schema — indexed alongside outputs. */
+const SAMPLE_ENTRIES: Record<string, { id: string; title: string; slug: string }[]> = {
+  blog: [
+    { id: 'entry_771891', title: 'Unlocking Wellness: The Future of Smart Wearables', slug: 'future-of-smart-wearables' },
+    { id: 'entry_528304', title: 'What Your Smartwatch Knows About You', slug: 'what-your-smartwatch-knows' },
+    { id: 'entry_339412', title: 'Reading Your Resting Heart Rate the Right Way', slug: 'resting-heart-rate-guide' },
+    { id: 'entry_684127', title: 'The Wearable Health Metrics Worth Watching', slug: 'wearable-metrics-worth-watching' },
+    { id: 'entry_905318', title: 'From Step Counter to Health Companion', slug: 'step-counter-to-health-companion' },
+  ],
+  seo: [
+    { id: 'entry_771891', title: 'Optimized Health Trackers', slug: 'optimized-health-trackers' },
+    { id: 'entry_442090', title: 'Headless CMS in 2026', slug: 'headless-cms-2026' },
+    { id: 'entry_217645', title: 'What Is a Headless CMS', slug: 'what-is-headless-cms' },
+    { id: 'entry_873512', title: 'Headless vs Traditional CMS', slug: 'headless-vs-traditional-cms' },
+    { id: 'entry_590836', title: 'Choose a Headless CMS', slug: 'choose-headless-cms-checklist' },
+  ],
+  ecom: [
+    { id: 'entry_771891', title: 'Wriven Smart Air Pro', slug: 'wriven-smart-air-pro' },
+    { id: 'entry_318264', title: 'Wriven SoundBand Flow', slug: 'wriven-soundband-flow' },
+    { id: 'entry_726451', title: 'Wriven PulseWrap Elite', slug: 'wriven-pulsewrap-elite' },
+    { id: 'entry_184937', title: 'Wriven Cadence One', slug: 'wriven-cadence-one' },
+    { id: 'entry_630582', title: 'Wriven Tempo Band', slug: 'wriven-tempo-band' },
+  ],
+};
+
 export default function SandboxPlayground() {
+  const rotationRef = useRef<Record<string, number>>({});
   const [activeSchema, setActiveSchema] = useState('blog');
   const [promptInput, setPromptInput] = useState('Write an engaging SEO-optimized intro for a smartwatch article about health tracking.');
   const [fieldTone, setFieldTone] = useState('Professional');
@@ -65,38 +138,38 @@ export default function SandboxPlayground() {
     { id: 'ecom', name: 'Product Highlight', desc: 'Specs, Copy blocks, Benefits indices' }
   ];
 
+  /** Advance the per schema+tone rotation counter so repeats cycle through variants. */
+  const nextVariantIndex = (key: string, total: number) => {
+    const counts = rotationRef.current;
+    const idx = (counts[key] ?? 0) % total;
+    counts[key] = idx + 1;
+    return idx;
+  };
+
   const handleWeaveGenerate = () => {
     setIsGenerating(true);
     setEditorResult("Wriven inking engines at work...");
 
-    // Simulated generation — canned copy per schema + tone
+    // Simulated generation — rotating canned copy per schema + tone
     window.setTimeout(() => {
-      const output = SAMPLE_OUTPUTS[activeSchema]?.[fieldTone] ?? SAMPLE_OUTPUTS.blog.Professional;
+      const outputs = SAMPLE_OUTPUTS[activeSchema]?.[fieldTone] ?? SAMPLE_OUTPUTS.blog.Professional;
+      const idx = nextVariantIndex(`${activeSchema}:${fieldTone}`, outputs.length);
+      const output = outputs[idx] ?? outputs[0];
       setEditorResult(output);
 
-      const formattedTitle = activeSchema === 'blog'
-        ? "Unlocking Wellness: The Future of Smart Wearables"
-        : activeSchema === 'seo'
-        ? "Optimized Health Trackers"
-        : "Wriven Smart Air Pro";
-
-      const formattedSlug = activeSchema === 'blog'
-        ? "future-of-smart-wearables"
-        : activeSchema === 'seo'
-        ? "optimized-health-trackers"
-        : "wriven-smart-air-pro";
+      const entry = SAMPLE_ENTRIES[activeSchema]?.[idx] ?? SAMPLE_ENTRIES.blog[0];
 
       setJsonResponse(JSON.stringify({
         success: true,
         data: {
           items: [
             {
-              id: "entry_771891",
+              id: entry.id,
               status: "published",
               contentType: activeSchema === 'blog' ? 'posts' : activeSchema === 'seo' ? 'seo_metadata' : 'products',
               fields: {
-                title: formattedTitle,
-                slug: formattedSlug,
+                title: entry.title,
+                slug: entry.slug,
                 generated_content: output
               }
             }
@@ -219,7 +292,7 @@ export default function SandboxPlayground() {
           <div className="lg:col-span-7 flex flex-col gap-6" id="sandbox-preview-pane">
 
             {/* Visual Draft Paper Sheet */}
-            <div className="bg-brand-surface border border-brand-border-button rounded-xl p-6 flex flex-col justify-between relative neo-shadow-lg flex-1">
+            <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 flex flex-col relative neo-shadow-lg">
               <div className="flex items-center justify-between border-b border-brand-border pb-3 mb-4">
                 <span className="text-sm font-mono uppercase text-text-primary flex items-center gap-2 font-bold">
                   <Layers className="w-4 h-4 text-brand-accent" />
@@ -229,7 +302,7 @@ export default function SandboxPlayground() {
               </div>
 
               <div className="text-left flex-grow">
-                <div className="h-full overflow-auto rounded-lg bg-brand-surface-soft/80 p-4 border border-brand-border text-sm font-mono text-text-primary leading-relaxed min-h-[160px] max-h-[220px]">
+                <div className="h-full overflow-auto rounded-lg bg-brand-surface-soft/80 p-4 border border-brand-border text-sm font-mono text-text-primary leading-relaxed min-h-[110px] max-h-[150px]">
                   {isGenerating ? (
                     <div className="space-y-3">
                       <div className="h-2.5 w-1/2 bg-text-muted/15 rounded animate-pulse" />
@@ -245,7 +318,7 @@ export default function SandboxPlayground() {
             </div>
 
             {/* API Log Ledger Section */}
-            <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 relative overflow-hidden h-[200px] text-left neo-shadow">
+            <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 relative overflow-hidden h-[340px] flex flex-col text-left neo-shadow">
               <div className="absolute top-4 right-4 flex gap-2 select-none">
                 <span className="inline-flex items-center gap-1 text-sm font-mono font-bold tracking-wider bg-brand-surface-soft text-brand-accent border border-brand-border px-2 py-1 rounded">
                   <Code className="w-3 h-3" />
@@ -253,8 +326,8 @@ export default function SandboxPlayground() {
                 </span>
               </div>
 
-              <span className="block text-sm font-mono text-text-muted mb-2 uppercase tracking-widest font-bold">DELIVERY API RESPONSE (JSON)</span>
-              <div className="h-[120px] overflow-auto text-sm font-mono rounded bg-brand-surface-soft p-3 border border-brand-border" id="json-scroll">
+              <span className="block text-sm font-mono text-text-muted mb-3 uppercase tracking-widest font-bold">DELIVERY API RESPONSE (JSON)</span>
+              <div className="flex-1 min-h-0 overflow-auto text-sm font-mono rounded bg-brand-surface-soft p-3 border border-brand-border" id="json-scroll">
                 <pre className="whitespace-pre-wrap text-text-primary">{jsonResponse}</pre>
               </div>
             </div>
