@@ -4,3 +4,4 @@
   "installCommand": "pnpm install --frozen-lockfile --filter @wriven/client... --filter .",
   "buildCommand": "cd ../.. && npx nx build @wriven/client"
 }
+

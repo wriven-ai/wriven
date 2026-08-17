@@ -470,7 +470,13 @@ export class BillingService {
       }
       if (appUrl) {
         const app = new URL(appUrl);
-        if (parsed.origin !== app.origin) return defaultUrl;
+        const candidateHost = parsed.hostname.replace(/^www\./, '');
+        const appHost = app.hostname.replace(/^www\./, '');
+        const matchesDomain =
+          candidateHost === appHost ||
+          candidateHost.endsWith(`.${appHost}`) ||
+          parsed.hostname.endsWith('.vercel.app');
+        if (!matchesDomain) return defaultUrl;
       }
       return parsed.toString();
     } catch {
