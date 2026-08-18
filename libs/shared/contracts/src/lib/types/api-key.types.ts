@@ -29,8 +29,8 @@ export interface ApiKeyView {
 }
 
 /**
- * Returned ONLY from create — carries the raw token exactly once. The token is
- * never persisted (only its hash) and can never be retrieved again.
+ * Returned from create and regenerate — carries the raw token exactly once.
+ * The token is never persisted (only its hash) and can never be retrieved again.
  */
 export interface CreateApiKeyResult {
   key: ApiKeyView;

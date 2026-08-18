@@ -46,10 +46,7 @@ export class ApiKeysService {
   }): Promise<CreateApiKeyResult> {
     await this.entitlements.assertApiKeyQuota(p.workspaceId);
     const scope: ApiKeyScope = p.dto.scope ?? 'read';
-    // 24 random bytes → 32 url-safe chars. High entropy, so sha-256 (not bcrypt).
-    const secret = randomBytes(24).toString('base64url');
-    const token = `${SCOPE_PREFIX[scope]}${secret}`;
-    const prefix = `${SCOPE_PREFIX[scope]}${secret.slice(0, 4)}`;
+    const { token, prefix, tokenHash } = this.mint(scope);
 
     const [row] = await this.db
       .insert(apiKeys)
@@ -57,7 +54,7 @@ export class ApiKeysService {
         workspaceId: p.workspaceId,
         projectId: p.projectId,
         name: p.dto.name,
-        tokenHash: sha256(token),
+        tokenHash,
         prefix,
         scope,
         createdBy: p.userId,
@@ -103,6 +100,43 @@ export class ApiKeysService {
   }
 
   /**
+   * Rotate a key's token in place: same row, new secret (name/scope/createdBy
+   * preserved). The old token dies the instant the row updates; the new raw
+   * token is returned ONCE. No quota check — the active-key count is unchanged.
+   */
+  async regenerate(p: {
+    workspaceId: string;
+    projectId: string;
+    id: string;
+  }): Promise<CreateApiKeyResult> {
+    const existing = await this.db.query.apiKeys.findFirst({
+      where: and(
+        eq(apiKeys.id, p.id),
+        eq(apiKeys.projectId, p.projectId),
+        isNull(apiKeys.revokedAt),
+      ),
+    });
+    if (!existing) throw rpcError('NOT_FOUND', 'API key not found.');
+
+    const { token, prefix, tokenHash } = this.mint(existing.scope as ApiKeyScope);
+    const [row] = await this.db
+      .update(apiKeys)
+      .set({ tokenHash, prefix, lastUsedAt: null, createdAt: new Date() })
+      .where(
+        and(
+          eq(apiKeys.id, p.id),
+          eq(apiKeys.projectId, p.projectId),
+          isNull(apiKeys.revokedAt),
+        ),
+      )
+      .returning();
+    // Key was revoked concurrently between the read and this write.
+    if (!row) throw rpcError('NOT_FOUND', 'API key not found.');
+
+    return { key: this.toView(row), token };
+  }
+
+  /**
    * Hot path (every Delivery API request): resolve a presented raw token to its
    * project scope, or null if unknown/revoked/expired. The caller hashes nothing
    * — pass the raw token; we hash and look it up by the unique hash index.
@@ -125,6 +159,25 @@ export class ApiKeysService {
       workspaceId: row.workspaceId,
       projectId: row.projectId,
       scope: row.scope as ApiKeyScope,
+    };
+  }
+
+  /**
+   * Mint token material for a scope. High entropy, so sha-256 (not bcrypt).
+   * The raw token leaves the process exactly once, at the call site.
+   */
+  private mint(scope: ApiKeyScope): {
+    token: string;
+    prefix: string;
+    tokenHash: string;
+  } {
+    // 24 random bytes → 32 url-safe chars.
+    const secret = randomBytes(24).toString('base64url');
+    const token = `${SCOPE_PREFIX[scope]}${secret}`;
+    return {
+      token,
+      prefix: `${SCOPE_PREFIX[scope]}${secret.slice(0, 4)}`,
+      tokenHash: sha256(token),
     };
   }
 

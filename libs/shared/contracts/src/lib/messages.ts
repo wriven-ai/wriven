@@ -81,6 +81,7 @@ export const CORE_PATTERNS = {
   // Project-scoped API keys (Delivery API auth — see plans/01).
   API_KEY_CREATE: 'core.apiKey.create',
   API_KEY_LIST: 'core.apiKey.list',
+  API_KEY_REGENERATE: 'core.apiKey.regenerate',
   API_KEY_REVOKE: 'core.apiKey.revoke',
   API_KEY_RESOLVE: 'core.apiKey.resolve',
 
