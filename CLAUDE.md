@@ -1,15 +1,16 @@
 # Wriven — Agent Instructions
 
-**Wriven** is an AI-native headless CMS SaaS. Nx + pnpm monorepo: NestJS microservices behind a single HTTP gateway, a Next.js client, a Python AI service (FastAPI, content generation), and publishable delivery-SDK packages (`packages/*`, `@wriven-ai/*`). Frontend deploys to Vercel; all backend services run in Docker on a VPS.
+**Wriven** is an AI-native headless CMS SaaS. Nx + pnpm monorepo: NestJS microservices behind a single HTTP gateway, a Next.js client, a Python AI service (FastAPI, content generation), and publishable delivery-SDK packages (`packages/*`, `@wriven-ai/*`). Client deploys to Vercel; backend services deploy to Render as Docker containers from [`render.yaml`](./render.yaml) (gateway = public web service at `api.wriven.tech`; auth/core/ai = internal private services). See [`doc/deployment.md`](./doc/deployment.md).
 
 ## Source of truth
 
 The maintained reference docs live under **[`doc/`](./doc/)** — start at [`doc/README.md`](./doc/README.md). Read the relevant doc before changing a subsystem:
 
-- Root: [`DOCKER_SETUP.md`](./DOCKER_SETUP.md) (prod Docker deployment) · [`apps/ai-service/README.md`](./apps/ai-service/README.md) (uv workflow, health endpoints)
+- Root: [`DOCKER_SETUP.md`](./DOCKER_SETUP.md) (Docker deployment) · [`doc/deployment.md`](./doc/deployment.md) (Render deployment, prod env) · [`apps/ai-service/README.md`](./apps/ai-service/README.md) (uv workflow, health endpoints)
 - [`doc/overview`](./doc/overview.md) · [`doc/architecture`](./doc/architecture.md) · [`doc/database`](./doc/database.md)
 - [`doc/api-reference`](./doc/api-reference.md) · [`doc/conventions`](./doc/conventions.md) · [`doc/status`](./doc/status.md)
-- Per service: [`api-gateway`](./doc/api-gateway/) · [`auth-service`](./doc/auth-service/) · [`core-service`](./doc/core-service/) · [`admin-panel`](./doc/admin-panel/) · [`frontend`](./doc/frontend/)
+- Cross-cutting: [`doc/ai-governance.md`](./doc/ai-governance.md) (AI data controls, retention, billing/retry policy) · [`doc/plan-config.md`](./doc/plan-config.md) (plan tiers + limits, admin-managed — not seeded) · [`doc/support-ticket/`](./doc/support-ticket/) · [`doc/market-readiness.md`](./doc/market-readiness.md)
+- Per service: [`api-gateway`](./doc/api-gateway/) · [`auth-service`](./doc/auth-service/) · [`core-service`](./doc/core-service/) · [`admin-panel`](./doc/admin-panel/) · [`frontend`](./doc/frontend/) (incl. [`sidebar.md`](./doc/frontend/sidebar.md) — dashboard nav architecture)
 - Feature design docs: [`specs/`](./specs/) (every feature gets a spec before implementation, `NN-<slug>.md`)
 - Execution plans: [`plans/`](./plans/) (opt-in, large features — derived from a spec via `/create-plan`; plan numbering is independent of spec numbering, e.g. specs/21 ↔ plans/14)
 
@@ -20,9 +21,9 @@ If a doc and the code disagree, **the code wins** — fix the doc.
 - **Shared contracts** — DTOs, response types, TCP message patterns, and error codes live in `libs/shared/contracts` (`@wriven/contracts`). Check it before defining anything new; never duplicate a contract inside a service.
 - **R2 keys only** — store object **keys** in the DB, never full URLs. Reconstruct URLs at runtime.
 - **Microservice boundaries** — don't collapse services:
-  - `api-gateway` (HTTP `:5000`) — public edge, validates JWT **locally**, validates workspace/project membership, owns no tables.
-  - `auth-service` (TCP `:5001`) — identity + tenancy (users, workspaces, projects, members, invitations).
-  - `core-service` (TCP `:5002`) — CMS (content types, entries, media, webhooks, delivery API).
+  - `api-gateway` (HTTP `:5000`) — public edge, validates JWT **locally**, validates workspace/project membership, owns no tables. Also hosts the Google OAuth passport strategy and verifies admin JWTs.
+  - `auth-service` (TCP `:5001`) — identity + tenancy (users, workspaces, projects, members, invitations) **and billing** (Stripe subscriptions/webhooks, plans, usage metering — `STRIPE_SECRET_KEY` lives only here; auth also *signs* admin JWTs, gateway verifies them via shared `ADMIN_JWT_SECRET`).
+  - `core-service` (TCP `:5002`) — CMS (content types, entries, media, webhooks, delivery API). Enforces plan quotas by calling auth-service over TCP for entitlements/limits — never assume open access when auth is unreachable.
    - `ai-service` (`apps/ai-service`, FastAPI `:8000`, Python + **uv**) — **AI content generation**. Prompt building, temperature, and `select`/`compose` structured-output validation+repair live here; core-service calls it over HTTP behind an `AiClient` seam (the only NestJS↔non-NestJS HTTP call). core keeps the DB-bound work (quota reserve, audit row, per-project AI voice profile, token/cost accounting, field validation); the provider key (`AI_API_KEY`) lives only in ai-service env. All NestJS↔NestJS is TCP. See specs/21.
 - **Gateway injects identity** — after JWT validation it puts `userId` + scope into every TCP payload; downstream services trust it (no re-validation).
 - **Response envelope** — `{ success, data }` / `{ success, error }`. Use error codes from `@wriven/contracts/errors.ts`; never leak stack traces, internal service names, or DB errors.
@@ -60,6 +61,7 @@ pnpm nx affected -t lint test                 # changed code only
 pnpm db:auth:generate | migrate | push | studio
 pnpm db:core:generate | migrate | push | studio
 pnpm db:auth:seed       # tsx --env-file=apps/auth-service/.env
+pnpm billing:replay     # re-process a stored Stripe event (auth-service script)
 
 # Single test file
 cd apps/ai-service && uv run pytest tests/test_guardrails.py   # ai-service (pytest)
