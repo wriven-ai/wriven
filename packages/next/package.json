@@ -1,6 +1,6 @@
 {
   "name": "@wriven-ai/next",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Next.js helpers for Wriven: a signed webhook \u2192 revalidate route handler and preview/draft wiring.",
   "type": "module",
   "license": "MIT",

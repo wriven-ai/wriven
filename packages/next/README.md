@@ -95,7 +95,10 @@ revalidate: (p) =>
 ```ts
 createWebhookRoute({
   secret: string,             // required — the whsec_… signing secret
-  revalidate?: (payload) => { paths?: string[]; tags?: string[] } | void,
+  revalidate?: (payload) => {
+    paths?: (string | { path: string; type?: 'page' | 'layout' })[];
+    tags?: string[];
+  } | void,
   onEvent?: (payload) => void | Promise<void>,
 })
 ```
@@ -105,6 +108,16 @@ createWebhookRoute({
 | `secret` | Shown exactly once when the webhook is created (dashboard → Project Settings → Webhooks). Keep it in a server env var. |
 | `revalidate` | Map an event to `paths` and/or `tags` to revalidate. Return nothing to skip. |
 | `onEvent` | Arbitrary side effect per verified event — logging, queueing a rebuild, analytics. Runs after revalidation; awaited. |
+
+A plain string path is an exact URL. For a **dynamic-segment pattern** (all
+`/blog/[slug]` pages at once), wrap it and pass the route type — a bare
+`'/blog/[slug]'` string is treated as a literal URL and matches nothing:
+
+```ts
+revalidate: (p) => ({
+  paths: ['/blog', { path: '/blog/[slug]', type: 'page' }],
+})
+```
 
 ## Signature verification
 
@@ -127,28 +140,51 @@ unsigned/tampered request never triggers cache invalidation.
 
 ## Tag-based revalidation
 
-Paths are one option; tags scale better. Fetch with
-[`@wriven-ai/client`](https://www.npmjs.com/package/@wriven-ai/client) using
-matching `next.tags`, then revalidate the tag for whole-type changes:
+Paths are one option; tags scale better — **for routes rendered on demand**.
+Fetch with [`@wriven-ai/client`](https://www.npmjs.com/package/@wriven-ai/client)
+using matching `next.tags`, then revalidate the tag for whole-type changes:
 
 ```ts
 // When fetching (e.g. in a page or generateStaticParams)
 const posts = await wriven.getEntries('blog_post', {
-  next: { revalidate: 60, tags: ['blog'] },
+  next: { revalidate: 60, tags: ['type_blog_post'] },
 });
 
 // app/api/wriven/route.ts
 export const { POST } = createWebhookRoute({
   secret: process.env.WRIVEN_WEBHOOK_SECRET!,
   revalidate: (p) => ({
-    tags: ['blog'],                    // every fetch tagged 'blog' is purged
+    tags: ['type_blog_post'],          // every cached fetch with this tag is purged
     paths: [`/blog/${p.entry.slug}`],  // plus the affected page
   }),
 });
 ```
 
-Every cached fetch tagged `blog` is invalidated at once — no path list to
-maintain.
+Every cached fetch tagged `type_blog_post` is invalidated at once — no path
+list to maintain.
+
+> **⚠️ Next.js 15/16 caveat — statically prerendered pages ignore tag purges.**
+> Build-time fetches for pages prerendered at build (fully static routes, no
+> `export const revalidate`) are inlined into the prerender and never
+> registered as tagged data-cache entries. `revalidateTag` for them is a
+> **silent no-op** — the page stays stale forever. Two fixes, use both:
+>
+> 1. Add `export const revalidate = 300;` (or similar) to every page that
+>    fetches Wriven content, so it is a real ISR route.
+> 2. Have `revalidate` return explicit `paths` for those pages (list the
+>    route per content type) — `revalidatePath` invalidates the full route
+>    cache regardless of tags:
+>
+> ```ts
+> const PATHS_BY_TYPE = {
+>   blog_post: ['/blog', { path: '/blog/[slug]', type: 'page' }],
+>   job_posting: ['/jobs'],
+> };
+> revalidate: (p) => ({
+>   paths: ['/', ...(PATHS_BY_TYPE[p.entry.type] ?? [])],
+>   tags: [`type_${p.entry.type}`],
+> })
+> ```
 
 ## Custom handling
 
