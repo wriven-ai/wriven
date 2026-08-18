@@ -67,7 +67,6 @@ export const CORE_PATTERNS = {
   CONTENT_TYPE_GET: 'core.contentType.get',
   CONTENT_TYPE_UPDATE: 'core.contentType.update',
   CONTENT_TYPE_DELETE: 'core.contentType.delete',
-  CONTENT_TYPE_SEED: 'core.contentType.seedDefaults',
 
   ENTRY_CREATE: 'core.entry.create',
   ENTRY_LIST: 'core.entry.list',

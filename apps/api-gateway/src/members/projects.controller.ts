@@ -20,7 +20,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class ProjectsController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
-    @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   // ── Project CRUD ────────────────────────────────────────────────────────────
@@ -31,24 +30,13 @@ export class ProjectsController {
     @Param('workspaceId') workspaceId: string,
     @Body() dto: contracts.CreateProjectDto,
   ) {
-    const project = await firstValueFrom<{ id: string }>(
+    return firstValueFrom<{ id: string }>(
       this.auth.send(contracts.PROJECT_PATTERNS.CREATE_PROJECT, {
         callerUserId: user.userId,
         workspaceId,
         dto,
       }),
     );
-    // Seed a starter content type so the new project isn't empty (best-effort).
-    if (project?.id) {
-      void firstValueFrom(
-        this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_SEED, {
-          workspaceId,
-          projectId: project.id,
-          userId: user.userId,
-        }),
-      ).catch(() => undefined);
-    }
-    return project;
   }
 
   @Get('workspaces/:workspaceId/projects')

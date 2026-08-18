@@ -67,13 +67,6 @@ export class ContentController {
     return this.types.remove(p);
   }
 
-  @MessagePattern(CORE_PATTERNS.CONTENT_TYPE_SEED)
-  seedTypes(
-    @Payload() p: { workspaceId: string; projectId: string; userId: string },
-  ) {
-    return this.types.seedDefaults(p);
-  }
-
   // ── Entries ───────────────────────────────────────────────────────────────
 
   @MessagePattern(CORE_PATTERNS.ENTRY_CREATE)
