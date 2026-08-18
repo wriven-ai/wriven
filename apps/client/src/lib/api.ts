@@ -439,6 +439,12 @@ export const apiKeyApi = {
       workspace: true,
       project: true,
     }),
+  regenerate: (id: string) =>
+    request<CreateApiKeyResult>(`/api-keys/${id}/regenerate`, {
+      method: 'POST',
+      workspace: true,
+      project: true,
+    }),
   revoke: (id: string) =>
     request<{ success: true }>(`/api-keys/${id}`, {
       method: 'DELETE',
