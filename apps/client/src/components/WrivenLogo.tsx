@@ -1,42 +1,51 @@
-import React from 'react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useTheme } from 'next-themes';
+import darkLogo from '@/assets/wriven-dark-logo.png';
+import lightLogo from '@/assets/wriven-light-logo.png';
 
 interface LogoProps {
   className?: string;
   iconOnly?: boolean;
+  /** Rendered height of the mark in px (the glyph is a fixed 2:1 aspect). */
+  iconSize?: number;
 }
 
-export default function WrivenLogo({ className = "", iconOnly = false }: LogoProps) {
+/**
+ * Brand lockup: PNG mark + typographic "Wriven". Theme-aware — navy-ink mark
+ * on light surfaces, light-ink mark on dark ones. Both PNGs are normalized to
+ * the same 2:1 canvas so the theme swap causes no layout shift.
+ */
+export default function WrivenLogo({
+  className = '',
+  iconOnly = false,
+  iconSize = 28,
+}: LogoProps) {
+  const { resolvedTheme } = useTheme();
+
+  // next-themes resolves on the client only — paint the light-theme (navy)
+  // mark during SSR/first render, then swap once the theme is known.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const logo = mounted && resolvedTheme === 'dark' ? lightLogo : darkLogo;
+
   return (
-    <div className={`flex items-center gap-2.5 select-none ${className}`} id="wriven-logo-container">
-      <svg
-        width="32"
-        height="32"
-        viewBox="0 0 100 100"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
+    <div
+      className={`flex items-center gap-2.5 select-none ${className}`}
+      id="wriven-logo-container"
+    >
+      <Image
+        src={logo}
+        alt="Wriven"
+        width={iconSize * 2}
+        height={iconSize}
+        priority
         className="shrink-0"
-        id="wriven-svg-logo"
-      >
-        {/* Weaving Loom Structural Rails (Charcoal base) */}
-        <rect x="20" y="20" width="8" height="60" rx="2" fill="var(--text-primary)" />
-        <rect x="72" y="20" width="8" height="60" rx="2" fill="var(--text-primary)" />
-        
-        {/* Horizontal Weft threads (Interlaced Terracotta) */}
-        <rect x="24" y="32" width="52" height="6" rx="1.5" fill="var(--brand-accent)" />
-        <rect x="24" y="48" width="52" height="6" rx="1.5" fill="var(--text-primary)" className="opacity-90" />
-        <rect x="24" y="64" width="52" height="6" rx="1.5" fill="var(--brand-accent)" />
-        
-        {/* Warp tension connectors (Fine thread points) */}
-        <circle cx="24" cy="35" r="4" fill="var(--brand-bg)" stroke="var(--brand-accent)" strokeWidth="2" />
-        <circle cx="76" cy="35" r="4" fill="var(--brand-bg)" stroke="var(--brand-accent)" strokeWidth="2" />
-        <circle cx="24" cy="51" r="4" fill="var(--brand-bg)" stroke="var(--text-primary)" strokeWidth="2" />
-        <circle cx="76" cy="51" r="4" fill="var(--brand-bg)" stroke="var(--text-primary)" strokeWidth="2" />
-        <circle cx="24" cy="67" r="4" fill="var(--brand-bg)" stroke="var(--brand-accent)" strokeWidth="2" />
-        <circle cx="76" cy="67" r="4" fill="var(--brand-bg)" stroke="var(--brand-accent)" strokeWidth="2" />
-      </svg>
-      
+      />
       {!iconOnly && (
-         <span 
+        <span
           className="font-display text-xl font-bold tracking-tight text-text-primary flex items-baseline gap-0.5"
           id="wriven-logo-text"
         >
