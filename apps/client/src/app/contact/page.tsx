@@ -10,12 +10,13 @@ export default function Contact() {
     name: '',
     email: '',
     subject: 'Sales Inquiry',
-    message: ''
+    message: '',
+    company: '' // honeypot — humans never see or fill this
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) {
       setSubmitResult('error');
@@ -25,16 +26,30 @@ export default function Contact() {
     setIsSubmitting(true);
     setSubmitResult('idle');
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        setSubmitResult('error');
+        return;
+      }
       setSubmitResult('success');
       setFormData({
         name: '',
         email: '',
         subject: 'Sales Inquiry',
-        message: ''
+        message: '',
+        company: ''
       });
-    }, 1500);
+    } catch {
+      setSubmitResult('error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -65,8 +80,8 @@ export default function Contact() {
                     </div>
                     <div>
                       <span className="block text-sm font-mono text-text-muted uppercase tracking-wider">Email Dispatch</span>
-                      <a href="mailto:support@wriven.io" className="text-sm font-mono font-bold text-text-primary hover:text-brand-accent transition-colors">
-                        support@wriven.io
+                      <a href="mailto:hello@wriven.tech" className="text-sm font-mono font-bold text-text-primary hover:text-brand-accent transition-colors">
+                        hello@wriven.tech
                       </a>
                     </div>
                   </div>
@@ -134,7 +149,7 @@ export default function Contact() {
                       id="contact-email"
                       type="email"
                       required
-                      placeholder="sophia@wriven.io"
+                      placeholder="sophia@wriven.tech"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-4 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
@@ -169,6 +184,18 @@ export default function Contact() {
                     className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border p-4 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary leading-relaxed"
                   />
                 </div>
+
+                {/* Honeypot — hidden from humans, catches bots */}
+                <input
+                  type="text"
+                  name="company"
+                  value={formData.company}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  className="hidden"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                />
 
                 <div className="pt-2">
                   <button
