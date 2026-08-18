@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import WrivenLogo from '@/components/WrivenLogo';
 import { WorkspaceSwitcher } from '@/components/topbar/workspace-switcher';
 import {
   Sidebar,
@@ -25,13 +27,18 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      {/* One row: brand icon + workspace switcher (in a project the switcher
-          moves to the top bar, leaving just the icon). */}
-      <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
+      {/* One row: brand mark + workspace switcher (in a project the switcher
+          moves to the top bar, leaving just the mark). Collapsed rail is 48px
+          wide, so the icon-mode padding trims to keep the 40px mark visible. */}
+      <SidebarHeader className="border-b border-sidebar-border px-3 py-3 group-data-[collapsible=icon]:px-1">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-brand-accent flex items-center justify-center text-white font-display font-black text-sm shrink-0">
-            W
-          </div>
+          <Link
+            href="/"
+            aria-label="Wriven home"
+            className="shrink-0 rounded-lg px-0.5 py-1 hover:bg-sidebar-accent transition-colors"
+          >
+            <WrivenLogo iconOnly iconSize={20} />
+          </Link>
           {!projectScope ? (
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <WorkspaceSwitcher variant="block" />

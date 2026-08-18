@@ -6,12 +6,14 @@ import { useState } from 'react';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { usePublicPlans } from '@/hooks/use-public-plans';
+import { useAuth } from '@/hooks/useAuth';
 import type { PlanFeatures, PlanLimits, PlanView } from '@/lib/types';
 
 const PricingPage = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
     'annual',
   );
+  const { isAuthenticated } = useAuth();
   const { data: plans, isLoading, isError } = usePublicPlans();
 
   const sorted = [...(plans ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -99,7 +101,11 @@ const PricingPage = () => {
               Couldn&apos;t load plans. Please try again later.
             </div>
           ) : (
-            <PricingCards plans={sorted} billingCycle={billingCycle} />
+            <PricingCards
+              plans={sorted}
+              billingCycle={billingCycle}
+              isAuthenticated={isAuthenticated}
+            />
           )}
 
           {/* Comparison matrix */}
@@ -108,7 +114,7 @@ const PricingPage = () => {
           )}
 
           {/* FAQ */}
-          <PricingFaq />
+          <PricingFaq isAuthenticated={isAuthenticated} />
         </div>
       </main>
 
@@ -122,9 +128,11 @@ const PricingPage = () => {
 function PricingCards({
   plans,
   billingCycle,
+  isAuthenticated,
 }: {
   plans: PlanView[];
   billingCycle: 'monthly' | 'annual';
+  isAuthenticated: boolean;
 }) {
   return (
     <div
@@ -196,7 +204,7 @@ function PricingCards({
 
             <div className="pt-8">
               <Link
-                href="/register"
+                href={isAuthenticated ? '/dashboard' : '/register'}
                 className={`block text-center font-mono font-bold text-sm uppercase tracking-wider py-4 px-4 rounded-lg border border-brand-border-button transition-all duration-150 cursor-pointer neo-shadow ${
                   popular
                     ? 'bg-brand-accent hover:bg-brand-accent-hover text-white'
@@ -204,7 +212,11 @@ function PricingCards({
                 }`}
                 id={`plan-cta-${plan.key}`}
               >
-                {plan.priceMonthly === 0 ? 'Get started' : `Start ${plan.name}`}
+                {isAuthenticated
+                  ? 'Go to Dashboard'
+                  : plan.priceMonthly === 0
+                    ? 'Get started'
+                    : `Start ${plan.name}`}
               </Link>
             </div>
           </div>
@@ -355,12 +367,12 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
 
 // ── FAQ + bottom CTA (copy kept; discount updated to 10%) ────────────────────
 
-function PricingFaq() {
+function PricingFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
   const faqs = [
     {
       question: "How are 'AI Content generations' counted?",
       answer:
-        "Every time you use Wriven's AI to draft text or generate an image, it counts against your plan's monthly AI quota. Standard manual edits or Delivery API requests do not consume AI credits. (AI generation is coming soon.)",
+        "Every time you use Wriven's AI to draft text or generate an image, it counts against your plan's monthly AI quota. Standard manual edits or Delivery API requests do not consume AI credits. (AI Image generation is coming soon.)",
     },
     {
       question: 'Can I upgrade or downgrade my plan at any time?',
@@ -417,11 +429,11 @@ function PricingFaq() {
           </p>
           <div className="flex justify-center pt-2">
             <Link
-              href="/register"
+              href={isAuthenticated ? '/dashboard' : '/register'}
               className="inline-flex items-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg neo-shadow cursor-pointer transition-all"
               id="pricing-bottom-primary"
             >
-              Start for free, no card required
+              {isAuthenticated ? 'Go to Dashboard' : 'Start for free, no card required'}
               <ArrowRight className="w-4 h-4 text-white" />
             </Link>
           </div>

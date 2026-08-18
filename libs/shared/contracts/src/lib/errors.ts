@@ -13,6 +13,10 @@ export const ERROR_CODES = {
     code: 'INVALID_VERIFICATION_TOKEN',
     statusCode: 400,
   },
+  INVALID_VERIFICATION_CODE: {
+    code: 'INVALID_VERIFICATION_CODE',
+    statusCode: 400,
+  },
   OAUTH_FAILED: { code: 'OAUTH_FAILED', statusCode: 400 },
   RATE_LIMITED: { code: 'RATE_LIMITED', statusCode: 429 },
   PLAN_LIMIT_REACHED: { code: 'PLAN_LIMIT_REACHED', statusCode: 403 },

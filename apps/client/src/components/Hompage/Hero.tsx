@@ -4,8 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Terminal, Check } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Hero() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <section className="relative overflow-hidden pt-16 pb-20 lg:pt-28 lg:pb-36 border-b border-brand-border" id="hero">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10" id="hero-container">
@@ -31,7 +34,7 @@ export default function Hero() {
                 href="/dashboard"
                 className="inline-flex items-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg neo-shadow transition-all cursor-pointer"
               >
-                <span>Launch Workspace</span>
+                <span>{isAuthenticated ? 'Go to Dashboard' : 'Launch Workspace'}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link

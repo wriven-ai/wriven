@@ -290,7 +290,7 @@ function MembersInner() {
                       <input
                         id="invite-email"
                         type="email"
-                        placeholder="e.g. teammate@wriven.io"
+                        placeholder="e.g. teammate@wriven.tech"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
                         required

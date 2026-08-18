@@ -82,6 +82,13 @@ export class VerifyEmailDto {
   token!: string;
 }
 
+/** 6-digit email-verification code (the OTP path alongside the link). */
+export class VerifyEmailCodeDto {
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'Code must be exactly 6 digits' })
+  code!: string;
+}
+
 /**
  * Self-service profile update for the authenticated user (`PATCH /users/me`).
  * Either field is optional; `avatar` accepts an R2 object key (to set) or

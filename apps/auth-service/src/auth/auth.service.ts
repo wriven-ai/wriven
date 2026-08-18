@@ -23,7 +23,8 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE, type DrizzleDB, dbError } from '@wriven/database';
 import * as bcrypt from 'bcrypt';
-import { and, eq } from 'drizzle-orm';
+import { timingSafeEqual } from 'crypto';
+import { and, desc, eq, isNotNull, lt } from 'drizzle-orm';
 import { resolveAvatarUrl } from '../common/avatar';
 import { durationToMs } from '../common/duration';
 import { rpcError } from '../common/rpc-error';
@@ -50,6 +51,9 @@ const {
 type UserRow = typeof users.$inferSelect;
 type WorkspaceRow = typeof workspaces.$inferSelect;
 type ProjectRow = typeof projects.$inferSelect;
+
+/** Failed 6-digit code guesses allowed before the code is locked. */
+const OTP_MAX_ATTEMPTS = 5;
 
 @Injectable()
 export class AuthService {
@@ -635,7 +639,96 @@ export class AuthService {
     return { success: true };
   }
 
-  /** Resend verification for the authenticated user (idempotent if verified). */
+  /**
+   * Verify the 6-digit OTP path. Identity comes from the gateway JWT — the
+   * code alone is never enough to find the row (no code enumeration).
+   */
+  async verifyEmailCode(payload: {
+    userId: string;
+    code: string;
+  }): Promise<{ success: true }> {
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, payload.userId),
+      columns: { id: true, emailVerified: true },
+    });
+    if (!user) {
+      throw rpcError('NOT_FOUND', 'User not found.');
+    }
+    // Idempotent: already verified via the link path in another tab.
+    if (user.emailVerified) {
+      return { success: true };
+    }
+
+    const row = await this.db.query.emailVerificationTokens.findFirst({
+      where: and(
+        eq(emailVerificationTokens.userId, payload.userId),
+        eq(emailVerificationTokens.used, false),
+        isNotNull(emailVerificationTokens.codeHash),
+      ),
+      orderBy: [desc(emailVerificationTokens.createdAt)],
+    });
+    if (!row) {
+      throw rpcError(
+        'INVALID_VERIFICATION_CODE',
+        'No active verification code. Request a new one from your profile page.',
+      );
+    }
+    if ((row.codeExpiresAt?.getTime() ?? 0) <= Date.now()) {
+      throw rpcError(
+        'INVALID_VERIFICATION_CODE',
+        'This code has expired. Request a new one.',
+      );
+    }
+    if (row.attempts >= OTP_MAX_ATTEMPTS) {
+      throw rpcError(
+        'INVALID_VERIFICATION_CODE',
+        'Too many incorrect attempts. Request a new code.',
+      );
+    }
+
+    const expected = Buffer.from(
+      this.tokens.hashVerificationCode(payload.code),
+      'hex',
+    );
+    const actual = Buffer.from(row.codeHash!, 'hex');
+    if (
+      expected.length !== actual.length ||
+      !timingSafeEqual(expected, actual)
+    ) {
+      // Guarded atomic increment — two racing wrong guesses can't both slip
+      // past the cap.
+      const [updated] = await this.db
+        .update(emailVerificationTokens)
+        .set({ attempts: row.attempts + 1 })
+        .where(
+          and(
+            eq(emailVerificationTokens.id, row.id),
+            lt(emailVerificationTokens.attempts, OTP_MAX_ATTEMPTS),
+          ),
+        )
+        .returning({ attempts: emailVerificationTokens.attempts });
+      const attemptsNow = updated?.attempts ?? OTP_MAX_ATTEMPTS;
+      throw rpcError(
+        'INVALID_VERIFICATION_CODE',
+        attemptsNow >= OTP_MAX_ATTEMPTS
+          ? 'Too many incorrect attempts. Request a new code.'
+          : `Incorrect code. ${OTP_MAX_ATTEMPTS - attemptsNow} attempt${OTP_MAX_ATTEMPTS - attemptsNow === 1 ? '' : 's'} remaining.`,
+      );
+    }
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ emailVerified: true })
+        .where(eq(users.id, payload.userId));
+      await tx
+        .update(emailVerificationTokens)
+        .set({ used: true })
+        .where(eq(emailVerificationTokens.id, row.id));
+    });
+
+    return { success: true };
+  }
   async resendVerification(payload: {
     userId: string;
   }): Promise<{ success: true }> {
@@ -661,6 +754,8 @@ export class AuthService {
     const ttlMs = durationToMs(
       this.config.get<string>('EMAIL_VERIFY_TTL', '24h'),
     );
+    const code = this.tokens.newVerificationCode();
+    const codeTtlMs = durationToMs(this.config.get<string>('OTP_TTL', '10m'));
 
     await this.db
       .update(emailVerificationTokens)
@@ -675,13 +770,16 @@ export class AuthService {
       tokenHash: token.hash,
       userId,
       expiresAt: new Date(Date.now() + ttlMs),
+      codeHash: this.tokens.hashVerificationCode(code),
+      codeExpiresAt: new Date(Date.now() + codeTtlMs),
+      attempts: 0,
     });
 
     const base = this.config.get<string>('APP_URL', 'http://localhost:4200');
     const link = `${base}/verify-email?token=${token.raw}`;
     // Don't let a mail failure break registration/resend.
     try {
-      await this.mail.sendVerification(email, link);
+      await this.mail.sendVerification(email, link, code);
     } catch (err) {
       this.logger.error(
         `Failed to send verification email to ${email}`,

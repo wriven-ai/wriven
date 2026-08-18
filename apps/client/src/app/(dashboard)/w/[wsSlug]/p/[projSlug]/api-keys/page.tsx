@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Folder,
   Key,
+  RefreshCw,
   TriangleAlert,
   Trash2,
 } from 'lucide-react';
@@ -62,6 +63,7 @@ export default function ApiKeysPage() {
   const [copied, setCopied] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; name: string } | null>(null);
+  const [regenTarget, setRegenTarget] = useState<{ id: string; name: string } | null>(null);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
@@ -97,6 +99,19 @@ export default function ApiKeysPage() {
     },
     onError: (err) =>
       toast.error(err instanceof ApiRequestError ? err.message : 'Revoke failed.'),
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: (id: string) => apiKeyApi.regenerate(id),
+    onSuccess: (result) => {
+      setRegenTarget(null);
+      setNewToken(result.token);
+      setPage(1);
+      queryClient.invalidateQueries({ queryKey });
+      toast.success('API key regenerated — copy the new token now.');
+    },
+    onError: (err) =>
+      toast.error(err instanceof ApiRequestError ? err.message : 'Regenerate failed.'),
   });
 
   const copyToken = () => {
@@ -252,14 +267,24 @@ export default function ApiKeysPage() {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => setRevokeTarget({ id: key.id, name: key.name })}
-                        disabled={revokeMutation.isPending || !canManage}
-                        className="inline-flex shrink-0 items-center gap-1.5 p-1 px-2 border border-brand-border text-text-secondary hover:bg-status-error/10 hover:text-status-error hover:border-status-error/30 rounded-lg font-mono text-xs font-semibold leading-none cursor-pointer transition-colors disabled:opacity-60"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Revoke
-                      </button>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          onClick={() => setRegenTarget({ id: key.id, name: key.name })}
+                          disabled={!canManage || revokeMutation.isPending || regenerateMutation.isPending}
+                          className="inline-flex items-center gap-1.5 p-1 px-2 border border-brand-border text-text-secondary hover:bg-brand-accent/10 hover:text-brand-accent hover:border-brand-accent/30 rounded-lg font-mono text-xs font-semibold leading-none cursor-pointer transition-colors disabled:opacity-60"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Regenerate
+                        </button>
+                        <button
+                          onClick={() => setRevokeTarget({ id: key.id, name: key.name })}
+                          disabled={!canManage || revokeMutation.isPending || regenerateMutation.isPending}
+                          className="inline-flex items-center gap-1.5 p-1 px-2 border border-brand-border text-text-secondary hover:bg-status-error/10 hover:text-status-error hover:border-status-error/30 rounded-lg font-mono text-xs font-semibold leading-none cursor-pointer transition-colors disabled:opacity-60"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Revoke
+                        </button>
+                      </div>
                     </div>
 
                     <div className="mt-2.5 flex items-center justify-between border border-brand-border-button bg-brand-surface-soft rounded-lg p-1.5 px-3 font-mono text-xs text-text-secondary">
@@ -348,6 +373,25 @@ export default function ApiKeysPage() {
         onConfirm={() => {
           if (!revokeTarget) return;
           revokeMutation.mutate(revokeTarget.id);
+        }}
+      />
+
+      <ConfirmationDialog
+        open={!!regenTarget}
+        onOpenChange={(open) => { if (!open) setRegenTarget(null); }}
+        variant="accent"
+        title="Regenerate API key?"
+        description={
+          regenTarget
+            ? `A new token will be issued for "${regenTarget.name}" and shown once. The old token stops working immediately — update any services using it.`
+            : undefined
+        }
+        confirmLabel="Regenerate key"
+        loading={regenerateMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => {
+          if (!regenTarget) return;
+          regenerateMutation.mutate(regenTarget.id);
         }}
       />
     </>

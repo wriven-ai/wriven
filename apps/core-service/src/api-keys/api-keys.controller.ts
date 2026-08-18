@@ -25,6 +25,13 @@ export class ApiKeysController {
     return this.keys.list(p);
   }
 
+  @MessagePattern(CORE_PATTERNS.API_KEY_REGENERATE)
+  regenerate(
+    @Payload() p: { workspaceId: string; projectId: string; id: string },
+  ) {
+    return this.keys.regenerate(p);
+  }
+
   @MessagePattern(CORE_PATTERNS.API_KEY_REVOKE)
   revoke(
     @Payload() p: { workspaceId: string; projectId: string; id: string },

@@ -21,7 +21,7 @@ NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema
 
 **refresh_tokens** — `token_hash` (unique, sha256), `user_id`→users (cascade), `expires_at`, `revoked`, `remember_me`, `created_at`.
 **password_reset_tokens** — `token_hash` (unique), `user_id`, `expires_at`, `used`, `created_at`.
-**email_verification_tokens** — same shape as reset tokens.
+**email_verification_tokens** — reset-token shape plus OTP columns: `code_hash` (HMAC'd 6-digit code), `code_expires_at`, `attempts` (max 5).
 
 ### Tenancy
 
@@ -69,9 +69,12 @@ User ──< workspace_members >── Workspace ──< projects ── project
 `POST /auth/reset-password { token, newPassword }` → validate token (not used/expired). **One transaction:** update password hash, mark token used, **revoke ALL refresh tokens** (force re-login everywhere).
 
 ### Email verification
-- Register issues a verification token (TTL `EMAIL_VERIFY_TTL`, `24h`) and emails `${APP_URL}/verify-email?token=…`.
-- `POST /auth/verify-email { token }` → mark `email_verified = true`, token used.
-- `POST /auth/resend-verification` (JWT) → idempotent; invalidates prior tokens, re-issues. Login is **not** blocked on unverified email (flag exposed via `/auth/me`).
+- On-demand (specs/18): no auto-send at signup; the client triggers sending from the profile page.
+- `POST /auth/resend-verification` (JWT) → idempotent; invalidates prior tokens, re-issues one row carrying **both** credentials: a link token (TTL `EMAIL_VERIFY_TTL`, `24h`, `${APP_URL}/verify-email?token=…`) and a 6-digit OTP (TTL `OTP_TTL`, `10m`). The email shows the code plus the verify button.
+- `POST /auth/verify-email { token }` (public) → mark `email_verified = true`, token used.
+- `POST /auth/verify-email-code { code }` (JWT) → verifies the OTP. Wrong code increments the row's `attempts` (max 5, then the code is locked — the link still works). Expired / exhausted / no-active-code all return `INVALID_VERIFICATION_CODE` 400 with a distinguishing message. Idempotent when already verified.
+- The code is stored as `HMAC-SHA256(code, OTP_PEPPER || JWT_SECRET)` — peppered, so DB dumps can't brute-force the 10^6 code space.
+- Login is **not** blocked on unverified email (flag exposed via `/auth/me`).
 
 ### Google OAuth
 - The **Passport Google strategy runs on the gateway** (auth-service has no public HTTP endpoint for Google to redirect to).
@@ -183,6 +186,8 @@ JWT_REFRESH_TTL_REMEMBER=30d
 BCRYPT_ROUNDS=12
 RESET_TOKEN_TTL=1h
 EMAIL_VERIFY_TTL=24h
+OTP_TTL=10m              # 6-digit verification-code lifetime
+OTP_PEPPER=              # HMAC pepper for code hashes; falls back to JWT_SECRET
 MAIL_HOST= MAIL_PORT=587 MAIL_USER= MAIL_PASS= MAIL_FROM=
 APP_URL=                # frontend base for reset/verify links + billing redirect allowlist
 # Stripe (billing)

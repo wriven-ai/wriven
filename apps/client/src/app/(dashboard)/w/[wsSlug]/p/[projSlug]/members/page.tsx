@@ -382,7 +382,7 @@ export default function ProjectMembersPage() {
                       <input
                         id="invite-email"
                         type="email"
-                        placeholder="e.g. teammate@wriven.io"
+                        placeholder="e.g. teammate@wriven.tech"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
                         className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2.5 text-text-primary focus:outline-hidden focus:border-brand-accent"

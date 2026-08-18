@@ -12,6 +12,7 @@ export const AUTH_PATTERNS = {
   FORGOT_PASSWORD: 'auth.forgotPassword',
   RESET_PASSWORD: 'auth.resetPassword',
   VERIFY_EMAIL: 'auth.verifyEmail',
+  VERIFY_EMAIL_CODE: 'auth.verifyEmailCode',
   RESEND_VERIFICATION: 'auth.resendVerification',
   GOOGLE_LOGIN: 'auth.googleLogin',
   VALIDATE_USER: 'auth.validateUser',
@@ -66,7 +67,6 @@ export const CORE_PATTERNS = {
   CONTENT_TYPE_GET: 'core.contentType.get',
   CONTENT_TYPE_UPDATE: 'core.contentType.update',
   CONTENT_TYPE_DELETE: 'core.contentType.delete',
-  CONTENT_TYPE_SEED: 'core.contentType.seedDefaults',
 
   ENTRY_CREATE: 'core.entry.create',
   ENTRY_LIST: 'core.entry.list',
@@ -80,6 +80,7 @@ export const CORE_PATTERNS = {
   // Project-scoped API keys (Delivery API auth — see plans/01).
   API_KEY_CREATE: 'core.apiKey.create',
   API_KEY_LIST: 'core.apiKey.list',
+  API_KEY_REGENERATE: 'core.apiKey.regenerate',
   API_KEY_REVOKE: 'core.apiKey.revoke',
   API_KEY_RESOLVE: 'core.apiKey.resolve',
 

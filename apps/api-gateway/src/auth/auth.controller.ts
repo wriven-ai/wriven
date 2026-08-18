@@ -128,6 +128,21 @@ export class AuthController {
     );
   }
 
+  @Throttle({ default: { limit: 10, ttl: MINUTE } })
+  @UseGuards(JwtAuthGuard)
+  @Post('verify-email-code')
+  async verifyEmailCode(
+    @Body() dto: contracts.VerifyEmailCodeDto,
+    @CurrentUser() user: contracts.AuthUser,
+  ) {
+    return firstValueFrom(
+      this.auth.send(contracts.AUTH_PATTERNS.VERIFY_EMAIL_CODE, {
+        userId: user.userId,
+        code: dto.code,
+      }),
+    );
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@CurrentUser() user: contracts.AuthUser, @Req() req: Request) {

@@ -1,11 +1,12 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { BadgeCheck, Camera, CircleAlert, Loader2, Mail, Save, Trash2 } from 'lucide-react';
+import { BadgeCheck, Camera, CircleAlert, Loader2, Mail, Save, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ApiRequestError, authApi, uploadAvatar } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
 
 const inputCls =
@@ -17,10 +18,22 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Email-verification OTP flow (specs/18 follow-up).
+  const [otpSent, setOtpSent] = useState(false);
+  const [code, setCode] = useState('');
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     if (user) setName(user.name);
   }, [user]);
+
+  // Resend cooldown ticker — one tick per second down to 0.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   const nameMutation = useMutation({
     mutationFn: (newName: string) => authApi.updateProfile({ name: newName }),
@@ -49,13 +62,40 @@ export default function ProfilePage() {
   });
 
   // On-demand email verification (specs/18) — signup no longer auto-sends.
+  // Each send delivers BOTH a 6-digit code and a verification link; resending
+  // invalidates the previous code and link.
   const resendMutation = useMutation({
     mutationFn: () => authApi.resendVerification(),
-    onSuccess: () =>
-      toast.success('Verification email sent — check your inbox.'),
+    onSuccess: () => {
+      toast.success('Verification email sent — check your inbox.');
+      setOtpSent(true);
+      setCode('');
+      setOtpError(null);
+      setCooldown(60);
+    },
     onError: (e) =>
       setError(e instanceof ApiRequestError ? e.message : 'Could not send verification email.'),
   });
+
+  const verifyMutation = useMutation({
+    mutationFn: (c: string) => authApi.verifyEmailCode(c),
+    onSuccess: async () => {
+      const session = await authApi.me();
+      updateUser(session.user); // flips the badge without a reload
+      setOtpSent(false);
+      setCode('');
+      setOtpError(null);
+      toast.success('Email verified.');
+    },
+    onError: (e) =>
+      setOtpError(e instanceof ApiRequestError ? e.message : 'Verification failed.'),
+  });
+
+  const onCodeChange = (value: string) => {
+    setCode(value);
+    setOtpError(null);
+    if (value.length === 6) verifyMutation.mutate(value);
+  };
 
   if (!user) {
     return <p className="font-mono text-sm text-text-muted">Loading…</p>;
@@ -193,7 +233,7 @@ export default function ProfilePage() {
               </span>
             )}
           </div>
-          {!user.emailVerified && (
+          {!user.emailVerified && !otpSent && (
             <button
               type="button"
               onClick={() => resendMutation.mutate()}
@@ -209,11 +249,73 @@ export default function ProfilePage() {
             </button>
           )}
         </div>
-        <p className="font-mono text-xs text-text-muted">
-          {user.emailVerified
-            ? 'Your email is verified.'
-            : 'Verify your email to secure your account. We’ll send a verification link.'}
-        </p>
+        {!user.emailVerified && otpSent ? (
+          <div className="space-y-4 rounded-lg border border-brand-border bg-brand-surface-soft p-4">
+            <p className="font-mono text-sm text-text-secondary">
+              Enter the 6-digit code sent to{' '}
+              <span className="font-mono text-text-primary">{user.email}</span>
+            </p>
+            <InputOTP
+              maxLength={6}
+              value={code}
+              onChange={onCodeChange}
+              autoFocus
+              disabled={verifyMutation.isPending}
+              aria-invalid={!!otpError || undefined}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+            {otpError && (
+              <div className="rounded-lg border border-status-error/40 bg-status-error/5 px-4 py-3 font-mono text-sm text-status-error">
+                {otpError}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => verifyMutation.mutate(code)}
+                disabled={verifyMutation.isPending || code.length !== 6}
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-accent px-4 py-2 font-mono text-sm font-bold text-white transition-all hover:bg-brand-accent-hover disabled:opacity-60"
+              >
+                {verifyMutation.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="size-3.5" />
+                )}
+                {verifyMutation.isPending ? 'Verifying…' : 'Verify'}
+              </button>
+              <button
+                type="button"
+                onClick={() => resendMutation.mutate()}
+                disabled={resendMutation.isPending || cooldown > 0}
+                className="font-mono text-sm font-bold text-brand-accent underline-offset-4 transition-colors hover:text-brand-accent-hover hover:underline disabled:pointer-events-none disabled:opacity-60"
+              >
+                {resendMutation.isPending
+                  ? 'Sending…'
+                  : cooldown > 0
+                    ? `Resend code in ${cooldown}s`
+                    : 'Resend code'}
+              </button>
+            </div>
+            <p className="font-mono text-xs text-text-muted">
+              Prefer links? Use the “Verify email address” button in the email
+              instead.
+            </p>
+          </div>
+        ) : (
+          <p className="font-mono text-xs text-text-muted">
+            {user.emailVerified
+              ? 'Your email is verified.'
+              : 'Verify your email to secure your account. We’ll send a 6-digit code and a verification link.'}
+          </p>
+        )}
       </section>
     </div>
   );

@@ -3,8 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function BottomCta() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <section className="bg-brand-surface text-text-primary py-24 relative overflow-hidden text-center" id="bottom-cta">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 relative z-10 space-y-6" id="bottom-cta-inner">
@@ -17,11 +20,11 @@ export default function BottomCta() {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3" id="bottom-actions">
           <Link
-            href="/register"
+            href={isAuthenticated ? '/dashboard' : '/register'}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider px-8 py-4.5 rounded-lg neo-shadow-lg"
             id="bottom-primary-btn"
           >
-            Create your workspace free
+            {isAuthenticated ? 'Go to Dashboard' : 'Create your workspace free'}
             <ArrowRight className="w-4 h-4 text-white" />
           </Link>
         </div>

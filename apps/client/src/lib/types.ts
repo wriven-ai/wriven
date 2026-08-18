@@ -283,7 +283,7 @@ export interface ApiKeyView {
   createdAt: string;
 }
 
-/** Returned only from create — carries the full raw token exactly once. */
+/** Returned from create and regenerate — carries the full raw token exactly once. */
 export interface CreateApiKeyResult {
   key: ApiKeyView;
   token: string;

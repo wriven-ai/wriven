@@ -60,6 +60,21 @@ export class ApiKeysController {
     );
   }
 
+  @Post(':id/regenerate')
+  regenerate(
+    @CurrentWorkspace() workspaceId: string,
+    @CurrentProject() projectId: string,
+    @Param('id') id: string,
+  ) {
+    return firstValueFrom(
+      this.core.send(contracts.CORE_PATTERNS.API_KEY_REGENERATE, {
+        workspaceId,
+        projectId,
+        id,
+      }),
+    );
+  }
+
   @Delete(':id')
   revoke(
     @CurrentWorkspace() workspaceId: string,
