@@ -66,7 +66,7 @@ _Last reviewed: after the AI generation redesign (specs/21) — typed `AiOutput`
 | Content type CRUD | ✅ | soft delete |
 | Entry CRUD (field validation, slug, status, revisions) | ✅ | revision per write |
 | Entry publish + pagination + list filters | ✅ | |
-| **API keys** (project-scoped, hash-only, scope read/preview/manage) | ✅ | `api_keys` table; create/list/revoke/resolve (plans/01 P1) |
+| **API keys** (project-scoped, hash-only, scope read/preview/manage) | ✅ | `api_keys` table; create/list/regenerate/revoke/resolve (plans/01 P1) |
 | **Content Delivery API** (published-only read by `apiId`/slug) | ✅ | select/filter/sort/paginate/include (plans/01 P3) |
 | `media_assets` schema | ✅ | R2 keys |
 | **Media upload** (presigned direct-to-R2 + create/list/delete) | ✅ | storage adapter; keys-only (specs/03) |

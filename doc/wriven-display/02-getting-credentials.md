@@ -21,7 +21,7 @@ Your display app needs **three values** to talk to Wriven:
    display prefix (e.g. `wrk_live_a1b2`) is stored and shown afterwards.
 5. Note the **Project ID** shown on the same page.
 
-> If you lose the token, revoke the key and create a new one. There is no recovery.
+> If you lose the token, use **Regenerate** on the key's row in the dashboard: it issues a new token (shown once) and the old one stops working immediately.
 
 ### Token scopes
 

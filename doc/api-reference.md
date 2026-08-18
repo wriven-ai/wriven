@@ -207,6 +207,21 @@ Events: `entry.published` · `entry.unpublished` · `entry.deleted`.
 
 ---
 
+## API keys
+
+Dashboard management of Delivery API keys (JWT + workspace/project guards, **`API_KEY_MANAGE`** permission). See plans/01.
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| POST | `/api-keys` | `{ name, scope? }` | `CreateApiKeyResult` = `{ key: ApiKeyView, token }` (token shown once; only its sha-256 hash is stored) |
+| GET | `/api-keys` | — | `ApiKeyView[]` (active keys, prefix only) |
+| POST | `/api-keys/:id/regenerate` | — | `CreateApiKeyResult` — rotates the secret in place (same key name/scope); old token dies immediately |
+| DELETE | `/api-keys/:id` | — | `{ success: true }` (soft revoke) |
+
+Scopes: `read` (published only, public-safe) · `preview` (drafts too) · `manage` (full read/write). Token prefixes mirror scope: `wrk_live_` / `wrk_preview_` / `wrk_admin_`.
+
+---
+
 ## Plans (public)
 
 | Method | Path | Body | → |
