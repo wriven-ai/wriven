@@ -1,6 +1,6 @@
 {
   "name": "@wriven-ai/client",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Official client for the Wriven headless CMS Content Delivery API. Isomorphic, typed, zero-dependency.",
   "type": "module",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@wriven/common",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -17,6 +17,5 @@
       "scope:shared",
       "type:common"
     ]
-  },
-  "dependencies": {}
+  }
 }

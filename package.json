@@ -1,6 +1,6 @@
 {
   "name": "@wriven/wriven",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "license": "MIT",
   "scripts": {
     "dev:auth": "pnpm nx serve auth-service",
