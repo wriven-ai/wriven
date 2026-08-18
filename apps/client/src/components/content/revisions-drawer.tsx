@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { History, RotateCcw } from 'lucide-react';
+import { useState } from 'react';
 import { contentApi } from '@/lib/api';
 import {
   Sheet,
@@ -10,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 
 /**
  * Version history for an entry — list past revisions, restore one. Restoring
@@ -26,6 +28,7 @@ export function RevisionsDrawer({
   onOpenChange: (v: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const [restoreVersion, setRestoreVersion] = useState<number | null>(null);
 
   const { data: revisions = [], isLoading } = useQuery({
     queryKey: ['revisions', entryId],
@@ -36,6 +39,7 @@ export function RevisionsDrawer({
   const restoreMutation = useMutation({
     mutationFn: (version: number) => contentApi.restoreRevision(entryId, version),
     onSuccess: () => {
+      setRestoreVersion(null);
       qc.invalidateQueries({ queryKey: ['entry', entryId] });
       qc.invalidateQueries({ queryKey: ['revisions', entryId] });
       qc.invalidateQueries({ queryKey: ['entries'] });
@@ -47,6 +51,7 @@ export function RevisionsDrawer({
   const currentVersion = revisions[0]?.version;
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
@@ -92,10 +97,7 @@ export function RevisionsDrawer({
                   </div>
                   {!isCurrent && (
                     <button
-                      onClick={() => {
-                        if (confirm(`Restore version ${rev.version}? Current content is kept as a new revision.`))
-                          restoreMutation.mutate(rev.version);
-                      }}
+                      onClick={() => setRestoreVersion(rev.version)}
                       disabled={restoreMutation.isPending}
                       className="inline-flex shrink-0 items-center gap-1 rounded border border-brand-border px-2 py-1 font-mono text-sm font-bold text-text-secondary hover:text-brand-accent hover:border-brand-accent/40 transition-colors disabled:opacity-50"
                     >
@@ -110,5 +112,20 @@ export function RevisionsDrawer({
         </div>
       </SheetContent>
     </Sheet>
+
+    <ConfirmationDialog
+      open={restoreVersion !== null}
+      onOpenChange={(o) => { if (!o) setRestoreVersion(null); }}
+      title={restoreVersion !== null ? `Restore version ${restoreVersion}?` : ''}
+      description="The current content will be kept as a new revision — nothing is lost."
+      confirmLabel="Restore"
+      loading={restoreMutation.isPending}
+      lockWhileLoading
+      onConfirm={() => {
+        if (restoreVersion === null) return;
+        restoreMutation.mutate(restoreVersion);
+      }}
+    />
+    </>
   );
 }

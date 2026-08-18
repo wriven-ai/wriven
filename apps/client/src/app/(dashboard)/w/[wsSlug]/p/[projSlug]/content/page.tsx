@@ -15,6 +15,7 @@ import { contentApi } from '@/lib/api';
 import type { ContentEntryView, ContentTypeView } from '@/lib/types';
 import { STATUS_COLORS } from '@/components/content/fields';
 import { ContentTypeSelectSkeleton, EntryRowsSkeleton } from '@/components/skeleton/content-list-skeleton';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 
 /** Best display title for an entry: first text field value, else slug. */
 function entryTitle(entry: ContentEntryView, type?: ContentTypeView): string {
@@ -30,6 +31,7 @@ export default function ContentListPage() {
   const contentTypesHref = `/w/${wsSlug}/p/${projSlug}/content-types`;
 
   const [selectedTypeId, setSelectedTypeId] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const { data: typesData, isLoading: typesLoading } = useQuery({
     queryKey: ['content-types'],
@@ -51,7 +53,10 @@ export default function ContentListPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => contentApi.deleteEntry(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['entries', selectedTypeId] }),
+    onSuccess: () => {
+      setDeleteTarget(null);
+      qc.invalidateQueries({ queryKey: ['entries', selectedTypeId] });
+    },
   });
 
   return (
@@ -175,7 +180,7 @@ export default function ContentListPage() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (confirm('Delete this entry?')) deleteMutation.mutate(entry.id);
+                        setDeleteTarget({ id: entry.id, title: entryTitle(entry, selectedType) });
                       }}
                       className="text-text-muted hover:text-status-error opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       title="Delete"
@@ -189,6 +194,25 @@ export default function ContentListPage() {
           )}
         </div>
       )}
+
+      <ConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        variant="danger"
+        title="Delete this entry?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.title}" will be permanently deleted. This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Delete entry"
+        loading={deleteMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deleteMutation.mutate(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

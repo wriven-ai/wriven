@@ -29,6 +29,7 @@ import {
 import { FieldRow, isFieldEmpty, STATUS_COLORS } from './fields';
 import { AiPanel } from './ai-panel';
 import { RevisionsDrawer } from './revisions-drawer';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
@@ -75,6 +76,7 @@ export function ContentEditor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [appliedGenerationIds, setAppliedGenerationIds] = useState<string[]>([]);
   // Bumped when the entry changes underneath the editor (revision restore,
@@ -172,6 +174,7 @@ export function ContentEditor({
   const deleteMutation = useMutation({
     mutationFn: () => contentApi.deleteEntry(entryId as string),
     onSuccess: () => {
+      setDeleteOpen(false);
       qc.invalidateQueries({ queryKey: ['entries'] });
       router.push(contentBase);
     },
@@ -309,9 +312,7 @@ export function ContentEditor({
           )}
           {entryId && can(Permission.CONTENT_ENTRY_DELETE) && (
             <button
-              onClick={() => {
-                if (confirm('Delete this entry?')) deleteMutation.mutate();
-              }}
+              onClick={() => setDeleteOpen(true)}
               className="p-2 border border-brand-border rounded-lg text-text-muted hover:text-status-error hover:border-status-error/30 transition-colors cursor-pointer"
               title="Delete entry"
             >
@@ -528,6 +529,18 @@ export function ContentEditor({
           onOpenChange={setHistoryOpen}
         />
       )}
+
+      <ConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        variant="danger"
+        title="Delete this entry?"
+        description="This entry will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete entry"
+        loading={deleteMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => deleteMutation.mutate()}
+      />
     </div>
   );
 }
