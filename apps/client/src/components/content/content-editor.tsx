@@ -29,6 +29,7 @@ import {
 import { FieldRow, isFieldEmpty, STATUS_COLORS } from './fields';
 import { AiPanel } from './ai-panel';
 import { RevisionsDrawer } from './revisions-drawer';
+import { ContentEditorSkeleton } from '@/components/skeleton/content-editor-skeleton';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useCan } from '@/components/sidebar/use-can';
@@ -54,13 +55,13 @@ export function ContentEditor({
   const contentBase = `/w/${wsSlug}/p/${projSlug}/content`;
   const contentTypesHref = `/w/${wsSlug}/p/${projSlug}/content-types`;
 
-  const { data: typesData } = useQuery({
+  const { data: typesData, isPending: typesPending } = useQuery({
     queryKey: ['content-types'],
     queryFn: () => contentApi.listTypes({ limit: 100 }),
   });
   const types = typesData?.items ?? [];
 
-  const { data: entry } = useQuery({
+  const { data: entry, isPending: entryPending } = useQuery({
     queryKey: ['entry', entryId],
     queryFn: () => contentApi.getEntry(entryId as string),
     enabled: !!entryId,
@@ -252,6 +253,13 @@ export function ContentEditor({
       .map((f) => f.key),
   );
   const aiTargets = hasAiTarget ? aiTargetableKeys : new Set<string>();
+
+  // Initial load: the schema (and, when editing, the entry itself) is still in
+  // flight. Rendering the real editor now would flash an empty, disabled shell —
+  // show the skeleton that mirrors this layout instead. (The Suspense fallback
+  // in page.tsx never fires: useQuery does not suspend.)
+  const initialLoad = typesPending || (!!entryId && entryPending);
+  if (initialLoad) return <ContentEditorSkeleton />;
 
   return (
     <div className="space-y-6 text-left">
