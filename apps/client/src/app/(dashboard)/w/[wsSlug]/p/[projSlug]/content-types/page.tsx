@@ -305,7 +305,7 @@ export default function ContentTypesPage() {
 
   return (
     <div className="space-y-8 text-left">
-      <div className="border-b border-brand-border pb-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="border-b border-brand-border pb-3 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display font-medium text-xl sm:text-2xl text-text-primary tracking-tight">
             Structure & <span className="font-normal italic text-brand-secondary">Content Types</span>
@@ -319,8 +319,8 @@ export default function ContentTypesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
         {/* Left: Create form */}
-        <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-5 sm:p-6 shadow-xs space-y-5">
-          <div className="flex items-center justify-between border-b border-brand-border pb-2.5">
+        <div className="lg:col-span-5 bg-brand-surface border border-brand-border rounded-xl p-4 sm:p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-brand-border pb-2">
             <span className="text-sm font-mono tracking-wider text-text-secondary font-bold">
               {editingId ? 'Edit Content Layout Model' : 'Assemble Content Layout Model'}
             </span>
@@ -335,21 +335,21 @@ export default function ContentTypesPage() {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-mono text-text-secondary mb-1.5">Schema Name</label>
+              <label className="block text-sm font-mono text-text-secondary mb-1">Schema Name</label>
               <input
                 type="text"
                 placeholder="e.g. Blog Articles, Product Specs..."
                 value={typeName}
                 onChange={e => handleNameChange(e.target.value)}
                 required
-                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-2 text-text-primary focus:outline-none focus:border-brand-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-mono text-text-secondary mb-1.5">
+              <label className="block text-sm font-mono text-text-secondary mb-1">
                 API ID{' '}
                 <span className="text-text-muted">
                   {editingId ? '(immutable)' : '(snake_case, auto-derived)'}
@@ -362,17 +362,17 @@ export default function ContentTypesPage() {
                 onChange={e => { setTypeApiId(e.target.value); setApiIdTouched(true); }}
                 required
                 disabled={!!editingId}
-                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-3 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg px-3.5 py-2 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             {/* Field builder */}
-            <div className="space-y-3.5 border-t border-brand-border pt-4">
+            <div className="space-y-3 border-t border-brand-border pt-3">
               <span className="block text-sm font-mono text-text-secondary font-bold">
                 Field Specifications ({fields.length})
               </span>
 
-              <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
                 {fields.length === 0 && (
                   <p className="text-sm font-mono text-text-muted text-center py-3">No fields yet — add one below</p>
                 )}
@@ -491,7 +491,7 @@ export default function ContentTypesPage() {
               </div>
 
               {/* Field candidate builder */}
-              <div className="bg-brand-surface-soft/60 border border-brand-border rounded-lg p-3.5 space-y-3">
+              <div className="bg-brand-surface-soft/60 border border-brand-border rounded-lg p-3 space-y-2.5">
                 <input
                   type="text"
                   placeholder="Label — display name (e.g. Article Title)"
@@ -647,7 +647,7 @@ export default function ContentTypesPage() {
                       (candType === 'reference' && !candRefTypeId) ||
                       (candType === 'select' && !hasValidSelectOptions(candOptions))
                     }
-                    className="px-3 py-1 border border-dashed border-brand-border hover:border-brand-accent font-mono text-sm font-bold text-text-secondary hover:text-brand-accent cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-3 py-1 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono text-sm font-bold cursor-pointer transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     + Add field
                   </button>
@@ -670,7 +670,7 @@ export default function ContentTypesPage() {
                 !typeApiId.trim() ||
                 activeMutation.isPending
               }
-              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-3 rounded-lg neo-shadow cursor-pointer transition-all"
+              className="w-full inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-2.5 rounded-lg neo-shadow cursor-pointer transition-all"
             >
               {activeMutation.isPending ? (
                 <><RefreshCw className="w-4 h-4 animate-spin" /> {editingId ? 'Saving...' : 'Compiling...'}</>
