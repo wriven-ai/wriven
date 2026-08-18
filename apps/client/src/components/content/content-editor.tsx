@@ -29,6 +29,8 @@ import {
 import { FieldRow, isFieldEmpty, STATUS_COLORS } from './fields';
 import { AiPanel } from './ai-panel';
 import { RevisionsDrawer } from './revisions-drawer';
+import { ContentEditorSkeleton } from '@/components/skeleton/content-editor-skeleton';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
@@ -53,13 +55,13 @@ export function ContentEditor({
   const contentBase = `/w/${wsSlug}/p/${projSlug}/content`;
   const contentTypesHref = `/w/${wsSlug}/p/${projSlug}/content-types`;
 
-  const { data: typesData } = useQuery({
+  const { data: typesData, isPending: typesPending } = useQuery({
     queryKey: ['content-types'],
     queryFn: () => contentApi.listTypes({ limit: 100 }),
   });
   const types = typesData?.items ?? [];
 
-  const { data: entry } = useQuery({
+  const { data: entry, isPending: entryPending } = useQuery({
     queryKey: ['entry', entryId],
     queryFn: () => contentApi.getEntry(entryId as string),
     enabled: !!entryId,
@@ -75,6 +77,7 @@ export function ContentEditor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [appliedGenerationIds, setAppliedGenerationIds] = useState<string[]>([]);
   // Bumped when the entry changes underneath the editor (revision restore,
@@ -172,6 +175,7 @@ export function ContentEditor({
   const deleteMutation = useMutation({
     mutationFn: () => contentApi.deleteEntry(entryId as string),
     onSuccess: () => {
+      setDeleteOpen(false);
       qc.invalidateQueries({ queryKey: ['entries'] });
       router.push(contentBase);
     },
@@ -250,6 +254,13 @@ export function ContentEditor({
   );
   const aiTargets = hasAiTarget ? aiTargetableKeys : new Set<string>();
 
+  // Initial load: the schema (and, when editing, the entry itself) is still in
+  // flight. Rendering the real editor now would flash an empty, disabled shell —
+  // show the skeleton that mirrors this layout instead. (The Suspense fallback
+  // in page.tsx never fires: useQuery does not suspend.)
+  const initialLoad = typesPending || (!!entryId && entryPending);
+  if (initialLoad) return <ContentEditorSkeleton />;
+
   return (
     <div className="space-y-6 text-left">
       {/* Top bar */}
@@ -309,9 +320,7 @@ export function ContentEditor({
           )}
           {entryId && can(Permission.CONTENT_ENTRY_DELETE) && (
             <button
-              onClick={() => {
-                if (confirm('Delete this entry?')) deleteMutation.mutate();
-              }}
+              onClick={() => setDeleteOpen(true)}
               className="p-2 border border-brand-border rounded-lg text-text-muted hover:text-status-error hover:border-status-error/30 transition-colors cursor-pointer"
               title="Delete entry"
             >
@@ -528,6 +537,18 @@ export function ContentEditor({
           onOpenChange={setHistoryOpen}
         />
       )}
+
+      <ConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        variant="danger"
+        title="Delete this entry?"
+        description="This entry will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete entry"
+        loading={deleteMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => deleteMutation.mutate()}
+      />
     </div>
   );
 }

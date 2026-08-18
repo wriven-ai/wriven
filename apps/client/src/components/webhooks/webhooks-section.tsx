@@ -9,6 +9,7 @@ import { WEBHOOK_EVENTS } from '@/lib/types';
 import type { WebhookEvent } from '@/lib/types';
 import { useCan } from '@/components/sidebar/use-can';
 import { Permission } from '@wriven/contracts/rbac';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 
 const EVENT_LABEL: Record<WebhookEvent, string> = {
   'entry.published': 'Published',
@@ -27,6 +28,7 @@ export function WebhooksSection() {
   const [error, setError] = useState<string | null>(null);
   const [newSecret, setNewSecret] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; url: string } | null>(null);
 
   const { data: hooks = [], isLoading } = useQuery({
     queryKey,
@@ -54,7 +56,10 @@ export function WebhooksSection() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => webhookApi.remove(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey }),
+    onSuccess: () => {
+      setDeleteTarget(null);
+      qc.invalidateQueries({ queryKey });
+    },
   });
 
   const toggleEvent = (e: WebhookEvent) =>
@@ -152,9 +157,7 @@ export function WebhooksSection() {
                   {h.active ? 'ACTIVE' : 'PAUSED'}
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm('Delete this webhook?')) deleteMutation.mutate(h.id);
-                  }}
+                  onClick={() => setDeleteTarget({ id: h.id, url: h.url })}
                   disabled={!canManage}
                   className="text-text-muted hover:text-status-error transition-colors disabled:opacity-40"
                 >
@@ -204,6 +207,25 @@ export function WebhooksSection() {
           {createMutation.isPending ? 'Adding…' : 'Add webhook'}
         </button>
       </form>
+
+      <ConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        variant="danger"
+        title="Delete this webhook?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.url}" will stop receiving events immediately. This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Delete webhook"
+        loading={deleteMutation.isPending}
+        lockWhileLoading
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deleteMutation.mutate(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

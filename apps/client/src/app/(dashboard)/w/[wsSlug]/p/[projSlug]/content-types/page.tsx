@@ -23,6 +23,7 @@ import { Permission } from '@wriven/contracts/rbac';
 import { NoAccess } from '@/components/auth/no-access';
 import { Pagination } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ContentTypeRowsSkeleton } from '@/components/skeleton/content-types-skeleton';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import {
   Table,
@@ -686,9 +687,13 @@ export default function ContentTypesPage() {
          {/* Right: List */}
          <div className="lg:col-span-7 space-y-4">
            <div className="flex flex-wrap items-center justify-between gap-3">
-<span className="text-sm font-mono tracking-wider text-brand-secondary font-bold">
-                Active Registered Models ({total})
-              </span>
+              {isLoading ? (
+                <Skeleton className="h-3.5 w-40" />
+              ) : (
+                <span className="text-sm font-mono tracking-wider text-brand-secondary font-bold">
+                  Active Registered Models ({total})
+                </span>
+              )}
              <div className="flex items-center gap-2">
                {/* Search */}
                <div className="relative">
@@ -731,25 +736,7 @@ export default function ContentTypesPage() {
                </TableHeader>
                <TableBody>
                  {isLoading
-                   ? Array.from({ length: 3 }).map((_, i) => (
-                       <TableRow key={i}>
-                         <TableCell className="pl-5">
-                           <div className="space-y-1.5">
-                             <Skeleton className="h-3 w-28" />
-                             <Skeleton className="h-2.5 w-20" />
-                           </div>
-                         </TableCell>
-                         <TableCell><Skeleton className="h-3 w-20" /></TableCell>
-                         <TableCell><Skeleton className="h-3 w-8" /></TableCell>
-                         <TableCell className="text-right pr-5">
-                           <div className="flex items-center justify-end gap-1.5">
-                             <Skeleton className="h-7 w-7 rounded" />
-                             <Skeleton className="h-7 w-7 rounded" />
-                             <Skeleton className="h-7 w-7 rounded" />
-                           </div>
-                         </TableCell>
-                       </TableRow>
-                     ))
+                   ? <ContentTypeRowsSkeleton />
                    : contentTypes.length === 0
                      ? (
                        <TableRow>
@@ -814,11 +801,13 @@ export default function ContentTypesPage() {
              </Table>
            </div>
 
-           <Pagination
-             currentPage={page}
-             totalPages={totalPages}
-             onPageChange={(p) => { setPage(p); setSearch(''); }}
-           />
+           {!isLoading && (
+             <Pagination
+               currentPage={page}
+               totalPages={totalPages}
+               onPageChange={(p) => { setPage(p); setSearch(''); }}
+             />
+           )}
          </div>
 
        </div>
