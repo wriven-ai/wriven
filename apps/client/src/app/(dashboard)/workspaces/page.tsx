@@ -293,7 +293,7 @@ export default function WorkspacesPage() {
             Wriven Engine — Connected
           </div> */}
           <h1 className="font-display font-medium text-2xl sm:text-3xl text-text-primary tracking-tight leading-none">
-            Welcome back, <span className="font-normal italic text-brand-secondary">Anowar.</span>
+            Welcome, <span className="font-normal italic text-brand-secondary">Anowar.</span>
           </h1>
           <p className="text-sm sm:text-sm text-text-secondary font-light leading-relaxed">
             Your organization manages <span className="font-mono font-semibold text-text-primary">{workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}</span> with isolated content environments. Create a workspace to group related projects together.

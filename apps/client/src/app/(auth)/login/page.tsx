@@ -252,7 +252,7 @@ export const LoginPage = () => {
                 className="w-full inline-flex items-center justify-center gap-2 mt-3 bg-brand-surface-soft hover:bg-brand-border border border-brand-accent text-text-primary text-sm font-mono font-bold uppercase tracking-wider py-3.5 px-4 rounded-lg transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 id="login-demo-btn"
               >
-                {isDemoSubmitting ? 'Signing in…' : 'Demo Login'}
+                {isDemoSubmitting ? 'Signing in…' : 'Easy Login For Demo'}
               </button>
             )}
           </div>
