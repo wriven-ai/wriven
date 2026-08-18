@@ -178,7 +178,7 @@ export function WebhooksSection() {
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://your-site.com/api/wriven-webhook"
+          placeholder="https://your-site.com/api/wriven"
           className="w-full rounded-lg border border-brand-border bg-brand-surface-soft px-3 py-2 font-mono text-sm text-text-primary focus:border-brand-accent focus:outline-none"
         />
         <div className="flex flex-wrap gap-3">
