@@ -13,7 +13,7 @@ import json
 import logging
 import time
 
-from openai import AsyncOpenAI, OpenAIError, RateLimitError
+from openai import NOT_GIVEN, AsyncOpenAI, OpenAIError, RateLimitError
 
 from app.config import settings
 from app.exceptions import ProviderError
@@ -75,9 +75,18 @@ class LlmClient:
         return self._client is not None and bool(self._model.strip())
 
     async def chat(
-        self, messages: list[ChatMessage], temperature: float, operation: Operation
+        self,
+        messages: list[ChatMessage],
+        temperature: float,
+        operation: Operation,
+        *,
+        timeout_s: float | None = None,
     ) -> tuple[str, str, Usage, str | None, str | None]:
-        """Run one Chat Completions call. Raises `ProviderError` on any failure."""
+        """Run one Chat Completions call. Raises `ProviderError` on any failure.
+
+        `timeout_s` narrows the client default for a single call (a repair turn
+        bounded by the remaining generation deadline); `None` keeps the default.
+        """
         if self._client is None:
             # Defensive — the generator checks configured() first and raises NotConfigured.
             raise ProviderError("AI provider not configured")  # pragma: no cover
@@ -88,6 +97,9 @@ class LlmClient:
                 model=self._model,
                 messages=messages,  # type: ignore[arg-type]
                 temperature=temperature,
+                # NOT_GIVEN (not None — which the SDK reads as "no timeout")
+                # keeps the client-level default when the caller sets no bound.
+                timeout=timeout_s if timeout_s is not None else NOT_GIVEN,
                 max_tokens=min(
                     settings.ai_max_output_tokens,
                     # `.get` (not `[…]`) so adding an operation to the contract can
@@ -115,6 +127,7 @@ class LlmClient:
             logger.warning("AI provider returned a completion without choices")
             raise ProviderError("AI generation failed.")
 
+        choice = res.choices[0]
         record_provider_call("success", int((time.perf_counter() - started_at) * 1000))
         # Token totals and finish reason only — never prompt or completion text.
         logger.info(
@@ -126,7 +139,6 @@ class LlmClient:
             choice.finish_reason,
         )
 
-        choice = res.choices[0]
         text = choice.message.content or ""
         u = res.usage
         return (

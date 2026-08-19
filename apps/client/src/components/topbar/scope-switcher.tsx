@@ -68,12 +68,17 @@ export function ScopeSwitcher({
         </span>
       ) : null}
       <span
-        className={cn('truncate font-bold', block ? 'flex-1' : 'max-w-[12rem]')}
+        className={cn('truncate font-bold', block ? 'flex-1' : 'max-w-[5rem] sm:max-w-[12rem]')}
       >
         {current?.name ?? placeholder}
       </span>
       {badge ? (
-        <span className="inline-flex items-center leading-none shrink-0 rounded border border-brand-border bg-brand-surface-soft px-1 py-0.5 text-[10px] font-bold tracking-wider text-text-secondary dark:text-text-primary uppercase">
+        <span
+          className={cn(
+            'items-center leading-none shrink-0 rounded border border-brand-border bg-brand-surface-soft px-1 py-0.5 text-[10px] font-bold tracking-wider text-text-secondary dark:text-text-primary uppercase',
+            block ? 'inline-flex' : 'hidden sm:inline-flex',
+          )}
+        >
           {badge}
         </span>
       ) : null}

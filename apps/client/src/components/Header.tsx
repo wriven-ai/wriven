@@ -57,7 +57,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8" id="wriven-desktop-nav">
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-8" id="wriven-desktop-nav">
             {navItems.map((item) => {
               const active = isActive(item.href);
               return (
@@ -76,7 +76,7 @@ export default function Header() {
           </nav>
 
           {/* Right actions (Login & Sign Up) */}
-          <div className="hidden md:flex items-center gap-3 animate-fade-in" id="wriven-desktop-ctas">
+          <div className="hidden lg:flex items-center gap-2 xl:gap-3 animate-fade-in" id="wriven-desktop-ctas">
             <button
               onClick={toggleTheme}
               className="p-2 text-text-secondary hover:text-brand-accent transition-all duration-250 rounded-lg hover:bg-brand-surface-soft border border-transparent hover:border-brand-border cursor-pointer flex items-center justify-center shrink-0"
@@ -128,11 +128,11 @@ export default function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden" id="wriven-mobile-nav-toggle-container">
+          <div className="flex lg:hidden" id="wriven-mobile-nav-toggle-container">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               type="button"
-              className="inline-flex items-center justify-center rounded-lg p-2 text-text-secondary hover:bg-brand-surface-soft hover:text-text-primary transition-colors duration-150"
+              className="inline-flex items-center justify-center rounded-lg p-2.5 text-text-secondary hover:bg-brand-surface-soft hover:text-text-primary transition-colors duration-150"
               aria-controls="mobile-menu"
               aria-expanded={mobileMenuOpen}
               id="mobile-menu-toggle"
@@ -150,7 +150,7 @@ export default function Header() {
 
       {/* Mobile Menu, show/hide based on menu state */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-brand-border bg-brand-surface animate-fade-in" id="mobile-menu">
+        <div className="lg:hidden border-b border-brand-border bg-brand-surface animate-fade-in" id="mobile-menu">
           <div className="space-y-1 px-4 py-4 sm:px-6">
             {navItems.map((item) => (
               <Link

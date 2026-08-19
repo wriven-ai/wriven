@@ -184,13 +184,13 @@ export default function WorkspacesPage() {
                 const isAdmin = member.role === 'Workspace Admin';
                 return (
                   <div key={member.id} className="flex items-center justify-between gap-3 p-3 border border-brand-border bg-brand-surface-soft/30 rounded-xl">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-brand-accent/15 border border-brand-border text-brand-accent font-mono font-bold text-sm flex items-center justify-center shrink-0">
                         {initials}
                       </div>
-                      <div>
-                        <p className="text-sm font-mono font-bold text-text-primary">{member.name}</p>
-                        <p className="text-sm font-mono text-text-muted">{member.email}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-mono font-bold text-text-primary truncate">{member.name}</p>
+                        <p className="text-sm font-mono text-text-muted truncate">{member.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export default function WorkspacesPage() {
                       {!isAdmin && (
                         <button
                           onClick={() => removeMemberFromWorkspace(member.id)}
-                          className="p-1 hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors"
+                          className="p-2.5 hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors"
                           title="Remove from workspace"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -334,7 +334,7 @@ export default function WorkspacesPage() {
                       <h3 className="font-display font-bold text-base text-text-primary tracking-tight">{ws.name}</h3>
                     </div>
                     <p className="text-sm font-mono text-text-secondary leading-relaxed">{ws.description}</p>
-                    <div className="flex items-center gap-3 text-sm font-mono text-text-muted pt-0.5">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-mono text-text-muted pt-0.5">
                       <span className="bg-brand-surface-soft border border-brand-border text-text-primary px-1.5 py-0.5 rounded font-bold">
                         slug: {ws.slug}
                       </span>
@@ -342,14 +342,14 @@ export default function WorkspacesPage() {
                         <Users className="w-3 h-3" />
                         {ws.members.length} member{ws.members.length !== 1 ? 's' : ''}
                       </span>
-                      <span>Created {ws.createdAt}</span>
+                      <span className="hidden sm:inline">Created {ws.createdAt}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => deleteWorkspace(ws.id)}
-                      className="p-1.5 border border-brand-border bg-brand-surface hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors"
+                      className="p-2.5 border border-brand-border bg-brand-surface hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors"
                       title="Delete workspace"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

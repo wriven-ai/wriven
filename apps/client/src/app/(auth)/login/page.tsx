@@ -84,12 +84,9 @@ export const LoginPage = () => {
         className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-4 relative z-10 animate-fade-in"
         id="login-header"
       >
-        <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 id-tag rounded inline-block">
+        <span className="mt-6 text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 id-tag rounded inline-block">
           Secure Login
         </span>
-        <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight">
-          Sign in to your account
-        </h2>
       </div>
 
       <div
@@ -117,7 +114,7 @@ export const LoginPage = () => {
                 className="block text-sm font-mono font-bold text-text-muted uppercase tracking-wider mb-2"
                 htmlFor="login-email"
               >
-                Workspace Email
+                Email
               </label>
               <input
                 id="login-email"

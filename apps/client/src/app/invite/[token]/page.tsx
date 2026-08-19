@@ -101,7 +101,7 @@ function Content({
           Join {target}
         </h1>
         <p className="mt-1 font-mono text-sm text-text-muted">
-          {inviter} invited <span className="text-text-secondary">{invite.email}</span> as{' '}
+          {inviter} invited <span className="text-text-secondary break-all">{invite.email}</span> as{' '}
           <span className="uppercase text-brand-secondary">{invite.role}</span>
         </p>
       </div>
@@ -175,7 +175,7 @@ function Dead({
         <div className="flex justify-center">{icon}</div>
       )}
       <h1 className="font-display text-base font-bold text-text-primary">{title}</h1>
-      <p className="font-mono text-sm leading-relaxed text-text-muted">{body}</p>
+      <p className="font-mono text-sm leading-relaxed text-text-muted [overflow-wrap:anywhere]">{body}</p>
     </div>
   );
 }

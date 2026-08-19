@@ -31,7 +31,7 @@ class FakeClient:
     def configured(self) -> bool:
         return True
 
-    async def chat(self, *_: object) -> tuple[str, str, Usage, str | None, str | None]:
+    async def chat(self, *_: object, **_kwargs: object) -> tuple[str, str, Usage, str | None, str | None]:
         reply = self.replies[self.calls]
         self.calls += 1
         return (reply, "model-x", Usage(prompt_tokens=10, completion_tokens=5, total_tokens=15), "r", "stop")

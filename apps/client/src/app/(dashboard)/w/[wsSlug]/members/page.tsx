@@ -138,7 +138,7 @@ function MembersInner() {
 
       {/* Navigation Tabs */}
       <Tabs defaultValue="members" className="w-full space-y-6">
-        <TabsList className="bg-brand-surface-soft/60 border border-brand-border p-1 rounded-xl h-auto inline-flex">
+        <TabsList className="bg-brand-surface-soft/60 border border-brand-border p-1 rounded-xl h-auto inline-flex max-w-full overflow-x-auto">
           <TabsTrigger
             value="members"
             className="px-4 py-2 rounded-lg text-xs font-mono font-bold tracking-wider uppercase data-active:bg-brand-surface data-active:text-text-primary data-active:shadow-xs transition-all"
@@ -222,7 +222,7 @@ function MembersInner() {
                               <button
                                 onClick={() => removeMutation.mutate(member.userId)}
                                 disabled={removeMutation.isPending}
-                                className="p-1 hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors disabled:opacity-40"
+                                className="p-2.5 hover:bg-status-error/10 hover:text-status-error text-text-muted rounded cursor-pointer transition-colors disabled:opacity-40"
                                 title="Remove member"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -256,7 +256,7 @@ function MembersInner() {
                             onClick={() => resendInviteMutation.mutate(inv.id)}
                             disabled={resendInviteMutation.isPending}
                             title="Resend invitation"
-                            className="p-1 text-text-muted hover:text-brand-accent rounded cursor-pointer disabled:opacity-40"
+                            className="p-2.5 text-text-muted hover:text-brand-accent rounded cursor-pointer disabled:opacity-40"
                           >
                             <Send className="w-4 h-4" />
                           </button>
@@ -264,7 +264,7 @@ function MembersInner() {
                             onClick={() => revokeInviteMutation.mutate(inv.id)}
                             disabled={revokeInviteMutation.isPending}
                             title="Revoke invitation"
-                            className="p-1 text-text-muted hover:text-status-error rounded cursor-pointer disabled:opacity-40"
+                            className="p-2.5 text-text-muted hover:text-status-error rounded cursor-pointer disabled:opacity-40"
                           >
                             <X className="w-4 h-4" />
                           </button>

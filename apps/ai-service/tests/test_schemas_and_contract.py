@@ -18,7 +18,7 @@ class _NeverCalledClient:
     def configured(self) -> bool:
         return True
 
-    async def chat(self, *_: object) -> object:
+    async def chat(self, *_: object, **_kwargs: object) -> object:
         raise AssertionError("the provider must not be called for a rejected request")
 
 

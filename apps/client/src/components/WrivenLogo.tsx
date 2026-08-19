@@ -9,6 +9,8 @@ import lightLogo from '@/assets/wriven-light-logo.png';
 interface LogoProps {
   className?: string;
   iconOnly?: boolean;
+  /** Wordmark only — no PNG mark (tight spaces, e.g. auth chrome on mobile). */
+  textOnly?: boolean;
   /** Rendered height of the mark in px (the glyph is a fixed 2:1 aspect). */
   iconSize?: number;
 }
@@ -21,6 +23,7 @@ interface LogoProps {
 export default function WrivenLogo({
   className = '',
   iconOnly = false,
+  textOnly = false,
   iconSize = 28,
 }: LogoProps) {
   const { resolvedTheme } = useTheme();
@@ -36,14 +39,16 @@ export default function WrivenLogo({
       className={`flex items-center gap-2.5 select-none ${className}`}
       id="wriven-logo-container"
     >
-      <Image
-        src={logo}
-        alt="Wriven"
-        width={iconSize * 2}
-        height={iconSize}
-        priority
-        className="shrink-0"
-      />
+      {!textOnly && (
+        <Image
+          src={logo}
+          alt="Wriven"
+          width={iconSize * 2}
+          height={iconSize}
+          priority
+          className="shrink-0"
+        />
+      )}
       {!iconOnly && (
         <span
           className="font-display text-xl font-bold tracking-tight text-text-primary flex items-baseline gap-0.5"

@@ -29,31 +29,31 @@ export default function Hero() {
             </div>
 
             {/* CTA BUTTONS AND SEED ACTIONS */}
-            <div className="flex flex-wrap items-center gap-4" id="hero-cta-actions">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-4" id="hero-cta-actions">
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg neo-shadow transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg neo-shadow transition-all cursor-pointer"
               >
                 <span>{isAuthenticated ? 'Go to Dashboard' : 'Launch Workspace'}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="#sandbox"
-                className="inline-flex items-center gap-2 bg-brand-surface border border-brand-border-button hover:border-text-secondary/60 text-text-secondary font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 bg-brand-surface border border-brand-border-button hover:border-text-secondary/60 text-text-secondary font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg transition-all cursor-pointer"
               >
                 <span>Try Sandbox</span>
                 <Terminal className="w-4 h-4" />
               </Link>
             </div>
 
-            <div className="flex items-center gap-6 pt-2 text-sm font-mono text-text-muted" id="hero-badges">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-sm font-mono text-text-muted" id="hero-badges">
               <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-brand-accent stroke-[3.5]" /> AI TEXT GENERATION</div>
               <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-brand-accent stroke-[3.5]" /> REST DELIVERY API</div>
             </div>
           </div>
 
           {/* Right Column - Frameless Typographic Spec sheet */}
-          <div className="lg:col-span-6 flex flex-col justify-center relative min-h-[440px]" id="hero-visual-block">
+          <div className="lg:col-span-6 flex flex-col justify-center relative lg:min-h-[440px]" id="hero-visual-block">
             {/* Clean, open-air SVG composition showcasing fluid connectivity of content nodes */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.25]">
               <svg className="w-full h-full" viewBox="0 0 400 400" fill="none">
@@ -99,7 +99,7 @@ export default function Hero() {
                 <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight leading-tight mb-2">
                   Drafting that respects your voice.
                 </h2>
-                <div className="flex gap-4 text-sm font-mono text-text-muted">
+                <div className="flex flex-wrap gap-2 sm:gap-4 text-sm font-mono text-text-muted">
                   <span>GENERATE · REFINE · COMPOSE</span>
                   <span>PER-PROJECT BRAND VOICE</span>
                 </div>

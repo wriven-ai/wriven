@@ -15,6 +15,7 @@ cost on a `failed` row and charges no request quota.
 
 import json
 import logging
+import time
 
 from app.config import settings
 from app.exceptions import (
@@ -30,6 +31,7 @@ from app.llm import LlmClient
 from app.observability import record_generation_tokens
 from app.prompts import build_compose_messages, build_messages, temperature_for
 from app.schemas import (
+    FieldDefIn,
     GenerateRequest,
     GenerateResponse,
     RecordOutput,
@@ -87,6 +89,22 @@ def _attach_spend(
 # bounded overhead.
 _WRAPPER_ALLOWANCE_CHARS = 512
 
+# Minimum wall-clock budget a repair turn must still have to be worth sending.
+# Below this the repair cannot realistically finish inside the generation
+# deadline, so the miss error is raised on the first attempt's spend instead —
+# core gets a proper error row, and no provider tokens burn after core hangs up.
+_MIN_REPAIR_BUDGET_S = 5.0
+
+
+def _remaining_deadline_s(started_at: float) -> float:
+    """Seconds left before the whole generation must be answered.
+
+    `AI_GENERATION_DEADLINE_MS` sits just under core's request deadline
+    (`AI_SERVICE_TIMEOUT_MS`), so a slow provider is cut off here and core
+    receives the error JSON instead of a socket timeout.
+    """
+    return settings.ai_generation_deadline_ms / 1000 - (time.perf_counter() - started_at)
+
 
 def _parse_record(text: str, allowed_keys: set[str]) -> dict[str, str] | None:
     """Best-effort parse of a JSON object, tolerant of a stray code fence.
@@ -125,6 +143,33 @@ def _parse_record(text: str, allowed_keys: set[str]) -> dict[str, str] | None:
         elif isinstance(value, str):
             out[key] = value
     return out or None
+
+
+def _normalize_record(
+    fields: dict[str, str], definitions: list[FieldDefIn] | None
+) -> dict[str, str]:
+    """Canonicalize select values onto their exact option text.
+
+    The single-field path matches `text.strip()` against the options; compose
+    values arrive as raw JSON strings, and a free model may pad them with
+    whitespace. Map a padded value onto the exact option so downstream field
+    validation sees canonical text. Values that match nothing after stripping
+    pass through untouched (core's validation rejects them, as before).
+    """
+    by_key = {definition.key: definition for definition in definitions or []}
+    out: dict[str, str] = {}
+    for key, value in fields.items():
+        definition = by_key.get(key)
+        if (
+            definition is not None
+            and definition.type == "select"
+            and definition.options
+        ):
+            stripped = value.strip()
+            if stripped in definition.options:
+                value = stripped
+        out[key] = value
+    return out
 
 
 # Correction turns appended on a structured-output miss. Free models that fail a
@@ -175,6 +220,7 @@ async def generate(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
 
 async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
     """Single-field generate/refine, with the `select` validate-and-retry path."""
+    started_at = time.perf_counter()
     operation = req.operation
     assert req.field is not None  # guaranteed by GenerateRequest validation
     messages = build_messages(req, operation)
@@ -187,17 +233,29 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
 
     if req.field.type == "select" and req.field.options:
         if text.strip() not in req.field.options:
+            remaining_s = _remaining_deadline_s(started_at)
+            if remaining_s < _MIN_REPAIR_BUDGET_S:
+                logger.warning("select repair skipped op=%s reason=deadline-exhausted", operation)
+                record_generation_tokens(usage.total_tokens)
+                raise SelectMissError(
+                    model=model,
+                    usage=usage,
+                    provider_request_id=provider_request_id,
+                    finish_reason=finish_reason,
+                    attempt_count=attempt_count,
+                )
             logger.info("select repair op=%s reason=option-miss", operation)
             first_usage = usage
             # Repair, not a re-roll: echo the invalid answer back and restate the
-            # exact constraint so the model corrects course.
+            # exact constraint so the model corrects course. The call is bounded
+            # by the deadline still left so the whole turn stays answerable.
             retry_messages = messages + [
                 {"role": "assistant", "content": text},
                 {"role": "user", "content": _select_correction(req.field.options)},
             ]
             try:
                 text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
-                    retry_messages, temperature, operation
+                    retry_messages, temperature, operation, timeout_s=remaining_s
                 )
             except AiServiceError as exc:
                 # The repair died transport-level — attempt 1's spend must still
@@ -230,6 +288,17 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
     if req.field.type != "select":
         text = sanitize(text, req.field.type)
         if is_unusable(text):
+            remaining_s = _remaining_deadline_s(started_at)
+            if remaining_s < _MIN_REPAIR_BUDGET_S:
+                logger.warning("guardrail repair skipped op=%s reason=deadline-exhausted", operation)
+                record_generation_tokens(usage.total_tokens)
+                raise TextGuardrailError(
+                    model=model,
+                    usage=usage,
+                    provider_request_id=provider_request_id,
+                    finish_reason=finish_reason,
+                    attempt_count=attempt_count,
+                )
             logger.info("guardrail repair op=%s reason=unusable-output", operation)
             first_usage = usage
             retry_messages = messages + [
@@ -238,7 +307,7 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
             ]
             try:
                 text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
-                    retry_messages, temperature, operation
+                    retry_messages, temperature, operation, timeout_s=remaining_s
                 )
             except AiServiceError as exc:
                 # The repair died transport-level — attempt 1's spend must still
@@ -278,6 +347,7 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
 
 async def _compose(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
     """Whole-entry draft: JSON object keyed by field key, validated + repaired once."""
+    started_at = time.perf_counter()
     allowed = {definition.key for definition in req.compose_fields or []}
     messages = build_compose_messages(req)
     temperature = temperature_for("compose", "")
@@ -285,20 +355,33 @@ async def _compose(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
     text, model, usage, provider_request_id, finish_reason = await client.chat(
         messages, temperature, "compose"
     )
-    fields = _parse_record(text, allowed)
+    parsed = _parse_record(text, allowed)
+    fields = _normalize_record(parsed, req.compose_fields) if parsed is not None else None
     attempt_count = 1
 
     if fields is None:
+        remaining_s = _remaining_deadline_s(started_at)
+        if remaining_s < _MIN_REPAIR_BUDGET_S:
+            logger.warning("compose repair skipped reason=deadline-exhausted")
+            record_generation_tokens(usage.total_tokens)
+            raise ComposeMissError(
+                model=model,
+                usage=usage,
+                provider_request_id=provider_request_id,
+                finish_reason=finish_reason,
+                attempt_count=attempt_count,
+            )
         logger.info("compose repair reason=invalid-json")
         first_usage = usage
         # Repair: echo the invalid output + restate the JSON-only constraint.
+        # Bounded by the deadline still left so the whole turn stays answerable.
         retry_messages = messages + [
             {"role": "assistant", "content": text},
             {"role": "user", "content": _COMPOSE_CORRECTION},
         ]
         try:
             text, model, retry_usage, provider_request_id, finish_reason = await client.chat(
-                retry_messages, temperature, "compose"
+                retry_messages, temperature, "compose", timeout_s=remaining_s
             )
         except AiServiceError as exc:
             # The repair died transport-level — attempt 1's spend must still
@@ -313,7 +396,8 @@ async def _compose(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
             raise
         usage = add_usage(first_usage, retry_usage)
         attempt_count += 1
-        fields = _parse_record(text, allowed)
+        parsed = _parse_record(text, allowed)
+        fields = _normalize_record(parsed, req.compose_fields) if parsed is not None else None
 
     if fields is None:
         logger.warning("compose failed reason=double-miss attempts=2")

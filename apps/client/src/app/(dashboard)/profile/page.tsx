@@ -158,12 +158,12 @@ export default function ProfilePage() {
                 disabled={photoMutation.isPending}
                 title="Change photo"
                 aria-label="Change photo"
-                className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-brand-accent text-white shadow-sm ring-2 ring-brand-surface transition-all hover:bg-brand-accent-hover hover:scale-110 active:scale-95 disabled:opacity-60"
+                className="absolute -bottom-1.5 -right-1.5 flex size-9 items-center justify-center rounded-full bg-brand-accent text-white shadow-sm ring-2 ring-brand-surface transition-all hover:bg-brand-accent-hover hover:scale-110 active:scale-95 disabled:opacity-60"
               >
                 {photoMutation.isPending && photoMutation.variables ? (
-                  <Loader2 className="size-3 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Camera className="size-3" />
+                  <Camera className="size-4" />
                 )}
               </button>
             </div>
@@ -253,12 +253,13 @@ export default function ProfilePage() {
           <div className="space-y-4 rounded-lg border border-brand-border bg-brand-surface-soft p-4">
             <p className="font-mono text-sm text-text-secondary">
               Enter the 6-digit code sent to{' '}
-              <span className="font-mono text-text-primary">{user.email}</span>
+              <span className="font-mono text-text-primary break-all">{user.email}</span>
             </p>
             <InputOTP
               maxLength={6}
               value={code}
               onChange={onCodeChange}
+              containerClassName="flex flex-wrap items-center gap-1.5"
               autoFocus
               disabled={verifyMutation.isPending}
               aria-invalid={!!otpError || undefined}

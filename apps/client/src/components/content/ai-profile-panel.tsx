@@ -154,7 +154,7 @@ export function AiProfilePanel({
                     setDirty(true);
                   }}
                   placeholder="avoid"
-                  className="flex-1 text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-60"
+                  className="flex-1 min-w-0 text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-60"
                 />
                 <span className="text-xs font-mono text-text-muted">→</span>
                 <input
@@ -171,7 +171,7 @@ export function AiProfilePanel({
                     setDirty(true);
                   }}
                   placeholder="use"
-                  className="flex-1 text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-60"
+                  className="flex-1 min-w-0 text-sm font-mono bg-brand-surface-soft border border-brand-border rounded-lg p-2 text-text-primary focus:outline-none focus:border-brand-accent disabled:opacity-60"
                 />
                 {canManage && (
                   <button

@@ -170,7 +170,7 @@ export default function ProjectMembersPage() {
 
       {/* Navigation Tabs */}
       <Tabs defaultValue="members" className="w-full space-y-6">
-        <TabsList className="bg-brand-surface-soft/60 border border-brand-border p-1 rounded-xl h-auto inline-flex">
+        <TabsList className="bg-brand-surface-soft/60 border border-brand-border p-1 rounded-xl h-auto inline-flex max-w-full overflow-x-auto">
           <TabsTrigger
             value="members"
             className="px-3.5 py-1.5 rounded-lg text-sm font-mono font-bold tracking-wider uppercase data-active:bg-brand-surface data-active:text-text-primary data-active:shadow-xs transition-all"

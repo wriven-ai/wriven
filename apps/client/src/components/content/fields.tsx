@@ -165,7 +165,7 @@ export function FieldRow({
                 type="button"
                 onClick={aiTarget.onClick}
                 title="Draft or refine this field with AI"
-                className="text-text-muted hover:text-brand-secondary transition-colors cursor-pointer"
+                className="text-text-muted hover:text-brand-secondary transition-colors cursor-pointer p-2 -m-2"
               >
                 <Sparkles className="w-3.5 h-3.5" />
               </button>

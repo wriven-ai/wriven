@@ -781,7 +781,7 @@ export default function MediaLibraryPage() {
               onClick={(e) => e.stopPropagation()}
               className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl cursor-default"
             />
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-black/60 text-white font-mono text-sm">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 max-w-[90vw] truncate px-4 py-2 rounded-lg bg-black/60 text-white font-mono text-sm">
               {lightbox.originalFilename ?? lightbox.id}
               {lightbox.width ? ` · ${lightbox.width}×${lightbox.height}` : ''}
             </div>

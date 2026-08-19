@@ -685,7 +685,7 @@ function BillingInner() {
                       <p className="text-sm font-mono font-bold text-text-primary truncate">
                         {inv.description ?? `Invoice ${inv.number ?? inv.id}`}
                       </p>
-                      <p className="text-sm font-mono text-text-muted">
+                      <p className="text-sm font-mono text-text-muted truncate">
                         {inv.number ?? '—'} · {inv.createdAt.slice(0, 10)}
                       </p>
                     </div>

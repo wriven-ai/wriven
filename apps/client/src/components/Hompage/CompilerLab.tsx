@@ -162,7 +162,7 @@ export default function CompilerLab() {
                       <Check className="w-4 h-4 text-green-600 stroke-[3]" /> 200 OK — published entries only
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm font-mono border-t border-brand-border pt-4 text-text-secondary">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm font-mono border-t border-brand-border pt-4 text-text-secondary">
                     <div>Auth:</div>
                     <div className="text-text-primary font-bold">Bearer wrk_… (read scope)</div>
                     <div>Cache-Control:</div>
