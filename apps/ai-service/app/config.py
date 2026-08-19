@@ -22,9 +22,14 @@ class Settings(BaseSettings):
 
     # LLM provider (generic OpenAI-compatible Chat Completions). All env-driven.
     ai_api_key: str = ""
-    ai_base_url: str = "" 
+    ai_base_url: str = ""
     ai_model: str = ""
     ai_timeout_ms: int = 30_000
+    # Total wall-clock budget for one generation (initial call + one repair).
+    # Kept just under core's AI_SERVICE_TIMEOUT_MS (35s default) so a slow
+    # provider is cut off here and core receives our error JSON instead of
+    # timing out the socket — and no provider tokens burn after core hung up.
+    ai_generation_deadline_ms: int = 32_000
     # Hard service-wide ceilings. Operation policy can lower the output ceiling,
     # but never raise it. These protect provider spend even if core is bypassed.
     ai_max_input_chars: int = Field(default=24_000, ge=1_000, le=100_000)

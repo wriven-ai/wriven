@@ -62,7 +62,7 @@ class FakeLlm:
     def configured(self) -> bool:
         return True
 
-    async def chat(self, messages, temperature, operation):
+    async def chat(self, messages, temperature, operation, **_kwargs):
         self.calls.append((messages, temperature, operation))
         outcome = self._results.pop(0)
         if isinstance(outcome, Exception):

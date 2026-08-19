@@ -21,11 +21,13 @@ spent).
 """
 
 import logging
+import time
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.observability import record_http_request
 from app.schemas import Usage
 
 logger = logging.getLogger("ai-service.errors")
@@ -217,9 +219,18 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def _handle_unexpected(_: Request, exc: Exception) -> JSONResponse:  # noqa: BLE001
+    async def _handle_unexpected(request: Request, exc: Exception) -> JSONResponse:  # noqa: BLE001
         # Never leak the real cause — collapse to a generic generation failure.
         logger.exception("event=unexpected_generation_error")
+        # The unhandled exception bypassed the observability middleware's success
+        # path (it re-raises past this handler's caller chain), so the request is
+        # counted here with the status actually emitted — not a guessed 500.
+        started_at = getattr(request.state, "started_at", None)
+        record_http_request(
+            request.url.path,
+            502,
+            int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0,
+        )
         return JSONResponse(
             status_code=502,
             content=_body("AI_GENERATION_FAILED", "AI generation failed."),
