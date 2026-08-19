@@ -83,12 +83,9 @@ const RegisterPage = () => {
         className="sm:mx-auto sm:w-full sm:max-w-3xl text-center space-y-4 relative z-10"
         id="register-header"
       >
-        <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
+        <span className="mt-6 text-sm font-semibold tracking-wider text-brand-secondary uppercase bg-brand-surface border border-brand-border px-3 py-1 rounded inline-block">
           Create Workspace
         </span>
-        <h2 className="font-display font-medium text-text-primary text-2xl tracking-tight">
-          Create your free workspace
-        </h2>
       </div>
 
       <div

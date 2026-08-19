@@ -47,7 +47,7 @@ const PricingPage = () => {
             </p>
 
             <div
-              className="pt-6 flex justify-center items-center gap-4"
+              className="pt-6 flex flex-wrap justify-center items-center gap-x-4 gap-y-2"
               id="billing-choice-selector"
             >
               <span
@@ -293,7 +293,7 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
         <table className="w-full min-w-[650px] text-left border-collapse" id="pricing-matrix-table">
           <thead>
             <tr className="bg-brand-surface-soft border-b border-brand-border-button">
-              <th className="p-4.5 text-sm font-mono font-bold uppercase text-text-muted tracking-wider">
+              <th className="p-4.5 text-sm font-mono font-bold uppercase text-text-muted tracking-wider sticky left-0 bg-brand-surface-soft z-10">
                 Features &amp; Capabilities
               </th>
               {plans.map((p, i) => (
@@ -311,7 +311,7 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
           <tbody className="divide-y divide-brand-border text-sm font-mono">
             {LIMIT_ROWS.map((row) => (
               <tr key={row.label} className="hover:bg-brand-surface-soft/40 transition-colors">
-                <td className="p-4 font-sans font-bold text-text-primary">{row.label}</td>
+                <td className="p-4 font-sans font-bold text-text-primary sticky left-0 bg-brand-surface z-10">{row.label}</td>
                 {plans.map((p, i) => (
                   <td
                     key={p.key}
@@ -324,7 +324,7 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
             ))}
             {FEATURE_ROWS.map((row) => (
               <tr key={row.label} className="hover:bg-brand-surface-soft/40 transition-colors">
-                <td className="p-4 font-sans font-bold text-text-primary">
+                <td className="p-4 font-sans font-bold text-text-primary sticky left-0 bg-brand-surface z-10">
                   {row.label}
                   {row.future && (
                     <span className="ml-1 text-sm text-text-muted font-normal">(future)</span>
@@ -348,7 +348,7 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
               </tr>
             ))}
             <tr className="hover:bg-brand-surface-soft/40 transition-colors">
-              <td className="p-4 font-sans font-bold text-text-primary">Support tier</td>
+              <td className="p-4 font-sans font-bold text-text-primary sticky left-0 bg-brand-surface z-10">Support tier</td>
               {plans.map((p, i) => (
                 <td
                   key={p.key}
@@ -430,7 +430,7 @@ function PricingFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
           <div className="flex justify-center pt-2">
             <Link
               href={isAuthenticated ? '/dashboard' : '/register'}
-              className="inline-flex items-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg neo-shadow cursor-pointer transition-all"
+              className="w-full sm:w-auto inline-flex items-center justify-center text-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white border border-brand-border-button font-mono font-bold text-sm uppercase tracking-wider py-4 px-6 rounded-lg neo-shadow cursor-pointer transition-all"
               id="pricing-bottom-primary"
             >
               {isAuthenticated ? 'Go to Dashboard' : 'Start for free, no card required'}

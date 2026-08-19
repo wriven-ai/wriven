@@ -182,7 +182,7 @@ export default function ContentListPage() {
                         e.stopPropagation();
                         setDeleteTarget({ id: entry.id, title: entryTitle(entry, selectedType) });
                       }}
-                      className="text-text-muted hover:text-status-error opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="text-text-muted hover:text-status-error opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer p-2 -m-2"
                       title="Delete"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

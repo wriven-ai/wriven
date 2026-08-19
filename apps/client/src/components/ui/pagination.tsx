@@ -52,7 +52,7 @@ function Pagination({
         className
       )}
     >
-      <p className="font-mono text-sm text-text-muted">
+      <p className="hidden sm:block font-mono text-sm text-text-muted">
         Page {currentPage} of {totalPages}
       </p>
 
@@ -62,7 +62,7 @@ function Pagination({
           disabled={currentPage <= 1}
           aria-label="Go to previous page"
           className={cn(
-            "inline-flex items-center justify-center size-7 rounded-md border border-brand-border bg-brand-surface transition-colors",
+            "inline-flex items-center justify-center size-9 sm:size-7 rounded-md border border-brand-border bg-brand-surface transition-colors",
             "hover:bg-brand-surface-soft hover:border-brand-accent/50",
             "disabled:opacity-40 disabled:pointer-events-none disabled:hover:bg-brand-surface disabled:hover:border-brand-border"
           )}
@@ -85,7 +85,7 @@ function Pagination({
               aria-label={`Go to page ${page}`}
               aria-current={currentPage === page ? "page" : undefined}
               className={cn(
-                "inline-flex items-center justify-center size-7 rounded-md border font-mono text-sm font-bold transition-colors",
+                "inline-flex items-center justify-center size-9 sm:size-7 rounded-md border font-mono text-sm font-bold transition-colors",
                 currentPage === page
                   ? "bg-brand-accent text-white border-brand-accent"
                   : "bg-brand-surface text-text-secondary border-brand-border hover:bg-brand-surface-soft hover:border-brand-accent/50"
@@ -101,7 +101,7 @@ function Pagination({
           disabled={currentPage >= totalPages}
           aria-label="Go to next page"
           className={cn(
-            "inline-flex items-center justify-center size-7 rounded-md border border-brand-border bg-brand-surface transition-colors",
+            "inline-flex items-center justify-center size-9 sm:size-7 rounded-md border border-brand-border bg-brand-surface transition-colors",
             "hover:bg-brand-surface-soft hover:border-brand-accent/50",
             "disabled:opacity-40 disabled:pointer-events-none disabled:hover:bg-brand-surface disabled:hover:border-brand-border"
           )}

@@ -22,7 +22,7 @@ export function CodeBlock({ code, lang }: { code: string; lang?: string }) {
       ) : null}
       <button
         onClick={copy}
-        className="absolute right-2.5 top-2.5 rounded border border-white/10 bg-white/10 p-1.5 text-white transition-colors hover:bg-white/20"
+        className="absolute right-2.5 top-2.5 flex min-h-10 min-w-10 items-center justify-center rounded border border-white/10 bg-white/10 text-white transition-colors hover:bg-white/20"
         aria-label="Copy code"
       >
         {copied ? (

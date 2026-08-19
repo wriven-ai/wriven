@@ -65,7 +65,7 @@ export default function ForgotPasswordPage() {
               <strong className="block font-bold">Check your inbox</strong>
               <p className="text-text-secondary font-light leading-relaxed">
                 If an account exists for{' '}
-                <strong>{getValues('email')}</strong>, we&apos;ve sent a link to
+                <strong className="break-all">{getValues('email')}</strong>, we&apos;ve sent a link to
                 reset your password. The link expires in 1 hour.
               </p>
             </div>

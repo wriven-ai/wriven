@@ -24,8 +24,7 @@ export default function BlogPostReader({ params }: PageProps) {
       <Header />
 
       <main className="flex-grow py-12 sm:py-16 relative z-10">
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full ambient-violet-glow filter blur-[120px] pointer-events-none opacity-20" />
-        
+
         <div className="mx-auto max-w-4xl px-4 sm:px-6 relative z-10">
           
           {/* Back button link */}
@@ -115,7 +114,7 @@ export default function BlogPostReader({ params }: PageProps) {
             </div>
 
             {/* Social Share / Interaction Bar */}
-            <div className="flex items-center justify-between pt-2" id="post-share-interactions font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2" id="post-share-interactions">
               <div className="flex gap-2">
                 <button className="inline-flex items-center gap-1.5 bg-brand-surface-soft hover:bg-brand-border text-sm font-mono font-semibold text-text-secondary px-3.5 py-2.5 rounded-lg transition-colors cursor-pointer">
                   <MessageSquare className="w-3.5 h-3.5 text-brand-accent" />

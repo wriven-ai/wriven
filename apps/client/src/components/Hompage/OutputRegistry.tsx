@@ -76,7 +76,7 @@ export default function OutputRegistry() {
           <div className="lg:col-span-7 lg:border-l lg:border-brand-border lg:pl-12 flex flex-col justify-between self-stretch min-h-[485px]">
             
             {/* Canvas Header */}
-            <div className="flex items-center justify-between border-b border-brand-border pb-4 mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border pb-4 mb-6">
               <div className="flex items-center gap-2">
                 <span className="w-1 h-1 rounded-full bg-brand-secondary" />
                 <span className="font-mono text-sm font-bold text-text-muted uppercase tracking-widest">
@@ -106,7 +106,7 @@ export default function OutputRegistry() {
                       <span className="w-2 h-2 rounded-full bg-brand-border" />
                       <span className="w-2 h-2 rounded-full bg-brand-border" />
                       <span className="w-2 h-2 rounded-full bg-brand-border" />
-                      <span className="text-sm font-mono ml-2">https://localhost:3000/blog/future-of-wearables</span>
+                      <span className="text-sm font-mono ml-2 min-w-0 flex-1 truncate">https://localhost:3000/blog/future-of-wearables</span>
                     </div>
 
                     <div className="space-y-4">
@@ -231,9 +231,9 @@ export default function OutputRegistry() {
                     transition={{ duration: 0.25 }}
                     className="w-full bg-brand-bg border border-brand-border rounded-lg p-5 shadow-sm text-left font-mono text-sm overflow-x-auto relative"
                   >
-                    <div className="flex items-center justify-between pb-3 border-b border-brand-border mb-3 text-text-muted">
-                      <span>GET /v1/projects/prj_2f9c/content/posts/wearables-wellness</span>
-                      <span className="text-brand-accent">200 OK</span>
+                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-brand-border mb-3 text-text-muted">
+                      <span className="min-w-0 truncate">GET /v1/projects/prj_2f9c/content/posts/wearables-wellness</span>
+                      <span className="text-brand-accent shrink-0">200 OK</span>
                     </div>
 
                     <pre className="text-text-primary leading-relaxed whitespace-pre-wrap max-h-72 overflow-y-auto font-mono">
@@ -257,7 +257,7 @@ export default function OutputRegistry() {
             </div>
 
             {/* Technical specifications footer */}
-            <div className="pt-4 mt-6 border-t border-brand-border flex items-center justify-between text-sm font-mono text-text-muted">
+            <div className="pt-4 mt-6 border-t border-brand-border flex flex-col sm:flex-row items-center sm:justify-between gap-1 text-sm font-mono text-text-muted">
               <span>CACHE-CONTROL: PUBLIC, S-MAXAGE=60</span>
               <span>PURGED BY TAG ON PUBLISH</span>
             </div>

@@ -287,8 +287,8 @@ export default function ApiKeysPage() {
                       </div>
                     </div>
 
-                    <div className="mt-2.5 flex items-center justify-between border border-brand-border-button bg-brand-surface-soft rounded-lg p-1.5 px-3 font-mono text-xs text-text-secondary">
-                      <span className="tracking-wide">
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border border-brand-border-button bg-brand-surface-soft rounded-lg p-1.5 px-3 font-mono text-xs text-text-secondary">
+                      <span className="tracking-wide truncate min-w-0">
                         {key.prefix}
                         <span className="text-text-muted">••••••••••••••••••••</span>
                       </span>

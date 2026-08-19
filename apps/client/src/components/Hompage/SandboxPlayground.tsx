@@ -245,7 +245,7 @@ export default function SandboxPlayground() {
                     <button
                       key={tone}
                       onClick={() => setFieldTone(tone)}
-                      className={`py-2 text-sm font-mono font-bold uppercase rounded border transition-all cursor-pointer ${
+                      className={`py-2 text-xs sm:text-sm font-mono font-bold uppercase rounded border transition-all cursor-pointer ${
                         fieldTone === tone
                         ? 'bg-brand-accent text-white border-brand-border-button'
                         : 'bg-brand-surface-soft text-text-secondary border-brand-border hover:border-brand-border-button'
@@ -293,7 +293,7 @@ export default function SandboxPlayground() {
 
             {/* Visual Draft Paper Sheet */}
             <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 flex flex-col relative neo-shadow-lg">
-              <div className="flex items-center justify-between border-b border-brand-border pb-3 mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border pb-3 mb-4">
                 <span className="text-sm font-mono uppercase text-text-primary flex items-center gap-2 font-bold">
                   <Layers className="w-4 h-4 text-brand-accent" />
                   ENTRY PREVIEW: generated_draft
@@ -319,10 +319,10 @@ export default function SandboxPlayground() {
 
             {/* API Log Ledger Section */}
             <div className="bg-brand-surface border border-brand-border-button rounded-xl p-5 relative overflow-hidden h-[340px] flex flex-col text-left neo-shadow">
-              <div className="absolute top-4 right-4 flex gap-2 select-none">
-                <span className="inline-flex items-center gap-1 text-sm font-mono font-bold tracking-wider bg-brand-surface-soft text-brand-accent border border-brand-border px-2 py-1 rounded">
-                  <Code className="w-3 h-3" />
-                  GET /v1/projects/:id/content/:apiId
+              <div className="absolute top-4 right-4 flex gap-2 select-none max-w-[calc(100%-2rem)]">
+                <span className="inline-flex items-center gap-1 text-sm font-mono font-bold tracking-wider bg-brand-surface-soft text-brand-accent border border-brand-border px-2 py-1 rounded min-w-0">
+                  <Code className="w-3 h-3 shrink-0" />
+                  <span className="truncate">GET /v1/projects/:id/content/:apiId</span>
                 </span>
               </div>
 

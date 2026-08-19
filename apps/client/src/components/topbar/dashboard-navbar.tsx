@@ -46,8 +46,10 @@ export function DashboardNavbar() {
         <SidebarTrigger className="text-text-secondary hover:text-text-primary hover:bg-brand-surface-soft border border-transparent hover:border-brand-border rounded-lg transition-all" />
         {projSlug ? (
           <>
-            <WorkspaceSwitcher />
-            <ChevronRight className="w-3 h-3 text-brand-border-button shrink-0" />
+            <div className="hidden sm:flex items-center gap-1.5">
+              <WorkspaceSwitcher />
+              <ChevronRight className="w-3 h-3 text-brand-border-button shrink-0" />
+            </div>
             <ProjectSwitcher />
           </>
         ) : null}

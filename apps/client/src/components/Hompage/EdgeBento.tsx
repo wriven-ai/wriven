@@ -38,11 +38,11 @@ export default function EdgeBento() {
           {/* Box 1: CDN cache behavior */}
           <div className="lg:col-span-8 flex flex-col justify-between space-y-6" id="bento-cache-rate">
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-wrap justify-between items-center gap-2">
                 <span className="text-sm font-mono font-bold uppercase text-brand-accent tracking-widest">CACHE POLICY</span>
                 <span className="inline-flex items-center gap-1.5 text-sm font-mono font-bold text-green-600 bg-green-500/5 border border-green-500/10 px-2.5 py-0.5 rounded">
                   <Activity className="w-3.5 h-3.5 animate-pulse text-green-600" />
-                  APPLIED ON EVERY PUBLISHED READ
+                  <span className="hidden sm:inline">APPLIED ON EVERY PUBLISHED READ</span>
                 </span>
               </div>
 

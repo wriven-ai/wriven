@@ -280,7 +280,7 @@ export function ContentEditor({
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {isDirty && (
             <span className="text-sm font-mono text-brand-secondary bg-brand-secondary/10 px-2 py-1 rounded animate-pulse font-bold">
               ● Unsaved

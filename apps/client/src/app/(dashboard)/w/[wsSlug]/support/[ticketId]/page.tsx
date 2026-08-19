@@ -420,7 +420,7 @@ function TicketDetailInner() {
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-brand-surface-soft rounded cursor-pointer transition-colors"
+                    className="p-2.5 text-text-muted hover:text-text-primary hover:bg-brand-surface-soft rounded cursor-pointer transition-colors"
                     title="Attach image"
                   >
                     <ImagePlus className="w-3.5 h-3.5" />
