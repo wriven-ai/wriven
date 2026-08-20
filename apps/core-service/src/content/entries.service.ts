@@ -236,7 +236,10 @@ export class EntriesService {
         return row;
       });
 
-      // Fire webhooks on publish-state changes (rebuild the consumer site).
+      // Fire webhooks so consumers rebuild. The first branch fires on EVERY
+      // save of a published entry (including slug renames — the old URL must
+      // be purged and the new one rendered), not just the publish transition;
+      // the second covers publish -> draft.
       if (updated.status === 'published') {
         void this.emit(p.projectId, 'entry.published', updated);
       } else if (prevStatus === 'published') {
