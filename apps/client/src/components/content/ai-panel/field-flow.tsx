@@ -6,6 +6,7 @@ import { aiApi } from '@/lib/api';
 import type { AiIntent, AiRefinePreset } from '@/lib/types';
 import { FlowControls } from './flow-controls';
 import { FlowErrors } from './flow-errors';
+import { useGenerationProgress } from './generation-progress';
 import {
   appendTurn,
   applyGeneratedField,
@@ -163,6 +164,7 @@ export function FieldFlow({
 
   const busy = mutation.isPending;
   const anyBusy = busy || otherBusy;
+  const progress = useGenerationProgress(busy, 'field');
 
   const submit = (input: GenerationInput) => {
     // One generation at a time across BOTH flows — a concurrent field + compose
@@ -287,6 +289,8 @@ export function FieldFlow({
         runDisabled={anyBusy || !targetKey || !instruction.trim()}
         runLabel={runLabel}
         onRun={run}
+        progressLabel={progress?.label ?? null}
+        progress={progress?.progress ?? null}
         onStopWaiting={() => {
           abortRef.current?.abort();
           setCancelled(true);
