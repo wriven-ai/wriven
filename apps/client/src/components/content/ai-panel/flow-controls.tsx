@@ -3,6 +3,7 @@
 import { RefreshCw, Sparkles } from 'lucide-react';
 import type { RefObject } from 'react';
 import type { AiIntent, AiRefinePreset } from '@/lib/types';
+import { GenerationProgressBar } from './generation-progress';
 import { PRESET_HINTS, REFINE_PRESETS, type TargetField } from './types';
 
 /**
@@ -28,6 +29,9 @@ export function FlowControls({
   runLabel,
   onRun,
   onStopWaiting,
+  /** Live phase label from useGenerationProgress; falls back to "Working…". */
+  progressLabel,
+  progress,
   historyTurns,
   onClearHistory,
 }: {
@@ -48,6 +52,8 @@ export function FlowControls({
   runLabel: string;
   onRun: () => void;
   onStopWaiting: () => void;
+  progressLabel: string | null;
+  progress: number | null;
   historyTurns: number;
   onClearHistory: () => void;
 }) {
@@ -161,13 +167,15 @@ export function FlowControls({
         className="w-full inline-flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white disabled:bg-gray-400 border border-brand-border-button font-mono font-bold text-sm py-2.5 px-4 rounded-lg transition-all cursor-pointer neo-shadow"
       >
         {busy ? (
-          <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Working…</>
+          <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> {progressLabel ?? 'Working…'}</>
         ) : (
           <>
             <Sparkles className="w-3.5 h-3.5" /> {runLabel}
           </>
         )}
       </button>
+
+      {busy && progress !== null && <GenerationProgressBar progress={progress} />}
 
       {busy && (
         <button

@@ -5,8 +5,10 @@ import { FileText, RefreshCw, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { aiApi } from '@/lib/api';
 import { ComposeResult } from './compose-result';
+import { FlowErrors } from './flow-errors';
+import { GenerationProgressBar, useGenerationProgress } from './generation-progress';
 import { applyGeneratedField, sameValue } from './richtext';
-import { ERR_MESSAGES, type ComposeField, type TargetField } from './types';
+import { type ComposeField, type TargetField } from './types';
 
 /**
  * Whole-entry compose: one call drafts every eligible field of the content
@@ -49,7 +51,9 @@ export function ComposeSection({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [applied, setApplied] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [cancelled, setCancelled] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const lastAttemptRef = useRef<{ requestId: string; instruction: string } | null>(null);
   const undoRef = useRef<{
     prev: Record<string, unknown>;
     written: Record<string, unknown>;
@@ -114,13 +118,17 @@ export function ComposeSection({
 
   const busy = mutation.isPending;
   const anyBusy = busy || otherBusy;
+  const progress = useGenerationProgress(busy, 'compose');
 
   const runCompose = () => {
     // See the field flow: both share one burst budget — serialize them.
     if (busy || otherBusy) return;
     setApplied(false);
+    setCancelled(false);
     onBusyChange(true);
-    mutation.mutate({ requestId: crypto.randomUUID(), instruction: brief });
+    const input = { requestId: crypto.randomUUID(), instruction: brief };
+    lastAttemptRef.current = input;
+    mutation.mutate(input);
   };
 
   const applyCompose = () => {
@@ -184,26 +192,36 @@ export function ComposeSection({
         }`}
       >
         {busy ? (
-          <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Drafting…</>
+          <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> {progress?.label ?? 'Drafting…'}</>
         ) : (
           <><Sparkles className="w-3.5 h-3.5" /> Draft entry</>
         )}
       </button>
-      {mutation.isError && (
-        <div className="space-y-1">
-          <p className="text-xs font-mono text-status-error bg-status-error/10 border border-status-error/20 rounded-lg px-2.5 py-2">
-            {ERR_MESSAGES[errCode ?? ''] ?? 'Drafting failed. Try again or rephrase the brief.'}
-          </p>
-          <button
-            type="button"
-            onClick={runCompose}
-            disabled={anyBusy}
-            className="text-xs font-mono text-brand-secondary hover:text-brand-accent transition-colors cursor-pointer text-left disabled:opacity-50"
-          >
-            Try again with a new request
-          </button>
-        </div>
+      {busy && progress && <GenerationProgressBar progress={progress.progress} />}
+      {busy && (
+        <button
+          type="button"
+          onClick={() => {
+            abortRef.current?.abort();
+            setCancelled(true);
+          }}
+          className="text-xs font-mono text-text-muted hover:text-text-secondary transition-colors cursor-pointer text-left"
+        >
+          Stop waiting — the provider may still finish, and this request can be safely retried.
+        </button>
       )}
+      <FlowErrors
+        isError={mutation.isError}
+        cancelled={cancelled}
+        errCode={errCode}
+        anyBusy={anyBusy}
+        hasAttempt={!!lastAttemptRef.current}
+        onTryAgain={runCompose}
+        onSafeRetry={() => {
+          const attempt = lastAttemptRef.current;
+          if (attempt) mutation.mutate(attempt);
+        }}
+      />
       {result && (
         <ComposeResult
           fields={result.fields}
