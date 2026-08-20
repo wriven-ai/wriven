@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/next';
 import { cn } from '@/lib/utils';
 import { Manrope } from 'next/font/google';
 import './global.css';
@@ -23,6 +24,7 @@ export default function RootLayout({
     >
       <body>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
