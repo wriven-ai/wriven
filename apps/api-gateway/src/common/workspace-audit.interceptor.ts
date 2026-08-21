@@ -67,28 +67,35 @@ export class WorkspaceAuditInterceptor implements NestInterceptor {
             : undefined;
         const resultWorkspaceField =
           result && typeof result === 'object' && 'workspaceId' in result
-            ? String((result as { workspaceId: unknown }).workspaceId)
+            ? (result as { workspaceId?: unknown }).workspaceId
             : undefined;
         const workspaceId =
           req.workspaceId ??
           req.params?.['workspaceId'] ??
           resultWorkspaceId ??
-          resultWorkspaceField;
+          (typeof resultWorkspaceField === 'string'
+            ? resultWorkspaceField
+            : undefined);
         if (!workspaceId) return;
+        const params = req.params ?? {};
         // Prefer route params (:id generic, :userId member routes, :projectId
         // project routes); fall back to the created entity's id from the
         // handler result (creates have no :id param).
         const resultId =
           result && typeof result === 'object' && 'id' in result
-            ? String((result as { id: unknown }).id)
-            : null;
-        const params = req.params ?? {};
-        const resultProjectId =
-          result && typeof result === 'object' && 'projectId' in result
-            ? ((result as { projectId: unknown }).projectId as string | null)
+            ? (result as { id?: unknown }).id
             : undefined;
         const targetId =
-          params['id'] ?? params['userId'] ?? params['projectId'] ?? resultId;
+          params['id'] ??
+          params['userId'] ??
+          params['projectId'] ??
+          (typeof resultId === 'string' || typeof resultId === 'number'
+            ? String(resultId)
+            : null);
+        const resultProjectId =
+          result && typeof result === 'object' && 'projectId' in result
+            ? ((result as { projectId?: unknown }).projectId as string | null)
+            : undefined;
         const payload: WorkspaceLogWritePayload = {
           workspaceId,
           userId: user.userId,

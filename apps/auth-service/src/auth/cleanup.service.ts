@@ -46,7 +46,9 @@ export class CleanupService {
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async pruneActivityLogs(): Promise<void> {
     const days = Number(process.env.WORKSPACE_LOG_RETENTION_DAYS ?? 90);
-    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    // A garbage env value must not produce an Invalid Date in the WHERE.
+    const safeDays = Number.isFinite(days) && days > 0 ? days : 90;
+    const cutoff = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000);
     const pruned = await this.db
       .delete(workspaceActivityLog)
       .where(lt(workspaceActivityLog.createdAt, cutoff))
