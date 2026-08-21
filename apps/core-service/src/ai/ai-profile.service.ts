@@ -8,15 +8,10 @@ import * as schema from '../db/schema';
 const { aiProfiles } = schema;
 
 /**
- * Per-project AI "voice" config: brand voice, glossary, default language. Read
- * on every generation and edited from the project's AI settings. Absent row =
- * empty profile (no guidance) — today's neutral behavior. Never auto-created;
- * {@link upsert} creates on first edit.
- *
- * `projects` is an auth-service table, so this service cannot re-verify the
- * project/workspace binding; the gateway resolves the authoritative workspace
- * from the project record and injects it into the TCP payload —
- * the client's `X-Workspace-Id` header is never persisted for this row.
+ * Per-project AI voice config. Absent row = empty profile, never auto-created
+ * (upsert creates on first edit). `projects` is an auth-service table, so the
+ * gateway-injected workspaceId is authoritative — the client's X-Workspace-Id
+ * header is never persisted for this row.
  */
 @Injectable()
 export class AiProfileService {
@@ -33,16 +28,14 @@ export class AiProfileService {
     return this.toView(row);
   }
 
-  /** Create or update a project's profile (validated by the gateway DTO). */
   async upsert(p: {
     workspaceId: string;
     projectId: string;
     userId: string;
     dto: UpdateAiProfileDto;
   }): Promise<AiProfileView> {
-    // `glossary` is a NOT NULL jsonb column: `@IsOptional()` lets `null` past
-    // the DTO, so treat null as "clear" in BOTH paths — the conflict branch
-    // previously wrote a raw NULL and 500'd on Postgres 23502.
+    // glossary is NOT NULL jsonb but @IsOptional() lets null past the DTO —
+    // treat null as clear in both paths (a raw NULL 500'd on Postgres 23502).
     const glossary = p.dto.glossary ?? [];
     const [row] = await this.db
       .insert(aiProfiles)

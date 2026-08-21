@@ -2,13 +2,8 @@
 
 import { Skeleton } from '@/components/ui/skeleton';
 
-/**
- * Usage & consumption page loading skeletons. Each skeleton mirrors the real
- * markup's container (surface + hairline border + rounded-xl) so it reads as
- * the same layout, not a generic spinner. Pulse blocks use the shared
- * <Skeleton/> primitive, which is token-bound (bg-muted = brand-surface-soft)
- * and tracks light/dark automatically.
- */
+/** Mirrors the real page markup so loading reads as the same layout; pulses
+ * use the token-bound <Skeleton/>. */
 
 function UsageCardSkeleton() {
   return (

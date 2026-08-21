@@ -60,7 +60,6 @@ export const useAuthStore = create<AuthState>()(
         const currentWsId = validWs
           ? persistedWs!
           : (session.workspaces[0]?.id ?? null);
-        // Projects belonging to the resolved current workspace.
         const wsProjects = session.projects.filter(
           (p) => p.workspaceId === currentWsId,
         );

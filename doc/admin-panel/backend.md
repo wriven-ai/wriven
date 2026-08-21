@@ -19,38 +19,53 @@ controllers, message patterns) rather than inventing new shapes.
 
 ```
 apps/auth-service/src/
-  db/schema/index.ts            # + adminUsers, adminRefreshTokens, adminAuditLog, plans, workspacePlans
-  admin/                        # NEW: admin identity + cross-tenant tenant queries
-    admin-auth.service.ts       #   login, TOTP, refresh, password
+  db/schema/index.ts            # + adminUsers, adminRefreshTokens, adminAuditLog, plans, subscriptions
+  admin/                        # admin identity + cross-tenant tenant queries
+    admin-auth.service.ts       #   login, refresh, logout, getById
     admin-users.service.ts      #   CRUD admin_users (admin role only)
     admin-audit.service.ts      #   write + query audit log
     admin-tenancy.service.ts    #   cross-tenant user/workspace/project queries (no scope)
-    plans.service.ts            #   plans + workspace_plans
+    admin-plans.service.ts      #   plans + subscriptions
+    admin-token.service.ts      #   admin JWT sign/verify (ADMIN_JWT_SECRET)
+    admin-metrics.service.ts    #   auth_svc counts for /admin/metrics
     admin.controller.ts         #   @MessagePattern('admin.*') handlers
+    admin.module.ts
 
 apps/core-service/src/
-  admin/                        # NEW: cross-tenant content/media/keys/webhooks queries
+  admin/                        # cross-tenant content/media/keys/webhooks queries
     admin-content.service.ts
+    admin-content-types.service.ts
     admin-media.service.ts
     admin-keys.service.ts
     admin-webhooks.service.ts
+    admin-project-usage.service.ts   # GET /admin/projects/:id/usage rollup
+    admin-metrics.service.ts         # core_svc counts for /admin/metrics
     admin.controller.ts         #   @MessagePattern('admin.*') handlers
+    admin.module.ts
 
-apps/api-gateway/src/admin/     # NEW: public HTTP surface for the SPA
+apps/api-gateway/src/admin/     # public HTTP surface for the SPA
   admin-jwt.guard.ts            #   verifies admin_access_token (ADMIN_JWT_SECRET)
   admin-roles.guard.ts          #   RBAC: admin|moderator|member
   admin-roles.decorator.ts      #   @AdminRoles('admin', 'moderator')
   current-admin.decorator.ts    #   @CurrentAdmin() -> { adminUserId, email, role }
   audit.interceptor.ts          #   @Audit('user.suspend') -> writes admin_audit_log
   audit.decorator.ts
+  # one controller per resource (no admin.module.ts — registered in src/app/app.module.ts)
   admin-auth.controller.ts      #   /admin/auth/*
-  admin-users.controller.ts     #   /admin/admins/*  (admin only)
   admin-metrics.controller.ts   #   /admin/metrics/*
-  admin-tenancy.controller.ts   #   /admin/users, /workspaces, /projects
-  admin-content.controller.ts   #   /admin/content, /media, /api-keys, /webhooks, /invitations
+  admin-admins.controller.ts    #   /admin/admins/*  (admin only)
+  admin-users.controller.ts     #   /admin/users/*
+  admin-workspaces.controller.ts    #   /admin/workspaces/*
+  admin-projects.controller.ts      #   /admin/projects/*
+  admin-content.controller.ts       #   /admin/content/*
+  admin-content-types.controller.ts #   /admin/content-types
+  admin-media.controller.ts         #   /admin/media/*
+  admin-apikeys.controller.ts       #   /admin/api-keys/*
+  admin-webhooks.controller.ts      #   /admin/webhooks/*
+  admin-support.controller.ts       #   /admin/support/tickets/*
+  admin-support-metrics.controller.ts  #   /admin/support/metrics
   admin-plans.controller.ts     #   /admin/plans
   admin-audit.controller.ts     #   /admin/audit-log
-  admin.module.ts
 ```
 
 ---
@@ -107,12 +122,12 @@ export const adminAuditLog = authSchema.table('admin_audit_log', {
 
 // ── Plans & per-workspace assignment ────────────────────────────────────────
 
-// Three self-serve tiers: free / pro / business. Display + billing live in
+// Self-serve tiers: free / starter / pro. Display + billing live in
 // columns (Stripe-ready); quotas + entitlements live in jsonb so new dimensions
 // need no migration. See PlanLimits / PlanFeatures / PlanView in @wriven/contracts.
 export const plans = authSchema.table('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
-  key: text('key').notNull().unique(),     // 'free'|'pro'|'business'
+  key: text('key').notNull().unique(),     // 'free'|'starter'|'pro'
   name: text('name').notNull(),
   description: text('description'),
   sortOrder: integer('sort_order').notNull().default(0),
@@ -120,7 +135,9 @@ export const plans = authSchema.table('plans', {
   active: boolean('active').notNull().default(true),
   // Billing (Stripe-ready; nullable until billing lands). Prices in cents.
   priceMonthly: integer('price_monthly'),
-  priceYearly: integer('price_yearly'),
+  priceYearly: integer('price_yearly'),    // final yearly amount Stripe charges
+  yearlyDiscountPercent: integer('yearly_discount_percent'),  // 0–100, null = none
+  yearlyDiscountAmount: integer('yearly_discount_amount'),    // cents saved vs monthly×12
   currency: text('currency').notNull().default('usd'),
   stripeProductId: text('stripe_product_id'),
   stripePriceIdMonthly: text('stripe_price_id_monthly'),
@@ -148,11 +165,13 @@ export const subscriptions = authSchema.table('subscriptions', {
   billingCycle: text('billing_cycle'),                  // 'monthly'|'yearly'|null
   stripeCustomerId: text('stripe_customer_id'),
   stripeSubscriptionId: text('stripe_subscription_id'),
+  stripeEventCreatedAt: timestamp('stripe_event_created_at', { withTimezone: true }),  // stale-event guard (event.created)
   currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
   trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
   canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  pendingChange: jsonb('pending_change'),               // deferred downgrade (specs/16)
   overrides: jsonb('overrides'),                        // per-workspace limit overrides
   updatedBy: uuid('updated_by'),                        // admin_user id (no FK across concern)
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -188,8 +207,8 @@ export const subscriptions = authSchema.table('subscriptions', {
   session must never satisfy a tenant guard or vice-versa.
 
 ### 3.2 Cross-origin cookie settings (separate-repo SPA)
-The SPA runs on a different origin (`admin.wriven.com`) than the API
-(`api.wriven.com`). For the browser to send admin cookies:
+The SPA runs on a different origin (`admin.wriven.tech`) than the API
+(`api.wriven.tech`). For the browser to send admin cookies:
 - Cookies: **`httpOnly; Secure; SameSite=None`** (SameSite=None requires Secure;
   Lax/Strict would block cross-site sending).
 - Gateway CORS: allow exactly `ADMIN_PANEL_ORIGIN`, `credentials: true`, allow the
@@ -219,10 +238,10 @@ The guard reads the route's required roles (via `Reflector`) and checks
 `req.adminUser.role`. `member` passes only on routes with no decorator (reads).
 Throw `FORBIDDEN` otherwise.
 
-### 3.5 TOTP (MFA)
-If `admin_users.totpSecret` is set, `/admin/auth/login` returns a
-`{ mfaRequired: true, challengeId }` step; a second call `/admin/auth/login/totp`
-verifies the 6-digit code before issuing cookies. Recommended-required for `admin`.
+### 3.5 TOTP (MFA) — not implemented
+The `admin_users.totpSecret` column exists in the schema, but no runtime TOTP
+flow is built: login is single-step email+password, there is no
+`/admin/auth/login/totp`, and admins have no MFA reset. Deferred (see §10).
 
 ---
 
@@ -261,14 +280,12 @@ Examples — name them `admin.<area>.<action>`:
 
 **auth-service (`admin.controller.ts`):**
 ```
-admin.auth.login / admin.auth.totp / admin.auth.refresh / admin.auth.logout / admin.auth.me
-admin.adminUsers.list / .get / .create / .update / .delete
+admin.auth.login / admin.auth.refresh / admin.auth.logout / admin.auth.getById
+admin.admins.list / .create / .update / .delete
 admin.audit.write / admin.audit.list
-admin.users.list (search/paginate ALL tenant users) / .get / .update / .delete / .resendVerification
-admin.workspaces.list (+owner, member/project counts, plan) / .get / .update / .suspend
-admin.workspaces.setPlan
+admin.users.list (search/paginate ALL tenant users) / .get / .update (suspend, force-verify) / .delete
+admin.workspaces.list (+owner, member/project counts, plan) / .get / .setPlan
 admin.projects.list / .get / .delete
-admin.invitations.list
 admin.plans.list / .create / .update
   # Returns AdminPlanView (PlanView + stripe_product_id / stripe_price_id_monthly /
   # stripe_price_id_yearly) so the admin can see the Stripe linkage. create
@@ -277,15 +294,18 @@ admin.plans.list / .create / .update
   # update with active:false archives the Stripe Product + deactivates its Prices.
   # Prices are read-only after create (Stripe owns pricing). Stripe failures →
   # STRIPE_SYNC_FAILED (DB write skipped). See specs/11.
-admin.metrics.overview (counts + growth from auth_svc)
+admin.metrics.auth (user/workspace/plan counts from auth_svc)
 ```
 
 **core-service (`admin.controller.ts`):**
 ```
 admin.content.list (cross-tenant, filter ws/project/type/status) / .get / .takedown
-admin.media.usageByWorkspace / .list / .purge
+admin.contentTypes.list (cross-tenant content-type definitions)
+admin.media.list / .usage (per-workspace bytes) / .purge
 admin.apiKeys.list / .revoke
 admin.webhooks.list / .disable
+admin.projects.usage (per-project content/media/keys/webhooks/AI rollup)
+admin.support.list / .get / .reply / .update / .metrics (support ticketing)
 admin.metrics.content (entry/media/key counts + storage totals)
 ```
 
@@ -306,21 +326,19 @@ in brackets — none = any admin (incl. `member`, read-only).
 
 ```
 # Auth
-POST   /admin/auth/login                 # email+password -> cookies, or { mfaRequired }
-POST   /admin/auth/login/totp            # 6-digit code -> cookies
+POST   /admin/auth/login                 # single-step email+password -> cookies (no TOTP step)
 POST   /admin/auth/refresh
 POST   /admin/auth/logout
 GET    /admin/auth/me                    # { adminUserId, email, name, role }
 
 # Metrics
-GET    /admin/metrics/overview           # KPIs: users/ws/projects/entries/storage, growth, plan split
+GET    /admin/metrics/overview           # gateway merge of auth + core metrics (users/ws/projects/entries/storage/plan split — no growth fields)
 
 # Tenant users
 GET    /admin/users                      # search/paginate
 GET    /admin/users/:id                  # detail + memberships + activity
 PATCH  /admin/users/:id                  [admin|moderator]  # suspend/reactivate, force-verify
-POST   /admin/users/:id/resend-verification   [admin|moderator]
-DELETE /admin/users/:id                  [admin]            # soft-delete / GDPR
+DELETE /admin/users/:id                  [admin]            # HARD delete (FK violations → CONFLICT)
 
 # Workspaces
 GET    /admin/workspaces                 # list + owner + usage + plan
@@ -331,7 +349,11 @@ PUT    /admin/workspaces/:id/plan        [admin]            # assign plan + over
 # Projects
 GET    /admin/projects                    # cross-workspace
 GET    /admin/projects/:id
+GET    /admin/projects/:id/usage          # per-project counts
 DELETE /admin/projects/:id               [admin]            # soft-delete
+
+# Content types
+GET    /admin/content-types               # all types (cross-tenant)
 
 # Content moderation
 GET    /admin/content                     # global entry browser (read-only)
@@ -348,10 +370,14 @@ DELETE /admin/api-keys/:id               [admin|moderator]  # revoke
 
 # Webhooks
 GET    /admin/webhooks                      # all + last status
-PATCH  /admin/webhooks/:id               [admin|moderator]  # disable
+PATCH  /admin/webhooks/:id/disable       [admin|moderator]  # disable
 
-# Invitations
-GET    /admin/invitations                   # pending system-wide
+# Support (staff ticket handling)
+GET    /admin/support/tickets            # queue: page/limit/status/priority/scopeType/workspaceId/assignedAdminId/unassigned/q
+GET    /admin/support/tickets/:id        # full thread incl. internal notes
+POST   /admin/support/tickets/:id/messages  [admin|moderator]  # reply / internal note
+PATCH  /admin/support/tickets/:id        [admin|moderator]  # status/priority/assignee
+GET    /admin/support/metrics            # counts: open/pending/resolved/closed/unassigned/total
 
 # Plans (definitions)
 GET    /admin/plans
@@ -361,11 +387,11 @@ PATCH  /admin/plans/:id                   [admin]
 # Admin users
 GET    /admin/admins                      [admin]
 POST   /admin/admins                      [admin]
-PATCH  /admin/admins/:id                  [admin]   # role, deactivate, reset MFA
+PATCH  /admin/admins/:id                  [admin]   # { role?, active? } only
 DELETE /admin/admins/:id                  [admin]
 
 # Audit
-GET    /admin/audit-log                    # filter by admin/action/target/date
+GET    /admin/audit-log                    # ?page&limit&action&targetType (no admin-id/date filters)
 ```
 
 Responses use the standard envelope. The frontend client (frontend.md §4) unwraps
@@ -379,7 +405,7 @@ Add to gateway + auth-service `.env.example` (never commit real secrets):
 
 ```
 ADMIN_JWT_SECRET=            # distinct from JWT_SECRET
-ADMIN_PANEL_ORIGIN=https://admin.wriven.com   # CORS allowlist for the SPA
+ADMIN_PANEL_ORIGIN=https://admin.wriven.tech   # CORS allowlist for the SPA
 ADMIN_SEED_EMAIL=
 ADMIN_SEED_PASSWORD_HASH=    # argon2/bcrypt hash, set out-of-band
 # optional hardening
@@ -460,7 +486,7 @@ ADMIN_IP_ALLOWLIST=          # comma-separated CIDRs for /admin/* (prod)
 - Content **takedown purges the CDN** (`CachePurgeService.purgeEntry`).
 
 **Deferred (next slice):** TOTP/MFA. IP allowlist + `/admin/*` rate-limit.
-**CORS origin allowlist** (still `origin:true`). Metrics/media-usage caching at
+**CORS origin allowlist — done** (`CORS_ORIGINS` on the gateway). Metrics/media-usage caching at
 scale. (Core-side quota counts are point-in-time, not advisory-locked — minor
 race on soft caps; hard storage cap is checked pre-upload.)
 ```

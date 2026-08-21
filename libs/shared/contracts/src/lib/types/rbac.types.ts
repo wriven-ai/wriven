@@ -1,20 +1,9 @@
 /**
- * RBAC — the permission layer over Wriven's existing roles.
- *
- * Model: Hierarchical RBAC (NIST RBAC3). Roles are unchanged string values on
- * the membership rows (`workspace_members.role`, `project_members.role`); here
- * they gain a typed union and a static role → permission map. Every call site
- * checks a {@link Permission}, never a role string.
- *
- * Cascade: a workspace `owner`/`admin` holds every project permission in their
- * workspace, even without a `project_members` row. The effective set is the
- * union of the workspace-derived and project-assigned sets — see
- * {@link effectivePermissions}, the single cascade definition shared by the
- * auth-service resolver and the frontend `useCan()` hook.
- *
- * Roles-as-DB-enums / dynamic custom roles are deliberately out of scope (the
- * `customRoles` plan entitlement); the permission-string seam is what makes
- * that a future flip with zero call-site edits.
+ * RBAC over Wriven's existing roles (hierarchical, NIST RBAC3-style). Roles
+ * stay plain strings on the membership rows; here they gain a typed union and
+ * a static role → permission map. Call sites check a {@link Permission}, never
+ * a role string. Dynamic custom roles are out of scope — the permission-string
+ * seam is what makes that a future flip.
  */
 
 // ──────────────────────────────────────────────────────────────────────────

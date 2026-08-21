@@ -14,8 +14,9 @@ needs.
 - An **entry** is a record of that type (like a row). Its `data` object holds the
   field values.
 
-> A starter **`post`** content type is auto-seeded when a project is created, so
-> `GET …/content/post` works out of the box for testing.
+> Projects start **empty** — create your content types in the dashboard's content
+> builder first (e.g. one with `apiId: "post"`), then `GET …/content/post` serves
+> its published entries.
 
 ## Field types
 

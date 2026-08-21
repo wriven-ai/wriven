@@ -1,21 +1,17 @@
 /**
  * Billing & subscriptions (Stripe) — view + status types shared between
- * auth-service (billing module) and api-gateway (billing controller). Backed by
- * `auth_svc.subscriptions` (one row per workspace). See specs/08.
+ * auth-service (billing module) and api-gateway (billing controller). Backed
+ * by `auth_svc.subscriptions` (one row per workspace).
  */
 
 import type { PlanLimits } from './admin.types';
 
 /**
- * Stock resource dimensions checked before a plan downgrade is allowed. A
- * downgrade (paid → lower paid, or → Free) is blocked when the workspace's
- * current usage of any of these exceeds the target plan's limit. Order is the
- * display order used by the client's blocked-downgrade dialog.
- *
- * Flow dimensions (`apiRequestsPerMonth`, `assetBandwidthGb`, AI) are excluded:
- * they reset each period and cannot be "deleted" to comply. `environments` /
- * `locales` are excluded too — they have no counter in `WorkspaceStatsView` yet
- * (`null` limit = don't block). See specs/18 (downgrade guard).
+ * Stock resource dimensions checked before a plan downgrade. Blocked when the
+ * workspace's current usage exceeds the target plan's limit; order is the
+ * client dialog's display order. Flow dimensions (requests, bandwidth, AI) are
+ * excluded — they reset each period and can't be "deleted" to comply.
+ * environments/locales too — no counter exists in `WorkspaceStatsView` yet.
  */
 export type DowngradeDimension =
   | 'projects'
@@ -39,11 +35,9 @@ export interface DowngradeBlock {
 }
 
 /**
- * Metadata for each downgrade-checked dimension: the `PlanLimits` field that
- * holds its cap. `null`/absent on that field = unlimited → never blocks. Kept
- * in contracts so the gateway guard and the docs share one source of truth for
- * which dimensions count. (The client mirrors this table — it can't import the
- * contracts bundle — see `apps/client/src/lib/downgrade.ts`.)
+ * Each checked dimension's `PlanLimits` cap field. `null`/absent = unlimited →
+ * never blocks. The client mirrors this table by hand (it can't import the
+ * contracts bundle — apps/client/src/lib/downgrade.ts).
  */
 export const DOWNGRADE_DIMENSIONS: readonly {
   dimension: DowngradeDimension;
@@ -78,10 +72,9 @@ export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 export type BillingCycle = 'monthly' | 'yearly';
 
 /**
- * A deferred plan downgrade scheduled via a Stripe Subscription Schedule
- * (specs/16). Populated while the lower-price phase hasn't landed yet; cleared
- * by the webhook reconciler at period end. `effectiveAt` = the period end when
- * the downgrade applies.
+ * A deferred downgrade scheduled via a Stripe Subscription Schedule. Populated
+ * until the lower-price phase lands; cleared by the webhook reconciler at
+ * period end. `effectiveAt` = when the downgrade applies.
  */
 export interface PendingDowngrade {
   planKey: string;

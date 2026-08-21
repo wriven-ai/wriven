@@ -29,16 +29,13 @@ function mapStatus(s: Stripe.Subscription.Status): string {
 }
 
 /**
- * Verifies + reconciles Stripe events into the local `subscriptions` row — the
- * source of truth that {@link ../auth/entitlements.service} reads for quota
- * enforcement.
- *
- * v2 contract (see plans/02 v2): the idempotency insert and the state write are
- * ONE atomic transaction. If the write fails, the insert rolls back too, so
- * Stripe's retry (gateway returns 5xx on downstream failure) genuinely
- * reprocesses instead of silently dropping a half-applied event. State is
- * derived from each event's own payload and ordered by `event.created`, so
- * out-of-order delivery can't stomp newer state. See specs/08.
+ * Verifies + reconciles Stripe events into the local `subscriptions` row —
+ * the source of truth entitlements read for quota enforcement. The idempotency
+ * insert and the state write are ONE atomic transaction: if the write fails,
+ * the insert rolls back too, so Stripe's retry reprocesses instead of silently
+ * dropping a half-applied event. State is derived from each event's own
+ * payload and ordered by `event.created`, so out-of-order delivery can't stomp
+ * newer state.
  */
 @Injectable()
 export class StripeWebhookService {

@@ -70,9 +70,13 @@ import { WrivenRichText } from '@wriven-ai/react';
 <WrivenRichText value={entry.data.body} />
 ```
 
-Prefer not to add the dependency? Vendor the same renderer into your project as
+Prefer not to add the dependency? Vendor the renderer below into your project as
 **`src/components/WrivenRichText.tsx`** — it is dependency-free, safe-link-only,
-supports inline images, and is the exact component shipped by `@wriven-ai/react`.
+and supports inline images. It is a close sibling of the shipped
+`@wriven-ai/react` renderer, not a byte-exact copy: the shipped version has a
+stricter safe-href regex, returns `null` for images with a missing/null `src`,
+and guards heading levels against NaN. For exact parity install
+`@wriven-ai/react` instead of vendoring.
 
 ```tsx
 // src/components/WrivenRichText.tsx

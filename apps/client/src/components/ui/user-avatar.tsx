@@ -6,9 +6,9 @@ import { cn } from '@/lib/utils';
 
 /**
  * Render a user's avatar via `next/image`, falling back to initials when there
- * is no photo **or** the image fails to load (broken/expired URL). Avoids the
+ * is no photo or the image fails to load (broken/expired URL). Avoids the
  * raw-`<img>` broken-image icon. Sizes: `size` px (square). Hosts must be
- * registered in `next.config.js` `images.remotePatterns` (specs/18).
+ * registered in `next.config.js` `images.remotePatterns`.
  */
 export function UserAvatar({
   name,

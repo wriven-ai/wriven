@@ -10,7 +10,7 @@ export const USAGE_KEYS = {
 
 /**
  * Current-period workspace usage vs plan limits (requests used/limit +
- * storage used/limit). Refreshes every 60s — usage moves slowly. See specs/14.
+ * storage used/limit). Refreshes every 60s — usage moves slowly.
  */
 export function useUsage() {
   return useQuery({

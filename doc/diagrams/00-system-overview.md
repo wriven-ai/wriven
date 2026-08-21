@@ -24,8 +24,8 @@ Wriven at a glance: one HTTP edge, three NestJS microservices behind it (TCP), a
 | Layer | Owns | Does NOT |
 |-------|------|----------|
 | **api-gateway** | HTTP edge, JWT validation, workspace/project membership validation, RBAC enforcement for **core** routes | any tables |
-| **auth-service** | `auth_svc` (users, workspaces, projects, members, invitations, sessions, tokens, subscriptions), the RBAC resolver | HTTP surface |
-| **core-service** | `core_svc` (content types, entries, media assets, api keys, webhooks) | authZ — trusts gateway-injected identity |
+| **auth-service** | `auth_svc` (users, workspaces, projects, members, invitations, sessions, tokens, plans, subscriptions, stripe_events, password/email-verification tokens, admin_users, admin_refresh_tokens, admin_audit_log), the RBAC resolver, billing | HTTP surface |
+| **core-service** | `core_svc` (content types, entries, revisions, media assets, api keys, webhooks, usage_buckets, ai_generations, ai_profiles, support_tickets + messages/attachments) | authZ — trusts gateway-injected identity |
 | **ai-service** | AI content generation (prompt build, temperature, `select`/`compose` validate-and-repair) | no tables (stateless LLM proxy; quota/audit/profile/cost stay in core) |
 | **client** | UI, state, cookie handling | backend secrets |
 
@@ -36,10 +36,9 @@ Wriven at a glance: one HTTP edge, three NestJS microservices behind it (TCP), a
 - **R2 keys only** — DB stores object **keys**, never full URLs; URLs reconstructed at runtime.
 - **All response envelope** — `{ success, data }` / `{ success, error }`; denials → `FORBIDDEN`.
 
-## Deploy (current vs target)
+## Deploy (live)
 
-- **Now:** all local. Supabase (Postgres) + Cloudflare R2 provisioned; client runs on Vercel in prod target.
-- **Target:** client → Vercel; gateway + auth + core (+ ai) → VPS in Docker. Not yet shipped (see [doc/market-readiness.md](../market-readiness.md) P0).
+- **Shipped:** gateway/auth/core/ai on **Render** (gateway public at `api.wriven.tech`, the rest private services — [`render.yaml`](../../render.yaml) Blueprint); client on **Vercel** (`wriven.tech`); admin SPA on **`admin.wriven.tech`**; Postgres on **Supabase**; media on Cloudflare R2. Runbook: [doc/deployment.md](../deployment.md). Remaining infra gaps (CI, staging): [doc/market-readiness.md](../market-readiness.md).
 
 ## Next diagrams
 

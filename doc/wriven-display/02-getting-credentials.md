@@ -4,9 +4,9 @@ Your display app needs **three values** to talk to Wriven:
 
 | Value | Example | Where it comes from |
 |-------|---------|---------------------|
-| **Base URL** | `http://localhost:5000` (dev) / `https://api.yourdomain.com` (deployed) | The Wriven gateway origin |
-| **Project ID** | `proj_abc123…` (a UUID) | Dashboard → your Project → API Keys page |
-| **API token** | `wrk_live_<32 hex chars>` | Dashboard → Project → API Keys → **Create key** |
+| **Base URL** | `http://localhost:5000` (dev) / `https://api.wriven.tech` (Wriven cloud) | The Wriven gateway origin |
+| **Project ID** | a bare UUID (`11111111-2222-…`) | Dashboard → your Project → API Keys page |
+| **API token** | `wrk_live_<32 base64url chars>` | Dashboard → Project → API Keys → **Create key** |
 
 ## 1. Create a read API key in the dashboard
 
@@ -29,7 +29,7 @@ Your display app needs **three values** to talk to Wriven:
 |-------|--------|----------|--------------|
 | `read` | `wrk_live_…` | **published** only | ✅ **Yes — use this in your display app** |
 | `preview` | `wrk_preview_…` | drafts + published | ❌ Never put in a browser bundle |
-| `manage` | `wrk_manage_…` | everything + writes | ❌ Dashboard only |
+| `manage` | `wrk_admin_…` | everything + writes | ❌ Dashboard only |
 
 A `read` key is bound to **one project**. It physically cannot read another project's
 content, even within the same workspace — the path's `{projectId}` must match the
@@ -48,7 +48,7 @@ GET  {BASE_URL}/v1/projects/{projectId}/content/{apiId}/{slug} # one entry
   `/v1/projects/…` for you.
 - Local development: `http://localhost:5000`
 - Production: whatever origin your Wriven gateway is deployed at
-  (e.g. `https://api.wriven.com`).
+  (the hosted Wriven cloud uses `https://api.wriven.tech`).
 
 > **Prefix note:** The public path is `/v1/projects/{projectId}/content/…`
 > (the dashboard's management API now shares the same `/v1` root). Older gateway
@@ -63,11 +63,17 @@ GET  {BASE_URL}/v1/projects/{projectId}/content/{apiId}/{slug} # one entry
 Run this from a terminal. Replace the three values:
 
 ```bash
-# Health check (no auth) — confirms the gateway is up
+# Health check (no auth) — confirms the gateway + downstream services are up
 curl http://localhost:5000/v1/health
-# -> { "success": true, "data": { "gateway": "ok", "auth": "ok", "core": "ok" } }
+# -> { "success": true, "data": {
+#      "gateway": "up",
+#      "auth":  { "service": "auth-service", "db": "up", "ts": "…" },
+#      "core":  { "service": "core-service", "db": "up", "ts": "…" },
+#      "ai":    { "status": "ok", "service": "ai-service" } } }
+#    (ai is non-fatal: { "status": "down", "error": "…" } when unreachable)
 
-# List published entries of the "post" content type (auto-seeded on project creation)
+# List published entries of a content type you created (e.g. apiId "post" —
+# projects start empty, so create + publish the type/entries in the dashboard first)
 curl "http://localhost:5000/v1/projects/$PROJECT_ID/content/post?limit=3" \
   -H "Authorization: Bearer $TOKEN"
 ```

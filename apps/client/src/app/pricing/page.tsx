@@ -365,7 +365,7 @@ function ComparisonMatrix({ plans }: { plans: PlanView[] }) {
   );
 }
 
-// ── FAQ + bottom CTA (copy kept; discount updated to 10%) ────────────────────
+// ── FAQ + bottom CTA ────────────────────────────────────────────────────────
 
 function PricingFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
   const faqs = [

@@ -1,15 +1,9 @@
 /**
- * Idempotent seed for the admin panel foundation:
- *  a bootstrap `admin` from env (ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD)
- *
- * Plans are NOT seeded — they are managed from the admin panel (POST /admin/plans;
- * paid plans get their Stripe Product/Prices created there, prices entered in USD
- * dollars — the DTO converts to cents). Until a `free` plan row exists, entitlements
- * fail closed to the baked-in FREE_FALLBACK limits (auth/entitlements.service.ts).
- *
- * Run after migrations:
- *   pnpm db:auth:seed
- * (loads apps/auth-service/.env via tsx --env-file)
+ * Idempotent seed: a bootstrap `admin` from env (ADMIN_SEED_EMAIL /
+ * ADMIN_SEED_PASSWORD). Plans are NOT seeded — they are managed from the
+ * admin panel (POST /admin/plans; prices entered in USD dollars, the DTO
+ * converts to cents). Until a `free` plan row exists, entitlements fail
+ * closed to FREE_FALLBACK limits. Run after migrations: `pnpm db:auth:seed`.
  */
 import * as bcrypt from 'bcrypt';
 import { drizzle } from 'drizzle-orm/postgres-js';

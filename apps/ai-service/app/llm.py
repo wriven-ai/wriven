@@ -26,9 +26,8 @@ logger = logging.getLogger("ai-service.llm")
 # Product policy: bounded output per action. AI_MAX_OUTPUT_TOKENS is the
 # deployment-wide ceiling; an operation may only lower it. Keep verbose actions
 # bounded even if an operator increases the global ceiling for another use case.
-# Caps are deliberately generous: on the default free provider
-# spend is $0 while a truncated answer is a direct UX hit — `compose` 6_000 and
-# `refine` 3_000 intentionally exceed spec 21's original 2_400/1_200.
+# Caps are deliberately generous: on the default free provider spend is $0
+# while a truncated answer is a direct UX hit.
 _OPERATION_OUTPUT_TOKEN_CAPS: dict[str, int] = {
     "generate": 3_000,
     "compose": 6_000,

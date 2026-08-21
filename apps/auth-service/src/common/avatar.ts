@@ -1,15 +1,7 @@
 /**
- * Reconstruct a renderable avatar URL from the stored value.
- *
- * `users.avatar` stores either an R2 object key (user-uploaded photo) or, for
- * Google-OAuth users, the original full URL. The R2-keys-only rule means we
- * never persist a Wriven URL — so for a key we prefix the R2 public base
- * (`R2_PUBLIC_URL`, the same env core media uses). External `http(s)` URLs and
- * `null` pass through unchanged.
- *
- * Shared by `toUserView` + the member/project mappers so every `UserView.avatar`
- * is consistent (specs/18). Reads `process.env` directly so any mapper can call
- * it without DI plumbing.
+ * Reconstruct a renderable avatar URL from the stored value: an R2 object key
+ * (prefixed with `R2_PUBLIC_URL`) or, for Google users, the original full
+ * URL. `http(s)` URLs and null pass through unchanged.
  */
 const HTTP_RE = /^https?:\/\//i;
 

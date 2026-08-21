@@ -97,12 +97,7 @@ _MIN_REPAIR_BUDGET_S = 5.0
 
 
 def _remaining_deadline_s(started_at: float) -> float:
-    """Seconds left before the whole generation must be answered.
-
-    `AI_GENERATION_DEADLINE_MS` sits just under core's request deadline
-    (`AI_SERVICE_TIMEOUT_MS`), so a slow provider is cut off here and core
-    receives the error JSON instead of a socket timeout.
-    """
+    """Seconds left before the whole generation must be answered."""
     return settings.ai_generation_deadline_ms / 1000 - (time.perf_counter() - started_at)
 
 
@@ -258,8 +253,8 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
                     retry_messages, temperature, operation, timeout_s=remaining_s
                 )
             except AiServiceError as exc:
-                # The repair died transport-level — attempt 1's spend must still
-                # reach core's failed audit row.
+                # Repair died transport-level — keep attempt 1's spend
+                # (see _attach_spend).
                 _attach_spend(
                     exc,
                     usage=usage,
@@ -310,8 +305,8 @@ async def _field(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
                     retry_messages, temperature, operation, timeout_s=remaining_s
                 )
             except AiServiceError as exc:
-                # The repair died transport-level — attempt 1's spend must still
-                # reach core's failed audit row.
+                # Repair died transport-level — keep attempt 1's spend
+                # (see _attach_spend).
                 _attach_spend(
                     exc,
                     usage=usage,
@@ -384,8 +379,8 @@ async def _compose(req: GenerateRequest, client: LlmClient) -> GenerateResponse:
                 retry_messages, temperature, "compose", timeout_s=remaining_s
             )
         except AiServiceError as exc:
-            # The repair died transport-level — attempt 1's spend must still
-            # reach core's failed audit row.
+            # Repair died transport-level — keep attempt 1's spend
+            # (see _attach_spend).
             _attach_spend(
                 exc,
                 usage=usage,

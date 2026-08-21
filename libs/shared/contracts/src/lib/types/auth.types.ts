@@ -71,8 +71,7 @@ export interface ServiceError {
   /**
    * Optional structured payload. The gateway exception filter returns a
    * `ServiceError` as-is, so this survives to the client envelope. Today only
-   * `DOWNGRADE_BLOCKED` uses it (a `DowngradeBlock[]` listing over-limit
-   * dimensions); other codes leave it absent.
+   * `DOWNGRADE_BLOCKED` uses it (a `DowngradeBlock[]` of over-limit dimensions).
    */
   details?: unknown;
 }
@@ -95,9 +94,8 @@ export interface WorkspaceMembership {
 export interface ProjectMembership {
   projectId: string;
   /**
-   * Workspace that owns the project, resolved from the project row by
-   * auth-service — the authoritative binding, unlike the client's
-   * `X-Workspace-Id` header (which other guards validate independently).
+   * Owning workspace, resolved from the project row by auth-service — the
+   * authoritative binding, unlike the client's X-Workspace-Id header.
    */
   workspaceId: string;
   /** Project role, or null when access is derived from a workspace owner/admin role. */

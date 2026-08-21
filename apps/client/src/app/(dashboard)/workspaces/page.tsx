@@ -60,12 +60,10 @@ export default function WorkspacesPage() {
 
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
 
-  // Create form
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  // Add member to workspace
   const [addMemberId, setAddMemberId] = useState('');
   const [addMemberRole, setAddMemberRole] = useState<'Editor' | 'Viewer'>('Editor');
   const [isAddingMember, setIsAddingMember] = useState(false);
@@ -127,7 +125,6 @@ export default function WorkspacesPage() {
     setSelectedWorkspace(updatedWs);
   };
 
-  // Detail view
   if (selectedWorkspace) {
     const availableToAdd = ORG_MEMBERS.filter(
       m => !selectedWorkspace.members.some(wm => wm.id === m.id)
@@ -281,7 +278,6 @@ export default function WorkspacesPage() {
     );
   }
 
-  // List view
   return (
     <div className="space-y-8 text-left" id="workspaces-list-view">
 

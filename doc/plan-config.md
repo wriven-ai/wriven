@@ -3,9 +3,9 @@
 Plans are **not seeded** — they live in the `auth_svc.plans` table and are created/managed from the admin panel (`POST /admin/plans`). This doc is the intended configuration reference (originally specs/15). If the DB and this doc disagree, the DB wins — fix this doc (or the plan in the admin panel).
 
 - 3 plans: `free` / `starter` / `pro`
-- Prices stored in **cents**; yearly = 10% discount (all paid tiers). The admin panel create form sends **USD dollars** — `CreatePlanDto` (`@wriven/contracts`) transforms to cents; read paths (`AdminPlanView`) return cents.
+- Prices stored in **cents**; yearly = 10% discount (all paid tiers). The admin panel create form sends **USD dollars**; `CreatePlanDto` (`@wriven/contracts`) carries dollars and the **auth-service `AdminPlansService` converts to cents** (not in the DTO); read paths (`AdminPlanView`) return cents.
 - Paid-plan create also creates the Stripe Product + monthly/yearly Prices server-side and stores their ids; prices are read-only after create (Stripe owns them)
-- `free` is the default plan for every workspace — until a `free` row exists, `EntitlementsService` fails closed to its baked-in `FREE_FALLBACK` limits
+- `free` is the default plan for every workspace — until a `free` row exists, `EntitlementsService` fails closed to its baked-in `FREE_FALLBACK` limits, which are **stricter than the configured Free tier**: projects 2, members **3**, environments 1, contentTypes **10**, entries **1000**, storageMb **100**, apiKeys **3** (plus `revisionsPerEntry`/`aiTextRequestsPerMonth`/`aiImageRequestsPerMonth` defaults — see `auth/entitlements.service.ts`). Keep the `free` plan row healthy; the fallback is a safety net, not a mirror.
 - Limits sized to free-tier infra (R2 + Supabase) + indie pricing
 
 ## Pricing

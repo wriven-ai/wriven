@@ -22,7 +22,6 @@ export const BILLING_KEYS = {
   invoices: ['billing', 'invoices'] as const,
 };
 
-/** Public plan catalog (free/starter/pro with prices/limits/features). */
 export function usePlans() {
   return useQuery({
     queryKey: BILLING_KEYS.plans,
@@ -30,7 +29,6 @@ export function usePlans() {
   });
 }
 
-/** The workspace's current subscription. */
 export function useSubscription() {
   return useQuery({
     queryKey: BILLING_KEYS.subscription,
@@ -38,7 +36,6 @@ export function useSubscription() {
   });
 }
 
-/** Last Stripe invoices for the workspace's customer. */
 export function useInvoices() {
   return useQuery({
     queryKey: BILLING_KEYS.invoices,

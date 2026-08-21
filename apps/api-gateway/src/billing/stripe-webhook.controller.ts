@@ -11,7 +11,7 @@ type RawBodyRequest = Request & { rawBody?: Buffer };
  * Receives Stripe webhooks. Public — auth is the Stripe signature, not a JWT
  * (no JwtAuthGuard; CSRF guard short-circuits with no access_token cookie).
  * Stays thin per "gateway owns no business logic": forwards the raw body +
- * signature to auth-service, which verifies + reconciles. See specs/08.
+ * signature to auth-service, which verifies + reconciles.
  */
 @SkipThrottle()
 @Controller('webhooks/stripe')

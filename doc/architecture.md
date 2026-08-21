@@ -84,7 +84,7 @@ this.core.send(CORE_PATTERNS.ENTRY_CREATE, { workspaceId, userId, dto });
 - **Workspace membership** validated via TCP `auth.validateWorkspaceMember` before forwarding workspace-scoped requests.
 - **Rate limiting** (`@nestjs/throttler`) — global default + tighter per-route limits.
 - **Response envelope** — `ResponseInterceptor` (success) + `AllExceptionsFilter` (errors). See [Conventions](./conventions.md).
-- **CORS** — credentials enabled, origin from `CLIENT_ORIGIN` (refresh cookie is cross-site).
+- **CORS** — split policy: the public Delivery API (`/v1/projects/*`) reflects any origin, credentials **off** (Bearer API keys, never cookies — customer browser apps); all other routes use the exact-origin allowlist `CORS_ORIGINS` with credentials (dev `localhost:3000,3001`; prod wriven.tech/www + admin.wriven.tech/www). `CLIENT_ORIGIN` is used for the Google-OAuth callback redirect.
 - Owns **no database tables and no business logic** — it routes and guards.
 
 ## Service boundaries
@@ -92,7 +92,7 @@ this.core.send(CORE_PATTERNS.ENTRY_CREATE, { workspaceId, userId, dto });
 | Owns | auth-service | core-service |
 |------|-------------|--------------|
 | Schema | `auth_svc` | `core_svc` |
-| Data | users, sessions, orgs, workspaces, members, tokens | content types, entries, revisions, media |
-| Never owns | content, media | identity, auth tokens, org/workspace records |
+| Data | users, sessions, workspaces, projects, members, invitations, tokens (refresh/reset/verification), **plans, subscriptions, stripe_events**, admin identity (admin_users, admin_refresh_tokens, admin_audit_log) | content types, entries, revisions, media assets, api_keys, webhooks, usage_buckets, ai_generations, ai_profiles, support tickets (+ messages/attachments) |
+| Never owns | content, media | identity, auth tokens, workspace/project records, billing |
 
 A service never reads another service's tables. Cross-service data (e.g. resolving a content author's name) goes over TCP message patterns, not SQL joins. See [Database](./database.md) for why there are no cross-service foreign keys.

@@ -12,12 +12,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-/**
- * Reusable success modal. Centered check emblem (status-success) over the
- * shadcn/base-ui `Dialog`, themed with Wriven brand tokens. Use to confirm a
- * completed action (plan change, save, send, …). Force-dismisses only via its
- * action button (no X) so the success is acknowledged.
- */
+/** Success modal — dismisses only via its action button (no X) so the
+ * success is acknowledged. */
 export interface SuccessModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

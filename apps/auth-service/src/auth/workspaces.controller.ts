@@ -39,7 +39,7 @@ export class WorkspacesController {
     return this.workspaces.remove(p);
   }
 
-  /** Workspace tenancy counts (projects + members). See specs/17. */
+  /** Workspace tenancy counts (projects + members). */
   @MessagePattern(WORKSPACE_PATTERNS.STATS)
   stats(@Payload() p: { userId: string; workspaceId: string }) {
     return this.workspaces.stats(p);

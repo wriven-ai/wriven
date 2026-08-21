@@ -13,11 +13,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 
-/**
- * Current-period usage for the active workspace (requests used/limit +
- * storage used/limit). Read-only for any workspace member. Thin adapter →
- * core-service `core.usage.read`. See specs/14.
- */
+/** Current-period usage for the active workspace; read open to any member. */
 @Controller('usage')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, PermissionGuard)
 export class UsageController {

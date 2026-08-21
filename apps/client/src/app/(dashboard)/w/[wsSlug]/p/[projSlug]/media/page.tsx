@@ -169,7 +169,6 @@ export default function MediaLibraryPage() {
   const quotaBytes = storageLimitMb ? storageLimitMb * 1024 * 1024 : null;
   const usedPct = quotaBytes ? Math.min(100, (usedBytes / quotaBytes) * 100) : 0;
 
-  // Close lightbox on Escape
   useEffect(() => {
     if (!lightbox) return;
     const onKey = (e: KeyboardEvent) => {
@@ -213,7 +212,6 @@ export default function MediaLibraryPage() {
   const cardClick = (id: string) =>
     selectMode ? toggleSelect(id) : setSelectedId(id);
 
-  // Esc exits select mode (only while selecting)
   useEffect(() => {
     if (!selectMode) return;
     const onKey = (e: KeyboardEvent) => {
@@ -790,7 +788,7 @@ export default function MediaLibraryPage() {
       </AnimatePresence>
 
       {/* Delete warning — asset is removed from the library and R2; content
-          referencing it may break. (specs/18) */}
+          referencing it may break. */}
       <ConfirmationDialog
         open={!!deleteTarget}
         onOpenChange={(o) => !o && setDeleteTarget(null)}

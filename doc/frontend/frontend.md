@@ -24,16 +24,19 @@ apps/client/src/
 ├── app/                    # App Router
 │   ├── (auth)/             # route group: login, register, forgot/reset-password, verify-email
 │   ├── auth/callback/      # Google OAuth redirect landing
-│   ├── (dashboard)/        # route group: dashboard, w/, workspaces/ — behind RequireAuth
+│   ├── (dashboard)/        # route group: dashboard, profile, w/, workspaces/ — behind RequireAuth
 │   ├── invite/             # public invitation accept page
-│   ├── about/ blog/ contact/ docs/ pricing/   # marketing / public
-│   ├── layout.tsx          # root layout → <Providers>
+│   ├── about/ blog/ contact/ docs/ pricing/ billing/   # marketing / public (billing = fallback redirect)
+│   ├── api/                # route handlers: contact (honeypot + per-IP rate limit), health, hello
+│   ├── layout.tsx          # root layout → <Providers> + <Analytics/> (Vercel)
 │   └── providers.tsx       # QueryClient, ThemeProvider, api wiring, silent session restore
 ├── components/
 │   ├── auth/               # RequireAuth guard, auth forms
 │   ├── sidebar/            # nav shell + brain (see sidebar.md)
 │   ├── topbar/             # dashboard navbar, workspace/project switchers
-│   ├── content/ editor/ webhooks/ workspace/   # feature surfaces
+│   ├── api-keys/ docs/ skeleton/ support/   # feature surfaces (plus below)
+│   ├── content/ editor/ webhooks/ workspace/
+│   ├── Hompage/ Header.tsx Footer.tsx WrivenLogo.tsx   # marketing components
 │   └── ui/                 # shadcn/base-ui primitives
 ├── hooks/                  # useAuth, use-scope, use-current-workspace, use-workspace-projects, …
 ├── lib/
@@ -67,7 +70,7 @@ A thin `fetch` wrapper that speaks the gateway's [response envelope](../conventi
 - **Credentials** ride automatically (`credentials: 'include'`).
 - Base URL: `NEXT_PUBLIC_API_URL` (default `http://localhost:5000/v1`).
 
-API modules: `authApi`, `contentApi` (types/entries/revisions), `apiKeyApi`, `webhookApi`, `mediaApi` (+ `uploadMedia`), `workspaceApi`, `memberApi`, `projectApi`, `projectMemberApi`, `invitationApi`. Google OAuth starts via a full-page navigation to `googleAuthUrl`.
+API modules: `authApi`, `contentApi` (types/entries/revisions), `apiKeyApi`, `webhookApi`, `mediaApi` (+ `uploadMedia`), `workspaceApi`, `memberApi`, `projectApi`, `projectMemberApi`, `invitationApi`, `aiApi` (generate/profile), `supportApi`, `billingApi`, `plansApi`, `usageApi`, `statsApi`. Google OAuth starts via a full-page navigation to `googleAuthUrl`.
 
 ### Media upload
 

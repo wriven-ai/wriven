@@ -67,7 +67,7 @@ class NotConfigured(AiServiceError):
 
 
 class ProviderError(AiServiceError):
-    """Upstream provider failure / timeout / 429. Defaults to 502."""
+    """Upstream provider failure / timeout / 429."""
 
     code = "AI_GENERATION_FAILED"
     status_code = 502
@@ -104,12 +104,8 @@ class SelectMissError(AiServiceError):
 
 
 class ComposeMissError(AiServiceError):
-    """Whole-entry `compose` could not produce a valid JSON record after retry.
-
-    Same metering contract as {@link SelectMissError}: the provider completed
-    (tokens spent), but the structured output was unusable, so core records the
-    spend on a `failed` row and charges no request quota.
-    """
+    """Whole-entry `compose` invalid after retry; same metering contract as
+    `SelectMissError` (model + usage ride on the error)."""
 
     code = "AI_GENERATION_FAILED"
     status_code = 502
@@ -134,12 +130,8 @@ class ComposeMissError(AiServiceError):
 
 
 class TextGuardrailError(AiServiceError):
-    """Free-text output stayed unusable (reasoning / prompt echo) after one retry.
-
-    Same metering contract as the structured-output misses: the provider
-    completed (tokens spent), but the answer was not usable field content, so
-    core records the spend on a `failed` row and charges no request quota.
-    """
+    """Free-text output unusable after retry; same metering contract as
+    `SelectMissError`."""
 
     code = "AI_GENERATION_FAILED"
     status_code = 502

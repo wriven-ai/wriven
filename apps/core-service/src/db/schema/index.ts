@@ -98,7 +98,6 @@ export const contentEntries = coreSchema.table(
     index('content_entries_workspace_id_idx').on(t.workspaceId),
     index('content_entries_type_idx').on(t.contentTypeId),
     index('content_entries_status_idx').on(t.status),
-    // GIN index for querying inside the JSONB field values.
     index('content_entries_data_gin').using('gin', t.data),
     check(
       'content_entries_status_check',
@@ -166,10 +165,10 @@ export const mediaAssets = coreSchema.table(
 // ── API keys (authenticate the public Content Delivery API) ──────────────────
 
 /**
- * A project-scoped API key. The raw token is shown to the user exactly once at
- * creation; we persist ONLY its sha-256 hash (`tokenHash`) plus a display
- * `prefix`. The gateway resolves a presented token by hashing it and looking it
- * up here. See plans/01 — Model A build plan.
+ * A project-scoped API key. The raw token is shown to the user exactly once
+ * at creation; we persist ONLY its sha-256 hash (`tokenHash`) plus a display
+ * `prefix`. The gateway resolves a presented token by hashing it and looking
+ * it up here.
  */
 export const apiKeys = coreSchema.table(
   'api_keys',
@@ -200,7 +199,7 @@ export const apiKeys = coreSchema.table(
   ],
 );
 
-// ── Webhooks (publish → signed POST; see plans/01 P6) ─────────────────────────
+// ── Webhooks (publish → signed POST) ────────────────────────────────────────
 
 /**
  * Outgoing webhook subscriptions. On publish/unpublish/delete, core POSTs a
@@ -337,7 +336,6 @@ export const supportTicketAttachments = coreSchema.table(
  * (`ON CONFLICT … request_count + n`). `workspace_id` has no cross-schema FK
  * (auth_svc boundary — same denormalized pattern as content_entries). The
  * gateway batches increments off the hot path and flushes via core.usage.record.
- *
  */
 export const usageBuckets = coreSchema.table(
   'usage_buckets',
@@ -366,19 +364,13 @@ export const usageBuckets = coreSchema.table(
 // ── AI generation log (metering + audit; workspace = billing unit) ──────────
 
 /**
- * One row per AI generation. Doubles as the metering source (row-count vs
+ * One row per AI generation — the metering source (row-count vs
  * `aiTextRequestsPerMonth`) and an audit trail with token totals. `status`
- * flows `pending` (reserved before the provider call) → `succeeded` | `failed`.
- * Quota reserves against `status IN ('pending','succeeded')`; the `/usage` stat
- * counts only `succeeded`, while token/cost sums include `failed` (a failed call
- * still burned tokens). `content_type_id` / `entry_id` are plain uuids with no
- * FK — a generation record survives its target being deleted. The idempotency key
- * and persisted output make this row the durable hand-off record for the future
- * worker queue; no separate job table needs to replace it later.
- *
- * `target_kind` distinguishes a single-field generation from a whole-entry
- * `compose`; for `compose`, `field_key` is null and `applied_field_keys` records
- * which fields of the returned record the author actually applied.
+ * flows pending (reserved before the provider call) → succeeded | failed.
+ * Quota reserves against pending+succeeded; /usage counts only succeeded,
+ * while token/cost sums include failed (a failed call still burned tokens).
+ * `content_type_id` / `entry_id` are plain uuids with no FK — the record
+ * survives its target being deleted.
  */
 export const aiGenerations = coreSchema.table(
   'ai_generations',
@@ -445,11 +437,9 @@ export const aiGenerations = coreSchema.table(
 );
 
 /**
- * Per-project AI "voice" configuration. Operator-authored guidance
- * injected into the generation system prompt: a brand voice description, a
- * glossary of preferred terms, and a default output language. One row per
- * project (absent row = no guidance = today's neutral behavior). This is
- * configuration, not tenant content — but it is still fenced in the prompt.
+ * Per-project AI voice configuration: brand voice, glossary of preferred
+ * terms, default output language. One row per project (absent = no
+ * guidance). Configuration, not tenant content — still fenced in the prompt.
  */
 export const aiProfiles = coreSchema.table(
   'ai_profiles',

@@ -167,8 +167,8 @@ export class AuthService {
       throw err;
     }
 
-    // No auto verification email on signup (specs/18) — verification is opt-in,
-    // triggered on demand from the profile page via resend-verification.
+    // No auto verification email on signup — verification is opt-in,
+    // triggered on demand from the profile page.
     await this.claimInvites(result.user.id, result.user.email);
 
     return {
@@ -531,14 +531,11 @@ export class AuthService {
   }
 
   /**
-   * Self-service profile update (specs/18): `name` and/or `avatar`. `avatar`
-   * must be `null` (clear), an `http(s)` URL (e.g. Google), or an R2 key under
-   * this user's own `avatars/<userId>/` prefix (the prefix `presignAvatar`
-   * mints) — rejects arbitrary strings / keys pointing at other objects.
-   *
-   * Returns the updated user plus the **raw prior avatar value** (DB key or
-   * external URL) when the avatar changed, so the gateway can best-effort
-   * delete the orphaned R2 object. Null/empty otherwise.
+   * Self-service profile update: `name` and/or `avatar`. `avatar` must be
+   * null (clear), an http(s) URL (e.g. Google), or an R2 key under this
+   * user's own `avatars/<userId>/` prefix — rejects keys of other objects.
+   * Returns the raw prior avatar value when it changed, so the gateway can
+   * best-effort delete the orphaned R2 object.
    */
   async updateProfile(payload: {
     userId: string;

@@ -104,9 +104,12 @@ always auto-resolved to `{ url, alt, … }`. If you see a string:
   array (multiple). Guard before reading `.url`:
   `entry.data.image?.url`. Filter `multiple` arrays: `.filter(Boolean)`.
 - For inline images in rich text, the API hydrates `node.attrs.src`. If `src` is
-  `null`, the referenced media was deleted/unpublished — the renderer still emits an
-  `<img>` with no src; override the `image` node to skip empty srcs (see
-  [06-rendering.md](./06-rendering.md) overrides).
+  `null`, the referenced media was deleted/unpublished — the current
+  `@wriven-ai/react` renderer (and the vendored version in
+  [06-rendering.md](./06-rendering.md)) **skips the node entirely** (returns
+  `null`), so a deleted image simply doesn't render. Older renderer versions
+  emitted a srcless `<img>` — if you see that, override the `image` node or bump
+  the package.
 
 ---
 

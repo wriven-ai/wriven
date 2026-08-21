@@ -26,38 +26,33 @@ export const ERROR_CODES = {
   SUBSCRIPTION_EXISTS: { code: 'SUBSCRIPTION_EXISTS', statusCode: 409 },
   // No live paid subscription to change — call createCheckout to subscribe first.
   SUBSCRIPTION_NOT_FOUND: { code: 'SUBSCRIPTION_NOT_FOUND', statusCode: 404 },
-  // A downgrade is blocked: the workspace holds more of a stock resource
-  // (projects, members, content types, entries, API keys, webhooks, storage)
-  // than the target plan allows. `details` lists each over-limit dimension.
-  // The user must trim below the target limits before downgrading.
+  // Downgrade blocked: the workspace holds more of a stock resource than the
+  // target plan allows. `details` lists each over-limit dimension.
   DOWNGRADE_BLOCKED: { code: 'DOWNGRADE_BLOCKED', statusCode: 409 },
   // A Stripe call failed mid plan create/retire sync — DB write skipped so the
   // plan row isn't left half-linked. Retryable.
   STRIPE_SYNC_FAILED: { code: 'STRIPE_SYNC_FAILED', statusCode: 500 },
-  // The LLM provider call failed (upstream error, timeout, bad response, upstream
-  // rate limit, or a `select` retry-miss).
+  // The LLM provider call failed (upstream error, timeout, bad response, rate
+  // limit, or a `select` retry-miss).
   AI_GENERATION_FAILED: { code: 'AI_GENERATION_FAILED', statusCode: 502 },
-  // AI is not configured (AI_API_KEY missing). Returned on the route, not a boot
-  // failure — core-service stays up.
+  // AI_API_KEY missing. Returned on the route, not a boot failure.
   AI_NOT_CONFIGURED: { code: 'AI_NOT_CONFIGURED', statusCode: 503 },
-  // AI usage is a paid resource: do not submit a provider request when the
-  // workspace allowance cannot be verified.
+  // AI usage is paid — never submit a provider request when the allowance
+  // can't be verified.
   AI_QUOTA_UNAVAILABLE: { code: 'AI_QUOTA_UNAVAILABLE', statusCode: 503 },
-  // Aggregate user-controlled input (draft + history + context) exceeds the
-  // context budget. Actionable, unlike the generic failure it used to collapse
-  // into — the author can shorten the draft or clear the conversation.
+  // User-controlled input (draft + history + context) exceeds the context
+  // budget — the author can shorten the draft or clear the conversation.
   AI_INPUT_TOO_LARGE: { code: 'AI_INPUT_TOO_LARGE', statusCode: 422 },
-  // The same idempotency key is already executing. Reuse the key only for a
-  // safe retry of the same request; start a new generation with a new key.
+  // Same idempotency key already executing. Retry the same request, or start
+  // a new generation with a new key.
   AI_GENERATION_IN_PROGRESS: { code: 'AI_GENERATION_IN_PROGRESS', statusCode: 409 },
   // A client accidentally attached one idempotency key to two different inputs.
   IDEMPOTENCY_KEY_REUSED: { code: 'IDEMPOTENCY_KEY_REUSED', statusCode: 409 },
-  // The idempotency key's stored result was redacted by retention. The replay
-  // window is over — start a new generation with a new key. Distinct from a
-  // failure: never report a succeeded-but-expired request as an error state.
+  // Stored result redacted by retention — replay window over, start a new
+  // generation. Never report a succeeded-but-expired request as an error state.
   AI_RESULT_EXPIRED: { code: 'AI_RESULT_EXPIRED', statusCode: 410 },
-  // A gateway-routed backend call exceeded its deadline (no response from the
-  // downstream service). 504, not 502: the request never completed.
+  // A backend call exceeded its deadline. 504, not 502 — the request never
+  // completed.
   GATEWAY_TIMEOUT: { code: 'GATEWAY_TIMEOUT', statusCode: 504 },
   INTERNAL_ERROR: { code: 'INTERNAL_ERROR', statusCode: 500 },
 } as const;

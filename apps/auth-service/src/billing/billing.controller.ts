@@ -11,12 +11,10 @@ import { BillingService } from './billing.service';
 import { StripeWebhookService } from './stripe-webhook.service';
 
 /**
- * TCP handlers for the billing module. The api-gateway billing controller +
- * Stripe webhook receiver forward to these patterns. See specs/08.
- *
- * Billing mutations (checkout / portal) require WORKSPACE_BILLING_MANAGE,
- * enforced at both the gateway (`PermissionGuard`) and here (defense-in-depth,
- * resolving from auth-service's own membership data).
+ * TCP handlers for the billing module — the api-gateway billing controller +
+ * Stripe webhook receiver forward to these patterns. Billing mutations
+ * (checkout / portal) require WORKSPACE_BILLING_MANAGE, enforced at both the
+ * gateway (`PermissionGuard`) and here (defense-in-depth).
  */
 @Controller()
 export class BillingController {

@@ -17,13 +17,15 @@ guard or vice-versa.
 ---
 
 ## 2. Cross-origin cookie settings (separate-repo SPA)
-The SPA runs on a different origin (`admin.wriven.com`) than the API
-(`api.wriven.com`). For the browser to send admin cookies:
+The SPA runs on a different origin (`admin.wriven.tech`) than the API
+(`api.wriven.tech`). For the browser to send admin cookies:
 - Cookies: **`httpOnly; Secure; SameSite=None`** (SameSite=None requires Secure;
   Lax/Strict would block cross-site sending). In dev, fall back to `SameSite=Lax`.
-- Gateway CORS: allow exactly `ADMIN_PANEL_ORIGIN`, `credentials: true`, allow the
-  CSRF header. Configure in [main.ts](../../../apps/api-gateway/src/main.ts) — add the
-  admin origin alongside the existing tenant origin (don't use `*` with credentials).
+- Gateway CORS: **done** — the gateway allowlists exact origins via `CORS_ORIGINS`
+  ([main.ts](../../../apps/api-gateway/src/main.ts)); prod includes
+  `https://admin.wriven.tech` + `https://www.admin.wriven.tech` (render.yaml) and dev includes
+  `http://localhost:3001`.
+  Never `*` with credentials.
 - Keep the existing **`CsrfGuard`** on admin mutations (double-submit token), same
   as tenant side.
 

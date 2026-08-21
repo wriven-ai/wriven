@@ -4,8 +4,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { PassportModule } from '@nestjs/passport';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { SERVICE_TOKENS } from '@wriven/contracts';
+import { ProxyAwareThrottlerGuard } from '../common/proxy-aware.throttler.guard';
 import { AdminAdminsController } from '../admin/admin-admins.controller';
 import { AdminApiKeysController } from '../admin/admin-apikeys.controller';
 import { AdminAuditController } from '../admin/admin-audit.controller';
@@ -143,7 +144,7 @@ import { AppService } from './app.service';
     UsageBufferService,
     UsageEnforceService,
     WorkspaceUsageComposer,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: ProxyAwareThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],

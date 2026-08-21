@@ -171,11 +171,11 @@ export type AiRefinePreset =
 
 export type EntryStatus = 'draft' | 'published' | 'archived';
 
-/** Per-project AI voice configuration (brand voice, glossary, language). */
 export interface AiGlossaryTerm {
   term: string;
   prefer: string;
 }
+/** Per-project AI voice configuration (brand voice, glossary, language). */
 export interface AiProfileView {
   brandVoice: string | null;
   glossary: AiGlossaryTerm[];
@@ -389,7 +389,7 @@ export interface PlanLimits {
 /**
  * Stock resource dimensions checked before a plan downgrade. Mirrors
  * `@wriven/contracts` DowngradeDimension — the client can't import the contracts
- * bundle. See `lib/downgrade.ts` for the matching compute helper. specs/18.
+ * bundle. See `lib/downgrade.ts` for the matching compute helper.
  */
 export type DowngradeDimension =
   | 'projects'

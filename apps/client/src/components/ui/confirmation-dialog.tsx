@@ -15,12 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-/**
- * Reusable confirmation dialog. Built on the shadcn/base-ui `Dialog` primitive,
- * themed with Wriven brand tokens (mono typeface, brand-accent / status-error
- * accents). Use across the app for "are you sure?" gates before destructive or
- * billing-impacting actions.
- */
+/** Reusable "are you sure?" gate for destructive / billing-impacting actions. */
 export type ConfirmVariant = 'accent' | 'danger' | 'neutral';
 
 export interface ConfirmationDialogProps {

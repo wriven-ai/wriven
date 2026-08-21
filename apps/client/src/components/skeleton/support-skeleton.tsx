@@ -4,18 +4,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 /**
- * Support-page loading skeletons. Each skeleton mirrors the real markup's
- * container (surface + hairline border + rounded-xl) so it reads as the same
- * layout, not a generic spinner. Pulse blocks use the shared <Skeleton/>
- * primitive, which is token-bound (bg-muted = brand-surface-soft) and tracks
- * light/dark automatically.
- *
- * Three pages:
- *  - `SupportListSkeleton`    list page (header + filters + ticket rows)
- *  - `NewTicketSkeleton`      "open a ticket" form page
- *  - `TicketDetailSkeleton`  conversation thread page
- * Granular `*Rows`/`*Body` helpers drop inside already-rendered cards while a
- * section's React Query resolves.
+ * Support-page loading skeletons — each mirrors the real markup's container so
+ * it reads as the same layout, not a generic spinner.
+ *  - `SupportListSkeleton` / `NewTicketSkeleton` / `TicketDetailSkeleton` —
+ *    full-page fallbacks (list / new-ticket form / conversation thread).
+ *  - Granular `*Rows`/`*Body` helpers drop inside already-rendered cards while
+ *    a section's React Query resolves.
  */
 
 // A card shell identical to the real support cards — keeps the silhouette.

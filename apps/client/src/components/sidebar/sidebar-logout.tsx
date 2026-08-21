@@ -4,11 +4,7 @@ import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useLogout } from '@/hooks/useAuth';
 
-/**
- * Sidebar footer logout control. Calls the logout API (revoke session) via
- * useLogout, then clears local state and redirects to /login. Collapses to an
- * icon-only button when the sidebar is in icon mode.
- */
+/** Sidebar footer logout; collapses to icon-only in icon mode. */
 export function SidebarLogout() {
   const logout = useLogout();
   const [pending, setPending] = useState(false);

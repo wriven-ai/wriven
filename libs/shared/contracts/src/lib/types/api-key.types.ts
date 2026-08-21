@@ -1,7 +1,7 @@
 /**
- * Project-scoped API keys authenticate the public Content Delivery API
- * (see plans/01 — Model A build plan). A key is shown in full exactly once, at
- * creation; the backend stores only its sha-256 hash plus a display prefix.
+ * Project-scoped API keys authenticate the public Content Delivery API. A key
+ * is shown in full exactly once, at creation; the backend stores only its
+ * sha-256 hash plus a display prefix.
  */
 
 /** What a key may do. `read` → published content; `preview` → drafts too. */

@@ -22,7 +22,7 @@ function entryTitle(entry: ContentEntryView, type?: ContentTypeView): string {
 
 /**
  * Editor control for `reference` fields — links to entries of another content
- * type. Stores the referenced entry **id** (or an array when `multiple`).
+ * type. Stores the referenced entry id (or an array when `multiple`).
  * Modern picker: a searchable dialog listing the target type's entries.
  */
 export function ReferenceField({

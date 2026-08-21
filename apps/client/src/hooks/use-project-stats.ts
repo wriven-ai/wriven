@@ -5,9 +5,6 @@ import { statsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 
 /**
- * Project-level aggregate stats (entries split, content types, API keys,
- * webhooks, media). See specs/17.
- *
  * Keyed by the active project id (the value sent as X-Project-Id) so switching
  * projects always refetches — a global key would serve the previous project's
  * stats within `staleTime`. Disabled until the store has resolved the project

@@ -35,11 +35,10 @@ const { contentTypes, contentEntries, aiGenerations } = schema;
 /** Fields eligible for AI generation (Tier 1). */
 const TIER1: readonly FieldType[] = ['text', 'richtext', 'select'];
 const STALE_RESERVATION_SQL = sql`now() - interval '5 minutes'`;
-// Bumped to v4: a topical anchor added to both prompts — whatever the
-// instruction asks, the answer is publishable field/entry content, never chat
-// (off-topic or injected instructions included). v3 added the last-position
-// output guardrail; v2 injected the per-project AI profile (brand voice /
-// glossary / language) as a fenced <voice_guide>.
+// v4: topical anchor in both prompts — whatever the instruction asks, the
+// answer must be publishable field/entry content, never chat (off-topic or
+// injected instructions included). v3: last-position output guardrail. v2:
+// fenced <voice_guide> voice-profile injection.
 const TEXT_PROMPT_VERSION = 'text-v4';
 
 type Reservation =
@@ -54,19 +53,15 @@ type Reservation =
       truncated: boolean;
     };
 
-/** Type guard: narrows a `FieldType` to the Tier-1 types (avoids an `as` cast). */
 function isTier1Type(type: FieldType): type is AiFieldType {
   return TIER1.includes(type);
 }
 
 /**
- * Collapse the author-facing `(targetKind, intent, preset)` triple into the
- * operation persisted on the audit row.
- *
- * The editor only offers "generate" and "refine" (plus preset chips), but the
- * provider still receives a tight per-verb prompt: on a weak free model a
- * specific template beats one generic "revise as instructed" by a wide margin.
- * The UI collapse is presentational; the engine keeps every operation.
+ * Collapse (targetKind, intent, preset) into the operation persisted on the
+ * audit row. The editor only offers "generate" and "refine", but the provider
+ * still gets a tight per-verb prompt — a specific template beats a generic
+ * "revise as instructed" on weak free models.
  */
 function deriveOperation(dto: AiGenerateDto): AiOperation {
   if (dto.targetKind === 'entry') return 'compose';
@@ -77,17 +72,16 @@ function deriveOperation(dto: AiGenerateDto): AiOperation {
 @Injectable()
 export class AiService {
   /**
-   * Step-level trace logger. The browser's requestId correlates a generation
-   * across all three hops (gateway → core → ai-service logs it too). Log only
-   * ids, enums, tokens, durations, and outcome codes — never field content,
-   * instructions, or provider payloads.
+   * Step-level trace logger; requestId correlates a generation across all
+   * three services. Log only ids, enums, tokens, durations, and outcome
+   * codes — never field content, instructions, or provider payloads.
    */
   private readonly logger = new Logger('AiService');
   private readonly auditRetentionDays: number;
   /**
-   * Env-configured list price for the deployment's default model, used only as a
-   * fallback when the returned model has no rule in `ai-model-prices`. Both
-   * halves must be set or it is null (never a half-price).
+   * Env-configured list price for the deployment's default model, used only
+   * when the returned model has no rule in ai-model-prices. Null unless both
+   * halves are set (never a half-price).
    */
   private readonly envDefaultPrice: ModelPrice | null;
 
@@ -126,7 +120,6 @@ export class AiService {
     const { workspaceId, projectId, userId, dto } = p;
     const requestHash = generationRequestHash(dto);
 
-    // 1. Load the content type that owns the target.
     const type = await this.db.query.contentTypes.findFirst({
       where: and(
         eq(contentTypes.id, dto.contentTypeId),
@@ -140,9 +133,8 @@ export class AiService {
     const fields = (type.fields ?? []) as FieldDef[];
     const operation = deriveOperation(dto);
 
-    // 2. Fail fast if the ai-service client isn't configured (no boot failure —
-    //    missing AI_SERVICE_URL/INTERNAL_SECRET returns 503; a reachable but
-    //    key-less ai-service returns AI_NOT_CONFIGURED through the client).
+    // Fail fast: missing AI_SERVICE_URL/INTERNAL_SECRET → 503 here; a reachable
+    // but key-less ai-service returns AI_NOT_CONFIGURED through the client.
     if (!this.client.configured()) {
       throw rpcError(
         'AI_NOT_CONFIGURED',
@@ -150,14 +142,10 @@ export class AiService {
       );
     }
 
-    // 3. Load the per-project AI profile (brand voice / glossary / language)
-    //    before reserving quota. Absent profile = empty guidance; never blocks.
-    //    One indexed single-row read — deliberately uncached.
+    // Absent profile = empty guidance, never blocks. Single indexed read,
+    // uncached by design.
     const profile: AiProfile = await this.profiles.read(projectId);
 
-    // 4. Validate the target + build the ai-service request per target kind.
-    //    Eligibility is derived, not configured: a field is a valid target when
-    //    it is Tier-1, single-valued, and not marked sensitive.
     const isEligible = (f: FieldDef): boolean =>
       isTier1Type(f.type) && !f.multiple && !f.aiPrivate;
 
@@ -165,8 +153,7 @@ export class AiService {
     let targetFieldKey: string | null;
 
     if (dto.targetKind === 'entry') {
-      // Whole-entry composition drafts every eligible field in one call — one
-      // generation, one quota unit, regardless of how many fields it fills.
+      // One generation, one quota unit — no matter how many fields it fills.
       if (dto.intent !== 'generate') {
         throw rpcError(
           'VALIDATION_ERROR',
@@ -185,9 +172,8 @@ export class AiService {
           'Whole-entry drafting does not target a field.',
         );
       }
-      // The compose path never reads entry data (no sibling context), so the
-      // entry's existence/scope must be checked explicitly — an arbitrary id
-      // must not land in the audit/provenance row.
+      // Compose never reads entry data, so scope-check explicitly — an
+      // arbitrary id must not reach the audit row.
       if (dto.entryId) {
         const entry = await this.db.query.contentEntries.findFirst({
           where: and(
@@ -220,9 +206,7 @@ export class AiService {
         targetKind: 'entry',
         contentTypeName: type.name,
         composeFields,
-        // Compose is a one-shot whole-entry draft — multi-turn history doesn't
-        // apply, so it isn't forwarded (Python's build_compose_messages ignores
-        // it; sending it was dead payload).
+        // History isn't forwarded — compose is a one-shot draft and ignores it.
         instruction: dto.instruction,
         profile,
       };
@@ -258,14 +242,14 @@ export class AiService {
           'Current field content is required for AI refinement.',
         );
       }
-      // `tone` has no dedicated input any more — the author's instruction carries
-      // the target tone, so an empty instruction would leave the model guessing.
+      // `tone` has no dedicated input — the author's instruction carries the
+      // target tone.
       if (operation === 'tone' && !dto.instruction?.trim()) {
         throw rpcError('VALIDATION_ERROR', 'Describe the tone you want.');
       }
 
-      // Build sibling context before reserving quota. A bad/stale entry must
-      // fail without leaving a metered `pending` reservation behind.
+      // Before the quota reserve — a stale entry must fail without leaving a
+      // metered pending row.
       const siblingValues = dto.entryId
         ? await this.siblingValues({
             workspaceId,
@@ -297,8 +281,8 @@ export class AiService {
       };
     }
 
-    // 5. Atomic quota reserve (advisory lock + pending row). Limit resolves
-    //    OUTSIDE the lock so an auth round-trip never extends the lock hold.
+    // Quota reserve: advisory lock + pending row. The limit resolves outside
+    // the lock so an auth round-trip never extends the lock hold.
     this.logger.log(
       `ai.generate step=validated request_id=${dto.requestId} operation=${operation} ` +
         `target=${targetFieldKey ?? 'entry'} content_type=${type.id} profile=${profile.brandVoice ? 'set' : 'empty'}`,
@@ -330,8 +314,6 @@ export class AiService {
       };
     }
 
-    // 6. Generate via ai-service (HTTP). Prompt building, temperature, and
-    //    `select`/`compose` output validation + retry all live in Python now.
     this.logger.log(
       `ai.generate step=reserved request_id=${dto.requestId} outcome=reserved ` +
         `generation=${reservation.generationId} remaining=${reservation.remaining ?? 'unlimited'}`,
@@ -345,8 +327,6 @@ export class AiService {
           `finish_reason=${result.finishReason ?? 'unknown'} attempts=${result.attemptCount}`,
       );
       await this.finalize(reservation.generationId, 'succeeded', result.model, result.usage, {
-        // Persist a canonical text form for idempotent replay: the scalar text,
-        // or the record serialized as JSON (reconstructed on replay by targetKind).
         output: storedOutputText(result.output),
         promptVersion: TEXT_PROMPT_VERSION,
         latencyMs: Date.now() - startedAt,
@@ -364,18 +344,14 @@ export class AiService {
         model: result.model,
         usage: result.usage,
         remaining: reservation.remaining,
-        // The provider hit the output cap — the author is looking at a partial
-        // answer and must be told, not silently handed truncated content.
+        // 'length' = the provider hit the output cap; the author must know.
         truncated: result.finishReason === 'length',
       };
     } catch (err) {
-      // AiClientError carries a contract code (AI_NOT_CONFIGURED,
-      // AI_GENERATION_FAILED, or AI_INPUT_TOO_LARGE) from the ai-service — map
-      // it through unchanged. RpcException (already mapped, e.g. the quota
-      // throw) rethrows as-is.
+      // AiClientError carries a contract code — map it through unchanged;
+      // RpcException (e.g. the quota throw) rethrows as-is.
       if (err instanceof AiClientError) {
-        // err.model/err.usage present only when the LLM call succeeded but the
-        // turn failed (select miss) — record the spent tokens on the failed row.
+        // model/usage set only when the LLM call succeeded but the turn failed.
         this.logger.warn(
           `ai.generate step=provider-failed request_id=${dto.requestId} code=${err.code} ` +
             `model=${err.model ?? 'unknown'} total_tokens=${err.usage?.totalTokens ?? 0} ` +
@@ -396,9 +372,8 @@ export class AiService {
   }
 
   /**
-   * Redact the only recoverable content kept in the audit row once its
-   * idempotency-recovery window has elapsed. The durable operational metadata
-   * remains available for metering, cost reconciliation, and incident review.
+   * Redact recoverable audit content once the replay window has elapsed;
+   * operational metadata survives for metering and incident review.
    */
   async redactExpiredAuditData(): Promise<number> {
     const cutoff = new Date(
@@ -413,17 +388,17 @@ export class AiService {
           or(isNotNull(aiGenerations.output), isNotNull(aiGenerations.requestHash)),
         ),
       )
-      // Window count instead of materializing every redacted id into Node —
-      // retention days can touch thousands of rows.
+      // Window count instead of materializing ids into Node — retention can
+      // touch thousands of rows.
       .returning({ n: sql<number>`count(*) over ()` });
     return rows[0]?.n ?? 0;
   }
 
   /**
-   * Insert a `pending` row under a per-workspace advisory lock, then count
-   * reserved+succeeded rows this period. Over limit → throws (txn rolls back,
-   * discarding the pending row, so no quota is consumed and no provider call
-   * happens). Returns the pending row id + remaining count.
+   * Insert a pending row under a per-workspace advisory lock, then count this
+   * period's reserved+succeeded rows. Over limit → throw; the txn rolls back
+   * and discards the pending row, so no quota is consumed and no provider
+   * call happens.
    */
   private async reserveQuota(p: {
     workspaceId: string;
@@ -458,9 +433,8 @@ export class AiService {
       await tx.execute(
         sql`SELECT pg_advisory_xact_lock(hashtext(${workspaceId})::bigint)`,
       );
-      // A process can die after reserving quota but before finalizing the row.
-      // Reclaim stale reservations while holding the same workspace lock so they
-      // cannot block every future generation in the billing period.
+      // A process can die between reserve and finalize — reclaim stale rows
+      // under the same lock so they can't block the whole billing period.
       await tx
         .update(aiGenerations)
         .set({
@@ -534,9 +508,8 @@ export class AiService {
         }
         if (existing.status === 'succeeded') {
           if (existing.output == null) {
-            // Retention redacted the stored result — the replay window for this
-            // key is over. Distinct from a failure: never report a
-            // succeeded-but-expired request as a generic error.
+            // Retention redacted the result — replay window over; don't report
+            // it as a generic failure.
             this.logger.warn(
               `ai.generate step=reserve request_id=${dto.requestId} outcome=rejected reason=result-expired generation=${existing.id}`,
             );
@@ -550,7 +523,6 @@ export class AiService {
           return {
             kind: 'replay',
             generationId: existing.id,
-            // Reconstruct the typed output from the canonical stored text.
             output: reconstructOutput(existing.targetKind, existing.output),
             model: existing.model,
             usage: {
@@ -562,10 +534,8 @@ export class AiService {
             truncated: existing.finishReason === 'length',
           };
         }
-        // Failed row: rethrow the ORIGINAL code so a retried key keeps its
-        // status class (422 input-too-large stays 422 on retry). Rows written
-        // before the error_code column existed carry no stored code, and an
-        // unknown stored value must never crash the registry lookup.
+        // Rethrow the original code so a retried key keeps its status class
+        // (422 stays 422). Pre-error_code rows fall back to AI_GENERATION_FAILED.
         const storedCode = existing.errorCode;
         const replayCode: ErrorCodeKey =
           storedCode && storedCode in ERROR_CODES
@@ -596,8 +566,8 @@ export class AiService {
         .returning({ id: aiGenerations.id });
 
       if (limit == null) {
-        // Explicitly unlimited plan. Entitlement lookup failures are rejected by
-        // aiTextLimit(), because paid AI generation must fail closed.
+        // Explicitly unlimited plan — entitlement lookup failures fail closed
+        // in aiTextLimit().
         return { kind: 'reserved', generationId: row.id, remaining: null };
       }
 
@@ -624,8 +594,7 @@ export class AiService {
     usage?: { promptTokens: number; completionTokens: number; totalTokens: number },
     opts?: {
       error?: string;
-      /** Contract error code persisted beside `error` so a retried failed key
-       *  rethrows with its original status class. */
+      /** Persisted so a retried failed key rethrows its original status class. */
       errorCode?: string;
       output?: string;
       promptVersion?: string;
@@ -677,8 +646,8 @@ export class AiService {
       ),
     });
     if (!entry) throw rpcError('NOT_FOUND', 'Content entry not found.');
-    // Context is opt-in per target field. This prevents unrelated CMS data from
-    // reaching a provider merely because it happens to share an entry.
+    // Context is opt-in per target field, so unrelated CMS data never reaches
+    // a provider just because it shares an entry.
     if (p.allowedFieldKeys.length === 0) return [];
     const allowed = new Set(p.allowedFieldKeys);
     const data = (entry.data ?? {}) as Record<string, unknown>;
@@ -714,11 +683,8 @@ function generationRequestHash(dto: AiGenerateDto): string {
     .digest('hex');
 }
 
-/**
- * Canonical text form of an output for the audit row's `output` column: the
- * scalar text, or the record's fields serialized as JSON. `reconstructOutput`
- * is its inverse, keyed by the row's `target_kind`.
- */
+/** Canonical audit form: scalar text, or the record's fields as JSON.
+ * reconstructOutput() is its inverse. */
 function storedOutputText(output: AiOutput): string {
   return output.kind === 'record' ? JSON.stringify(output.fields) : output.text;
 }
@@ -730,7 +696,7 @@ function reconstructOutput(targetKind: string, stored: string): AiOutput {
       const fields = JSON.parse(stored) as Record<string, string>;
       return { kind: 'record', fields };
     } catch {
-      // A malformed stored record shouldn't crash a replay; return empty.
+      // Don't crash a replay on malformed stored JSON.
       return { kind: 'record', fields: {} };
     }
   }

@@ -1,18 +1,8 @@
 /**
- * Provider price resolution for AI cost accounting.
- *
- * Prices are keyed on the model the provider actually returned (`response.model`),
- * NOT the requested `AI_MODEL`: `openrouter/free` resolves to a different model
- * per call, so a single global price would be wrong. Resolution order:
- *
- *   1. exact model id  → its price
- *   2. longest matching suffix rule → its price (`…:free` is genuinely $0)
- *   3. caller-supplied env fallback pair
- *   4. `null` — price unknown
- *
- * `null` means *unknown* and must never be guessed from a name; `0` is a fact
- * (a free model costs nothing). A period that contains any `null`-priced
- * generation is reported as `cost.complete = false` upstream.
+ * Prices for AI cost accounting, keyed on the model the provider RETURNED —
+ * not the requested AI_MODEL (openrouter/free resolves to a different model
+ * per call). Resolution: exact id → longest suffix rule → env fallback → null.
+ * null means unknown and is never guessed from a name; 0 is a real free model.
  */
 
 /** micro-USD per 1,000,000 tokens, split by prompt vs completion. */
@@ -23,19 +13,12 @@ export interface ModelPrice {
 
 const FREE: ModelPrice = { inputPerMillion: 0, outputPerMillion: 0 };
 
-/**
- * Exact `response.model` → price. Empty by default: on `openrouter/free` every
- * model matches the `:free` suffix rule below, so no paid entries are needed
- * until a paid model is configured. Add entries here (or via the env fallback)
- * when you point `AI_MODEL` at a paid model.
- */
+/** Empty because the :free suffix rule below covers every openrouter/free model;
+ * add entries when AI_MODEL targets a paid model. */
 const EXACT_PRICES: Readonly<Record<string, ModelPrice>> = {};
 
-/**
- * Suffix rules, longest match wins. OpenRouter free model ids end in `:free`
- * (e.g. `meta-llama/llama-3.3-70b-instruct:free`), so this prices the entire
- * free tier at $0 without enumerating every model.
- */
+/** Longest match wins. Free-tier ids end in :free, so one rule prices the
+ * whole free tier at $0. */
 const SUFFIX_PRICES: ReadonlyArray<{ suffix: string; price: ModelPrice }> = [
   { suffix: ':free', price: FREE },
 ];
@@ -56,10 +39,7 @@ export function resolveModelPrice(
   return fallback;
 }
 
-/**
- * Spend for one generation in micro-USD, or `null` when the price is unknown.
- * `0` is returned for a priced-but-free model — distinct from `null`.
- */
+/** Spend in micro-USD, or null when the price is unknown (0 = free, not unknown). */
 export function costMicrousdFor(
   usage: { promptTokens: number; completionTokens: number } | undefined,
   price: ModelPrice | null,

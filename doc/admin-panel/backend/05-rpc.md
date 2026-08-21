@@ -15,16 +15,14 @@ as `ADMIN_PATTERNS`. Add to the existing TCP controllers (or a new
 ## auth-service (`admin.controller.ts`)
 
 ```
-admin.auth.login / admin.auth.totp / admin.auth.refresh / admin.auth.logout / admin.auth.me
-admin.adminUsers.list / .get / .create / .update / .delete
+admin.auth.login / admin.auth.refresh / admin.auth.logout / admin.auth.getById   (no .totp — not implemented)
+admin.admins.list / .get / .create / .update / .delete
 admin.audit.write / admin.audit.list
-admin.users.list (search/paginate ALL tenant users) / .get / .update / .delete / .resendVerification
-admin.workspaces.list (+owner, member/project counts, plan) / .get / .update / .suspend
-admin.workspaces.setPlan
+admin.users.list (search/paginate ALL tenant users) / .get / .update / .delete   (no .resendVerification)
+admin.workspaces.list (+owner, member/project counts, plan) / .get / .setPlan    (no .update/.suspend)
 admin.projects.list / .get / .delete
-admin.invitations.list
 admin.plans.list / .create / .update
-admin.metrics.overview (counts + growth from auth_svc)
+admin.metrics.auth (auth_svc counts; merged with core at the gateway — no growth fields)
 ```
 
 Plus `auth.entitlements.resolve` (`AUTH_PATTERNS.ENTITLEMENTS_RESOLVE`) — resolves
@@ -37,10 +35,13 @@ effective plan limits + usage for a workspace (used by core-side enforcement, se
 
 ```
 admin.content.list (cross-tenant, filter ws/project/type/status) / .get / .takedown
-admin.media.usageByWorkspace / .list / .purge
+admin.contentTypes.list (all content types, cross-tenant)
+admin.media.usage / .list / .purge
 admin.apiKeys.list / .revoke
 admin.webhooks.list / .disable
+admin.projects.usage (per-project counts)
 admin.metrics.content (entry/media/key counts + storage totals)
+admin.support.list / .get / .reply / .update / .metrics   (staff ticket handling)
 ```
 
 ---

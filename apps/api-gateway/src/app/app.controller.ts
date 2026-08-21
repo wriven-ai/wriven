@@ -14,8 +14,7 @@ export class AppController {
     private readonly config: ConfigService,
   ) {}
 
-  /** GET /v1/ — API root. Static service metadata + a link to the liveness
-   *  check. Public (AppController sits behind no JWT guard). */
+  /** Public — no guard on this controller (only the global throttler applies). */
   @Get()
   root() {
     return {

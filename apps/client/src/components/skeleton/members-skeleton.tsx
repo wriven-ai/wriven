@@ -4,16 +4,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 /**
- * Workspace-members page loading skeletons. Each skeleton mirrors the real
- * markup's container (surface + hairline border + rounded-xl) so it reads as
- * the same layout, not a generic spinner. Pulse blocks use the shared
- * <Skeleton/> primitive, which is token-bound (bg-muted = brand-surface-soft)
- * and tracks light/dark automatically.
- *
- * Two granularities:
- *  - `*Skeleton`      full card (shell + title + body) — for whole-page fallback
- *  - `*Rows`/`*Body`  inner content only — drop inside an already-rendered card
- *                     while that section's React Query resolves.
+ * Workspace-members page loading skeletons — each mirrors the real markup's
+ * container so it reads as the same layout, not a generic spinner.
+ *  - `*Skeleton` — full card (shell + title + body), whole-page fallback.
+ *  - `*Rows`/`*Body` — inner content only, dropped inside an already-rendered
+ *    card while that section's React Query resolves.
  */
 
 // A card shell identical to the real members cards — keeps the silhouette.

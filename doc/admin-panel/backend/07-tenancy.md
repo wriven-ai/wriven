@@ -15,27 +15,26 @@ auth-service `admin-tenancy.service.ts`, exposed via `admin.*` RPC
 - **update** `[admin|moderator]` — suspend/reactivate, force-verify. Suspending
   sets `users.suspendedAt` **and revokes the user's refresh tokens** (kills active
   sessions, not just new logins; `auth.refresh` also rejects suspended accounts).
-- **resendVerification** `[admin|moderator]`.
-- **delete** `[admin]` — soft-delete / GDPR. FK-guarded: a `23503` violation maps
-  to `CONFLICT` rather than a 500.
+- **delete** `[admin]` — **hard** `DELETE FROM users` (not soft/GDPR-tooling). FK-guarded:
+  a `23503` violation maps to `CONFLICT` rather than a 500. No resend-verification
+  endpoint exists.
 
 ---
 
 ## Workspaces
 
-- **list** — workspace + owner + member/project counts + storage + plan. Batched
-  counts, no N+1.
-- **get** — members, projects, storage, plan (gateway merges auth_svc identity
-  with core_svc storage totals).
-- **update / suspend** `[admin|moderator]` — rename / suspend.
+- **list** — workspace + owner + plan fields (`planKey`/`planName`/`subscriptionStatus`;
+  **no storage column** — that lives in metrics/media views). Batched counts, no N+1.
+- **get** — members, projects, plan (gateway merges auth_svc identity with core_svc
+  totals).
 - **setPlan** `[admin]` — assign plan + overrides (atomic upsert, see
-  [09-plans.md](./09-plans.md)).
+  [09-plans.md](./09-plans.md)). No workspace update/suspend (rename) handler exists.
 
 ---
 
 ## Projects
 
-- **list** — cross-workspace (counts: types/entries/keys/webhooks).
+- **list** — cross-workspace (list rows carry **no counts**; use `GET /admin/projects/:id/usage` — `admin.projects.usage` — for types/entries/keys/webhooks counts).
 - **get** — detail; drills into the project's content/keys/webhooks (read-only
   oversight).
 - **delete** `[admin]` — soft-delete. `and(inArray(...), isNull(deletedAt))` on

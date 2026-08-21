@@ -68,8 +68,8 @@ export class EntitlementsService {
     let planKey = sub?.plan?.key;
     let baseLimits = (sub?.plan?.limits ?? null) as PlanLimits | null;
 
-    // Billing status policy (specs/08): a canceled subscription, or a
-    // past_due/incomplete one past BILLING_GRACE_DAYS, reverts to free limits.
+    // Billing status policy: a canceled subscription, or a past_due/incomplete
+    // one past BILLING_GRACE_DAYS, reverts to free limits.
     if (baseLimits && shouldRestrictToFree(sub)) {
       baseLimits = null; // triggers the free-plan fallback below
     }

@@ -11,7 +11,6 @@ export const PLAN_KEYS = {
 /**
  * Public plan catalog (free/starter/pro) for the `/pricing` page. No auth, no
  * workspace — fetched from `GET /plans`. Plans change rarely → 10min stale.
- * See specs/15.
  */
 export function usePublicPlans() {
   return useQuery({

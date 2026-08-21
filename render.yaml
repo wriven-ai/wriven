@@ -183,6 +183,10 @@ services:
       # SPA origin for the OAuth post-login redirect (falls back to localhost).
       - key: CLIENT_ORIGIN
         value: https://wriven.tech
+      # CORS allowlist — exact origins, credentials enabled (never `*`).
+      # Client (apex + www) + the admin SPA subdomain.
+      - key: CORS_ORIGINS
+        value: https://wriven.tech,https://www.wriven.tech,https://admin.wriven.tech,https://www.admin.wriven.tech
       - key: USAGE_ENFORCE
         value: "false"
 

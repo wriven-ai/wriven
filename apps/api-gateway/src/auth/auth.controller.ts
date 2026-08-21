@@ -23,9 +23,9 @@ const MINUTE = 60000;
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_COOKIE_PATH = '/v1/auth';
 
-// Access JWT + CSRF token ride cookies scoped to the whole API. The access
-// cookie is httpOnly (JS can't read it); the CSRF cookie is readable so the SPA
-// can echo it back in a header (double-submit). Both share the access TTL.
+// Access + CSRF cookies share the access TTL. Both httpOnly; the CSRF token
+// reaches the SPA via the response body (different hosts — JS can't read the
+// cookie cross-host).
 const ACCESS_COOKIE = 'access_token';
 const CSRF_COOKIE = 'csrf_token';
 const API_COOKIE_PATH = '/v1';
@@ -165,7 +165,6 @@ export class AuthController {
 
   // ── Google OAuth ────────────────────────────────────────────────────────────
 
-  /** Kicks off the Google consent redirect (handled by the passport guard). */
   @Get('google')
   @UseGuards(AuthGuard('google'))
   googleAuth() {
@@ -189,9 +188,8 @@ export class AuthController {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /** Set the session cookies and return the client-facing payload. The CSRF
-   *  token is returned in the body (synchronizer-token pattern) because the SPA
-   *  and gateway are different hosts — JS can't read the cookie cross-host. */
+  /** Set session cookies; return the client payload (CSRF token in body — see
+   *  setAccessCookies for the cross-host rationale). */
   private completeAuth(res: Response, result: contracts.AuthResult) {
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
     const csrfToken = this.setAccessCookies(res, result.accessToken);

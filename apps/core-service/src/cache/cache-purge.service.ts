@@ -2,13 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /**
- * Purges CDN cache by tag when content changes (plans/01 Phase 5). The Delivery
- * API tags every published response with `proj_<id> type_<apiId> entry_<id>`;
- * here we purge the affected tags so a publish invalidates exactly the right
- * responses — never a wildcard.
- *
- * Provider: Cloudflare cache-tag purge. Adapter-style + lazy: with no CDN env
- * configured it's a no-op (logs once), so the app runs fine without a CDN.
+ * Purges CDN cache by tag when content changes. The Delivery API tags every
+ * published response with `proj_<id> type_<apiId> entry_<id>`; here we purge
+ * the affected tags so a publish invalidates exactly the right responses —
+ * never a wildcard. Provider: Cloudflare cache-tag purge, adapter-style and
+ * lazy — with no CDN env configured it's a no-op (logs once).
  */
 @Injectable()
 export class CachePurgeService {

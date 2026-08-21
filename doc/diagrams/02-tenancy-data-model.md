@@ -24,6 +24,7 @@ invitations ──(resolves to workspace | project)──> a member row on accep
 - A user's role is **not one value** — it's a per-workspace row + a per-project row. `effectivePermissions` unions them (see [01-auth-rbac](./01-auth-rbac.md)).
 - Invariants: ≥1 `owner` per workspace, ≥1 `admin` per project; only a workspace `owner` may grant/transfer the owner role.
 - Single shared Postgres, schema-isolated (`auth_svc` / `core_svc`). core_svc rows carry `projectId` (denormalized `workspaceId`) but **no enforced cross-schema FK** — the gateway injects the scope.
+- **Scope note:** this diagram shows only the membership graph. `auth_svc` also holds billing/token/admin tables (`plans`, `subscriptions`, `stripe_events`, `refresh_tokens`, `password_reset_tokens`, `email_verification_tokens`, `admin_users`, `admin_refresh_tokens`, `admin_audit_log`); `core_svc` also holds content/revisions, `media_assets`, `api_keys`, `webhooks`, `usage_buckets`, `ai_generations`, `ai_profiles`, and the support-ticket tables (see [00-system-overview](./00-system-overview.md)).
 
 ## Source
 

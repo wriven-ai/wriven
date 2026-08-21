@@ -310,8 +310,8 @@ export const projectMembersRelations = relations(
 // ── Invitations (pending member onboarding) ─────────────────────────────────
 
 /**
- * A pending invitation to a workspace or project. The raw token is emailed once;
- * we persist only its sha-256 hash. Single-use, time-limited. See specs/05.
+ * A pending invitation to a workspace or project. The raw token is emailed
+ * once; we persist only its sha-256 hash. Single-use, time-limited.
  */
 export const invitations = authSchema.table(
   'invitations',
@@ -432,7 +432,7 @@ export const adminAuditLog = authSchema.table(
   ],
 );
 
-// ── Plans & per-workspace assignment (billing deferred; limits modelled now) ─
+// ── Plans & per-workspace assignment ───────────────────────────────────────
 
 export const plans = authSchema.table('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -444,7 +444,7 @@ export const plans = authSchema.table('plans', {
   isPublic: boolean('is_public').notNull().default(true),
   active: boolean('active').notNull().default(true),
 
-  // Billing (Stripe-ready; all nullable until billing lands). Prices in cents.
+  // Billing. Prices in cents.
   priceMonthly: integer('price_monthly'),
   // FINAL yearly amount (the cents Stripe charges) — computed server-side from
   // the discount breakdown below when a percent is given at create.
@@ -476,10 +476,9 @@ export const plans = authSchema.table('plans', {
 });
 
 /**
- * A workspace's subscription to a plan. One row per workspace (the billing unit).
- * Created as `free` when a workspace is created; an admin or the billing flow can
- * change the plan. Stripe fields are nullable until billing lands. `overrides`
- * lets an admin bump a single customer's limits without a custom plan.
+ * A workspace's subscription to a plan. One row per workspace (the billing
+ * unit), created as `free` on workspace creation. `overrides` lets an admin
+ * bump a single customer's limits without a custom plan.
  */
 export const subscriptions = authSchema.table(
   'subscriptions',
@@ -494,7 +493,7 @@ export const subscriptions = authSchema.table(
     // active|trialing|past_due|canceled|paused|incomplete
     status: text('status').notNull().default('active'),
     billingCycle: text('billing_cycle'), // 'monthly'|'yearly'|null (free)
-    // Stripe linkage (future billing).
+    // Stripe linkage.
     stripeCustomerId: text('stripe_customer_id'),
     stripeSubscriptionId: text('stripe_subscription_id'),
     // Timestamp of the last Stripe event applied (event.created) — stale-event guard.
@@ -509,9 +508,9 @@ export const subscriptions = authSchema.table(
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
     cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
     canceledAt: timestamp('canceled_at', { withTimezone: true }),
-    // Deferred downgrade (specs/16): when a downgrade is scheduled via a Stripe
-    // Subscription Schedule, this holds the target + the schedule id + the
-    // period-end effective date. Cleared by the reconciler when phase 2 lands.
+    // Deferred downgrade: when scheduled via a Stripe Subscription Schedule,
+    // holds the target + schedule id + period-end effective date. Cleared by
+    // the reconciler when phase 2 lands.
     // Shape: { planKey, planName, billingCycle, effectiveAt, scheduleId }.
     pendingChange: jsonb('pending_change'),
     // Per-workspace limit overrides (admin bump). Null = use the plan's limits.
@@ -540,7 +539,7 @@ export const subscriptions = authSchema.table(
 /**
  * Stripe webhook event log — idempotency + ordering. Stripe delivers events
  * at-least-once, possibly duplicated or out of order; `event_id` (Stripe's
- * `evt_…`) is the dedupe key. Payload kept for debug/replay. See specs/08.
+ * `evt_…`) is the dedupe key. Payload kept for debug/replay.
  */
 export const stripeEvents = authSchema.table(
   'stripe_events',

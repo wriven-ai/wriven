@@ -3,18 +3,20 @@
 Detailed reference for **workspace member** and **project member** management. Owned by `auth-service` (`MembersService` for workspaces, `ProjectsService` for projects); exposed by the gateway. All routes are JWT-protected and use the standard envelope (`{ success, data }` / `{ success, error }`).
 
 - **Base URL:** `http://localhost:5000/v1`
-- **Auth:** `Authorization: Bearer <accessToken>` on every route.
+- **Auth:** httpOnly `access_token` cookie on every route (+ `X-CSRF-Token` on mutations — see [Conventions](../conventions.md)).
 - **No `X-Workspace-Id` / `X-Project-Id` header needed** for member management routes — the id comes from the path; the caller's permission is derived from their membership row.
-- Identity model: members reference `auth_svc.users`. Adding a member **links an existing user by email** — there is no invitation flow yet.
+- Identity model: members reference `auth_svc.users`. Adding a member **links an existing user by email**; for users who don't exist yet there is a full **invitation flow** (specs/05) — `/workspaces/:id/invitations` + `/projects/:id/invitations` + `POST /invitations/token/:token/accept`.
 
 ## Roles
 
 | Scope | Roles | Who can manage members |
 |-------|-------|------------------------|
-| Workspace | `owner`, `admin`, `member` | `owner` / `admin` |
+| Workspace | `owner`, `admin`, `member`, `guest` | `owner` / `admin` |
 | Project | `admin`, `editor`, `viewer` | project `admin`, or workspace `owner` / `admin` (implicit) |
 
-**Invariants:** a workspace must always keep **≥1 `owner`**; a project must always keep **≥1 `admin`**. Only a workspace **owner** may grant, change, or remove the workspace `owner` role. Workspace owners/admins have implicit access to all projects in their workspace (enforced by the gateway `ProjectGuard`).
+`guest` = a user invited to a project only — auto-seated into the workspace with the baseline role so they hold a membership row and consume a seat; sees only their assigned projects.
+
+**Invariants:** a workspace must always keep **≥1 `owner`**; a project must always keep **≥1 `admin`**. Only a workspace **owner** may grant, change, or remove the workspace `owner` role. Workspace owners/admins get implicit access to all projects in their workspace via the RBAC **cascade**, resolved auth-service-side in `validateProjectMember` (the gateway has no bypass).
 
 ## Common errors
 
@@ -24,6 +26,7 @@ Detailed reference for **workspace member** and **project member** management. O
 | `FORBIDDEN` | 403 | Caller lacks the required role (or isn't a member) |
 | `NOT_FOUND` | 404 | Workspace/project/member not found, or no user with that email |
 | `CONFLICT` | 409 | Already a member, or would break the last-owner/last-admin invariant |
+| `PLAN_LIMIT_REACHED` | 403 | Seat quota full — add-member (workspace and project) enforces the plan's `members` limit in-transaction |
 | `VALIDATION_ERROR` | 422 | Bad body (invalid email/role) |
 
 ---
@@ -65,12 +68,12 @@ curl -X POST $API/workspaces/$WS/members \
   -d '{"email":"jane@acme.dev","role":"member"}'
 ```
 → `201`, the created `WorkspaceMemberView`.
-**Errors:** `NOT_FOUND` (no user with that email), `CONFLICT` (already a member), `FORBIDDEN`.
+**Errors:** `NOT_FOUND` (no user with that email), `CONFLICT` (already a member), `FORBIDDEN`, `PLAN_LIMIT_REACHED` (seat quota full).
 
 ### PATCH `/workspaces/:workspaceId/members/:userId`
 Change a member's role. **Caller:** `owner`/`admin`.
 
-**Body:** `{ "role": "owner" | "admin" | "member" }`
+**Body:** `{ "role": "owner" | "admin" | "member" | "guest" }`
 
 Rules:
 - Granting or changing the `owner` role requires the caller to be an **owner** → else `FORBIDDEN`.
@@ -92,7 +95,7 @@ Rules:
 ## Project members
 
 ### GET `/projects/:projectId/members`
-List project members. **Caller:** any member (`admin`/`editor`/`viewer`).
+List project members. **Caller:** needs `PROJECT_MEMBERS_VIEW` — project `admin`, or workspace `owner`/`admin` via the cascade. Plain `editor`/`viewer` get `FORBIDDEN`.
 → `ProjectMemberView[]`.
 
 ### POST `/projects/:projectId/members`
@@ -104,7 +107,9 @@ Add an existing user by email. **Caller:** project `admin`.
 | `email` | string | valid email; lowercased |
 | `role` | string | `admin` \| `editor` \| `viewer` |
 
-→ `201`, created `ProjectMemberView`. **Errors:** `NOT_FOUND`, `CONFLICT` (already a member), `FORBIDDEN`.
+If the invitee has no workspace membership yet, they are **auto-seated as a workspace `guest`** first (baseline membership + seat quota), then added to the project.
+
+→ `201`, created `ProjectMemberView`. **Errors:** `NOT_FOUND`, `CONFLICT` (already a member), `FORBIDDEN`, `PLAN_LIMIT_REACHED`.
 
 ### PATCH `/projects/:projectId/members/:userId`
 Change role. **Caller:** project `admin`. Body `{ "role": "admin" | "editor" | "viewer" }`.
@@ -141,10 +146,11 @@ interface ProjectMemberView {
 ## Internals
 
 - **TCP patterns** (gateway → auth-service): `auth.workspace.{listMembers,addMember,updateMember,removeMember}` (`WORKSPACE_PATTERNS`), `auth.project.{listMembers,addMember,updateMember,removeMember}` (`PROJECT_PATTERNS`).
-- The gateway injects `callerUserId` (from the JWT) plus the path ids into each TCP payload; `MembersService` / `ProjectsService` performs the role check (`requireWorkspaceRole` / `requireProjectRole`) before mutating.
+- The gateway injects `callerUserId` (from the JWT) plus the path ids into each TCP payload; `MembersService` / `ProjectsService` check **permissions** via `AuthorizationService.authorize` (`WORKSPACE_MEMBERS_VIEW`/`WORKSPACE_MEMBERS_MANAGE`, `WORKSPACE_ROLE_ASSIGN`, `PROJECT_MEMBERS_MANAGE`) — not role-string checks.
 - Last-owner/last-admin checks use `db.$count`; member lists use Drizzle relational queries (`db.query.*.findMany({ with: { user: true } })`).
 
 ## Not yet implemented
 
-- **Invitations** (invite a non-existing user by email → pending → accept on signup).
 - **Leave** endpoint (self-removal) and ownership **transfer** as a distinct action.
+
+(Invitations shipped — see specs/05 and the routes above.)

@@ -42,7 +42,7 @@ function Thumb({ asset }: { asset?: MediaView }) {
 }
 
 /**
- * Editor control for `media` fields. Stores the media asset **id** (or array of
+ * Editor control for `media` fields. Stores the media asset id (or array of
  * ids when multiple). Opens the project's library to pick or upload.
  */
 export function MediaField({

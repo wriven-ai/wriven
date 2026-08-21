@@ -16,7 +16,7 @@ import { useWorkspaceStats } from '@/hooks/use-workspace-stats';
 import { WorkspaceStatsSkeleton } from '@/components/skeleton/workspace-stats-skeleton';
 
 /**
- * Workspace-level stat cards (specs/17). Read-only aggregate over the active
+ * Workspace-level stat cards. Read-only aggregate over the active
  * workspace: projects, members, entries (+ published split), content types,
  * API keys, webhooks, media, and API requests vs plan limit. Unmetered
  * dimensions (bandwidth, AI text/image) surface as a muted footer note rather

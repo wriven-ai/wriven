@@ -1,11 +1,12 @@
-# Support Tickets — Module Plan
+# Support Tickets
 
 Workspace-level support ticketing for Wriven. A tenant user opens a ticket (title +
 description + up to 3 images + optional scope), Wriven staff handle it from the
 **admin panel**, and both sides converse in a threaded reply log.
 
-This folder is **plan only** — implementation comes later. Three layer plans plus
-this shared context:
+**Shipped end to end** — core-service module + gateway routes (this repo), tenant
+dashboard pages (`apps/client`), and the admin SPA queue + thread (separate repo,
+`admin.wriven.tech`). The three layer docs below describe the implementation:
 
 | Doc | Layer | Repo |
 |-----|-------|------|
@@ -67,7 +68,8 @@ Full DDL in [backend.md §1](./backend.md). Three tables in `core_svc`:
   here.
 - **`support_ticket_attachments`** — image attachments: `ticketId`, `messageId?`
   (null = attached to the opening description), `r2Key`, `mime`, `sizeBytes`,
-  `originalFilename`, `uploadedBy`. **≤ 3 per ticket/message**, enforced in service.
+  `originalFilename`, `uploadedBy`. **≤ 3 per ticket/message**, enforced by DTO
+  validation (`@ArrayMaxSize(3)` in `support.dto.ts`).
 
 ---
 
@@ -85,13 +87,13 @@ Full DDL in [backend.md §1](./backend.md). Three tables in `core_svc`:
    staff "resolve"                       customer reply (reopen)
             │                                   │
             ▼                                   │
-        ┌──────────┐  reply within grace  ──────┘
+        ┌──────────┐  customer reply  ──────────┘
         │ resolved │
         └──────────┘
-            │ close (manual or auto after N days idle)
+            │ close (staff, or by the author via PATCH)
             ▼
         ┌────────┐
-        │ closed │  (terminal; reply within grace → open, else new ticket)
+        │ closed │  (terminal — reply is rejected with CONFLICT; start a new ticket)
         └────────┘
 ```
 
@@ -100,12 +102,13 @@ Full DDL in [backend.md §1](./backend.md). Three tables in `core_svc`:
 | `open` | Needs staff attention (new, or customer just replied) | create / customer reply |
 | `pending` | Staff replied, awaiting customer | staff **public** reply |
 | `resolved` | Staff marked solved | staff |
-| `closed` | Terminal | staff/customer, or auto-close job (later) |
+| `closed` | Terminal | staff, or the author (close-only `PATCH`) |
 
 Transition rules:
 - Staff **internal note** → **no** status change.
-- Customer reply on `pending`/`resolved`/recently-`closed` → back to `open` (reopen).
-- **Priority** (`low`/`normal`/`urgent` etc.) is **staff-only**, default `normal`;
+- Customer reply on `pending`/`resolved` → back to `open` (reopen). Reply on
+  `closed` is **rejected** (`CONFLICT`) — no grace window; open a new ticket.
+- **Priority** (`low`/`normal`/`high`/`urgent`) is **staff-only**, default `normal`;
   the client never sets it.
 
 ---
@@ -126,8 +129,9 @@ the workspace's projects). All other scopes carry no id. Stored as plain columns
 - **Email notifications** (new reply / status change) → **deferred**: depends on the
   transactional-email infra (market-readiness P0, [doc/17](../17-market-readiness.md)).
   Plan leaves hooks but builds in-app only for v1.
-- **Anti-spam:** soft cap on open tickets per workspace (e.g. 20) + gateway throttle,
-  rather than a plan entitlement. Not in `plans.limits`.
+- **Anti-spam:** soft cap of **20 open tickets per workspace** (shipped). No gateway
+  throttle on the support routes (the global limiter still applies). Not in
+  `plans.limits`.
 - **Attachment types:** v1 **images only** (matches the requirement); schema/flow
   are type-agnostic so logs/PDFs can be allowed later.
 - **Auto-close:** a `resolved → closed` cleanup job after N idle days — deferred to a

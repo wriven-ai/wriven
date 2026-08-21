@@ -18,7 +18,7 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  // Email-verification OTP flow (specs/18 follow-up).
+  // Email-verification OTP flow.
   const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState('');
   const [otpError, setOtpError] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export default function ProfilePage() {
       setError(e instanceof ApiRequestError ? e.message : 'Photo update failed.'),
   });
 
-  // On-demand email verification (specs/18) — signup no longer auto-sends.
+  // On-demand email verification — signup no longer auto-sends.
   // Each send delivers BOTH a 6-digit code and a verification link; resending
   // invalidates the previous code and link.
   const resendMutation = useMutation({

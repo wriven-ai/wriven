@@ -36,9 +36,9 @@ export interface FieldDef {
   /** Target content type id for `reference`. */
   refTypeId?: string;
   /**
-   * Sensitive data: never send this field to an AI provider, as target or
-   * context. The only AI control an author configures per field — eligibility is
-   * otherwise derived (Tier-1 type, single-value, not sensitive).
+   * Sensitive data: never sent to an AI provider, as target or context. The
+   * only per-field AI control — eligibility is otherwise derived (Tier-1
+   * type, single-value, not sensitive).
    */
   aiPrivate?: boolean;
   /** Explicit sibling-field allowlist used as context for this AI target. */
@@ -138,10 +138,9 @@ export interface Paginated<T> {
 }
 
 /**
- * Public, published-only shape returned by the Content Delivery API. Trimmed of
- * internal author/workspace ids. `reference` field values may be expanded inline
- * to nested `DeliveryEntry` objects when `include` is requested; otherwise they
- * remain the referenced entry id.
+ * Public, published-only Delivery API shape, trimmed of internal ids.
+ * `reference` values may be expanded inline to nested `DeliveryEntry`
+ * objects when `include` is requested; otherwise they stay entry ids.
  */
 export interface DeliveryEntry {
   id: string;

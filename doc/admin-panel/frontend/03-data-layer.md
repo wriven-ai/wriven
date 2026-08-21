@@ -4,7 +4,7 @@
 
 ## 1. API client (`lib/api.ts`)
 A thin `fetch` wrapper. Rules:
-- Base URL from `import.meta.env.VITE_API_URL` (e.g. `https://api.wriven.com`).
+- Base URL from `import.meta.env.VITE_API_URL` (e.g. `https://api.wriven.tech`).
 - **`credentials: 'include'`** on every request (cross-origin admin cookies).
 - Send the **CSRF header** on mutations (read the CSRF token the gateway exposes,
   same scheme as the tenant client — see [../backend/03-auth.md §2](../backend/03-auth.md)).
@@ -46,9 +46,10 @@ export interface TenantUser {
   emailVerified: boolean; suspended: boolean; workspaceCount: number; createdAt: string;
 }
 export interface WorkspaceRow {
-  id: string; name: string; slug: string; ownerEmail: string;
-  memberCount: number; projectCount: number; storageUsedMb: number;
-  planKey: string; status: 'active' | 'past_due' | 'suspended' | 'trialing'; createdAt: string;
+  id: string; name: string; slug: string; ownerId: string;
+  ownerEmail: string | null; memberCount: number; projectCount: number;
+  planKey: string | null; planName: string | null; subscriptionStatus: string | null;
+  createdAt: string;
 }
 // ...one interface per list/detail shape the screens consume.
 ```
@@ -60,9 +61,9 @@ export interface WorkspaceRow {
   loading → splash; success → hydrate `stores/admin`; `401` → redirect `/login`.
 - `RequireRole` wraps role-restricted routes/sections: reads `admin.role` from the
   store, renders `403` page or hides the entry when not allowed.
-- Login (`/login`): POST `/admin/auth/login`; if response is `{ mfaRequired }`,
-  show the TOTP step and POST `/admin/auth/login/totp`; on success cookies are set
-  → navigate to Overview.
+- Login (`/login`): POST `/admin/auth/login`; on success cookies are set
+  → navigate to Overview. Single-step email+password — there is no MFA/TOTP
+  step (not implemented; the backend has no such endpoint).
 
 ---
 
@@ -77,8 +78,9 @@ export interface WorkspaceRow {
 
 ## 5. Layout & navigation
 - **Left sidebar** (collapsible, persists collapse in the store): Overview · Users ·
-  Workspaces · Projects · Content · Media · API Keys · Webhooks · Plans · Admins ·
-  Audit · Settings. Hide `admin`-only items (Plans/Admins/Settings) for non-admins.
+  Workspaces · Projects · Content · Support · Media · API Keys · Webhooks · Plans ·
+  Admins · Audit · Settings. Hide `admin`-only items (Plans/Admins/Settings) for
+  non-admins.
   Active item uses sidebar-accent bg + brand-accent text ([05-design-system.md](./05-design-system.md)).
 - **Top bar:** global search (jump to user by email / workspace by slug / project /
   id), current admin name + **role badge**, theme toggle, logout. Optional

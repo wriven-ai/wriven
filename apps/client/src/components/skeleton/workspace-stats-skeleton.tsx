@@ -3,11 +3,7 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-/**
- * Loading skeletons for the stats grids (specs/17). Mirrors the real card grid
- * so there's no layout shift on load. Uses the token-bound <Skeleton/>
- * primitive (bg-muted = brand-surface-soft) + the standard card shell.
- */
+/** Mirrors the stats grid so load causes no layout shift. */
 
 function StatCardSkeleton() {
   return (

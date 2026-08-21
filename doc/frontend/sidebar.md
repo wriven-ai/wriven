@@ -12,7 +12,7 @@ useNavContext()  ──▶  buildNavTree(ctx)  ──▶  NavTree  ──▶  <N
    (Layer 1)            (Layer 2, pure)      (config)        (Layer 3, dumb)        (Layer 4, untouched)
 ```
 
-Product hierarchy: **workspace → project → feature**. Each level renders a different menu. Access is filtered by an injected `can()` gate (RBAC stub today).
+Product hierarchy: **workspace → project → feature**. Each level renders a different menu. Access is filtered by an injected `can()` gate — the **real** `effectivePermissions` cascade (see [RBAC seam](#rbac-seam) below), not a stub.
 
 ## Layers
 
@@ -44,18 +44,20 @@ Routes live under the `(dashboard)` route group (parens = no URL segment):
 ```
 (dashboard)/
   layout.tsx                      RequireAuth + SidebarProvider + <AppSidebar/> + top bar
+  dashboard/page.tsx              projects overview (default workspace's project list)
+  profile/                        user profile (name/avatar + inline OTP email verify)
   w/[wsSlug]/
     layout.tsx                    useSyncWorkspaceFromUrl()
     page.tsx                      workspace overview
-    projects | members | settings | billing | usage /page.tsx
+    members | usage | billing | settings | support{,/new,/[ticketId]} /page.tsx
     p/[projSlug]/
       layout.tsx                  useSyncProjectFromUrl()
       page.tsx                    project overview
-      content-types | content | media | api-keys /page.tsx
+      content-types | content | media | api-keys | members | settings /page.tsx
   workspaces/page.tsx             cross-workspace management list
 ```
 
-Plus `app/dashboard/page.tsx` (outside the group): a redirect resolver that sends a generic `/dashboard` hit to the user's default `/w/[ws]/p/[proj]` (keeps the marketing site's "Dashboard" link working).
+There is **no** `w/[wsSlug]/projects` page — the workspace-level Projects list is the `/dashboard` overview.
 
 **Why URL, not store:** deep-link / refresh / back-forward land in the right scope, links are shareable, and multiple tabs can hold different workspaces. (The store previously persisted the active ids in `localStorage`, which made two tabs fight over one selection.)
 
@@ -65,24 +67,24 @@ The API client (`lib/api.ts`) sets `X-Workspace-Id` / `X-Project-Id` from access
 
 - `hooks/use-scope.ts` — `useSyncWorkspaceFromUrl()` / `useSyncProjectFromUrl()` resolve the slug to an entity in the loaded session, mirror its id into the store via `setCurrentWorkspaceId` / `setCurrentProjectId` (plain setters, no side effects), and `notFound()` on an unknown slug once the session has loaded.
 - `stores/auth.ts` — no longer persists the active ids (`persist` removed); the URL is the source of truth.
-- Switching workspace/project (footer `<select>` in `app-sidebar.tsx`) **navigates** (`router.push`) rather than calling `setState`.
+- Switching workspace/project **navigates** (`router.push`) rather than calling `setState`. The workspace switcher is a combobox (`topbar/workspace-switcher.tsx`) at the **top** of the sidebar (`app-sidebar.tsx`); the project switcher is a separate `topbar/project-switcher` in the dashboard navbar. The sidebar footer holds only logout.
 
 ## Builders (the brain)
 
 Each builder owns one section, is pure, and returns `NavGroup | null` (`null` = not applicable in this context → filtered out by the orchestrator).
 
-- `builders/build-workspace-nav.ts` — present when a workspace resolves; Overview, Projects, Members, Usage, Billing, Settings.
-- `builders/build-project-nav.ts` — present when both workspace and project resolve; Content Types, Content, Media, API Keys.
+- `builders/build-workspace-nav.ts` — present when a workspace resolves; Overview, Members, Usage & Stats, Billing, Workspace Settings, **Support**.
+- `builders/build-project-nav.ts` — present when both workspace and project resolve; Overview, Content Types, Content, Media, API Keys, Members, Project Settings.
 - `builders/gate.ts` — `gate<T>(items, can)` filters by `permission`/`scope` then strips those fields so output matches the public type.
 
-`build-nav-tree.ts` composes them additively via a `maybe()` helper. An **exclusive sub-context** (a focused feature that replaces the whole sidebar + a "back" link) is added later as an early `return` here before the additive list.
+`build-nav-tree.ts` composes them **scope-exclusively**: when a `projSlug` is present the tree is the Home group + the project menu only; otherwise the workspace menu only. (A future **exclusive sub-context** — a focused feature that replaces the whole sidebar + a "back" link — would land as an early `return` here.)
 
 ## Active-state rule (the bug magnet)
 
 Computed centrally in `nav-tree-renderer.tsx`:
 
 - Explicit `active` wins.
-- Else **parents match by prefix, leaves match by exact** (`match: 'exact' | 'prefix'`, default `prefix`).
+- Else every node matches by **prefix** by default; exact matching only when `match: 'exact'` is set.
 
 This is what prevents two rows lighting up at once. A collapsible auto-opens when any child is active (or `defaultOpen`).
 

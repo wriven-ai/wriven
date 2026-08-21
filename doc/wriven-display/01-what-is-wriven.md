@@ -14,7 +14,7 @@ Wriven server code — it just makes HTTP requests and renders JSON.
 ┌───────────────────────┐        ┌──────────────────────┐        ┌─────────────────────┐
 │  Wriven Dashboard     │        │  Wriven Gateway      │        │  Your Display App   │
 │  (authors edit here)  │ ──▶    │  (Delivery API)      │ ◀──    │  (React + Vite)     │
-│  app.wriven.com       │ writes │  GET /v1/projects/…  │ reads  │  public site        │
+│  app.yourdomain.com       │ writes │  GET /v1/projects/…  │ reads  │  public site        │
 └───────────────────────┘        └──────────────────────┘        └─────────────────────┘
                                           │
                                           ▼
@@ -75,7 +75,7 @@ The Delivery API returns entries in this shape (see [03-delivery-api.md](./03-de
 
 ```jsonc
 {
-  "id": "entry_…",
+  "id": "9f0c…",               // a bare UUID — no entry_ prefix
   "type": "blog_post",          // the content type apiId
   "slug": "launching-wriven",
   "data": {                      // the field values

@@ -70,9 +70,9 @@ function toPlanView(p: typeof plans.$inferSelect): PlanView {
 
 /**
  * Customer-facing billing: plan catalog, current subscription, Checkout +
- * Billing Portal session creation. Reconciliation of Stripe → `subscriptions`
- * happens in {@link StripeWebhookService}; this service only reads/writes the
- * row to create/look up the Stripe Customer and start sessions. See specs/08.
+ * Billing Portal sessions. Stripe → `subscriptions` reconciliation lives in
+ * {@link StripeWebhookService}; this service only reads/writes the row to
+ * create the Stripe Customer and start sessions.
  */
 @Injectable()
 export class BillingService {
@@ -162,13 +162,11 @@ export class BillingService {
       );
     }
 
-    // Reject if a live PAID subscription already exists (active / trialing /
-    // past-due within grace) — a second Checkout would create a second Stripe
-    // subscription and double-charge. Plan changes go through the Portal. Note the
-    // free row always exists with status='active' but a NULL stripe_subscription_id,
-    // so the gate is the Stripe sub id, not the row status. A `canceled` paid row
-    // (stripe_subscription_id still set) is reusable — syncSubscription's sub-id
-    // guard overwrites it on the next checkout.session.completed.
+    // Gate on the Stripe sub id, not the row status: the free row always
+    // exists with status='active' but a NULL stripe_subscription_id. A
+    // `canceled` paid row is reusable — syncSubscription overwrites its sub id
+    // on the next checkout.session.completed. Anything else live would
+    // double-charge; plan changes go through the Portal.
     const existing = await this.db.query.subscriptions.findFirst({
       where: eq(subscriptions.workspaceId, input.workspaceId),
       columns: { status: true, stripeSubscriptionId: true },
@@ -199,12 +197,10 @@ export class BillingService {
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
         client_reference_id: input.workspaceId,
-        // Managed Payments is Stripe's 2025+ default (merchant-of-record + Stripe Tax).
-        // It requires products to carry a tax_code and the Checkout page to init against
-        // a fully-configured account — a sandbox without Stripe Tax provisioned fails
-        // ("product tax code missing" at create / "apiKey is not set" on the page).
-        // Default to classic Checkout (no tax_code needed); flip to Managed Payments via
-        // STRIPE_MANAGED_PAYMENTS=true once Stripe Tax + product tax_codes are set up.
+        // Managed Payments (Stripe's 2025+ default, merchant-of-record + Tax)
+        // needs product tax_codes and a fully-configured account — a sandbox
+        // without Stripe Tax provisioned fails ("product tax code missing").
+        // Classic Checkout by default; opt in via STRIPE_MANAGED_PAYMENTS=true.
         ...(process.env.STRIPE_MANAGED_PAYMENTS === 'true'
           ? {}
           : { managed_payments: { enabled: false } }),
@@ -220,11 +216,9 @@ export class BillingService {
       },
       {
         // Per workspace+customer+plan+cycle+day: dedupes double-clicks within a
-        // day but allows a fresh session tomorrow (a permanent key would return
-        // a stale session on legitimate retry). The customer is part of the key
-        // so the same key is never replayed with different params (Stripe
-        // rejects key reuse with changed params — e.g. after the local customer
-        // link is lost and a NEW Stripe customer is created same-day).
+        // day, allows a fresh session tomorrow. The customer is in the key so a
+        // replay never carries changed params (Stripe rejects key reuse with
+        // different params — e.g. after a new Stripe customer is created).
         idempotencyKey: `checkout:${input.workspaceId}:${customerId}:${plan.key}:${input.billingCycle}:${new Date().toISOString().slice(0, 10)}`,
       },
     );
@@ -253,22 +247,19 @@ export class BillingService {
     return { url: session.url };
   }
 
-  /** Change an existing paid subscription's plan/cycle, or schedule
-   *  cancellation down to free. Unlike Checkout, this works on an
-   *  already-subscribed workspace.
-   *  - Upgrade / cycle switch → immediate prorated invoice (`always_invoice`).
-   *  - Downgrade (lower paid tier) → **deferred**: a 2-phase Subscription
-   *    Schedule keeps the current price until period end, then applies the
-   *    lower price at renewal (`proration_behavior: 'none'`). The pending
-   *    target is stored on `pending_change`; the reconciler clears it when
-   *    phase 2 lands (specs/16).
-   *  - Downgrade to free → `cancel_at_period_end` (keeps access until period end).
-   *  - Reactivation (target === current plan while a downgrade is pending) →
-   *    release the schedule + clear `pending_change`.
-   *  Any change other than reactivation first releases a pending schedule (a
-   *  scheduled sub blocks direct `subscriptions.update`). The webhook reconciler
-   *  remains the source of truth for the row — this method only mutates Stripe
-   *  + the `pending_change` hint. */
+  /**
+   * Change an existing paid subscription's plan/cycle, or cancel down to free.
+   *  - Upgrade / cycle switch → immediate prorated invoice (`always_invoice`),
+   *    mirrored onto the row now; the webhook reconciler confirms later.
+   *  - Downgrade (lower tier) → deferred via a 2-phase Subscription Schedule:
+   *    current price until period end, lower price at renewal
+   *    (`proration_behavior: 'none'`). Pending target stored on
+   *    `pending_change`, cleared when phase 2 lands.
+   *  - Downgrade to free → `cancel_at_period_end` (access until period end).
+   *  - Reactivation (same plan + cycle) → release schedule + clear pending.
+   *  Any non-reactivation change first releases a pending schedule — a
+   *  scheduled sub rejects direct `subscriptions.update`.
+   */
   async swapPlan(input: {
     workspaceId: string;
     planKey: string;
@@ -304,11 +295,10 @@ export class BillingService {
       scheduleId?: string;
     } | null;
 
-    // Reactivation: same plan AND same cycle — clear whatever is pending (a
-    // scheduled downgrade via Subscription Schedule, and/or a cancel-at-period-
-    // end). No price change → no need to read the line item / billing period.
-    // A same-plan cycle change (monthly↔yearly) must NOT short-circuit here; it
-    // falls through to the prorated price update below.
+    // Reactivation: same plan AND cycle — clear whatever is pending (a
+    // scheduled downgrade and/or a cancel-at-period-end). A same-plan cycle
+    // change (monthly↔yearly) must NOT short-circuit here; it falls through
+    // to the prorated price update below.
     if (
       input.planKey === current.plan?.key &&
       input.billingCycle === current.billingCycle
@@ -333,15 +323,12 @@ export class BillingService {
       return this.getSubscription(input.workspaceId);
     }
 
-    // Any other change must first release a pending downgrade's schedule — a
-    // scheduled subscription rejects direct `subscriptions.update`.
     if (pending?.scheduleId) {
       await this.stripe.subscriptionSchedules.release(pending.scheduleId);
       await this.clearPendingChange(current.id);
     }
 
-    // Downgrade to free → schedule cancellation at period end. Mirror the flag
-    // onto the row so the card flips to "Canceling" immediately.
+    // Mirror the flag onto the row so the card flips to "Canceling" immediately.
     if (input.planKey === 'free') {
       await this.stripe.subscriptions.update(current.stripeSubscriptionId, {
         cancel_at_period_end: true,
@@ -382,17 +369,14 @@ export class BillingService {
 
     const tierDelta = target.sortOrder - (current.plan?.sortOrder ?? 0);
 
-    // Downgrade → defer to period end via a 2-phase schedule (no proration):
-    // phase 1 holds the current price until period end, phase 2 applies the
-    // lower price at renewal. Keeps access through the paid period.
+    // Deferred to period end — paid access continues until phase 2 lands.
     if (tierDelta < 0) {
       const schedule = await this.stripe.subscriptionSchedules.create({
         from_subscription: current.stripeSubscriptionId,
         phases: [
-          // stripe@22 moved proration_behavior off the top-level create params
-          // onto each phase. 'none' on the entry (holding) phase suppresses any
-          // proration when the schedule takes over the subscription — the price
-          // is unchanged here, so this is belt-and-suspenders.
+          // stripe@22 moved proration_behavior onto each phase. 'none' on the
+          // holding phase suppresses proration when the schedule takes over —
+          // the price is unchanged here, so belt-and-suspenders.
           {
             items: [{ price: currentPriceId }],
             proration_behavior: 'none',
@@ -416,10 +400,8 @@ export class BillingService {
       return this.getSubscription(input.workspaceId);
     }
 
-    // Upgrade / cycle switch → immediate prorated update. The price change
-    // succeeded synchronously, so mirror it onto the row now (plan + cycle + clear
-    // any pending cancel) — the webhook reconciler confirms the same state. Lets
-    // the cards + entitlements flip without waiting on webhook delivery.
+    // Mirror the row now so cards/entitlements flip without waiting on webhook
+    // delivery.
     await this.stripe.subscriptions.update(current.stripeSubscriptionId, {
       items: [{ id: item.id, price: priceId }],
       proration_behavior: 'always_invoice',
@@ -452,11 +434,9 @@ export class BillingService {
   }
 
   /**
-   * Resolve a client-supplied redirect URL to a same-origin absolute URL, falling
-   * back to the app default otherwise. Prevents open-redirect abuse via
-   * `success_url` / `cancel_url` / portal `return_url`: a cross-origin or
-   * malformed value never reaches Stripe. `fallback` is a path resolved against
-   * `APP_URL` (or an absolute URL when APP_URL is unset).
+   * Resolve a client-supplied redirect URL to a same-origin absolute URL,
+   * else the app default. Prevents open-redirect abuse via success/cancel/
+   * return URLs — a cross-origin or malformed value never reaches Stripe.
    */
   private static safeUrl(candidate: string | undefined, fallback: string): string {
     const appUrl = process.env.APP_URL;

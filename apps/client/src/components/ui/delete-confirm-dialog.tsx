@@ -16,13 +16,9 @@ import {
 } from '@/components/ui/dialog';
 
 /**
- * Reusable destructive-action gate with **type-to-confirm**: the user must type
- * `matchText` (typically the entity's name) exactly before the confirm button
- * enables. The GitHub/Vercel pattern for irreversible deletes. Use for workspace
- * + project deletion (and any other one-way action where a misclick is costly).
- *
- * Built on the same Dialog primitive + brand tokens as `ConfirmationDialog`,
- * but always `danger`-styled and adds the matching input.
+ * Type-to-confirm gate for irreversible deletes: confirm enables only when the
+ * typed text matches `matchText` (GitHub/Vercel pattern). Always danger-styled;
+ * adds the matching input on top of `ConfirmationDialog`.
  */
 export interface DeleteConfirmDialogProps {
   open: boolean;

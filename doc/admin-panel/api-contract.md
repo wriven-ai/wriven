@@ -6,8 +6,8 @@ below are copy-paste-ready into the SPA's `lib/types.ts` (see
 [frontend/03-data-layer.md §2](./frontend/03-data-layer.md)).
 
 **Conventions (all endpoints):**
-- Base URL: `${VITE_API_URL}` (e.g. `https://api.wriven.com`), prefix `/v1`,
-  so full path = `${VITE_API_URL}/v1/admin/...`.
+- Base URL: `${VITE_API_URL}` (e.g. `https://api.wriven.tech`; `http://localhost:5000`
+  in local dev), prefix `/v1`, so full path = `${VITE_API_URL}/v1/admin/...`.
 - Auth: httpOnly admin cookies. Send `credentials: 'include'` on **every** request.
 - Envelope: success → `{ "success": true, "data": <T> }`; error →
   `{ "success": false, "error": { "code", "message" } }`. Unwrap `data`; throw on
@@ -85,6 +85,19 @@ Tokens are never returned — only `prefix`.
 | GET | `/admin/webhooks?page&limit&workspaceId?&projectId?` | any | — | `Paginated<AdminWebhookRow>` |
 | PATCH | `/admin/webhooks/:id/disable` | `[admin, moderator]` | — | `{ success: true }` |
 
+### Support tickets
+| GET | `/admin/support/tickets?page&limit&status?&priority?&scopeType?&workspaceId?&assignedAdminId?&unassigned?&q?` | any | — | `Paginated<SupportTicketRow>` |
+| GET | `/admin/support/tickets/:id` | any | — | `SupportTicketDetail` |
+| POST | `/admin/support/tickets/:id/messages` | `[admin, moderator]` | `AdminReplyDto` | `SupportTicketDetail` |
+| PATCH | `/admin/support/tickets/:id` | `[admin, moderator]` | `AdminUpdateTicketDto` | `SupportTicketDetail` |
+| GET | `/admin/support/metrics` | any | — | `SupportMetrics` |
+
+Cross-tenant support queue (core owns the `support_tickets` tables). `status` ∈
+`open|pending|resolved|closed`, `priority` ∈ `low|normal|high|urgent`, `scopeType` ∈
+`general|project|billing|account|technical`. Reply with `internalNote: true` posts a
+staff-only note (does not flip status to `pending`); replying to a closed ticket →
+`409 CONFLICT`.
+
 ### Plans
 | GET | `/admin/plans` | any | — | `AdminPlanView[]` (sorted by `sortOrder`; incl. Stripe ids) |
 | POST | `/admin/plans` | `[admin]` | `CreatePlanDto` | `AdminPlanView` |
@@ -106,7 +119,9 @@ Guards: can't deactivate/delete **yourself**; can't remove the **last active
 admin** → `409 CONFLICT`. Whole resource is `admin`-only (hide nav for others).
 
 ### Audit log
-| GET | `/admin/audit-log?page&limit` | any | — | `Paginated<AuditLogView>` |
+| GET | `/admin/audit-log?page&limit&action?&targetType?` | any | — | `Paginated<AuditLogView>` |
+
+Filters are `action` + `targetType` only (no admin-id/date filters).
 
 ---
 
@@ -198,6 +213,35 @@ export interface AdminWebhookRow {
   lastStatus: number | null; lastFiredAt: string | null; createdAt: string;
 }
 
+// ── Support tickets ─────────────────────────────────────────────
+export type SupportStatus = 'open' | 'pending' | 'resolved' | 'closed';
+export type SupportPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type SupportScope = 'general' | 'project' | 'billing' | 'account' | 'technical';
+export interface SupportAttachmentView {
+  id: string; url: string; mime: string | null;
+  sizeBytes: number | null; originalFilename: string | null;
+}
+export interface SupportMessageView {
+  id: string; authorType: 'user' | 'admin'; authorId: string;
+  body: string; isInternalNote?: boolean; createdAt: string;
+  attachments: SupportAttachmentView[];
+}
+export interface SupportTicketRow {
+  id: string; number: number; subject: string;
+  scopeType: SupportScope; scopeProjectId: string | null;
+  status: SupportStatus; priority: SupportPriority;
+  lastReplyAt: string | null; lastReplyBy: 'user' | 'admin' | null;
+  createdAt: string;
+}
+export interface SupportTicketDetail extends SupportTicketRow {
+  workspaceId: string; authorId: string; description: string;
+  attachments: SupportAttachmentView[]; messages: SupportMessageView[];
+}
+export interface SupportMetrics {
+  open: number; pending: number; resolved: number;
+  closed: number; unassigned: number; total: number;
+}
+
 // ── Plans ───────────────────────────────────────────────────────
 export interface PlanLimits {
   projects?: number | null; members?: number | null; environments?: number | null;
@@ -258,9 +302,22 @@ interface AdminUpdateUserDto { suspended?: boolean; emailVerified?: boolean; }
 // PATCH /admin/content/:id
 interface AdminTakedownDto { status: 'draft' | 'archived'; }
 
+// POST /admin/support/tickets/:id/messages
+interface AdminReplyDto {
+  body: string;                 // 1–10000 chars
+  internalNote?: boolean;       // staff-only note (doesn't flip status)
+  attachmentKeys?: string[];    // max 3
+}
+// PATCH /admin/support/tickets/:id
+interface AdminUpdateTicketDto {
+  status?: SupportStatus;
+  priority?: SupportPriority;
+  assignedAdminId?: string | null;
+}
+
 // POST /admin/plans
 interface CreatePlanDto {
-  key: string; name: string; description?: string;
+  key: string; name: string; description?: string; sortOrder?: number;
   // USD dollars on the wire (e.g. 9.99) — the DTO transforms to integer cents;
   // required for paid plans (key !== 'free'). priceYearly XOR yearlyDiscountPercent.
   priceMonthly?: number; priceYearly?: number; yearlyDiscountPercent?: number;
@@ -268,7 +325,7 @@ interface CreatePlanDto {
 }
 // PATCH /admin/plans/:id  — prices are read-only after create (Stripe owns them)
 interface UpdatePlanDto {
-  name?: string; description?: string;
+  name?: string; description?: string; sortOrder?: number;
   active?: boolean;
   limits?: Record<string, number | null>; features?: Record<string, unknown>;
 }

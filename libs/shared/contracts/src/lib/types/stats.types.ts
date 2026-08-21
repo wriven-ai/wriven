@@ -1,11 +1,9 @@
 /**
  * Workspace + project aggregate stats — read-only dashboard counts composed
- * from existing tables (no metering of its own; requests/storage come from the
- * usage module, specs/14).
- *
- * Bandwidth and AI image remain forward-compatible `used: null` fields until
- * their metering lands. AI text is now fully metered: it reports
- * requests, tokens, and known cost via {@link AiUsageStats}.
+ * from existing tables (no metering of its own; requests/storage come from
+ * the usage module). Bandwidth and AI image stay forward-compatible
+ * `used: null` fields until their metering lands; AI text is fully metered
+ * via {@link AiUsageStats}.
  */
 
 import type { AiUsageStats } from './usage.types';
@@ -32,7 +30,7 @@ export interface WorkspaceStatsView {
   apiKeys: number;
   webhooks: number;
   media: { count: number; usedMb: number; limitMb: number | null };
-  // metered usage (core; reuses UsageService.read — specs/14)
+  // metered usage (core; reuses UsageService.read)
   apiRequests: { used: number; limit: number | null };
   period: { start: string; end: string }; // current calendar month (UTC)
   // forward-compatible — unmetered today; `used` null until metering lands

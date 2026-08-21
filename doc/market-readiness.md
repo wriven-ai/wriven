@@ -5,7 +5,10 @@ candid inventory of gaps — not a roadmap promise. Each item: **what** it is,
 **why** it matters, **now** (current state), **effort** (S ≤ days · M ≤ 1–2 wks ·
 L ≤ 1 mo · XL multi-month).
 
-_Last reviewed: after usage metering (specs/14)._
+_Last reviewed: 2026-08-20 — after specs/15–22 (plan revamp, deferred downgrade,
+workspace stats, user profile, AI generation redesign + hardening), the
+Render + Vercel production deploy, the SDK npm publish, and the support-ticket
+system._
 
 Priority legend:
 - **P0** — blocks charging money / running in production safely. Do first.
@@ -37,9 +40,10 @@ So the gaps read in context. ✅ = working.
   CDN cache tags + Cloudflare purge.
 - ✅ **Media** — R2 presigned upload, keys-only delivery, library + field picker,
   inline rich-text images.
-- ✅ **Webhooks** — signed (HMAC) POST on publish/unpublish/delete, retry/backoff.
-- ✅ **SDK** — `@wriven-ai/client` / `react` / `next` (built, tested; **not yet
-  published**).
+- ✅ **Webhooks** — signed (HMAC) POST on publish/unpublish/delete **and on every
+  save of an already-published entry** (`entry.published` refires), retry/backoff.
+- ✅ **SDK** — `@wriven-ai/client` / `react` / `next` **published to npm**
+  (`@wriven-ai/client@0.2.x`, `@wriven-ai/next@0.2.x`).
 - ✅ **Admin platform console** (backend) — separate `admin_users` identity, RBAC,
   audit log, metrics, tenant/content/media/key/webhook moderation, plans CRUD +
   assignment, **plan-limit enforcement** (projects, members, entries, content
@@ -47,34 +51,63 @@ So the gaps read in context. ✅ = working.
 - ✅ **Plans/subscriptions + billing** — free/starter/pro @ $0/$10/$18 (10%
   annual), realistic limits sized to free-tier infra + a revision-retention cap
   (specs/15); Stripe Checkout + Billing Portal + webhook → `subscriptions`
-  reconciliation (specs/08 backend); **frontend billing page** + **public
-  `/pricing` page** rendered from real plan data (specs/09, 10, 15); live e2e
-  pending only the sandbox account config (new tiers' Stripe Products/Prices).
+  reconciliation (specs/08 backend); **deferred downgrades to period end via
+  Subscription Schedules** (`pendingDowngrade` on the view, specs/16); **frontend
+  billing page** + **public `/pricing` page** rendered from real plan data
+  (specs/09, 10, 15); `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` wired in the
+  Render deploy, payment-success fix landed — remaining: confirm full live-mode
+  e2e + dunning terminal-outcome decision.
+- ✅ **Support ticketing** (full stack) — workspace-scoped tickets with threaded
+  messages, up to 3 R2-presigned image attachments, scope dropdown, staff side in
+  the admin SPA (`doc/support-ticket/`): core-service `support` module +
+  `admin-support` read paths (tickets/messages/attachments in `core_svc`),
+  gateway `/support/tickets` routes, tenant
+  `(dashboard)/w/[wsSlug]/support` page, admin queue + ticket-thread pages.
+- ✅ **Production deploy** — backend on **Render** (gateway public at
+  `api.wriven.tech`; auth/core/ai private services — [`render.yaml`](../render.yaml)
+  Blueprint, per-app Dockerfiles), client on **Vercel** (`wriven.tech`), Postgres
+  on **Supabase**. Runbook: [`doc/deployment.md`](./deployment.md) +
+  [`DOCKER_SETUP.md`](../DOCKER_SETUP.md).
+- ✅ **Marketing site + public docs** — landing, `/about`, `/blog` (+ posts),
+  `/contact` (wired API route w/ honeypot + rate limit), `/pricing`, and a full
+  `/docs` section (quickstart, content modeling, delivery API, querying, media,
+  webhooks, preview, caching, rate limits, errors, rich text, SDK, Next.js) on
+  the client; plus the separate **showcase site** (`wriven-content-display` —
+  Next.js SSG + webhook-driven ISR rendering published content through the
+  `@wriven-ai/*` SDK).
+- ✅ **Other shipped since specs/14** — workspace + project stats pages (specs/17),
+  user profile page (specs/18) incl. 6-digit OTP email verification, API key
+  regeneration (in-place token rotation), AI generation per specs/21–22.
 - 🟡 **Usage metering** — Delivery API request counter (`usage_buckets`) +
   `GET /usage` + dashboard page shipped (specs/14); soft overage gate built but
   default-off pending live validation; `assetBandwidthGb` still unmeasured.
-- 🟡 **Frontend** — tenant dashboard (Next.js) exists; admin-panel SPA in progress
-  (separate repo).
+- 🟡 **Frontend** — tenant dashboard (Next.js) + marketing/docs site live; the
+  admin-panel SPA (separate repo) is **deployed at `admin.wriven.tech`** with all
+  console sections functional (users, workspaces, projects, content, support
+  queue + threads, media, api-keys, webhooks, audit, plans, admins, settings) —
+  remaining: polish passes, not core functionality.
 
 ---
 
 ## P0 — Blocks monetization / safe production
 
-### Billing integration (Stripe) — **M** (backend done; frontend + account config remain)
+### Billing live-mode confirmation — **S** (code done; account + policy remain)
 - **What:** actual payments — Checkout, customer portal, subscription lifecycle
   webhooks (created/updated/canceled/past_due), invoices, proration, dunning, tax.
 - **Why:** you cannot charge anyone without a payment path.
 - **Now:** **backend done** (specs/08) — Stripe SDK, Checkout + Billing Portal
-  sessions, an atomic + idempotent webhook → `subscriptions` reconciler (status,
-  period, plan-from-price-id), event replay script, Managed Payments opt-out.
-  Products/Prices + `plans.stripe_*` backfilled on the sandbox; read path +
-  Checkout-session creation validated live. Entitlements already read the
-  `subscriptions` row, so upgrades/downgrades need zero enforcement changes.
-- **Need:** the sandbox account needs a publishable key + Managed Payments
-  provisioning/disabling before the hosted Checkout page renders; then the live
-  webhook → entitlements e2e (the frontend page + reconciler are built — specs/08,
-  09, 10, 11). Trials were removed (no trial system); dunning terminal outcome
-  (cancel vs `unpaid`) + cancel-grace policy are open product decisions.
+  sessions, direct plan-swap (prorated upgrades immediate, specs/16), an atomic +
+  idempotent webhook → `subscriptions` reconciler (status, period,
+  plan-from-price-id), event replay script, Managed Payments opt-out.
+  Products/Prices + `plans.stripe_*` backfilled; frontend billing page + public
+  pricing page shipped (specs/09, 10, 15); `STRIPE_SECRET_KEY` /
+  `STRIPE_WEBHOOK_SECRET` wired as Render sync-credentials and a payment-success
+  fix has landed, so hosted Checkout has been exercised end to end. Entitlements
+  already read the `subscriptions` row, so upgrades/downgrades need zero
+  enforcement changes.
+- **Need:** confirm the full live-mode e2e on prod (real card → webhook →
+  entitlements → invoice list) and decide dunning terminal outcome (cancel vs
+  `unpaid`) + cancel-grace policy. Trials were removed (no trial system).
 
 ### Usage metering — **M** (counting + read shipped; live enforcement pending)
 - **What:** measure API requests/month, asset bandwidth, storage **over time** per
@@ -92,13 +125,17 @@ So the gaps read in context. ✅ = working.
   R2 keys-only — real egress lives in R2, not the gateway); deferred until an
   R2/egress integration lands.
 
-### Production deployment + infra — **L** (user-deferred)
-- **What:** deploy gateway + auth + core (+ ai) to prod; managed Postgres,
-  container orchestration, autoscaling, health checks, graceful shutdown, env/secret
-  management, domains/TLS, CDN.
-- **Why:** nothing is live.
-- **Now:** all local. R2 + Supabase provisioned.
-- **Need:** containerize, pick a host (Fly/Render/Railway/AWS), CI/CD, staging env.
+### CI/CD + staging environment — **M** (deploy itself is done)
+- **What:** pipeline on PR/push (lint, typecheck, build, ai-service pytest, SDK
+  tests, image builds), secret/dependency scanning, a staging environment, and
+  autoscaling/health-alert wiring on Render.
+- **Why:** prod is live with **no automated checks between a git push and
+  deployment** — the only safety net is what you run by hand.
+- **Now:** **prod deployed** (Render blueprint + Vercel client + Supabase — see
+  the shipped snapshot), but **`.github/workflows` doesn't exist**: no CI runner,
+  no staging env, no image-build verification before Render's own build.
+- **Need:** GitHub Actions (or equivalent) running the workspace checks; a
+  staging Render env or preview deploys; secret + dependency scanning in CI.
 
 ### Transactional email at scale — **S**
 - **What:** a real email provider.
@@ -111,7 +148,9 @@ So the gaps read in context. ✅ = working.
 - **What:** error tracking (Sentry), structured logs + aggregation, uptime/health
   monitoring, APM/traces, alerting.
 - **Why:** in production you're blind to failures without it.
-- **Now:** Nest `Logger` to stdout only. No error tracking, no alerts.
+- **Now:** Nest `Logger` to stdout only; ai-service has its own
+  `/metrics` + readiness endpoints (`app/observability.py`, `routers/health.py`)
+  but nothing aggregates or alerts on them. No error tracking, no alerts.
 
 ### Backups & disaster recovery — **S**
 - **What:** automated DB backups + point-in-time recovery, restore runbook, R2
@@ -120,7 +159,7 @@ So the gaps read in context. ✅ = working.
 - **Now:** relying on Supabase defaults; no documented/tested restore.
 
 ### Security hardening — **M**
-- **What:** CORS origin allowlist (still `origin:true`), per-API-key rate limiting
+- **What:** ~~CORS origin allowlist~~ (**done** — `CORS_ORIGINS` exact-origin list), per-API-key rate limiting
   on the Delivery API, tenant-side 2FA, admin TOTP/MFA, secret rotation, dependency
   + secret scanning (CI), basic WAF/abuse protection.
 - **Why:** table-stakes to be trusted with customer content.
@@ -130,8 +169,11 @@ So the gaps read in context. ✅ = working.
 
 ### Automated tests — **L**
 - **What:** unit + integration + e2e + load tests.
-- **Why:** zero safety net for a multi-service system handling customer data.
-- **Now:** **0 test files in `apps/`** (only the SDK packages have tests).
+- **Why:** near-zero safety net for a multi-service system handling customer data.
+- **Now:** ai-service has a real pytest suite (9 files — generator, guardrails,
+  compose, HTTP boundary, prompts snapshot, schemas/contract) and the SDK
+  packages have node:test suites; the three **NestJS services and the client
+  have 0 tests**.
 - **Need:** at least integration tests on auth, content CRUD, delivery, enforcement,
   webhooks; a smoke e2e; a load test on the Delivery API.
 
@@ -184,24 +226,25 @@ So the gaps read in context. ✅ = working.
 - **Now:** text/richtext/number/boolean/date/media/select/reference — **no
   nested/component or JSON**, limited validation.
 
-### API documentation — **M**
+### API documentation — **S→M** (public docs shipped; machine-readable spec remains)
 - **What:** OpenAPI/Swagger spec for the management + delivery API; GraphQL
   playground; an interactive API explorer; auto-generated typed reference.
 - **Why:** DX is a buying factor; hand-written docs drift.
-- **Now:** prose docs only ([api-reference.md](./api-reference.md)); **no
-  OpenAPI/Swagger** (`@nestjs/swagger` not installed).
+- **Now:** a **public docs site is live** at `wriven.tech/docs` (quickstart,
+  content modeling, delivery API, querying, media, webhooks, preview, caching,
+  rate limits, errors, rich text, SDK + Next.js guides) plus internal
+  [api-reference.md](./api-reference.md) — but **no OpenAPI/Swagger**
+  (`@nestjs/swagger` not installed), so the docs are hand-maintained and can
+  drift from the code.
 
-### Publish the SDK — **S**
-- **What:** ship `@wriven-ai/client` / `react` / `next` to npm.
-- **Why:** consumers can't install them; the whole DX story depends on it.
-- **Now:** built, tested, publint-clean, **not published**. (Blocked earlier on an
-  npm 2FA/token issue.)
-- **Cross-ref:** [06-sdk.md](../specs/06-sdk.md).
-
-### Admin panel frontend — **L** (in progress, separate repo)
+### Admin panel polish — **S** (deployed; polish remains, separate repo)
 - **What:** the operational console UI.
 - **Why:** the backend (this repo) is done; ops can't use it without the UI.
-- **Now:** being built in its own repo per [admin-panel/frontend/](./admin-panel/frontend/).
+- **Now:** **deployed and functional at `admin.wriven.tech`** — all console
+  sections live (users, workspaces, projects, content, **support queue + ticket
+  threads**, media, api-keys, webhooks, audit, plans, admins, settings) per
+  [admin-panel/frontend/](./admin-panel/frontend/). Remaining: UX/polish passes
+  and an auth-hardening review, not core functionality.
 
 ---
 
@@ -232,6 +275,10 @@ So the gaps read in context. ✅ = working.
   `/usage` (priced from the returned model; `*:free → 0`). Prompt build, temperature, and
   `select`/`compose` validate-and-repair run in the standalone Python `ai-service`, called over
   HTTP behind an `AiClient` seam (the only NestJS↔non-NestJS hop). The Co-Writer panel is live.
+  Hardened in specs/22 (snake_case usage-wire fix, 2xx body validation at the seam, honest
+  retry semantics + `AI_RESULT_EXPIRED` replay, shared richtext TipTap schema, compose
+  undo/provenance) and battle-tested since (bounded repair turns, honest 502 metrics, live
+  progress + unified retry UX in the panel); ai-service exposes readiness + private `/metrics`.
   **Remaining:** streaming, embeddings/RAG grounding over `reference` fields, async job queue
   (bulk/translate), and image generation.
 
@@ -267,8 +314,9 @@ So the gaps read in context. ✅ = working.
 - **Integrations** — Zapier/Make, native connectors, starter templates, sample apps.
 - **Compliance** — SOC 2, GDPR data export/delete tooling, DPA, cookie consent,
   sub-processor list. (GDPR "delete user" is currently FK-blocked → returns CONFLICT.)
-- **Growth** — referrals, in-app notifications + preferences, onboarding checklist,
-  status page.
+- **Growth** — marketing site, `/docs`, `/blog`, contact form, and the
+  `wriven-content-display` showcase site are live; still missing: referrals,
+  in-app notifications + preferences, onboarding checklist, status page.
 - **Multi-region / edge** — geo-distributed delivery, advanced caching tiers.
 - **Codegen** — typed `getEntries('blog_post')` from a project's content model
   (SDK Phase 4 in [06-sdk.md](../specs/06-sdk.md)).
@@ -279,23 +327,27 @@ So the gaps read in context. ✅ = working.
 
 A pragmatic sequence — ship something chargeable without boiling the ocean:
 
-1. **Make it sellable:** Stripe billing **live e2e** (code is done — needs the
-   sandbox account config + a run) + usage metering + production deploy +
-   transactional email. (P0)
-2. **Make it safe:** observability + backups/DR + security hardening (CORS,
-   per-key rate limit, secret/dep scanning) + a baseline integration test suite. (P0)
-3. **Make it credible:** publish the SDK, finish the admin SPA, add OpenAPI docs,
-   scheduled publishing, full-text search, on-the-fly image transforms. (P1)
+1. **Make it sellable:** confirm Stripe **live-mode e2e** on prod, flip
+   `USAGE_ENFORCE` after staging validation, swap Gmail SMTP for a real email
+   provider. Deploy + SDK publish are done. (P0)
+2. **Make it safe:** CI/CD + staging, observability (Sentry + log aggregation +
+   alerts), backups/DR runbook, security hardening (CORS allowlist, per-key rate
+   limit, secret/dep scanning), a baseline integration test suite on the NestJS
+   services. (P0)
+3. **Make it credible:** polish the (deployed) admin SPA, add OpenAPI alongside
+   the shipped docs site, scheduled publishing, full-text search, on-the-fly
+   image transforms. (P1)
 4. **Make it competitive:** GraphQL, localization, environments, richer field
    types/components, **custom roles + field-level perms** (the RBAC permission seam
    is already shipped — specs/12, 13; only custom roles + field-level remain). (P1→P2)
-5. **Differentiate:** ship AI generation (the "AI-native" promise — `AiModule` in core, extractable to `ai-service`), real-time
-   collaboration, DAM. (P2)
+5. **Differentiate:** finish the AI roadmap (streaming, RAG grounding, image
+   generation), real-time collaboration, DAM. (P2)
 
-> **Minimum to charge money:** the P0 block. Everything compiles and the CMS works;
-> what's missing to *sell* it is payments, metering, deploy, email, monitoring,
-> backups, and a security pass. That's the honest gap between "working MVP" and
-> "product in the market."
+> **Minimum to charge money:** the P0 block. Everything compiles, the CMS works,
+> and it's **deployed** — what's missing to *sell* it is confirmed live payments,
+> metering enforcement, production email, monitoring, backups, CI, and a security
+> pass. That's the honest gap between "deployed product" and "product in the
+> market."
 
 ---
 
@@ -303,14 +355,17 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 
 | Gap | Priority | Effort | State |
 |-----|----------|--------|-------|
-| Stripe billing | P0 | M | backend + frontend page done; sandbox account config + live e2e remain |
+| Stripe billing | P0 | S | code + pages done, prod keys wired, checkout exercised; confirm live-mode e2e + dunning decision |
 | Usage metering (API/bandwidth) | P0 | M | request counter + `GET /usage` + dashboard shipped (specs/14); enforce gate default-off; bandwidth still unmeasured |
-| Production deploy + infra | P0 | L | local only |
+| Production deploy + infra | P0 | — | ✅ **done** — Render + Vercel + Supabase live (`api.wriven.tech` / `wriven.tech`) |
+| CI/CD + staging | P0 | M | no `.github/workflows`, no staging env |
 | Transactional email at scale | P0 | S | Gmail SMTP (dev) |
-| Observability | P0 | M | stdout logs only |
+| Observability | P0 | M | NestJS stdout only; ai-service `/metrics` unaggregated |
 | Backups / DR | P0 | S | Supabase defaults |
-| Security hardening (CORS, key rate-limit, 2FA) | P0 | M | partial |
-| Automated tests | P0 | L | 0 in apps |
+| Security hardening (CORS, key rate-limit, 2FA) | P0 | M | CORS allowlisted (`CORS_ORIGINS`); no per-key delivery throttle, admin TOTP schema-only |
+| Automated tests | P0 | L | ai-service pytest (9 files) + SDK tests; NestJS services + client: 0 |
+| Support ticketing | — | — | ✅ **done** (full stack: core + gateway + tenant UI + admin queue) |
+| SDK on npm | — | — | ✅ **done** — `@wriven-ai/client@0.2.x`, `@wriven-ai/next@0.2.x` |
 | GraphQL API | P1 | L | none |
 | Full-text search | P1 | M | none |
 | Scheduled publishing | P1 | M | none |
@@ -318,10 +373,9 @@ A pragmatic sequence — ship something chargeable without boiling the ocean:
 | Content environments | P1 | L | none |
 | Image transformations | P1 | M | none |
 | Richer fields / components | P1 | M | 8 flat types |
-| OpenAPI / API docs | P1 | M | prose only |
-| Publish SDK | P1 | S | built, unpublished |
-| Admin panel UI | P1 | L | in progress |
+| OpenAPI spec | P1 | S | docs site live at `/docs`; machine-readable spec missing |
+| Admin panel UI | P1 | S | deployed at `admin.wriven.tech`, all sections functional; polish remains |
 | SSO/SAML | P2 | L | flag only |
 | Granular RBAC seam | P2 | M | typed perms + cascade shipped (specs/12, 13); custom roles + field-level remain |
-| AI generation | P2 | L→XL | Redesigned + shipped (specs/21): typed `AiOutput`, whole-entry compose, Generate/Refine model, AI voice profile, token/cost accounting; streaming + RAG + image gen remain |
+| AI generation | P2 | M→XL | text shipped + hardened (specs/21, 22); remaining: streaming, RAG, image gen (XL) |
 | Real-time collab | P2 | XL | none |

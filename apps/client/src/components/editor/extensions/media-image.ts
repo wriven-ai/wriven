@@ -12,7 +12,7 @@ export interface MediaImageAttrs {
 }
 
 /**
- * Body image node. Stores only the asset **id** (keys-only rule) — never a baked
+ * Body image node. Stores only the asset id (keys-only rule) — never a baked
  * URL. The editor NodeView resolves the id to a thumbnail for display; the
  * Delivery API resolves it to a public URL object at read time. This keeps body
  * content portable across CDN/transform changes, exactly like `media` fields.
