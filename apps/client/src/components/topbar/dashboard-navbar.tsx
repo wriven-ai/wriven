@@ -11,7 +11,6 @@ import {
   ChevronRight,
   ExternalLink,
   Moon,
-  // Search, // quick search temporarily disabled
   Sun,
   User,
 } from 'lucide-react';

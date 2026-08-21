@@ -5,10 +5,8 @@ import type { PlanView } from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 
 /**
- * Public plan catalog for the marketing `/pricing` page — no JWT, no workspace.
- * Reuses `BILLING_PATTERNS.LIST_PLANS`, which returns only `isPublic && active`
- * plans and omits Stripe ids (safe to expose). Only the global `ThrottlerGuard`
- * applies (no `JwtAuthGuard` on this controller). See specs/15.
+ * Public pricing catalog — only the global throttler applies. LIST_PLANS
+ * returns just isPublic && active plans, Stripe ids omitted.
  */
 @Controller('plans')
 export class PlansController {

@@ -17,12 +17,8 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 import { WorkspaceUsageComposer } from '../billing/workspace-usage.composer';
 
 /**
- * Read-only aggregate stats, header-scoped like `GET /usage`.
- * - `GET /stats/workspace` — merges auth tenancy counts (projects/members) with
- *   core content/media/usage stats into `WorkspaceStatsView` via
- *   {@link WorkspaceUsageComposer} (shared with the downgrade guard).
- * - `GET /stats/project` — core-only project-scoped `ProjectStatsView`.
- * See specs/17.
+ * Aggregate stats, header-scoped like `GET /usage`. The workspace view is
+ * composed via {@link WorkspaceUsageComposer} (shared with the downgrade guard).
  */
 @Controller('stats')
 export class StatsController {

@@ -64,7 +64,7 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-8 text-left" id="dashboard-home">
-      {/* Real project stats (specs/17 — replaces prior hardcoded numbers). */}
+      {/* Real project stats. */}
       {isError ? (
         <p className="font-mono text-2xs text-text-muted">
           Couldn’t load project stats right now.

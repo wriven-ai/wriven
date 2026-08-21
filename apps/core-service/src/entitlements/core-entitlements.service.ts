@@ -18,13 +18,9 @@ const RESOLVE_TIMEOUT_MS = 4000;
 const CACHE_TTL_MS = 30_000;
 
 /**
- * Core-side plan enforcement. Limits live in auth-service (plans/subscriptions),
- * so we fetch them over TCP and count this service's own resources.
- *
- * Resilience: the limits fetch is timed out + cached (short TTL) and **fails
- * open** — if auth-service is unreachable and there's no cached value, the create
- * is allowed rather than blocked. Plan caps are soft; a limit-check outage must
- * not break content creation. Counts are point-in-time (no advisory lock).
+ * Core-side plan enforcement. Limits live in auth-service; fetched over TCP,
+ * cached (short TTL), fails open — auth unreachable with no cached value →
+ * skip enforcement. Plan caps are soft. Counts are point-in-time (no lock).
  */
 @Injectable()
 export class CoreEntitlementsService {
@@ -122,8 +118,7 @@ export class CoreEntitlementsService {
   /**
    * Effective plan limits for a workspace, or `null` when unresolvable (auth
    * unreachable, no cache → fail open). Thin public accessor over the cached
-   * resolver so usage display reuses the same fail-open path as enforcement
-   * (specs/14). Does not alter cache/TTL/fail-open behavior.
+   * resolver so usage display reuses the same fail-open path as enforcement.
    */
   async effectiveLimits(workspaceId: string): Promise<PlanLimits | null> {
     return this.limits(workspaceId);
@@ -131,7 +126,7 @@ export class CoreEntitlementsService {
 
   /**
    * Revisions retained per entry (oldest pruned beyond this), or `null` =
-   * unlimited / unresolvable (skip pruning). Fail-open like the rest. specs/15.
+   * unlimited / unresolvable (skip pruning). Fail-open like the rest.
    */
   async revisionsCap(workspaceId: string): Promise<number | null> {
     const cap = (await this.limits(workspaceId))?.revisionsPerEntry;

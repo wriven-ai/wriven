@@ -8,7 +8,6 @@ export default function CompilerLab() {
   const [compilerStage, setCompilerStage] = useState(0);
   const [labAutoPlay, setLabAutoPlay] = useState(true);
 
-  // Auto-play effect
   useEffect(() => {
     if (!labAutoPlay) return;
     const interval = setInterval(() => {

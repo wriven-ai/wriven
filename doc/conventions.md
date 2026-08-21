@@ -126,6 +126,15 @@ Running a built service directly (used for smoke tests): `node apps/<svc>/dist/m
 - **One-line Conventional Commit** subjects, no body unless essential (`feat: …`, `fix: …`, `refactor: …`, `chore: …`).
 - Keep **frontend (`apps/client`) and backend** changes in **separate commits**; stage selectively rather than `git add -A` when both are dirty.
 
+## Code comments
+
+- **Why, not what.** A comment earns its line by explaining a decision, a pitfall, or behavior the code can't express. Never narrate what the next lines obviously do (no numbered `// 1.` step comments).
+- **Short by default** — 1-3 lines. Longer (up to ~5) is fine for a real mechanism (concurrency, Stripe quirks, fail-open/fail-closed policy) as long as every line carries information: cut repetition, not reasoning.
+- **File headers** — none by default; the filename usually says it. 1-2 lines only when the file holds a non-obvious constraint. No multi-paragraph essays. Exception: Python module docstrings are idiomatic — keep them.
+- **Doc comments on shared contracts and published SDK types stay** — they surface in IDE hover for every consumer. Keep them semantic: units, null meaning, who produces the field.
+- **No spec/plan citations in code.** Comments are self-contained — never `see specs/14` / `(specs/18)` / `plans/02`. State the constraint itself instead. Pointing at `doc/` reference docs is fine.
+- **Always keep**: bug post-mortems (what failed, why the fix), security rationale, cross-service sync notes ("mirrored in X — keep in sync"), upstream-version quirks (e.g. stripe@22 field moves).
+
 ## Nx notes
 
 - Workspace out-of-sync (tsconfig project references) auto-applies (`sync.applyChanges: true` in `nx.json`).

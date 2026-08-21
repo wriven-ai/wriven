@@ -18,14 +18,10 @@ interface CacheEntry {
 }
 
 /**
- * Soft overage gate for the monthly Delivery API request quota. When
- * `USAGE_ENFORCE=true`, checks the workspace's current-period usage (cached
- * briefly) against `apiRequestsPerMonth`; at/over the limit it rejects with
- * `RATE_LIMITED`. **Fails open**: if enforcement is off, or the usage lookup
- * fails / is uncached, the request is allowed — metering must never break
- * delivery (same contract as `CoreEntitlementsService`). The check is
- * intentionally eventual: the counter is batched, so the gate lags real usage
- * by one flush. See specs/14.
+ * Soft gate on the monthly Delivery API quota (USAGE_ENFORCE=true): at/over
+ * the limit, reject with RATE_LIMITED. Fails open — enforcement off, lookup
+ * failure, or uncached → allow (same contract as CoreEntitlementsService).
+ * The counter is batched, so the gate lags real usage by one flush.
  */
 @Injectable()
 export class UsageEnforceService {

@@ -15,13 +15,9 @@ export interface WorkspaceTenancyStats {
 }
 
 /**
- * Composes a full {@link WorkspaceStatsView} by merging auth-service tenancy
- * counts (projects/members) with core-service content/media/usage stats — the
- * same merge `StatsController` did inline. Centralized here so both the stats
- * endpoint and the downgrade guard share one source for the compose.
- *
- * core returns `projects`/`members` as 0 (placeholders); this overwrites them
- * with auth's real counts. See specs/17 + specs/18 (downgrade guard).
+ * Composes {@link WorkspaceStatsView}: core returns projects/members as 0
+ * placeholders; auth's real counts overwrite them. Shared by the stats
+ * endpoint and the downgrade guard.
  */
 @Injectable()
 export class WorkspaceUsageComposer {

@@ -2,12 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AiService } from './ai.service';
 
-/**
- * Enforces AI audit-content retention independently of author traffic.
- * This is deliberately a redaction job, not a delete: metering, cost, and
- * operational audit metadata survive after recoverable generated content is
- * removed.
- */
+/** Daily redaction job — removes recoverable content, keeps operational metadata. */
 @Injectable()
 export class AiAuditRetentionService {
   private readonly logger = new Logger(AiAuditRetentionService.name);

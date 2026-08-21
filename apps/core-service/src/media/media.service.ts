@@ -93,10 +93,10 @@ export class MediaService {
   }
 
   /**
-   * Issue a presigned PUT URL + object key for a profile photo (specs/18).
-   * Image-only, capped at the image size limit. Unlike {@link presign}: no
-   * `media_assets` row (an avatar is not project media) and no storage-quota
-   * check (it is not workspace media). Key lives under `avatars/<userId>/`.
+   * Issue a presigned PUT URL + object key for a profile photo. Image-only,
+   * capped at the image size limit. Unlike {@link presign}: no `media_assets`
+   * row (an avatar is not project media) and no storage-quota check. Key
+   * lives under `avatars/<userId>/`.
    */
   async presignAvatar(p: {
     userId: string;
@@ -117,8 +117,8 @@ export class MediaService {
   }
 
   /**
-   * Best-effort delete of an orphaned avatar object on photo change/remove
-   * (specs/18). Only deletes keys under `avatars/` — never an arbitrary object.
+   * Best-effort delete of an orphaned avatar object on photo change/remove.
+   * Only deletes keys under `avatars/` — never an arbitrary object.
    * `storage.delete` swallows errors, so a missing/failed R2 object never
    * surfaces to the user.
    */

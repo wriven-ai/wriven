@@ -10,7 +10,7 @@ import type {
  * Mirrors `DOWNGRADE_DIMENSIONS` in `libs/shared/contracts/src/lib/types/billing.types.ts`
  * — the client can't import the contracts bundle, so the tiny table is
  * duplicated here. Keep the two in sync. `limitKey` is the matching `PlanLimits`
- * field; `null`/absent there = unlimited → never blocks. specs/18.
+ * field; `null`/absent there = unlimited → never blocks.
  */
 const DOWNGRADE_DIMENSIONS: readonly {
   dimension: DowngradeDimension;

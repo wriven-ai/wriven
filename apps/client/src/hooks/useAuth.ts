@@ -5,7 +5,6 @@ import { useCallback } from 'react';
 import { authApi } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 
-/** Convenience selectors for the current session. */
 export function useAuth() {
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
@@ -18,7 +17,6 @@ export function useAuth() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const currentWorkspace =
     workspaces.find((w) => w.id === currentWorkspaceId) ?? null;
-  // Projects scoped to the active workspace.
   const currentWorkspaceProjects = projects.filter(
     (p) => p.workspaceId === currentWorkspaceId,
   );

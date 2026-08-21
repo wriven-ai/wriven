@@ -150,7 +150,6 @@ export default function SandboxPlayground() {
     setIsGenerating(true);
     setEditorResult("Wriven inking engines at work...");
 
-    // Simulated generation — rotating canned copy per schema + tone
     window.setTimeout(() => {
       const outputs = SAMPLE_OUTPUTS[activeSchema]?.[fieldTone] ?? SAMPLE_OUTPUTS.blog.Professional;
       const idx = nextVariantIndex(`${activeSchema}:${fieldTone}`, outputs.length);

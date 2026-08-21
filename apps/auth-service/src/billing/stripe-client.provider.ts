@@ -6,10 +6,10 @@ import Stripe from 'stripe';
 export const STRIPE_CLIENT = 'STRIPE_CLIENT';
 
 /**
- * Configured Stripe client. Reads `STRIPE_SECRET_KEY` from auth-service `.env`.
- * Fail-fast at boot if key missing. `apiVersion` uses Stripe.API_VERSION so it
- * stays in lockstep with the installed SDK types. Register the Dashboard
- * webhook endpoint under the same version (specs/08).
+ * Configured Stripe client. Reads `STRIPE_SECRET_KEY` from auth-service `.env`,
+ * fail-fast at boot if missing. `apiVersion` uses Stripe.API_VERSION so it
+ * stays in lockstep with the installed SDK types — register the Dashboard
+ * webhook endpoint under the same version.
  */
 export const stripeClientProvider: Provider = {
   provide: STRIPE_CLIENT,

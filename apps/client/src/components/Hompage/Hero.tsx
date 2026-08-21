@@ -54,7 +54,6 @@ export default function Hero() {
 
           {/* Right Column - Frameless Typographic Spec sheet */}
           <div className="lg:col-span-6 flex flex-col justify-center relative lg:min-h-[440px]" id="hero-visual-block">
-            {/* Clean, open-air SVG composition showcasing fluid connectivity of content nodes */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.25]">
               <svg className="w-full h-full" viewBox="0 0 400 400" fill="none">
                 <motion.path 

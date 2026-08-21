@@ -77,7 +77,7 @@ export const CORE_PATTERNS = {
   ENTRY_REVISIONS: 'core.entry.revisions',
   ENTRY_REVISION_RESTORE: 'core.entry.revisionRestore',
 
-  // Project-scoped API keys (Delivery API auth — see plans/01).
+  // Project-scoped API keys (Delivery API auth).
   API_KEY_CREATE: 'core.apiKey.create',
   API_KEY_LIST: 'core.apiKey.list',
   API_KEY_REGENERATE: 'core.apiKey.regenerate',
@@ -88,7 +88,7 @@ export const CORE_PATTERNS = {
   DELIVERY_LIST: 'core.delivery.list',
   DELIVERY_GET: 'core.delivery.get',
 
-  // Media library (R2-backed; presigned direct upload — see specs/03).
+  // Media library (R2-backed, presigned direct upload).
   MEDIA_PRESIGN: 'core.media.presign',
   MEDIA_CREATE: 'core.media.create',
   MEDIA_LIST: 'core.media.list',
@@ -96,12 +96,12 @@ export const CORE_PATTERNS = {
   MEDIA_DELETE: 'core.media.delete',
   MEDIA_DELETE_BULK: 'core.media.deleteBulk',
 
-  // Profile photo upload (R2 direct; no media_assets row — see specs/18).
+  // Profile photo upload (R2 direct; no media_assets row).
   AVATAR_PRESIGN: 'core.media.avatarPresign',
   // Delete an orphaned avatar object on photo change/remove (best-effort).
   AVATAR_DELETE: 'core.media.avatarDelete',
 
-  // Outgoing webhooks (publish → signed POST; see plans/01 P6).
+  // Outgoing webhooks (publish → signed POST).
   WEBHOOK_CREATE: 'core.webhook.create',
   WEBHOOK_LIST: 'core.webhook.list',
   WEBHOOK_UPDATE: 'core.webhook.update',
@@ -128,8 +128,7 @@ export const INVITATION_PATTERNS = {
 
 /**
  * Billing & subscriptions (Stripe). Owned by auth-service (`auth_svc.plans` /
- * `subscriptions`). Customer-facing checkout/portal + the inbound Stripe webhook
- * reconciler. See specs/08.
+ * `subscriptions`) — checkout/portal + the inbound Stripe webhook reconciler.
  */
 export const BILLING_PATTERNS = {
   LIST_PLANS: 'auth.billing.listPlans',
@@ -142,10 +141,9 @@ export const BILLING_PATTERNS = {
 } as const;
 
 /**
- * Usage metering (Delivery API request counter + storage). Owned by
- * core-service (it owns the metered resources: api_keys, delivery, media).
- * The gateway batches increments off the hot path and flushes via RECORD; READ
- * composes the current-period UsageView. See specs/14.
+ * Usage metering (Delivery API requests + storage). Owned by core-service
+ * (it owns the metered resources). The gateway batches increments off the hot
+ * path and flushes via RECORD; READ composes the current-period UsageView.
  */
 export const USAGE_PATTERNS = {
   RECORD: 'core.usage.record',
@@ -155,9 +153,8 @@ export const USAGE_PATTERNS = {
 } as const;
 
 /**
- * AI content generation. Core-service owns scope, policy, quota, and audit;
- * it calls the standalone Python ai-service through its internal `AiClient`.
- * The stable message pattern keeps the gateway and clients transport-agnostic.
+ * AI content generation. Core owns scope, policy, quota, and audit and calls
+ * the Python ai-service through its internal `AiClient`.
  */
 export const AI_PATTERNS = {
   GENERATE: 'core.ai.generate',
@@ -166,9 +163,8 @@ export const AI_PATTERNS = {
 } as const;
 
 /**
- * Platform admin panel. Cross-tenant, god-mode operations. Backed by a separate
- * `admin_users` identity (auth-service) and cross-tenant reads in both services.
- * See doc/admin-panel.
+ * Platform admin panel — cross-tenant operations backed by a separate
+ * `admin_users` identity. See doc/admin-panel.
  */
 export const ADMIN_PATTERNS = {
   // Admin identity & sessions (auth-service)

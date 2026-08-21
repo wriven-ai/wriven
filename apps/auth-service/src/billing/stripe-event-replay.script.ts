@@ -10,7 +10,7 @@
  *   pnpm billing:replay 2026-07-29T00:00:00Z   # since an ISO timestamp
  *   pnpm billing:replay 6                  # last 6 hours
  *
- * Loads env via AppModule's ConfigModule (apps/auth-service/.env). See specs/08.
+ * Loads env via AppModule's ConfigModule (apps/auth-service/.env).
  */
 import { NestFactory } from '@nestjs/core';
 import type Stripe from 'stripe';

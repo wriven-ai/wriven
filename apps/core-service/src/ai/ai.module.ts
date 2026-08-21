@@ -8,14 +8,7 @@ import { AiProfileService } from './ai-profile.service';
 import { AiService } from './ai.service';
 import { AiServiceClient } from './ai-service.client';
 
-/**
- * AI content generation. The LLM client is injected behind the `AiClient` seam;
- * `AiServiceClient` is an HTTP client to the standalone Python `ai-service`
- * (`${AI_SERVICE_URL}/generate`). Prompt building, temperature, and `select`
- * validation/retry live in Python — core only assembles context + meters usage.
- * `AiProfileService` owns the per-project brand voice / glossary / language
- * (read on every generation). DB (DRIZZLE) + ConfigService are global.
- */
+/** AI generation. The LLM client sits behind the AiClient seam; prompts live in Python. */
 @Module({
   imports: [ScheduleModule.forRoot(), CoreEntitlementsModule],
   controllers: [AiController],

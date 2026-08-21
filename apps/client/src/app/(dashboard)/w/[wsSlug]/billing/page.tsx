@@ -1041,7 +1041,6 @@ function PlanCta({
   swapBusy: boolean;
   onSelect: (plan: PlanView, cycle: BillingCycle, kind: PlanActionKind) => void;
 }) {
-  // The card for the plan the workspace currently subscribes to.
   if (isCurrent) {
     // A cancellation is already scheduled → offer to reactivate (clears it).
     if (cancelAtPeriodEnd) {
@@ -1092,7 +1091,6 @@ function PlanCta({
         </button>
       );
     }
-    // Current plan + matching cycle → no action available.
     return (
       <button disabled className={ctaClass('disabled')}>
         Current Plan

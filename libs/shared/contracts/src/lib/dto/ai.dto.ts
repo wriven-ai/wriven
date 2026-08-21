@@ -12,16 +12,8 @@ import {
 } from 'class-validator';
 
 /**
- * AI content generation contracts. Core-service validates scope, policy, quota,
- * and audit state, then calls the standalone Python ai-service behind an
- * `AiClient` seam.
- *
- * The author-facing surface is deliberately small: pick a **target** (one field,
- * or the whole entry), pick an **intent** (create or transform), optionally pick
- * a **preset** shortcut. Core derives the persisted {@link AiOperation} from that
- * triple — the operation selects the prompt template, temperature, and output
- * token cap, all of which stay per-verb because a weak free model follows a
- * tight template far better than one generic instruction.
+ * Per-verb prompt templates stay because weak free models follow a tight
+ * template far better than one generic instruction.
  */
 
 /** What a generation acts on: a single field, or every eligible field of an entry. */
@@ -33,9 +25,8 @@ export const AI_INTENTS = ['generate', 'refine'] as const;
 export type AiIntent = (typeof AI_INTENTS)[number];
 
 /**
- * Refine shortcuts surfaced as chips in the editor. A preset only prefills the
- * author's intent — it is not a separate UI mode, and omitting it leaves a
- * freeform `refine` driven by `instruction` alone.
+ * Refine shortcuts surfaced as chips in the editor. A preset only prefills
+ * the intent — omitting it leaves a freeform `refine` from `instruction`.
  */
 export const AI_REFINE_PRESETS = [
   'expand',
@@ -98,7 +89,6 @@ export class AiGenerateDto {
   @IsUUID()
   entryId?: string;
 
-  /** Whether this targets one field or the whole entry. */
   @IsIn(AI_TARGET_KINDS)
   targetKind!: AiTargetKind;
 
@@ -157,11 +147,11 @@ export interface AiTokenUsage {
 /**
  * The typed result of a generation.
  *
- * - `scalar` — one field's content (`text`/`richtext`, or a `select` value already
- *   validated against its options; a select is just a constrained scalar, so it
- *   needs no separate variant and stays trivially replayable from the audit row).
- * - `record` — a whole-entry `compose`: a map of field key → generated value the
- *   editor previews and applies per field.
+ * - `scalar` — one field's content (text/richtext, or a `select` value already
+ *   validated against its options — a select is a constrained scalar, needs no
+ *   separate variant, and replays trivially from the audit row).
+ * - `record` — a whole-entry compose: field key → generated value, previewed
+ *   and applied per field by the editor.
  */
 export type AiOutput =
   | { kind: 'scalar'; text: string }

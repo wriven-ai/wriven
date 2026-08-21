@@ -17,14 +17,12 @@ const CSRF_EXEMPT =
 const ADMIN_CSRF_EXEMPT = /\/admin\/auth\/(login|refresh|logout)(\/|$)/;
 
 /**
- * Double-submit CSRF protection for cookie-based auth.
- *
- * Only authenticated, state-changing requests are guarded: when an access-token
- * cookie is present on a mutating request, the `X-CSRF-Token` header must equal
- * the readable `csrf_token` cookie. Pre-auth endpoints (login, register, refresh
- * after a reload) carry no access cookie and are skipped — they have no ambient
- * authority to abuse. SameSite=Lax already blocks cross-site cookie sends; this
- * is the defence-in-depth second factor.
+ * Double-submit CSRF protection for cookie-based auth. Only authenticated,
+ * state-changing requests are guarded: with an access-token cookie present on
+ * a mutating request, the `X-CSRF-Token` header must equal the readable
+ * `csrf_token` cookie. Pre-auth endpoints carry no access cookie and are
+ * skipped — no ambient authority to abuse. SameSite=Lax already blocks
+ * cross-site sends; this is the defence-in-depth second factor.
  */
 @Injectable()
 export class CsrfGuard implements CanActivate {

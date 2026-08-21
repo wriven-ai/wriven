@@ -10,15 +10,11 @@ import { ClientProxy } from '@nestjs/microservices';
 import { SERVICE_TOKENS, USAGE_PATTERNS, UsageBucket } from '@wriven/contracts';
 
 /**
- * In-process Delivery API request counter. `bump()` is called on every
- * delivery request (off the hot path: a Map increment); a `setInterval` flush
- * drains the buffer to core-service as a batched `core.usage.record`. No
- * persistence on the gateway (stateless) — counts in-flight at flush time are
- * lost on crash, which is acceptable: metering is soft (commercial guardrail,
- * not a security boundary). `periodStart` is tagged at bump-time so a flush
- * straddling a month boundary still attributes to the correct period.
- *
- * See specs/14.
+ * In-process delivery counter: `bump()` off the hot path (a Map increment), a
+ * `setInterval` flush drains batches to core.usage.record. No persistence —
+ * in-flight counts lost on crash, acceptable for soft metering.
+ * `periodStart` is tagged at bump-time so a month-boundary flush attributes
+ * correctly.
  */
 @Injectable()
 export class UsageBufferService implements OnApplicationBootstrap, OnModuleDestroy {

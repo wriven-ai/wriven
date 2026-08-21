@@ -55,12 +55,8 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/v1';
 
 /**
- * The API client is decoupled from the auth store via injected accessors,
- * wired once in <Providers>. Avoids a store ↔ api import cycle.
- *
- * Auth is fully cookie-based: the access + refresh tokens live in httpOnly
- * cookies the client can't read. The client only mirrors the URL scope
- * (workspace/project) into headers and echoes the CSRF token.
+ * Decoupled from the auth store via injected accessors (wired once in
+ * <Providers>) — avoids a store ↔ api import cycle.
  */
 interface AuthAccessors {
   getWorkspaceId: () => string | null;
@@ -245,7 +241,7 @@ export const authApi = {
       method: 'POST',
       body: { code },
     }),
-  // Self-service profile (specs/18). User-scoped — no workspace header.
+  // Self-service profile. User-scoped — no workspace header.
   updateProfile: (dto: { name?: string; avatar?: string | null }) =>
     request<UserView>('/users/me', { method: 'PATCH', body: dto }),
   avatarPresign: (dto: {
@@ -615,8 +611,8 @@ export async function uploadMedia(file: File): Promise<MediaView> {
 }
 
 /**
- * Upload a profile photo to R2 and return the object key to store on the user
- * (specs/18). Mirrors {@link uploadMedia} but skips the `media.create` step —
+ * Upload a profile photo to R2 and return the object key to store on the user.
+ * Mirrors {@link uploadMedia} but skips the `media.create` step —
  * an avatar is not a media-library asset. Image-only, ≤ the image size cap.
  */
 export async function uploadAvatar(file: File): Promise<string> {
@@ -861,10 +857,8 @@ export const usageApi = {
 };
 
 export const statsApi = {
-  /** Workspace aggregate stats (projects, members, content, usage). See specs/17. */
   workspaceStats: () =>
     request<WorkspaceStatsView>('/stats/workspace', { workspace: true }),
-  /** Project-scoped aggregate stats. */
   projectStats: () =>
     request<ProjectStatsView>('/stats/project', {
       workspace: true,

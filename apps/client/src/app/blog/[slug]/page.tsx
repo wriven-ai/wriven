@@ -12,7 +12,6 @@ interface PageProps {
 }
 
 export default function BlogPostReader({ params }: PageProps) {
-  // Unwrapping the dynamic next.js params promise
   const resolvedParams = use(params);
   const slug = resolvedParams.slug;
 

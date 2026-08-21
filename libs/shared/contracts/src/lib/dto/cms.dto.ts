@@ -282,10 +282,9 @@ export class ListEntriesQueryDto {
 }
 
 /**
- * Bulk-delete media assets (`POST /content/media/bulk-delete`). Asset ids are
- * scoped to the request's project server-side; only matching live rows are
- * soft-deleted (atomic single `UPDATE … WHERE id IN (…)`) and their R2 objects
- * cleaned up best-effort. See specs/03 + multi-select.
+ * Bulk-delete media assets. Ids are scoped to the request's project
+ * server-side; matching live rows are soft-deleted in one atomic UPDATE and
+ * their R2 objects cleaned up best-effort.
  */
 export class DeleteMediaBulkDto {
   @IsArray()

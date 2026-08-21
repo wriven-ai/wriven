@@ -34,29 +34,23 @@ async function bootstrap() {
     .set('trust proxy', 1);
 
   const globalPrefix = 'v1';
-  // The public Content Delivery API is its own versioned surface mounted at
-  // /v1/projects/:projectId/... (per specs/01 and the @wriven-ai/client SDK). It
-  // shares the /v1 root with the management routes, so exclude it from the global
-  // prefix — otherwise the DeliveryController's `v1/projects/...` path gets
-  // doubled to /v1/v1/projects/... . Wildcard syntax is path-to-regexp v8.
+  // The public Delivery API mounts at /v1/projects/:projectId/... alongside
+  // the management routes, so exclude it from the global prefix — otherwise
+  // its path doubles to /v1/v1/projects/... . Wildcard syntax is
+  // path-to-regexp v8.
   app.setGlobalPrefix(globalPrefix, {
     exclude: ['v1/projects/*splat'],
   });
 
   app.use(cookieParser());
 
-  // Two CORS policies, split by surface:
-  //
-  // 1. Public Delivery API (/v1/projects/…) — customer display apps fetch it
-  //    straight from the browser on ANY origin (Contentful/Sanity CDA model).
-  //    Reflect the request origin; credentials stay OFF — these routes
-  //    authenticate with Bearer API keys, never cookies, so reflecting is safe.
-  // 2. Management + admin surface — exact-origin allowlist from CORS_ORIGINS
-  //    (credentials require a specific origin, never `*`). Prod lists
-  //    wriven.tech/admin.wriven.tech (+www); dev defaults to the local servers.
-  //
-  // Requests without an Origin header (curl, same-origin, server-to-server)
-  // are not CORS and pass through untouched either way.
+  // Two CORS policies:
+  // 1. Delivery API (/v1/projects/…) — browser-fetched from ANY origin
+  //    (Contentful/Sanity CDA model). Reflect the origin; credentials OFF —
+  //    these routes use Bearer API keys, never cookies.
+  // 2. Management + admin — exact-origin allowlist from CORS_ORIGINS
+  //    (credentials need a specific origin, never `*`).
+  // No Origin header (curl, same-origin, server-to-server) isn't CORS.
   const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:3001')
     .split(',')
     .map((origin) => origin.trim())

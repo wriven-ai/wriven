@@ -17,7 +17,7 @@ import type { DowngradeBlock } from '@/lib/types';
  * of a stock resource than the target plan allows. Lists each over-limit
  * dimension (used vs allowed) and points the user at where to trim. Driven by
  * the client-side eager preview (lib/downgrade) or the gateway's
- * `DOWNGRADE_BLOCKED` error `details` (race backstop). specs/18.
+ * `DOWNGRADE_BLOCKED` error `details` (race backstop).
  */
 export interface BlockedDowngradeDialogProps {
   open: boolean;

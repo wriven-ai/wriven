@@ -24,7 +24,7 @@ export class MediaController {
     return this.media.presign(p);
   }
 
-  /** Profile photo presign (specs/18) — no media_assets row, user-scoped. */
+  /** Profile photo presign — no media_assets row, user-scoped. */
   @MessagePattern(CORE_PATTERNS.AVATAR_PRESIGN)
   presignAvatar(
     @Payload() p: { userId: string; dto: PresignUploadDto },
@@ -32,7 +32,7 @@ export class MediaController {
     return this.media.presignAvatar(p);
   }
 
-  /** Best-effort orphan cleanup on avatar change/remove (specs/18). */
+  /** Best-effort orphan cleanup on avatar change/remove. */
   @MessagePattern(CORE_PATTERNS.AVATAR_DELETE)
   deleteAvatar(@Payload() p: { key: string }) {
     return this.media.deleteAvatar(p);

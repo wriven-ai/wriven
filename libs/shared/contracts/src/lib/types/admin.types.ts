@@ -81,7 +81,7 @@ export interface PlanLimits {
   webhooks?: number | null;
   /** Revisions retained per entry (oldest pruned beyond this); null = unlimited. */
   revisionsPerEntry?: number | null;
-  /** AI text generations / month (forward — enforced when ai-service ships). */
+  /** AI text generations / month. */
   aiTextRequestsPerMonth?: number | null;
   /** AI image generations / month (forward — enforced when ai-service ships). */
   aiImageRequestsPerMonth?: number | null;
@@ -111,7 +111,7 @@ export interface PlanView {
   /**
    * Yearly pricing breakdown (create-only). Percent given → priceYearly was
    * computed server-side; `yearlyDiscountAmount` = cents saved vs monthly×12.
-   * Both null = explicit/absent yearly price, no discount.
+   * Both null = no yearly discount.
    */
   yearlyDiscountPercent: number | null;
   yearlyDiscountAmount: number | null;

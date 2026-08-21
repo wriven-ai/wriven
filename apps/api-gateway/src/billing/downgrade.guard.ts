@@ -15,7 +15,7 @@ import {
  *
  * `null`/absent limit on a dimension = unlimited → never blocks. Flow
  * dimensions (API requests, bandwidth, AI) are excluded by
- * {@link DOWNGRADE_DIMENSIONS}. See specs/18.
+ * {@link DOWNGRADE_DIMENSIONS}.
  *
  * Mirrored in the client for the eager blocked-preview
  * (`apps/client/src/lib/downgrade.ts`) — keep the two in sync.

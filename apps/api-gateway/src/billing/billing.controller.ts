@@ -9,7 +9,7 @@ import {
 import type { ClientProxy } from '@nestjs/microservices';
 // Namespace import (not named) so DTO classes stay runtime values for
 // ValidationPipe metadata while satisfying TS1272 under isolatedModules +
-// emitDecoratorMetadata. See specs/08.
+// emitDecoratorMetadata.
 import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -22,11 +22,9 @@ import { computeDowngradeBlocks, downgradeBlockedError } from './downgrade.guard
 import { WorkspaceUsageComposer } from './workspace-usage.composer';
 
 /**
- * Customer-facing billing endpoints. Thin HTTP adapter → auth-service over TCP.
- * Workspace-scoped (WorkspaceGuard sets workspaceId + the cascade-resolved
- * permission set). PermissionGuard gates mutations to billing admins; reads are
- * open to any member. auth-service re-checks WORKSPACE_BILLING_MANAGE as
- * defense-in-depth. See specs/08.
+ * Customer-facing billing → auth-service over TCP. Reads open to any member;
+ * PermissionGuard gates mutations, and auth-service re-checks
+ * WORKSPACE_BILLING_MANAGE as defense-in-depth.
  */
 @Controller('billing')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, PermissionGuard)
@@ -96,8 +94,7 @@ export class BillingController {
    *  cancel down to free. Unlike /checkout, this works on already-paid
    *  workspaces. A downgrade (lower paid tier, or → Free) is first screened by
    *  {@link assertDowngradeAllowed} — blocked with `DOWNGRADE_BLOCKED` when the
-   *  workspace holds more stock resources than the target plan allows. See
-   *  specs/08 + specs/18. */
+   *  workspace holds more stock resources than the target plan allows. */
   @Post('swap')
   @RequirePermission(contracts.Permission.WORKSPACE_BILLING_MANAGE)
   async swapPlan(
@@ -116,12 +113,9 @@ export class BillingController {
   }
 
   /**
-   * Block a downgrade when the workspace exceeds the target plan's stock-resource
-   * limits. Resolves current + target plan from the public catalog and only runs
-   * the usage check when `target.sortOrder < current.sortOrder` (paid down or →
-   * Free). Upgrades, cycle-switches, reactivation, and unknown-plan cases are
-   * passed through to auth-service untouched. The gateway check is the
-   * authoritative gate; the client's eager preview is the fast-path UX.
+   * Block a downgrade that exceeds the target plan's stock limits: only runs
+   * when `target.sortOrder < current.sortOrder`; upgrades, cycle-switches, and
+   * unknown plans pass through to auth-service.
    */
   private async assertDowngradeAllowed(
     workspaceId: string,

@@ -22,16 +22,12 @@ export interface ResolvedRoles {
 }
 
 /**
- * The RBAC brain for auth-service. Owns membership lookups and the workspace →
+ * The RBAC brain for auth-service — membership lookups and the workspace →
  * project permission cascade. The gateway enforces; this service resolves.
- *
- * Cascade: a workspace owner/admin's set already contains every project
- * permission, so {@link resolveRoles} grants them project access with no
- * `project_members` row — generalising what used to be the gateway's
- * workspace-admin bypass.
- *
- * The pure cascade math (`effectivePermissions`) lives in `@wriven/contracts`
- * so the frontend `useCan()` shares the identical definition.
+ * A workspace owner/admin's set already contains every project permission, so
+ * {@link resolveRoles} grants project access with no `project_members` row.
+ * The cascade math (`effectivePermissions`) lives in `@wriven/contracts` so
+ * the frontend `useCan()` shares the identical definition.
  */
 @Injectable()
 export class AuthorizationService {

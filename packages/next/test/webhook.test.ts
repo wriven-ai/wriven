@@ -1,4 +1,3 @@
-// test/webhook.test.ts — createWebhookRoute handler behavior via the cache seam.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';

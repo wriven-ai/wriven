@@ -11,14 +11,9 @@ import {
 } from './ai-client.interface';
 
 /**
- * HTTP client to the standalone Python `ai-service`. The only LLM-adjacent code
- * in core-service — it forwards the context payload to `${AI_SERVICE_URL}/generate`
- * and maps failures to {@link AiClientError}. Prompt building, temperature, and
- * `select` validation/retry live in Python; core stays free of any LLM SDK.
- *
- * Auth: the shared `INTERNAL_SECRET` travels in the `X-Internal-Secret` header
- * (ai-service verifies it). Never send the provider key — that lives only in
- * ai-service env.
+ * The only LLM-adjacent code in core-service — no LLM SDK here, prompt building
+ * lives in Python. Auth is the shared INTERNAL_SECRET header; the provider key
+ * never leaves ai-service env.
  */
 @Injectable()
 export class AiServiceClient implements AiClient {
@@ -29,11 +24,9 @@ export class AiServiceClient implements AiClient {
   constructor(cfg: ConfigService) {
     const baseUrl = cfg.get<string>('AI_SERVICE_URL');
     const secret = cfg.get<string>('INTERNAL_SECRET');
-    // This deadline must leave room for ai-service to turn a provider timeout
-    // into a response. Keeping both hops at exactly 30s makes core abandon a
-    // request just as ai-service is finalizing it, which encourages duplicate
-    // paid retries. `AI_TIMEOUT_MS` remains a temporary compatibility fallback
-    // for existing core deployments; new configs use AI_SERVICE_TIMEOUT_MS.
+    // Must exceed ai-service's own provider timeout — if both are 30s, core
+    // abandons the request just as ai-service finalizes it, inviting duplicate
+    // paid retries. AI_TIMEOUT_MS is the legacy fallback name.
     const rawTimeout = Number(
       cfg.get<string>('AI_SERVICE_TIMEOUT_MS') ??
         cfg.get<string>('AI_TIMEOUT_MS') ??
@@ -68,11 +61,9 @@ export class AiServiceClient implements AiClient {
   }
 
   /**
-   * A 2xx is not a contract: a proxy, a stale deployment, or a wrong
-   * `AI_SERVICE_URL` can answer 200 with HTML or a legacy body. Validate the
-   * essentials before returning so a malformed success takes the normal
-   * `failed`-row path instead of crashing mid-`finalize` with the reservation
-   * stuck `pending` until the stale reclaim.
+   * A 2xx is not a contract (a proxy or stale deployment can answer with HTML):
+   * validate before returning so a malformed success takes the failed-row path
+   * instead of crashing mid-finalize.
    */
   private assertWellFormed(data: unknown): AiClientResult {
     const malformed = () =>
@@ -102,13 +93,9 @@ export class AiServiceClient implements AiClient {
   }
 
   /**
-   * Collapse any axios failure into an {@link AiClientError}. Code allowlist:
-   * if ai-service returned a known code (`AI_NOT_CONFIGURED` /
-   * `AI_GENERATION_FAILED` / `AI_INPUT_TOO_LARGE`) in the body, pass it through
-   * unchanged so the gateway emits the right one — an over-budget request must
-   * stay actionable instead of degrading to a generic failure. Everything else
-   * (401 secret mismatch, unmapped 5xx, network/timeout) → `AI_GENERATION_FAILED`.
-   * Never rethrow raw axios — it can carry the request URL/headers.
+   * Map any axios failure to AiClientError: known ai-service codes pass through
+   * unchanged, everything else (401, unmapped 5xx, network) becomes
+   * AI_GENERATION_FAILED. Never rethrow raw axios — it carries URL/headers.
    */
   private toClientError(err: unknown, requestId: string): AiClientError {
     const ALLOWED: readonly AiClientErrorCode[] = [
@@ -121,8 +108,7 @@ export class AiServiceClient implements AiClient {
       const status = err.response?.status;
       const code = err.response?.data?.code as AiClientErrorCode | undefined;
       const message = err.response?.data?.message as string | undefined;
-      // Only present when the LLM call succeeded but the turn failed (select miss);
-      // forwarded so core can meter spent tokens on the failed audit row.
+      // Set only when the LLM call succeeded but the turn failed (select miss).
       const model = err.response?.data?.model as string | undefined;
       const usage = err.response?.data?.usage as AiTokenUsage | undefined;
       const providerRequestId = err.response?.data?.providerRequestId as string | undefined;
@@ -138,7 +124,6 @@ export class AiServiceClient implements AiClient {
       }
 
       if (code && ALLOWED.includes(code)) {
-        // ai-service gave us a contract code — pass it (and its message/model/usage) through.
         this.logger.warn(
           `ai-service error request_id=${requestId} status=${status} code=${code}`,
         );

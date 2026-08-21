@@ -11,8 +11,8 @@ import { serializeSourceContent } from './ai-panel/richtext';
  * AI Co-Writer panel. Two flows over one Tier-1 target set: whole-entry
  * `compose` (drafts every eligible field in one call) and per-field
  * Generate/Refine with preset chips (see FieldFlow). Eligibility is derived,
- * not configured: single-value text/richtext/select that isn't sensitive
- *. Composition root only — the flows live in `./ai-panel/`.
+ * not configured: single-value text/richtext/select that isn't sensitive.
+ * Composition root only — the flows live in `./ai-panel/`.
  */
 export function AiPanel({
   contentTypeId,

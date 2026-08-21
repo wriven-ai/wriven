@@ -62,13 +62,9 @@ const PROFILE_TIMEOUT_ERROR: ServiceError = {
 };
 
 /**
- * AI content generation HTTP edge. Forwards to core-service's
- * `core.ai.generate` (AiModule). Core owns scope, policy, quota, and audit;
- * it delegates prompt assembly and provider calls to the internal Python
- * ai-service. Scoped like other content routes (JWT + workspace + project +
- * permission). The per-workspace {@link AiBurstGuard} guards only the generate
- * route — profile read/edit are not LLM calls and must not consume the burst
- * budget.
+ * Forwards to core.ai.generate — core owns scope/policy/quota/audit and
+ * delegates to the Python ai-service. AiBurstGuard covers only /generate;
+ * profile routes aren't LLM calls and must not consume burst budget.
  */
 @Controller('content/ai')
 @UseGuards(
@@ -156,8 +152,7 @@ export class AiController {
     @CurrentUser() user: AuthUser,
     // Authoritative workspace (resolved from the project record), NOT the
     // client's X-Workspace-Id header — the header is only membership-validated
-    // and a member of two workspaces could otherwise mis-stamp the profile row
-    //.
+    // and a member of two workspaces could otherwise mis-stamp the profile row.
     @CurrentProjectWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: UpdateAiProfileDto,

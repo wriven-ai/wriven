@@ -32,15 +32,15 @@ const SORTABLE = {
   slug: contentEntries.slug,
 } as const;
 
+/** Statuses a delivery read may return. Preview keys also see drafts. */
+const visibleStatuses = (preview?: boolean): string[] =>
+  preview ? ['draft', 'published'] : ['published'];
+
 /**
  * Read-only, published-only content access for the public Delivery API. The
  * project is fixed by the caller (resolved from the API key at the gateway); a
  * key can never read another project.
  */
-/** Statuses a delivery read may return. Preview keys also see drafts. */
-const visibleStatuses = (preview?: boolean): string[] =>
-  preview ? ['draft', 'published'] : ['published'];
-
 @Injectable()
 export class DeliveryService {
   constructor(

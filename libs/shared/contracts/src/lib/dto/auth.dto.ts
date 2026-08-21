@@ -90,11 +90,10 @@ export class VerifyEmailCodeDto {
 }
 
 /**
- * Self-service profile update for the authenticated user (`PATCH /users/me`).
- * Either field is optional; `avatar` accepts an R2 object key (to set) or
- * `null` (to clear). The handler additionally validates `avatar` is `null`,
- * an `http(s)://` URL (e.g. a Google avatar), or under the user's own
- * `avatars/<userId>/` prefix — rejects arbitrary strings / other objects' keys.
+ * Self-service profile update (`PATCH /users/me`). `avatar` accepts an R2
+ * object key (set) or null (clear); the handler also validates it is null,
+ * an http(s) URL (Google avatar), or under the user's own avatars/<userId>/
+ * prefix — rejects other objects' keys.
  */
 export class UpdateProfileDto {
   @IsOptional()

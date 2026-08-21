@@ -19,14 +19,6 @@ const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
 const PASSWORD_MESSAGE =
   'Password must be at least 8 characters with one uppercase letter and one special character';
 
-/**
- * Admin-entered prices stay USD dollars on the wire (e.g. `9.99`).
- * Dollars→cents conversion deliberately does NOT live in a `@Transform`:
- * BOTH the gateway's HTTP pipe and the auth-service's TCP pipe validate this
- * DTO with `transform: true`, so a transform would apply TWICE
- * ($10 → 1000 → 100000). The auth-service's AdminPlansService converts once.
- */
-
 const ADMIN_ROLES = ['admin', 'moderator', 'member'] as const;
 
 export class AdminLoginDto {
@@ -164,7 +156,11 @@ export class CreatePlanDto {
   @MaxLength(200)
   description?: string;
 
-  /** USD dollars on the wire (≤2 decimals) — the auth-service converts to cents. */
+  /**
+   * USD dollars on the wire (≤2 decimals); auth-service converts once. No
+   * `@Transform` here — the HTTP and TCP pipes both validate with
+   * `transform: true`, so a transform would apply twice ($10 → 100000).
+   */
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)

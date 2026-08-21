@@ -315,10 +315,7 @@ export class UsageService {
 }
 
 /**
- * Current billing window: calendar month, UTC midnight boundaries.
- *
- * Re-exported from `common/period` so existing importers keep working while the
- * single definition lives next to the other shared helpers — AI quota, `/usage`,
- * and stats must all agree on the boundary.
+ * Current billing window: calendar month, UTC midnight boundaries. Re-exported
+ * from `common/period` — AI quota, /usage, and stats must all agree on it.
  */
 export { currentPeriod };

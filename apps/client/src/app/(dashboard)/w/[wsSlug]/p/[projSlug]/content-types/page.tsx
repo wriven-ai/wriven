@@ -116,7 +116,6 @@ export default function ContentTypesPage() {
   // Derive from `allTypes` (not a snapshot) so the sheet stays fresh after edits.
   const viewTarget = allTypes.find((t) => t.id === viewId) ?? null;
 
-  // Client-side filter + sort
   const filtered = useMemo(() => {
     let list = allTypes;
     if (search.trim()) {
@@ -130,7 +129,6 @@ export default function ContentTypesPage() {
     );
   }, [allTypes, search, sortAsc]);
 
-  // Client-side pagination over the filtered+sorted list
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const contentTypes = filtered.slice((page - 1) * pageSize, page * pageSize);
   const total = filtered.length;

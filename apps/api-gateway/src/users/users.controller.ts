@@ -13,10 +13,8 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 /**
- * Self-service account routes (specs/18). User-scoped — no workspace/project
- * context. CSRF is enforced globally (`CsrfGuard` in `main.ts`), so the
- * mutating `PATCH /users/me` is protected automatically; the SPA already echoes
- * the double-submit token on writes.
+ * Self-service account routes — user-scoped, no workspace/project. The global
+ * CsrfGuard covers the mutating PATCH; no per-route CSRF code needed.
  */
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -29,7 +27,7 @@ export class UsersController {
   /**
    * Update the authed user's display name and/or avatar (R2 key / null).
    * After a successful avatar change/remove, best-effort deletes the prior R2
-   * object via core (specs/18). External (Google) URLs + null are skipped; a
+   * object via core. External (Google) URLs + null are skipped; a
    * failed delete never fails the PATCH.
    */
   @Patch('me')

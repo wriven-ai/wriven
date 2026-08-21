@@ -40,7 +40,6 @@ export class EntriesService {
    * Prune an entry's revisions to the plan cap: delete the oldest beyond `cap`,
    * keeping the newest `cap` by version. Runs inside the caller's transaction
    * so a crash can't leave over-cap revisions. `cap == null` = unlimited → no-op.
-   * specs/15.
    */
   private async pruneRevisions(
     tx: Parameters<Parameters<DrizzleDB<typeof schema>['transaction']>[0]>[0],
@@ -195,7 +194,6 @@ export class EntriesService {
     }
 
     const status = (p.dto.status ?? entry.status) as EntryStatus;
-    // Set publishedAt the first time an entry goes live.
     const publishedAt =
       status === 'published' && !entry.publishedAt
         ? new Date()
@@ -380,7 +378,6 @@ export class EntriesService {
           updatedAt: row.updatedAt.toISOString(),
         },
       };
-      // Purge CDN caches for this entry + its type's lists, then notify subscribers.
       await Promise.all([
         this.cache.purgeEntry(type.apiId, row.id),
         this.webhooks.dispatch(projectId, payload),

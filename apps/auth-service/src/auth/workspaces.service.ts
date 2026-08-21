@@ -36,7 +36,7 @@ export class WorkspacesService {
    * Workspace tenancy counts (projects + members) for the dashboard aggregate.
    * Membership is already enforced by the gateway's WorkspaceGuard, so this
    * trusts the injected `workspaceId` and just counts. Merged with core-service
-   * content/media stats at the gateway. See specs/17.
+   * content/media stats at the gateway.
    */
   async stats(p: {
     workspaceId: string;
