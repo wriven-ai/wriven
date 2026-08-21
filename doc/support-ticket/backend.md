@@ -4,7 +4,7 @@ Implementation plan for the support-ticket API in **this monorepo**. Mirrors the
 existing tenant module shape (media/webhooks): `core_svc` Drizzle tables, a
 core-service module behind `core.support.*` / `admin.support.*` TCP patterns, and
 gateway controllers under the existing guards. Shared model + lifecycle in
-[README.md](./README.md). **Plan only — build later.**
+[README.md](./README.md). **Shipped** — `apps/core-service/src/support/` + gateway `support/` + `admin/` controllers.
 
 > Conventions to follow: bare `workspaceId`/`authorId` uuids (no cross-service FK),
 > the `{ success, data }` envelope, `rpcError(...)`, `@Audit` on admin writes, all
@@ -98,10 +98,10 @@ export const supportTicketAttachments = coreSchema.table(
 
 Notes:
 - `number` via Postgres identity → stable, gapless-ish, human reference. Display `#${number}`.
-- **≤ 3 attachments** per ticket/message is enforced in the service (count check),
-  not the DB.
-- `scopeProjectId` is validated in the gateway against the caller's workspace
-  projects; stored bare (no FK — projects live in `auth_svc`).
+- **≤ 3 attachments** per ticket/message is enforced by DTO validation
+  (`@ArrayMaxSize(3)` in `support.dto.ts`), not the DB or the service.
+- `scopeProjectId` is stored bare (no FK — projects live in `auth_svc`); the
+  gateway does not re-validate it against the workspace on create.
 
 ---
 
@@ -110,8 +110,8 @@ Notes:
 Same two-step browser-direct upload the media module uses:
 
 1. **Presign** — `POST /support/tickets/attachments/presign` → core
-   `support.attachment.presign`. Validate `image/*` only + size via
-   `maxBytesForContentType`; key prefix **`support/{workspaceId}/{uuid}.{ext}`**
+   `core.support.presign`. Validate `image/*` only + a hardcoded **5 MB** size cap;
+   key prefix **`support/{workspaceId}/{uuid}.{ext}`**
    (own prefix so support assets never mix with project media). Return
    `{ uploadUrl, key }` from `StorageService.presignUpload`.
 2. Browser PUTs bytes to R2.
@@ -137,7 +137,7 @@ export const SUPPORT_SCOPES = ['general','project','billing','account','technica
 export type SupportScope = (typeof SUPPORT_SCOPES)[number];
 
 export interface SupportAttachmentView { id: string; url: string; mime: string | null; sizeBytes: number | null; originalFilename: string | null; }
-export interface SupportMessageView { id: string; authorType: 'user' | 'admin'; authorId: string; authorName?: string; body: string; createdAt: string; attachments: SupportAttachmentView[]; /* isInternalNote NOT sent to tenant */ }
+export interface SupportMessageView { id: string; authorType: 'user' | 'admin'; authorId: string; body: string; createdAt: string; attachments: SupportAttachmentView[]; /* isInternalNote NOT sent to tenant */ }
 export interface SupportTicketRow { id: string; number: number; subject: string; scopeType: SupportScope; scopeProjectId: string | null; status: SupportStatus; priority: SupportPriority; lastReplyAt: string | null; lastReplyBy: 'user'|'admin'|null; createdAt: string; }
 export interface SupportTicketDetail extends SupportTicketRow { workspaceId: string; authorId: string; description: string; attachments: SupportAttachmentView[]; messages: SupportMessageView[]; }
 ```
@@ -155,7 +155,7 @@ export class CreateTicketDto {
 export class CreateTicketMessageDto { body!: string; attachmentKeys?: string[]; } // ≤3
 export class ListTicketsQueryDto { /* page, limit, status?, scopeType? */ }
 // Admin
-export class AdminTicketListQueryDto { /* page, limit, status?, priority?, scopeType?, workspaceId?, assignedAdminId?, q? */ }
+export class AdminTicketListQueryDto { /* page, limit, status?, priority?, scopeType?, workspaceId?, assignedAdminId?, unassigned?, q? */ }
 export class AdminReplyDto { body!: string; internalNote?: boolean; attachmentKeys?: string[]; }
 export class AdminUpdateTicketDto { status?: SupportStatus; priority?: SupportPriority; assignedAdminId?: string | null; }
 ```
@@ -196,8 +196,9 @@ apps/core-service/src/support/
 - **create** — insert ticket (`status:'open'`) + opening attachments (verify keys);
   enforce anti-spam open-ticket cap per workspace; return detail.
 - **reply** (`authorType:'user'`) — append message + attachments; if ticket was
-  `pending`/`resolved`/recently-`closed` → set `status:'open'` (reopen); update
-  `lastReplyAt/By`. Block reply on a long-closed ticket (→ `CONFLICT`, open a new one).
+  `pending`/`resolved` → set `status:'open'` (reopen); update `lastReplyAt/By`.
+  Reply on **any** closed ticket is rejected (→ `CONFLICT`, open a new one) — no
+  grace window.
 - **list** — workspace-scoped, paginated, filter by status/scope. Visibility rule
   per [README §6](./README.md) (author vs workspace-admin) — resolved at the gateway
   from membership role.
@@ -207,15 +208,18 @@ apps/core-service/src/support/
   priority/assignee.
 
 `admin-support.service.ts` (mirrors `apps/core-service/src/admin/*`):
-- **list** — cross-tenant queue; filter status/priority/scope/workspace/assignee + `q`
-  (subject / `#number`). Batched author/workspace labels — no N+1.
+- **list** — cross-tenant queue; filter status/priority/scope/workspace/assignee
+  (`unassigned` boolean) + `q` (subject / `#number`). Returns bare
+  `SupportTicketRow`s — no author/workspace/assignee name resolution (the SPA joins
+  client-side).
 - **get** — full thread **including** internal notes.
 - **reply** (`authorType:'admin'`) — append message; `internalNote` keeps status,
   else set `pending` + stamp `firstRespondedAt` if first staff reply; update
   `lastReplyAt/By:'admin'`.
 - **update** — set `status` (stamp `resolvedAt`/`closedAt`), `priority`, `assignedAdminId`.
-- **metrics** — counts by status, unassigned count, avg first-response — for the
-  admin Overview widget + Support screen header.
+- **metrics** — `SupportMetrics` = counts (`open`/`pending`/`resolved`/`closed`/
+  `unassigned`/`total`) — for the admin Overview widget + Support screen header.
+  No avg first-response metric.
 
 ---
 
@@ -230,11 +234,10 @@ POST   /support/tickets
 GET    /support/tickets                 # workspace-scoped, paginated
 GET    /support/tickets/:id
 POST   /support/tickets/:id/messages    # reply
-PATCH  /support/tickets/:id             # author close/reopen only
+PATCH  /support/tickets/:id             # author close only (CloseTicketDto: status:'closed')
 ```
-Validate `scopeProjectId` belongs to the workspace before forwarding (reuse the
-project-membership check the existing controllers use). Pass the caller's
-workspace-role so the service applies the visibility rule.
+The gateway forwards the create DTO as-is — `scopeProjectId` workspace validity is
+NOT re-validated at the gateway (the service enforces author + workspace scoping).
 
 **Admin — `apps/api-gateway/src/admin/admin-support.controller.ts`**
 `@UseGuards(AdminJwtGuard)`, role-gated + `@Audit`, forwards to `admin.support.*`:

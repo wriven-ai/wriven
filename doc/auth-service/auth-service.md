@@ -17,6 +17,7 @@ NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema
 | provider_id | text | Google id; nullable. `unique(provider, provider_id)` |
 | password_hash | text | nullable (null for pure-OAuth users) |
 | email_verified | boolean | default false |
+| suspended_at | timestamptz | nullable; set → login/refresh return `FORBIDDEN` |
 | created_at / updated_at | timestamptz | `updated_at` auto-bumps |
 
 **refresh_tokens** — `token_hash` (unique, sha256), `user_id`→users (cascade), `expires_at`, `revoked`, `remember_me`, `created_at`.
@@ -25,8 +26,8 @@ NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema
 
 ### Tenancy
 
-**workspaces** — id, name, `slug` (globally unique), `created_by`→users, created_at, updated_at.
-**workspace_members** — workspace_id→workspaces, user_id→users, `role` (`owner`\|`admin`\|`member` CHECK), `unique(workspace_id, user_id)`, `user_id` index.
+**workspaces** — id, name, `slug` (`unique(created_by, slug)` — unique per owner, not global), `created_by`→users, created_at, updated_at.
+**workspace_members** — workspace_id→workspaces, user_id→users, `role` (`owner`\|`admin`\|`member`\|`guest` CHECK — `guest` is auto-seated for project-only invitees), `unique(workspace_id, user_id)`, `user_id` index.
 **projects** — id, workspace_id→workspaces (cascade), name, slug, `created_by`→users (restrict), `unique(workspace_id, slug)`, `deleted_at` (soft delete).
 **project_members** — project_id→projects (cascade), user_id→users (cascade), `role` (`admin`\|`editor`\|`viewer` CHECK), `unique(project_id, user_id)`, `user_id` index.
 
@@ -34,7 +35,9 @@ NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema
 
 ```
 User ──< workspace_members >── Workspace ──< projects ── project_members >── User
-   (a user can belong to many workspaces; signup auto-creates one workspace + one "Default Project")
+   (a user can belong to many workspaces; signup creates the workspace but NO project —
+   the user creates their first project in the UI. Only `WorkspacesService.create`
+   seeds a "Default Project".)
 ```
 
 ## Tokens
@@ -49,12 +52,12 @@ User ──< workspace_members >── Workspace ──< projects ── project
 `POST /auth/register { name, email, password, workspaceName? }` →
 1. Reject if email exists (`EMAIL_ALREADY_EXISTS`; also caught on the unique constraint for races).
 2. bcrypt hash (rounds `BCRYPT_ROUNDS`, default 12).
-3. **One transaction:** insert user → workspace (name from optional `workspaceName`, else `"<name>'s Workspace"`; random-suffixed slug) → workspace_member `owner` → project (`Default Project`, slug `default`) → project_member `admin` → refresh token row.
-4. Issue access + refresh tokens; send verification email (failure logged, never blocks).
-5. Return `{ accessToken, user, workspace, project }` + refresh cookie.
+3. **One transaction:** insert user → workspace (name from optional `workspaceName`, else `"<name>'s Workspace"`; random-suffixed slug) → workspace_member `owner` → free `subscriptions` row → refresh token row. **No project** is created (no `Default Project` at signup); no verification email is auto-sent (on-demand per specs/18).
+4. Issue access + refresh tokens.
+5. TCP returns `{ accessToken, refreshToken, refreshExpiresAt, user, workspace }`; the gateway sets httpOnly cookies and returns `{ user, workspace, csrfToken }` over HTTP.
 
 ### Login
-`POST /auth/login { email, password, rememberMe? }` → look up user, bcrypt compare. On missing email, runs a **dummy bcrypt compare** so timing doesn't leak existence. Generic `INVALID_CREDENTIALS` on any failure. Issues tokens + returns primary workspace/project.
+`POST /auth/login { email, password, rememberMe? }` → look up user, bcrypt compare. On missing email, runs a **dummy bcrypt compare** so timing doesn't leak existence. Generic `INVALID_CREDENTIALS` on any failure — except a **suspended** account, which returns `FORBIDDEN`. Issues tokens; returns `{ user, workspace, csrfToken }` (workspace only, no project).
 
 ### Refresh (mandatory rotation)
 `POST /auth/refresh` (refresh cookie) → hash, look up row. If **revoked token is reused → theft**: revoke all of the user's tokens, reject. If valid: revoke old + issue new (rotation), return new access token + cookie.
@@ -78,7 +81,7 @@ User ──< workspace_members >── Workspace ──< projects ── project
 
 ### Google OAuth
 - The **Passport Google strategy runs on the gateway** (auth-service has no public HTTP endpoint for Google to redirect to).
-- `GET /auth/google` → redirect to Google. `GET /auth/google/callback` → gateway exchanges code for profile, sends it over TCP (`auth.googleLogin`), sets refresh cookie, redirects to `${CLIENT_ORIGIN}/auth/callback#access_token=…` (token in URL fragment).
+- `GET /auth/google` → redirect to Google. `GET /auth/google/callback` → gateway exchanges code for profile, sends it over TCP (`auth.googleLogin`), sets refresh cookie, redirects to a clean `${CLIENT_ORIGIN}/auth/callback` (tokens live in httpOnly cookies — no URL fragment).
 - `googleLogin` resolution: find by `provider_id` → else link to existing local account by email (sets `provider_id`, `email_verified=true`) → else full signup transaction (`provider: 'google'`, verified).
 
 ### Mail templates
@@ -111,12 +114,12 @@ Expiry phrasing comes from the configured TTLs (`RESET_TOKEN_TTL`,
 
 ## Workspace & project management
 
-`WorkspacesService` handles workspace CRUD (patterns `auth.{createWorkspace,getWorkspace,listWorkspaces,updateWorkspace,deleteWorkspace}`), exposed by the gateway under `/workspaces` and `/workspaces/:workspaceId`. `ProjectsService` handles project CRUD + project membership (patterns `auth.project.*` / `auth.createProject` etc.), exposed under `/workspaces/:workspaceId/projects` and `/projects/:projectId` (full detail: [members-api.md](./members-api.md)). Authorization is enforced here from the caller's role:
+`WorkspacesService` handles workspace CRUD (patterns `auth.{createWorkspace,getWorkspace,listWorkspaces,updateWorkspace,deleteWorkspace}` + `auth.workspace.stats` for dashboard counts, specs/17), exposed by the gateway under `/workspaces` and `/workspaces/:workspaceId`. `ProjectsService` handles project CRUD + project membership (patterns `auth.project.*` / `auth.createProject` etc.), exposed under `/workspaces/:workspaceId/projects` and `/projects/:projectId` (full detail: [members-api.md](./members-api.md)). Authorization is enforced here from the caller's role:
 
 - **Workspace:** create/list = any authed user; update = owner/admin; delete = owner. Members: list = any member; add/update/remove = owner/admin. Only an owner manages the `owner` role; the workspace must keep ≥1 owner.
 - **Project:** create = workspace owner/admin; list = any workspace member (`getProjectScope` — `guest` sees only assigned); update/delete = project admin. Members: list = any member; add/update/remove = project admin. Workspace owners/admins get project permissions via the **cascade** (resolved auth-service-side in `validateProjectMember` — the gateway no longer has a bypass). The project must keep ≥1 admin. Authorization is permission-based (`AuthorizationService.authorize`), not role-string checks.
-- Creating a workspace seeds a "Default Project" and adds the creator as project admin.
-- Members are added by **email** and must be an existing user (no invitation flow yet).
+- Creating a workspace (explicit `POST /workspaces`) seeds a "Default Project" and adds the creator as project admin — signup does not.
+- Members are added by **email** (existing user) **or via the invitation flow** (specs/05 — `invitations` table, `InvitationsService`, patterns `auth.invitation.{create,list,revoke,resend,preview,accept}`, 7-day TTL, invite email, auto-claim of pending invites on signup).
 
 ## Cross-service handlers
 
@@ -128,16 +131,17 @@ Expiry phrasing comes from the configured TTLs (`RESET_TOKEN_TTL`,
 `BillingService` + `StripeWebhookService` own the payment path (patterns `auth.billing.*`). Entitlements/quotas already read the `subscriptions` row, so the integration changes **zero enforcement call sites** — it only keeps the row in sync with Stripe.
 
 ### Schema (`auth_svc`)
-- **plans** — `key` (free/starter/pro), prices (cents), `stripe_product_id` / `stripe_price_id_monthly` / `stripe_price_id_yearly` (created alongside the row via the admin panel — Stripe-first, so a Stripe failure can't leave a half-linked plan), `trial_days` (0 — trials removed), `limits` + `features` (jsonb). Rows are managed from the admin Plans UI, not the seed.
-- **subscriptions** — one row per workspace (created `free`/`active` on signup). Stripe linkage (`stripe_customer_id`, `stripe_subscription_id`), `status` (CHECK: active/trialing/past_due/canceled/paused/incomplete), `billing_cycle`, `current_period_start/end`, `trial_ends_at`, `cancel_at_period_end`, `canceled_at`, `stripe_event_created_at` (last applied event time — stale-event guard), `overrides` (admin per-customer limit bump), `updated_by`.
+- **plans** — `key` (free/starter/pro), prices (cents, USD dollars in the DTO — converted auth-service-side), `currency`, `yearly_discount_percent` / `yearly_discount_amount`, `sort_order`, `is_public`, `active`, `stripe_product_id` / `stripe_price_id_monthly` / `stripe_price_id_yearly` (created alongside the row via the admin panel — Stripe-first, so a Stripe failure can't leave a half-linked plan), `trial_days` (0 — trials removed), `limits` + `features` (jsonb). Rows are managed from the admin Plans UI, not the seed.
+- **subscriptions** — one row per workspace (created `free`/`active` on signup). Stripe linkage (`stripe_customer_id`, `stripe_subscription_id`), `status` (CHECK: active/trialing/past_due/canceled/paused/incomplete), `billing_cycle`, `current_period_start/end`, `trial_ends_at`, `cancel_at_period_end`, `canceled_at`, `stripe_event_created_at` (last applied event time — stale-event guard), `pending_change` (jsonb — deferred-downgrade hint, specs/16; surfaced as `SubscriptionView.pendingDowngrade`, cleared by the reconciler when phase 2 lands), `overrides` (admin per-customer limit bump), `updated_by`.
 - **stripe_events** — webhook idempotency log: `event_id` (Stripe `evt_…`, unique dedupe key), `event_type`, `event_created_at` (Stripe's `event.created`), `payload` (raw, for debug/replay).
 
-### Checkout / Portal
-- `createCheckout` — free→paid only. Pre-checks the row: if a live Stripe subscription exists (`stripe_subscription_id` set, status ≠ canceled) → `SUBSCRIPTION_EXISTS` (use the Portal). Ensures a Customer (idempotent `customer:${workspaceId}`), creates a `subscription`-mode Checkout Session with `metadata.workspaceId`/`planKey`/`billingCycle` + `client_reference_id`. **owner/admin only** (role forwarded by the gateway). Redirect URLs allowlisted to `APP_URL`.
-- `createPortal` — Billing Portal session on the workspace's Customer. owner/admin only.
+### Checkout / Portal / Swap
+- `createCheckout` — free→paid only. Pre-checks the row: if a live Stripe subscription exists (`stripe_subscription_id` set, status ≠ canceled) → `SUBSCRIPTION_EXISTS` (use the Portal). Ensures a Customer (idempotent `customer:${workspaceId}`), creates a `subscription`-mode Checkout Session with `metadata.workspaceId`/`planKey`/`billingCycle` + `client_reference_id`. Gated by the `WORKSPACE_BILLING_MANAGE` permission (enforced here from `userId` via `AuthorizationService.authorize` — no role forwarded). Redirect URLs allowlisted to `APP_URL`.
+- `createPortal` — Billing Portal session on the workspace's Customer. Same permission gate.
+- `swapPlan` (`POST /billing/swap`, specs/16) — mutates an **existing** subscription directly (no redirect): upgrade/cycle-switch = immediate prorated invoice (`always_invoice`); **downgrade = deferred** via a 2-phase Subscription Schedule (`proration_behavior: 'none'`, target stored in `pending_change`, access unchanged until period end); `planKey:'free'` = `cancel_at_period_end`; targeting the current plan while a downgrade pends = reactivation (schedule release + clear). Any non-reactivation swap first releases a pending schedule. The api-gateway screens downgrades (`DOWNGRADE_BLOCKED` 409) against stock-resource limits before forwarding (specs/18).
 
 ### Invoices
-- `listInvoices(workspaceId)` — read-only; resolves the workspace's `stripe_customer_id` (returns `[]` if none) and maps `stripe.invoices.list({ customer, limit: 20 })` to `InvoiceView` (`number`, `amountPaid`, `currency`, `status`, `createdAt`, `url = hosted_invoice_url`). **Link-out / keys-only** — nothing invoice-related is stored; the download links to Stripe's hosted PDF.
+- `listInvoices(workspaceId)` — read-only; resolves the workspace's `stripe_customer_id` (returns `[]` if none) and maps `stripe.invoices.list({ customer, limit: 20 })` to `InvoiceView` (`id`, `number`, `description`, `amountPaid`, `currency`, `status`, `createdAt`, nullable `url = hosted_invoice_url`). **Link-out / keys-only** — nothing invoice-related is stored; the download links to Stripe's hosted PDF.
 
 ### Admin plan sync (specs/11)
 `AdminPlansService` (in `AdminModule`, shares `StripeModule`) keeps plan create /
@@ -150,8 +154,9 @@ pricing; the app never pushes price edits). `admin.plans.*` return
   Stripe-first: creates the Product + monthly + yearly Prices, then inserts the
   plan row with the 3 ids. A paid plan with no price → `VALIDATION_ERROR`. Free
   plan skips Stripe. On Stripe failure → `STRIPE_SYNC_FAILED` (no half-linked row).
-- `update({ active: false })` — archives the Stripe Product + deactivates its
-  Prices (best-effort, then DB patch). Other field changes (`name`/`limits`/…)
+- `update({ active: false })` — **fail-loud**: archives the Stripe Product first; on
+  Stripe failure throws `STRIPE_SYNC_FAILED` and leaves the DB row untouched. Other
+  field changes (`name`/`limits`/…)
   are local-only.
 - **Changing a price** is a manual ops task: create a new Price in Stripe →
   repoint the plan's `stripe_price_id_*` + update the stored amount. Existing
@@ -190,6 +195,12 @@ OTP_TTL=10m              # 6-digit verification-code lifetime
 OTP_PEPPER=              # HMAC pepper for code hashes; falls back to JWT_SECRET
 MAIL_HOST= MAIL_PORT=587 MAIL_USER= MAIL_PASS= MAIL_FROM=
 APP_URL=                # frontend base for reset/verify links + billing redirect allowlist
+CLIENT_ORIGIN=          # used for invitation email links
+R2_PUBLIC_URL=          # avatar URL reconstruction (profile photos)
+# Admin platform console (admin JWTs are signed here; the gateway verifies)
+ADMIN_JWT_SECRET=       # MUST match api-gateway
+ADMIN_JWT_ACCESS_TTL= ADMIN_REFRESH_TTL=
+ADMIN_SEED_EMAIL= ADMIN_SEED_PASSWORD= ADMIN_SEED_NAME=   # bootstrap admin (seed script)
 # Stripe (billing)
 STRIPE_SECRET_KEY=      # sk_test_… / sk_live_…
 STRIPE_WEBHOOK_SECRET=  # whsec_… (auth-service verifies; gateway only forwards)

@@ -2,11 +2,11 @@
 
 ## The official SDK (recommended)
 
-Wriven's SDK is **published on npm** (`0.1.0`):
+Wriven's SDK is **published on npm** (`@wriven-ai/client@0.2.x`):
 
 | Package | What it does |
 |---------|--------------|
-| `@wriven-ai/client` | `createClient()`, `getEntry()`, `getEntries()` — typed, isomorphic, zero-dep |
+| `@wriven-ai/client` | `createClient()`, `getEntry()`, `getEntries()`, `getAllEntries()` (auto-pagination), `iterateEntries()` (async generator), `isWrivenError()` — typed, isomorphic, zero-dep; `Paginated` carries a computed `hasNextPage` |
 | `@wriven-ai/react` | `<WrivenRichText>` renderer for rich-text fields |
 | `@wriven-ai/next` | Next.js webhook + signature verification (not needed for Vite) |
 
@@ -251,9 +251,9 @@ want the real base URL for production builds.)
 
 ---
 
-## When `@wriven-ai/client` is published
+## Using the published `@wriven-ai/client`
 
-Swap is trivial. The official API:
+Already on npm — swap the vendored helper for it directly. The official API:
 
 ```ts
 import { createClient } from '@wriven-ai/client';
@@ -261,7 +261,7 @@ import { createClient } from '@wriven-ai/client';
 const wriven = createClient({
   projectId: import.meta.env.VITE_WRIVEN_PROJECT_ID,
   token: import.meta.env.VITE_WRIVEN_TOKEN,       // wrk_live_… or wrk_preview_…
-  baseUrl: import.meta.env.VITE_WRIVEN_BASE_URL,  // optional, defaults to https://api.wriven.com
+  baseUrl: import.meta.env.VITE_WRIVEN_BASE_URL,  // optional, defaults to https://api.wriven.tech
   // fetch?, timeoutMs?, retries?
 });
 

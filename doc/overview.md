@@ -21,10 +21,10 @@ Wriven is an **AI-native content management and generation SaaS platform**. AI i
 | Object storage | Cloudflare R2 | Store object **keys** only, never URLs |
 | Image transforms | ImageKit | Planned, in front of R2 |
 | Auth | JWT (HS256) + bcrypt + Passport (Google OAuth) | |
-| Email | Nodemailer over SMTP (Mailtrap in dev) | |
+| Email | Nodemailer over SMTP (Gmail documented for dev; production provider pending) | |
 | Build | Nx 22.7.5 + pnpm, SWC, webpack (node target) | |
-| Lint/Test | ESLint 9, Prettier, Jest 30 | |
-| Backend deploy | Hetzner VPS via Docker Compose (planned) | |
+| Lint/Test | ESLint 9, Prettier, Jest 30 (pytest for ai-service, node:test for SDK packages) | |
+| Backend deploy | **Render** (Docker, `render.yaml` Blueprint — live at `api.wriven.tech`); client on Vercel | |
 
 ## Monorepo layout
 
@@ -42,7 +42,9 @@ wriven/
 │   ├── common/          # @wriven/common
 │   ├── constants/       # @wriven/constants
 │   └── types/           # @wriven/types — role enums, etc.
+├── packages/            # publishable delivery SDK (on npm): client, react, next — @wriven-ai/*
 ├── doc/                 # this documentation
+├── render.yaml          # Render Blueprint (prod deploy)
 ├── nx.json · pnpm-workspace.yaml · tsconfig.base.json
 ```
 
@@ -67,6 +69,7 @@ These were chosen deliberately — do not re-litigate:
 pnpm dev:gateway      # nx serve api-gateway   (HTTP :5000)
 pnpm dev:auth         # nx serve auth-service  (TCP  :5001)
 pnpm dev:core         # nx serve core-service  (TCP  :5002)
+pnpm dev:ai           # uv run uvicorn ai-service (HTTP :8000)
 pnpm dev:client       # nx dev   client
 pnpm build            # build all
 pnpm db:auth:generate / db:auth:migrate    # Drizzle, auth schema

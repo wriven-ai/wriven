@@ -4,7 +4,7 @@ Build guide for the agent building the **Wriven Admin Panel SPA** in its **own
 separate repository**. Read the whole `frontend/` folder before writing code.
 
 You are building a React + React Router single-page app that talks to the
-`/admin/*` API on the Wriven gateway (`https://api.wriven.com`). The backend
+`/admin/*` API on the Wriven gateway (`https://api.wriven.tech`). The backend
 contract is in [../backend/06-endpoints.md](../backend/06-endpoints.md) and
 [../api-contract.md](../api-contract.md); product context in
 [../README.md](../README.md).
@@ -34,14 +34,15 @@ god-mode. Three admin roles drive what's visible/enabled: **`admin`** (full),
 but remember the **server enforces** it too, so never rely on hiding alone.
 
 Screens (build in this order): Login → Overview → Users → Workspaces → Projects →
-Content → Media → API Keys → Webhooks → Plans → Admins → Audit Log → Settings.
+Content → Support (queue + ticket thread) → Media → API Keys → Webhooks → Plans →
+Admins → Audit Log → Settings.
 Full spec per screen in [04-screens.md](./04-screens.md).
 
 ---
 
 ## 2. Definition of done
 
-- Login (+TOTP) works against `/admin/auth/*`; `member`/`moderator`/`admin` see the
+- Login works against `/admin/auth/*`; `member`/`moderator`/`admin` see the
   correct subset of nav and actions; server still rejects forbidden writes.
 - Every list is server-paginated/filterable with URL-synced params; every
   destructive action goes through confirm+reason and shows a result toast.

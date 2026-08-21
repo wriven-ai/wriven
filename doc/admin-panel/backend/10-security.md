@@ -13,13 +13,20 @@ Enforce in code + review. Each item is a gate, not a suggestion.
       untouched — [05-rpc.md](./05-rpc.md)).
 - [ ] No raw secrets returned (api-key tokens / webhook secrets are hash/once-only;
       admin sees prefixes/metadata).
-- [ ] Destructive ops require a reason (stored in audit metadata) + role gate.
+- [ ] Destructive ops are role-gated + audited. (A `reason` capture was once
+      specced for audit metadata — **unimplemented**: no admin DTO accepts a
+      reason and no handler sets `req.auditMeta`, so metadata is always `{}`.
+      Add it if the requirement stands.)
 - [ ] Admin tokens carry `typ:'admin'`; `AdminJwtGuard` rejects non-admin tokens.
 - [ ] Last-active-`admin` + self-deactivate/delete guards on admin-user mgmt.
 - [ ] Plan quotas enforced inside create tx under advisory lock (TOCTOU-safe);
       limits fail closed to free defaults if unseeded ([09-plans.md](./09-plans.md)).
-- [ ] Optional: IP allowlist + rate limit on `/admin/*` in prod.
-- [ ] TOTP for `admin` (recommended-required).
+- [x] Rate limit on the admin login (`@Throttle` 10/min). Rest of `/admin/*` is
+      unrated (global limiter only) — per-route limits still open.
+- [ ] TOTP for `admin` (recommended-required) — schema column only, no runtime.
+- [x] Support ticketing admin surface (`/admin/support/*`) shipped — role-gated
+      `[admin|moderator]` + `@Audit`, same rules as other admin writes.
 
-**Deferred hardening:** TOTP/MFA, IP allowlist + `/admin/*` rate-limit, CORS origin
-allowlist (still `origin:true`), metrics/media-usage caching at scale.
+**Deferred hardening:** TOTP/MFA (schema only), IP allowlist, per-`/admin/*`
+rate limits beyond login, ~~CORS origin allowlist~~ (**done** — `CORS_ORIGINS`),
+metrics/media-usage caching at scale, audit reason-capture (above).

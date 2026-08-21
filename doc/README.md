@@ -58,7 +58,7 @@ The docs split into three layers:
 
 | Doc | Covers |
 |-----|--------|
-| [deployment.md](./deployment.md) | Dev/test deploy runbook: backend on Render (Blueprint `render.yaml`: gateway web service + auth/core private TCP services), frontend on Vercel, DB on Supabase, `wriven.tech` + `api.wriven.tech` same-site domain (no cookie code change), env strategy, custom domains, Google OAuth, smoke test, troubleshooting |
+| [deployment.md](./deployment.md) | Deploy runbook (**live in prod**): backend on Render (Blueprint `render.yaml`: gateway public web service at `api.wriven.tech` + auth/core/ai private services), frontend on Vercel (`wriven.tech`), DB on Supabase, `wriven.tech` + `api.wriven.tech` same-site domain (no cookie code change), env strategy, custom domains, Google OAuth, smoke test, troubleshooting |
 
 ## Specs
 
@@ -72,7 +72,21 @@ Feature design docs live in [`../specs/`](../specs/). Each describes one feature
 | [05 — Invitations](../specs/05-invitations.md) | Pending-invitation token flow, accept-on-signup, project→workspace auto-add, project-list leak fix, member onboarding |
 | [06 — Client SDK](../specs/06-sdk.md) | `@wriven-ai/*` package strategy, dual ESM/CJS publishing foundation, isomorphic typed client design, phased build order |
 | [07 — Embedded Studio](../specs/07-embedded-studio.md) | `@wriven-ai/studio` at the customer's `/wriven` route: cross-origin auth handshake, origin allowlist, editor packaging, distribution |
+| [08 — Stripe Billing](../specs/08-stripe-billing.md) | Checkout + Billing Portal + subscription webhook reconciler (auth-service), Managed Payments opt-out, event replay |
+| [09 — Billing Page Frontend](../specs/09-billing-page-frontend.md) | Dashboard billing page: current plan, Checkout redirect, Portal link |
+| [10 — Invoice List](../specs/10-invoice-list.md) | Stripe invoice list on the billing page |
+| [11 — Admin Plan Stripe Sync](../specs/11-admin-plan-stripe-sync.md) | Admin plans CRUD ↔ Stripe Products/Prices linking |
+| [12 — RBAC Permissions](../specs/12-rbac-permissions.md) | Typed `Permission` catalog, role→permission maps, cascade resolver (backend) |
+| [13 — Frontend RBAC](../specs/13-frontend-rbac.md) | `useCan()`/`<Can>`/`<RequirePermission>` against the shared cascade |
 | [14 — Usage Metering](../specs/14-usage-metering.md) | Delivery API request counter (`usage_buckets`), batched gateway flush, `GET /usage` + dashboard, soft fail-open overage gate (`USAGE_ENFORCE`) |
+| [15 — Plan Revamp & Pricing](../specs/15-plan-revamp-and-pricing.md) | free/starter/pro catalog reshape, revision-retention caps, public `/pricing` |
+| [16 — Deferred Plan Downgrade](../specs/16-deferred-plan-downgrade.md) | Downgrades deferred to period end via Stripe Subscription Schedules (`pendingDowngrade`) |
+| [17 — Workspace Metrics](../specs/17-workspace-metrics.md) | `GET /stats/workspace` + `/stats/project`, themed stat grids |
+| [18 — User Profile](../specs/18-user-profile.md) | Profile page, avatar presign, OTP email verification, downgrade screening |
+| [19 — AI Content Generation](../specs/19-ai-content-generation.md) | (superseded by 21) |
+| [20 — AI Service Extraction](../specs/20-ai-service-extraction.md) | (superseded by 21) |
+| [21 — AI Generation Redesign](../specs/21-ai-generation-redesign.md) | Typed `AiOutput` (scalar/record), whole-entry compose, Generate/Refine model, per-project AI voice, token/cost accounting, standalone ai-service |
+| [22 — AI Generation Hardening](../specs/22-ai-generation-hardening.md) | Usage-wire fix, 2xx body validation at the AiClient seam, honest retry semantics, shared richtext schema, compose undo/provenance |
 
 > New spec? Run `/create-spec <feature name>` — it drafts the file under `../specs/` with the next number. (Spec numbering is non-contiguous: `02` graduated to `plans/`.)
 
@@ -83,7 +97,20 @@ Execution recipes derived from a spec — ordered steps, files per step, per-ste
 | Plan | Executes spec | Covers |
 |------|---------------|--------|
 | [01 — Model A Build Plan](../plans/01-model-a-build-plan.md) | [01 — Content Delivery & Plans](../specs/01-content-delivery-and-plans.md) | Phased build: api_keys table, token guard, Delivery API, dashboard keys UI, CDN purge, webhooks, preview, plans/metering, media |
+| [02 — Stripe Billing](../plans/02-stripe-billing.md) | [08](../specs/08-stripe-billing.md) | Billing module, webhook reconciler, replay script |
+| [03 — Billing Page Frontend](../plans/03-billing-page-frontend.md) | [09](../specs/09-billing-page-frontend.md) | Dashboard billing page |
+| [04 — Admin Plan Stripe Sync](../plans/04-admin-plan-stripe-sync.md) | [11](../specs/11-admin-plan-stripe-sync.md) | Plans CRUD ↔ Stripe linking |
+| [05 — RBAC Permissions](../plans/05-rbac-permissions.md) | [12](../specs/12-rbac-permissions.md) | Permission catalog + cascade |
+| [06 — Frontend RBAC](../plans/06-frontend-rbac.md) | [13](../specs/13-frontend-rbac.md) | `useCan()` gating |
 | [07 — Usage Metering](../plans/07-usage-metering.md) | [14 — Usage Metering](../specs/14-usage-metering.md) | Contracts → schema → core usage module → gateway buffer + enforce + `/usage` → frontend widget → docs |
+| [08 — Plan Revamp & Pricing](../plans/08-plan-revamp-and-pricing.md) | [15](../specs/15-plan-revamp-and-pricing.md) | Catalog reshape + pricing page |
+| [09 — Deferred Plan Downgrade](../plans/09-deferred-plan-downgrade.md) | [16](../specs/16-deferred-plan-downgrade.md) | Subscription Schedule downgrade flow |
+| [10 — Workspace Metrics](../plans/10-workspace-metrics.md) | [17](../specs/17-workspace-metrics.md) | Stats endpoints + stat grids |
+| [11 — User Profile](../plans/11-user-profile.md) | [18](../specs/18-user-profile.md) | Profile page + OTP verify |
+| [12 — AI Content Generation](../plans/12-ai-content-generation.md) | [19](../specs/19-ai-content-generation.md) | (superseded by plan 14) |
+| [13 — AI Service Extraction](../plans/13-ai-service-extraction.md) | [20](../specs/20-ai-service-extraction.md) | (superseded by plan 14) |
+| [14 — AI Generation Redesign](../plans/14-ai-generation-redesign.md) | [21](../specs/21-ai-generation-redesign.md) | Typed AiOutput, compose, voice profile, ai-service extraction |
+| [15 — AI Generation Hardening](../plans/15-ai-generation-hardening.md) | [22](../specs/22-ai-generation-hardening.md) | Review-hardening fixes |
 
 > New plan? Run `/create-plan <spec number or slug>` — it reads the spec + codebase and drafts `../plans/<NN>-<slug>.md`.
 

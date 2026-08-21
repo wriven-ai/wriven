@@ -5,22 +5,22 @@ The operational console for Wriven staff — cross-tenant. **Separate identity a
 ![Admin panel](./07-admin-panel.svg)
 
 ## Identity + guards
-- **admin_users** — distinct from tenant `users`. Roles: `super_admin / admin / support / viewer`.
-- **AdminAuthGuard** — separate admin JWT → sets `req.adminUser`.
+- **admin_users** — distinct from tenant `users`. Roles: `admin / moderator / member`.
+- **AdminJwtGuard** — verifies the admin JWT locally (`ADMIN_JWT_SECRET`, signed by auth-service) → sets `req.adminUser`.
 - **AdminRolesGuard** + `@AdminRoles(...)` — mirrors the tenant `PermissionGuard` (which copied *its* pattern). FORBIDDEN on role miss.
 
 ## Services (platform scope, cross-tenant)
-tenancy moderation · content/media/key/webhook moderation · plans CRUD + assignment (+ Stripe sync) · plan-limit enforcement · metrics · **audit log** (platform-side; tenants have none).
+tenancy moderation · content/media/key/webhook moderation · **support-ticket queue** (assignment, priority, staff replies + internal notes, ticket metrics) · plans CRUD + assignment (+ Stripe sync) · plan-limit enforcement · metrics · **audit log** (platform-side; tenants have none).
 
 ## Frontend
-Separate repo (not `apps/client`), talks to the same gateway `/admin/*` routes. In progress (P1).
+Separate repo (not `apps/client`), talks to the same gateway `/admin/*` routes — **deployed at `admin.wriven.tech`** with all console sections functional.
 
 ## The two RBAC axes (don't confuse them)
 | | Platform admin | Tenant RBAC |
 |---|---|---|
 | Identity | `admin_users` | `users` |
 | Guard | `AdminRolesGuard` | `PermissionGuard` |
-| Roles | super_admin/admin/support/viewer | owner/admin/member/guest + project admin/editor/viewer |
+| Roles | admin/moderator/member | owner/admin/member/guest + project admin/editor/viewer |
 | Scope | all tenants | one tenant |
 | Stack | fully independent | fully independent |
 

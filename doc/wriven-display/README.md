@@ -43,7 +43,7 @@ browser bundle** (exactly like Contentful/Sanity delivery tokens). See
 
 ## Install the Wriven SDK
 
-Wriven ships an official SDK, **published on npm** (`0.1.0`):
+Wriven ships an official SDK, **published on npm** (`@wriven-ai/client@0.2.x`, `@wriven-ai/react`, `@wriven-ai/next`):
 
 ```bash
 npm install @wriven-ai/client      # core delivery client (typed, isomorphic, zero-dep)
@@ -100,7 +100,7 @@ EOF
 # 3. Drop in the client from 05-client-setup.md -> src/lib/wriven.ts
 
 # 4. Fetch published entries of a content type
-const posts = await wriven.list('blog_post', { sort: '-publishedAt', limit: 10 });
+const posts = await wriven.getEntries('blog_post', { sort: '-publishedAt', limit: 10 });
 
 # 5. Run
 npm run dev

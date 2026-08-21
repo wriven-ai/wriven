@@ -5,26 +5,32 @@ Base URL: `http://localhost:5000/v1` (gateway). All responses use the standard e
 - Success: `{ "success": true, "data": <payload> }`
 - Error: `{ "success": false, "error": { "code", "message", "statusCode" } }`
 
-**Auth header:** `Authorization: Bearer <accessToken>` for protected routes.
+**Auth:** cookie-based sessions — the gateway's `JwtAuthGuard` reads the httpOnly
+`access_token` cookie (set by register/login/refresh/Google callback); there is **no
+`Authorization: Bearer` header**. Mutating routes with an access cookie must also send
+**`X-CSRF-Token`** echoing the session's CSRF token — the SPA receives it in the
+register/login/refresh/**`/auth/me`** response bodies and holds it in memory (the
+`csrf_token` cookie is httpOnly; the gateway compares header vs cookie server-side).
+**Cookies set on auth:** `access_token` (httpOnly, `/v1`), `refresh_token` (httpOnly, `/v1/auth`), `csrf_token` (httpOnly, `/v1` — token value reaches the SPA via response bodies, never JS).
 **Workspace header:** `X-Workspace-Id: <workspaceId>` for workspace-scoped routes.
 **Project header:** `X-Project-Id: <projectId>` for `/content/*` routes.
-**Refresh cookie:** `refresh_token` (HttpOnly), set by register/login/refresh, scoped to `/v1/auth`.
+Public Delivery API under `/v1/projects/:projectId/content/*` instead uses `Authorization: Bearer wrk_…` API keys — see [wriven-display/03-delivery-api.md](./wriven-display/03-delivery-api.md).
 
 ---
 
 ## Auth
 
 ### POST `/auth/register`
-Public. Body: `{ name, email, password, workspaceName? }` (password ≥ 8). Creates user + workspace + a "Default Project", sends verification email, sets refresh cookie. `workspaceName` names the created workspace (defaults to `"<name>'s Workspace"`).
-→ `{ accessToken, user, workspace, project }`. Errors: `VALIDATION_ERROR` 422, `EMAIL_ALREADY_EXISTS` 409. Rate limit 5/min.
+Public. Body: `{ name, email, password, workspaceName? }` (password ≥ 8). Creates user + workspace + a "Default Project", sends verification email, sets the auth cookies. `workspaceName` names the created workspace (defaults to `"<name>'s Workspace"`).
+→ `{ user, workspace, csrfToken }` (access/refresh tokens are cookie-set only). Errors: `VALIDATION_ERROR` 422, `EMAIL_ALREADY_EXISTS` 409. Rate limit 5/min.
 
 ### POST `/auth/login`
-Public. Body: `{ email, password, rememberMe? }`. Sets refresh cookie.
-→ `{ accessToken, user, workspace, project }`. Error: `INVALID_CREDENTIALS` 401 (generic). Rate limit 10/min.
+Public. Body: `{ email, password, rememberMe? }`. Sets the auth cookies.
+→ `{ user, workspace, csrfToken }`. Error: `INVALID_CREDENTIALS` 401 (generic). Rate limit 10/min.
 
 ### POST `/auth/refresh`
-Public (uses refresh cookie). Rotates the refresh token.
-→ `{ accessToken }` + new cookie. Error: `INVALID_REFRESH_TOKEN` 401 (also revoke-all on reuse).
+Public (uses refresh cookie). Rotates both the refresh and access cookies.
+→ `{ csrfToken }` + new cookies. Error: `INVALID_REFRESH_TOKEN` 401 (also revoke-all on reuse).
 
 ### POST `/auth/logout`
 Public (uses refresh cookie). Revokes the token, clears cookie. → `{ success: true }`.
@@ -46,7 +52,7 @@ Public. Body: `{ token }`. → `{ success: true }`. Error: `INVALID_VERIFICATION
 **Protected** (JWT). Re-sends verification for the current user (idempotent); invalidates the previous code + link. → `{ success: true }`. Rate limit 3/min.
 
 ### GET `/auth/me`
-**Protected** (JWT). Full session for restoring client state. → `{ user, workspaces[], projects[] }` where `user = { id, email, name, avatar, provider, emailVerified, createdAt }`, each workspace `{ id, name, slug, createdBy, role }`, each project `{ id, workspaceId, name, slug, createdBy, createdAt, updatedAt, role }`. Error: `UNAUTHORIZED` 401.
+**Protected** (JWT). Full session for restoring client state — including the `csrfToken` (the SPA re-hydrates its in-memory CSRF token from this after a page reload; the cookie itself is httpOnly). → `{ user, workspaces[], projects[], csrfToken }` where `user = { id, email, name, avatar, provider, emailVerified, createdAt }`, each workspace `{ id, name, slug, createdBy, role }`, each project `{ id, workspaceId, name, slug, createdBy, createdAt, updatedAt, role }`. Error: `UNAUTHORIZED` 401.
 
 ### GET `/auth/workspaces`
 **Protected** (JWT). The current user's workspaces. → `WorkspaceView[]`.
@@ -111,7 +117,7 @@ Rules: the project must keep ≥1 admin (`CONFLICT` 409). `WorkspaceMemberView`/
 Public. Redirects (302) to Google consent.
 
 ### GET `/auth/google/callback`
-Public (Google redirect). Exchanges code, sets refresh cookie, redirects to `${CLIENT_ORIGIN}/auth/callback#access_token=<jwt>`.
+Public (Google redirect). Exchanges code, sets the auth cookies, redirects to a clean `${CLIENT_ORIGIN}/auth/callback` URL (tokens are in httpOnly cookies — no URL fragment).
 
 ---
 
@@ -151,7 +157,30 @@ Errors: `CONFLICT` 409 (duplicate `apiId` within the project), `NOT_FOUND` 404, 
 `ContentEntryView`: `{ id, workspaceId, projectId, contentTypeId, slug, status, data, authorId, publishedAt, createdAt, updatedAt }`.
 `RevisionView`: `{ id, entryId, version, status, data, createdBy, createdAt }`.
 
-> A starter **Post** content type is auto-seeded on project creation (idempotent).
+> Projects start with **no** content types (the former starter `Post` seeding was
+> removed — `bad3987`); create types via `POST /content/types`.
+
+### Invitations — `/invitations` (specs/05)
+
+Workspace/project member invitations by email for users who don't exist yet (existing users are added directly via the member routes above). Accept page lives in the client.
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| POST | `/workspaces/:workspaceId/invitations` | `{ email, role }` | `InvitationView` + sends email |
+| GET | `/workspaces/:workspaceId/invitations` | `?status` | `InvitationView[]` |
+| POST | `/projects/:projectId/invitations` | `{ email, role }` | `InvitationView` |
+| GET | `/projects/:projectId/invitations` | `?status` | `InvitationView[]` |
+| DELETE | `/invitations/:id` | — | `{ success: true }` |
+| POST | `/invitations/:id/resend` | — | `{ success: true }` |
+| GET | `/invitations/token/:token` | — | invitation preview (public, for the accept page) |
+| POST | `/invitations/token/:token/accept` | — | accept + join (auth on signup/login; guest role supported) |
+
+### Users (profile, specs/18)
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| PATCH | `/users/me` | `{ name?, avatar? }` (`avatar` = R2 key or `null`; the prior avatar's R2 object is best-effort deleted) | updated `UserView` |
+| POST | `/users/me/avatar-presign` | `{ filename, contentType, size? }` | presigned R2 PUT `{ uploadUrl, key }` for a new profile photo |
 
 ### AI generation — `/content/ai/*`
 
@@ -189,6 +218,7 @@ R2-backed; presigned **direct** upload (browser PUTs to R2). Keys-only. See spec
 | GET | `/content/media` | `?page&limit` | `{ items, page, limit, total }` |
 | GET | `/content/media/:id` | — | `MediaView` |
 | DELETE | `/content/media/:id` | — | `{ success: true }` (soft + best-effort R2 delete) |
+| POST | `/content/media/bulk-delete` | `{ ids: string[] }` | `{ success: true }` (soft + best-effort R2 delete, same per-item semantics) |
 
 Limits (enforced at presign): 5 MB/image, 25 MB/other; 100 MB per workspace.
 
@@ -203,7 +233,7 @@ Outgoing webhooks on entry events; signed with HMAC-SHA256. See specs/04.
 | PATCH | `/webhooks/:id` | `{ url?, events?, active? }` | `WebhookView` |
 | DELETE | `/webhooks/:id` | — | `{ success: true }` |
 
-Events: `entry.published` · `entry.unpublished` · `entry.deleted`.
+Events: `entry.published` · `entry.unpublished` · `entry.deleted`. `entry.published` fires on first publish **and again on every save of an already-published entry** (webhook consumers must be idempotent on `entryId` + `updatedAt`).
 
 ---
 
@@ -289,30 +319,53 @@ Read-only aggregate counts for the dashboard. Header-scoped like `/usage` (the g
 ## Health
 
 ### GET `/health`
-Public. Pings auth + core over TCP. → `{ gateway, auth, core }`.
+Public. Pings auth + core over TCP and ai-service over HTTP (ai is non-fatal). → `{ gateway, auth, core, ai }`.
+
+## Support tickets
+
+Workspace-scoped support tickets with threaded messages and up to 3 R2 image attachments. Full design + field reference: [support-ticket/](./support-ticket/). **Protected** (JWT) + `X-Workspace-Id`.
+
+| Method | Path | Body | → |
+|--------|------|------|---|
+| POST | `/support/tickets/attachments/presign` | `{ filename, contentType, size }` | presigned R2 PUT for an attachment |
+| POST | `/support/tickets` | `{ subject, description, scopeType?, scopeProjectId?, attachmentKeys? }` (`scopeType` ∈ general/project/billing/account/technical; `scopeProjectId` required when `scopeType: 'project'`; ≤3 attachment keys) | `SupportTicketDetail` |
+| GET | `/support/tickets` | `?status&page&limit` | paginated tickets (author's own) |
+| GET | `/support/tickets/:id` | — | `SupportTicketDetail` (ticket + messages + attachments) |
+| POST | `/support/tickets/:id/messages` | `{ body, attachmentKeys? }` | `SupportMessageView` |
+| PATCH | `/support/tickets/:id` | `{ status: 'closed' }` | close the ticket (author) |
+
+Staff-side handling (queue, assignment, priority) runs through the admin surface — see [admin-panel/](./admin-panel/).
+
+## Admin surface
+
+15 controllers under `/admin/*` (admin JWT verified locally via `ADMIN_JWT_SECRET`): users, workspaces, projects, content, content-types, media, webhooks, api-keys, plans, admins, audit-log, metrics, support. Full endpoint list: [admin-panel/backend/06-endpoints.md](./admin-panel/backend/06-endpoints.md).
 
 ---
 
 ## Example
 
+Auth is cookie-based — use a cookie jar (`-c`/`-b`) and send the CSRF header on mutations:
+
 ```bash
-# Register
-curl -X POST http://localhost:5000/v1/auth/register \
+# Register (sets access_token + refresh_token + csrf_token cookies)
+curl -c jar.txt -X POST http://localhost:5000/v1/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"name":"Ana","email":"ana@x.dev","password":"secret123"}'
-# → { success:true, data:{ accessToken, user, workspace, project } }  (+ refresh cookie)
+# → { success:true, data:{ user, workspace, csrfToken } }
+
+CSRF=$(grep csrf_token jar.txt | awk '{print $7}')
 
 # Create a content type
-curl -X POST http://localhost:5000/v1/content/types \
-  -H "Authorization: Bearer $AT" -H "X-Workspace-Id: $WS" -H "X-Project-Id: $PID" \
+curl -b jar.txt -X POST http://localhost:5000/v1/content/types \
+  -H "X-CSRF-Token: $CSRF" -H "X-Workspace-Id: $WS" -H "X-Project-Id: $PID" \
   -H 'Content-Type: application/json' \
   -d '{"name":"Blog Post","apiId":"blog_post","fields":[
         {"key":"title","label":"Title","type":"text","required":true},
         {"key":"body","label":"Body","type":"richtext"}]}'
 
 # Create an entry
-curl -X POST http://localhost:5000/v1/content/entries \
-  -H "Authorization: Bearer $AT" -H "X-Workspace-Id: $WS" -H "X-Project-Id: $PID" \
+curl -b jar.txt -X POST http://localhost:5000/v1/content/entries \
+  -H "X-CSRF-Token: $CSRF" -H "X-Workspace-Id: $WS" -H "X-Project-Id: $PID" \
   -H 'Content-Type: application/json' \
   -d '{"contentTypeId":"'$TID'","data":{"title":"Hello","body":"<p>hi</p>"}}'
 ```

@@ -4,7 +4,7 @@ Complete, self-contained guide for the agent building the **Wriven Admin Panel
 SPA** in its **own separate repository**. Read this end to end before writing code.
 
 You are building a React + React Router single-page app that talks to the
-`/admin/*` API on the Wriven gateway (`https://api.wriven.com`). The backend
+`/admin/*` API on the Wriven gateway (`https://api.wriven.tech`). The backend
 contract is defined in [backend.md](./backend.md); the product context in
 [README.md](./README.md). This doc is everything the frontend needs: stack,
 project structure, auth/data layer, every screen, and the **design system**.
@@ -24,7 +24,8 @@ god-mode. Three admin roles drive what's visible/enabled: **`admin`** (full),
 but remember the **server enforces** it too, so never rely on hiding alone.
 
 Screens (build in this order): Login → Overview → Users → Workspaces → Projects →
-Content → Media → API Keys → Webhooks → Plans → Admins → Audit Log → Settings.
+Content → Support (queue + ticket thread) → Media → API Keys → Webhooks → Plans →
+Admins → Audit Log → Settings.
 Full spec per screen in §6.
 
 ---
@@ -43,7 +44,7 @@ Full spec per screen in §6.
 | Primitives | **Base UI** (`@base-ui/react`) + **shadcn-style** wrappers | Same primitive set the tenant app uses — dialog, popover, tooltip, etc. |
 | Icons | **lucide-react** | Same icon set as tenant app |
 | Charts | **Recharts** | Overview KPIs |
-| Dates | **date-fns** | Audit log, last-used, relative times |
+| Rich text | **tiptap** (`@tiptap/react` + starter-kit + link) | Read-only rendering of rich-text entry fields (content browser) |
 | Notifications | **sonner** (or Base UI toast) | Action result toasts |
 
 Pin versions to the same majors the tenant app uses where shared (Tailwind v4,
@@ -58,34 +59,40 @@ src/
   main.tsx                    # mount + QueryClientProvider + RouterProvider
   router.tsx                  # createBrowserRouter; route tree + guards
   app/
-    root-layout.tsx           # sidebar + topbar shell (authed)
-    auth-layout.tsx           # bare layout for /login
-    require-admin.tsx         # route guard: bootstraps /auth/me, redirects to /login on 401
-    require-role.tsx          # gate a route/section by role
+    RequireAdmin.tsx          # route guard: bootstraps /auth/me, redirects to /login on 401
+    RequireRole.tsx           # gate a route/section by role
+    layout/
+      RootLayout.tsx          # sidebar + topbar shell (authed)
+      AuthLayout.tsx          # bare layout for /login
+    pages/                    # one folder per screen: <X>Page.tsx + queries.ts + components/
+      login/  overview/  users/  workspaces/  projects/  content/
+      support/  media/  api-keys/  webhooks/  plans/  admins/  audit/  settings/
+  components/
+    ui/                       # shadcn-style: button, input, dialog, sheet, popover,
+                              #   tooltip, table, badge, skeleton, dropdown-menu, tabs,
+                              #   command, select, checkbox, confirm-dialog
+    data-table/               # generic TanStack Table wrapper: DataTable, FilterBar,
+                              #   Pagination
+    layout/                   # Sidebar, Topbar, PageHeader
+    admin-tabs/               # read-only project-detail tabs (Content, ContentTypes,
+                              #   Media, Webhooks, ApiKeys)
+    content/                  # EntryFields, RichTextViewer (tiptap rich-text rendering)
   lib/
     api.ts                    # fetch wrapper: envelope unwrap, credentials, CSRF, 401 handling
+    query-client.ts           # shared QueryClient
     query-keys.ts             # centralized TanStack Query keys
     types.ts                  # HAND-MAINTAINED API types (mirror backend.md §6)
     format.ts                 # bytes, dates, numbers
   stores/
     admin.ts                  # zustand: current admin (id/email/role), theme, sidebar
-  components/
-    ui/                       # shadcn-style: button, input, dialog, sheet, popover,
-                              #   tooltip, table, badge, skeleton, dropdown-menu, tabs,
-                              #   command, select, checkbox, confirm-dialog
-    data-table/               # generic TanStack Table wrapper: DataTable, columns helpers,
-                              #   Pagination, FilterBar, RowActions (⋯ menu)
-    layout/                   # AppSidebar, TopBar, PageHeader, EmptyState, StatCard
-    charts/                   # KpiLineChart, PlanBreakdownPie, etc.
-  features/                   # one folder per screen: queries + components + page
-    auth/  overview/  users/  workspaces/  projects/  content/
-    media/  api-keys/  webhooks/  plans/  admins/  audit/  settings/
+  schemas/  services/  types/  zustand/   # extra layers (currently empty placeholders)
   styles/
     globals.css               # Tailwind v4 import + the §7 design tokens
 ```
 
-Keep data fetching in `features/<x>/queries.ts` (TanStack Query hooks), screens in
-`features/<x>/<x>-page.tsx`. Generic table/forms live in `components/`.
+Keep data fetching in `app/pages/<x>/queries.ts` (TanStack Query hooks), screens in
+`app/pages/<x>/<X>Page.tsx` (plus per-screen `components/`, e.g. overview's
+`GrowthChart`/`PlanBreakdown`/`StatCard`). Generic table/forms live in `components/`.
 
 ---
 
@@ -93,7 +100,7 @@ Keep data fetching in `features/<x>/queries.ts` (TanStack Query hooks), screens 
 
 ### 4.1 API client (`lib/api.ts`)
 A thin `fetch` wrapper. Rules:
-- Base URL from `import.meta.env.VITE_API_URL` (e.g. `https://api.wriven.com`).
+- Base URL from `import.meta.env.VITE_API_URL` (e.g. `https://api.wriven.tech`).
 - **`credentials: 'include'`** on every request (cross-origin admin cookies).
 - Send the **CSRF header** on mutations (read the CSRF token the gateway exposes,
   same scheme as the tenant client — see backend.md §3.2).
@@ -132,9 +139,10 @@ export interface TenantUser {
   emailVerified: boolean; suspended: boolean; workspaceCount: number; createdAt: string;
 }
 export interface WorkspaceRow {
-  id: string; name: string; slug: string; ownerEmail: string;
-  memberCount: number; projectCount: number; storageUsedMb: number;
-  planKey: string; status: 'active' | 'past_due' | 'suspended' | 'trialing'; createdAt: string;
+  id: string; name: string; slug: string; ownerId: string;
+  ownerEmail: string | null; memberCount: number; projectCount: number;
+  planKey: string | null; planName: string | null; subscriptionStatus: string | null;
+  createdAt: string;
 }
 // ...one interface per list/detail shape the screens consume.
 ```
@@ -144,9 +152,9 @@ export interface WorkspaceRow {
   loading → splash; success → hydrate `stores/admin`; `401` → redirect `/login`.
 - `RequireRole` wraps role-restricted routes/sections: reads `admin.role` from the
   store, renders `403` page or hides the entry when not allowed.
-- Login (`/login`): POST `/admin/auth/login`; if response is `{ mfaRequired }`,
-  show the TOTP step and POST `/admin/auth/login/totp`; on success cookies are set
-  → navigate to Overview.
+- Login (`/login`): POST `/admin/auth/login`; on success cookies are set
+  → navigate to Overview. Single-step email+password — there is no MFA/TOTP
+  step (not implemented; the backend has no such endpoint).
 
 ### 4.4 Query conventions
 - Centralize keys in `lib/query-keys.ts` (`['users', { page, q }]`, etc.).
@@ -160,8 +168,9 @@ export interface WorkspaceRow {
 ## 5. Layout & navigation
 
 - **Left sidebar** (collapsible, persists collapse in the store): Overview · Users ·
-  Workspaces · Projects · Content · Media · API Keys · Webhooks · Plans · Admins ·
-  Audit · Settings. Hide `admin`-only items (Plans/Admins/Settings) for non-admins.
+  Workspaces · Projects · Content · Support · Media · API Keys · Webhooks · Plans ·
+  Admins · Audit · Settings. Hide `admin`-only items (Plans/Admins/Settings) for
+  non-admins.
   Active item uses sidebar-accent bg + brand-accent text (§7).
 - **Top bar:** global search (jump to user by email / workspace by slug / project /
   id), current admin name + **role badge**, theme toggle, logout. Optional
@@ -188,8 +197,8 @@ Shared conventions for all:
   `moderator` sees moderation/support actions but not Plans/Admins/Settings;
   `admin` sees all.
 
-1. **Login** (`/login`) — email+password form (RHF+zod). On `{ mfaRequired }`
-   show 6-digit TOTP input. No signup link. On success → Overview.
+1. **Login** (`/login`) — email+password form (RHF+zod). No signup link.
+   On success → Overview.
 
 2. **Overview** (`/`) — KPI `StatCard`s (total users, workspaces, projects,
    content entries, storage used, active plans). `KpiLineChart` of signups/growth.
@@ -199,35 +208,47 @@ Shared conventions for all:
 3. **Users** (`/users`) — table: email, name, provider, verified badge,
    #workspaces, created, status. Filters: query, verified, suspended. Row → detail
    (`/users/:id`): profile, memberships (workspaces+roles), recent activity.
-   Actions `[admin|moderator]`: suspend/reactivate, force-verify, resend
-   verification, reset password; `[admin]`: delete/GDPR-erase. All audited.
+   Actions `[admin|moderator]`: suspend/reactivate, force-verify;
+   `[admin]`: delete/GDPR-erase. All audited. (No reset-password or
+   resend-verification actions — the backend has no such endpoints.)
 
 4. **Workspaces** (`/workspaces`) — table: name, owner email, members, projects,
-   **storage used vs cap** (progress bar, warning near cap), plan badge, status.
-   Detail (`/workspaces/:id`) tabs: Members · Projects · Storage · Plan. Plan tab
-   `[admin]`: change plan + set overrides. `[admin|moderator]`: suspend/rename.
+   plan badge, subscription status. Detail (`/workspaces/:id`) header shows total
+   storage used; tabs: Members · Projects · Plan. Plan tab `[admin]`: change plan
+   + set overrides. (No storage tab or suspend/rename — not implemented; the
+   backend has no endpoints.)
 
-5. **Projects** (`/projects`) — cross-workspace table: name, workspace, counts
-   (types/entries/keys/webhooks), created-by, status. Detail drills into the
-   project's content/keys/webhooks (read-only oversight). `[admin]`: soft-delete.
+5. **Projects** (`/projects`) — cross-workspace table: name, workspace, created-by,
+   created. Detail (`/projects/:id`) pulls aggregated counts (content types,
+   entries, media, keys, webhooks, AI usage) from `GET /admin/projects/:id/usage`
+   and drills into the project's content/keys/webhooks (read-only oversight).
+   `[admin]`: soft-delete.
 
 6. **Content** (`/content`) — global entry browser for **moderation**, read-only by
    default. Filters: workspace, project, type, status. View one entry read-only;
    `[admin|moderator]` takedown = archive/unpublish (confirm + reason, audited).
    Not an editor.
 
-7. **Media** (`/media`) — storage usage per workspace (against the 100 MB cap),
+7. **Support** (`/support`, `/support/:id`) — cross-tenant ticket queue: subject,
+   number, workspace, author, scope, status, priority, assignee, last reply.
+   Filters: query, status, priority, scope, workspace, assignee (incl.
+   unassigned). Ticket thread (`/support/:id`): message history (user/admin),
+   reply + internal notes, set status/priority/assignee. Reply/update gated to
+   `[admin|moderator]`; `member` read-only. Shared model + lifecycle in
+   [doc/support-ticket/](../support-ticket/).
+
+8. **Media** (`/media`) — storage usage per workspace (against the 100 MB cap),
    largest files, by kind (image/video/file). `[admin|moderator]` purge an
    abusive/oversized asset (confirm + reason). Show R2 totals.
 
-8. **API Keys** (`/api-keys`) — all keys platform-wide: prefix, scope
+9. **API Keys** (`/api-keys`) — all keys platform-wide: prefix, scope
    (read/preview/manage), project, last used, created. **Never raw tokens.**
    `[admin|moderator]` revoke (confirm).
 
-9. **Webhooks** (`/webhooks`) — all subscriptions: url, events, last status code,
-   last fired, active. Highlight failing endpoints. `[admin|moderator]` disable.
+10. **Webhooks** (`/webhooks`) — all subscriptions: url, events, last status code,
+    last fired, active. Highlight failing endpoints. `[admin|moderator]` disable.
 
-10. **Plans** (`/plans`) `[admin]` — list/define plans + their limit sets
+11. **Plans** (`/plans`) `[admin]` — list/define plans + their limit sets
     (projects, members, storageMb, entries, apiKeys, webhooks). Create/edit via
     RHF+zod. Assignment happens on the workspace detail screen.
     - **List** shows the Stripe link per row (`AdminPlanView.stripeProductId` /
@@ -240,15 +261,15 @@ Shared conventions for all:
       amount as read-only). Setting `active:false` retires the plan and archives it
       on Stripe. A Stripe failure surfaces as `STRIPE_SYNC_FAILED` 500.
 
-11. **Admins** (`/admins`) `[admin]` — manage `admin_users`: invite/create, set
+12. **Admins** (`/admins`) `[admin]` — manage `admin_users`: invite/create, set
     role (admin/moderator/member), activate/deactivate, reset MFA. Every change
     audited. Cannot deactivate your own last admin (guard in UI + API).
 
-12. **Audit Log** (`/audit`) — filterable feed (admin, action, target type/id,
+13. **Audit Log** (`/audit`) — filterable feed (admin, action, target type/id,
     date range). Columns: when, admin, action, target, ip. Expand a row to see
     `metadata` (before/after, reason). Append-only, never editable.
 
-13. **Settings** (`/settings`) `[admin]` — platform feature flags (signups open,
+14. **Settings** (`/settings`) `[admin]` — platform feature flags (signups open,
     default plan, maintenance mode) if the backend exposes `platform_settings`.
 
 ---
@@ -427,7 +448,7 @@ legible; texture is for personality moments, not dense tables.
 ---
 
 ## 8. Definition of done
-- Login (+TOTP) works against `/admin/auth/*`; `member`/`moderator`/`admin` see the
+- Login works against `/admin/auth/*`; `member`/`moderator`/`admin` see the
   correct subset of nav and actions; server still rejects forbidden writes.
 - Every list is server-paginated/filterable with URL-synced params; every
   destructive action goes through confirm+reason and shows a result toast.
@@ -440,7 +461,8 @@ legible; texture is for personality moments, not dense tables.
 ## 9. Environment (SPA repo)
 
 ```
-VITE_API_URL=https://api.wriven.com     # gateway base; /admin/* lives here
+VITE_API_URL=https://api.wriven.tech    # gateway base; /admin/* lives here
+                                         # local dev: http://localhost:5000
 ```
 
 The gateway must allowlist this SPA's origin for CORS with credentials — coordinate

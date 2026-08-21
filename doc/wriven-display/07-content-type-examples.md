@@ -30,7 +30,7 @@ Recreate these in the dashboard under **Content → Content Types → New**, usi
 
 ```jsonc
 {
-  "id": "entry_prod_1",
+  "id": "b42f9a1c-0000-4a1e-9c3d-5e6f7a8b9c0d",
   "type": "product",
   "slug": "running-shoe",
   "data": {
@@ -144,7 +144,7 @@ getEntries<ProductData>('product', {
 
 ```jsonc
 {
-  "id": "entry_post_1",
+  "id": "7d1e0f2a-1111-4b8c-8e2f-3a4b5c6d7e8f",
   "type": "blog_post",
   "slug": "launching-wriven",
   "data": {
@@ -156,7 +156,7 @@ getEntries<ProductData>('product', {
     "category": "news",
     "tags": ["cms", "ai"],
     "author": {
-      "id": "entry_member_1", "type": "team_member", "slug": "jane-doe",
+      "id": "c9a8b7c6-2222-4d9e-af1b-2c3d4e5f6a7b", "type": "team_member", "slug": "jane-doe",
       "data": { "name": "Jane Doe", "role": "Founder",
                 "photo": { "url": "https://cdn…/jane.jpg", "alt": "Jane", "width": 400, "height": 400, "mime": "image/jpeg", "id": "media_4" },
                 "bio": { /* richtext */ } },
@@ -267,8 +267,11 @@ export function TeamGrid({ members }: { members: TeamMember[] }) {
 ### Useful query
 
 ```ts
-// Team sorted by manual order
-getEntries<TeamMemberData>('team_member', { sort: 'order', limit: 50 });
+// Manual ordering: `sort` only accepts system columns (publishedAt | createdAt |
+// updatedAt | slug — anything else silently falls back to -publishedAt), so fetch
+// all and order client-side by your data field:
+const res = await getEntries<TeamMemberData>('team_member', { limit: 100 });
+const team = [...res.items].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
 ```
 
 ---
@@ -283,7 +286,7 @@ The display app's pages map almost 1:1 to content types:
 | `/products/:slug` | `product` | `getEntry('product', slug, { include: 1 })` |
 | `/blog` | `blog_post` | `getEntries('blog_post', { sort: '-publishedAt', include: 1 })` |
 | `/blog/:slug` | `blog_post` | `getEntry('blog_post', slug, { include: 1 })` |
-| `/team` | `team_member` | `getEntries('team_member', { sort: 'order' })` |
+| `/team` | `team_member` | `getEntries('team_member', { limit: 100 })` + client-side sort by `data.order` (only system columns are server-sortable — see above) |
 
 The full Vite scaffold (router, hooks, all pages) is in
 [08-vite-build-guide.md](./08-vite-build-guide.md).

@@ -36,19 +36,25 @@ controllers, message patterns) rather than inventing new shapes.
 apps/auth-service/src/
   db/schema/index.ts            # + adminUsers, adminRefreshTokens, adminAuditLog, plans, subscriptions
   admin/                        # NEW: admin identity + cross-tenant tenant queries
-    admin-auth.service.ts       #   login, TOTP, refresh, password
+    admin-auth.service.ts       #   login (single-step — TOTP not built), refresh, password
     admin-users.service.ts      #   CRUD admin_users (admin role only)
     admin-audit.service.ts      #   write + query audit log
     admin-tenancy.service.ts    #   cross-tenant user/workspace/project queries (no scope)
-    admin-plans.service.ts      #   plans + subscriptions
+    admin-plans.service.ts      #   plans + subscriptions (Stripe-first sync)
+    admin-token.service.ts      #   admin JWT signing + refresh tokens
+    admin-metrics.service.ts    #   auth_svc counts (merged with core at the gateway)
     admin.controller.ts         #   @MessagePattern('admin.*') handlers
 
 apps/core-service/src/
-  admin/                        # NEW: cross-tenant content/media/keys/webhooks queries
+  admin/                        # NEW: cross-tenant content/media/keys/webhooks/support queries
     admin-content.service.ts
+    admin-content-types.service.ts
     admin-media.service.ts
     admin-keys.service.ts
     admin-webhooks.service.ts
+    admin-project-usage.service.ts
+    admin-metrics.service.ts
+    admin-support.service.ts   #   (also src/support/ for the tenant side)
     admin.controller.ts         #   @MessagePattern('admin.*') handlers
 
 apps/api-gateway/src/admin/     # NEW: public HTTP surface for the SPA
@@ -58,14 +64,22 @@ apps/api-gateway/src/admin/     # NEW: public HTTP surface for the SPA
   current-admin.decorator.ts    #   @CurrentAdmin() -> { adminUserId, email, role }
   audit.interceptor.ts          #   @Audit('user.suspend') -> writes admin_audit_log
   audit.decorator.ts
-  admin-auth.controller.ts      #   /admin/auth/*
-  admin-users.controller.ts     #   /admin/admins/*  (admin only)
-  admin-metrics.controller.ts   #   /admin/metrics/*
-  admin-tenancy.controller.ts   #   /admin/users, /workspaces, /projects
-  admin-content.controller.ts   #   /admin/content, /media, /api-keys, /webhooks, /invitations
-  admin-plans.controller.ts     #   /admin/plans
-  admin-audit.controller.ts     #   /admin/audit-log
-  admin.module.ts
+  admin-auth.controller.ts        #   /admin/auth/*
+  admin-users.controller.ts       #   /admin/admins/*  (admin only)
+  admin-metrics.controller.ts     #   /admin/metrics/* (auth+core merged)
+  admin-users.controller.ts       #   /admin/users/*   (tenancy)
+  admin-workspaces.controller.ts  #   /admin/workspaces/*
+  admin-projects.controller.ts    #   /admin/projects/* (+ /:id/usage)
+  admin-content.controller.ts     #   /admin/content/*
+  admin-content-types.controller.ts # /admin/content-types
+  admin-media.controller.ts       #   /admin/media/*
+  admin-apikeys.controller.ts     #   /admin/api-keys/*
+  admin-webhooks.controller.ts    #   /admin/webhooks/*
+  admin-support.controller.ts     #   /admin/support/tickets/*
+  admin-support-metrics.controller.ts # /admin/support/metrics
+  admin-plans.controller.ts       #   /admin/plans
+  admin-audit.controller.ts       #   /admin/audit-log
+  # (no admin.module.ts — controllers register in src/app/app.module.ts)
 ```
 
 ---
@@ -76,11 +90,12 @@ Add to gateway + auth-service `.env.example` (never commit real secrets):
 
 ```
 ADMIN_JWT_SECRET=            # distinct from JWT_SECRET
-ADMIN_PANEL_ORIGIN=https://admin.wriven.com   # CORS allowlist for the SPA
+ADMIN_PANEL_ORIGIN=https://admin.wriven.tech   # CORS allowlist for the SPA
 ADMIN_SEED_EMAIL=
-ADMIN_SEED_PASSWORD_HASH=    # argon2/bcrypt hash, set out-of-band
+ADMIN_SEED_PASSWORD=         # plaintext bootstrap-admin password (seed script; hash at rest)
+ADMIN_SEED_NAME=             # bootstrap-admin display name
 # optional hardening
-ADMIN_IP_ALLOWLIST=          # comma-separated CIDRs for /admin/* (prod)
+# (no ADMIN_IP_ALLOWLIST exists — IP allowlisting is unbuilt)
 ```
 
 > `ADMIN_JWT_SECRET` must be **identical** in auth-service + gateway and
@@ -146,7 +161,11 @@ ADMIN_IP_ALLOWLIST=          # comma-separated CIDRs for /admin/* (prod)
   (`ensureWorkspaceMember`), counting guests — closes the invite seat bypass.
 - Content **takedown purges the CDN** (`CachePurgeService.purgeEntry`).
 
-**Deferred (next slice):** TOTP/MFA. IP allowlist + `/admin/*` rate-limit.
-**CORS origin allowlist** (still `origin:true`). Metrics/media-usage caching at
+**Shipped since this doc was written:** the Support ticketing slice
+(`admin.support.*` + `/admin/support/*` + SPA queue) and the **admin-login rate
+limit** (`@Throttle` 10/min — the rest of `/admin/*` is unrated).
+
+**Deferred (next slice):** TOTP/MFA (schema only). IP allowlist.
+**CORS origin allowlist — done** (`CORS_ORIGINS` on the gateway). Metrics/media-usage caching at
 scale. (Core-side quota counts are point-in-time, not advisory-locked — minor
 race on soft caps; hard storage cap is checked pre-upload.)

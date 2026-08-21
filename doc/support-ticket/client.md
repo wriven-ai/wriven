@@ -1,9 +1,9 @@
-# Support Tickets — Client (Tenant Dashboard) Plan
+# Support Tickets — Client (Tenant Dashboard)
 
 Plan for the **tenant-facing** support UI in this monorepo's Next.js app
 (`apps/client`). A workspace member opens tickets, watches the thread, and replies.
 Shared model + lifecycle in [README.md](./README.md); the API it calls is in
-[backend.md §5](./backend.md). **Plan only — build later.**
+[backend.md §5](./backend.md). **Shipped** — `(dashboard)/w/[wsSlug]/support/{page,new,[ticketId]}` + `supportApi` in `lib/api.ts` + the sidebar Support item.
 
 > Reuses the app's existing conventions: cookie/session auth via
 > [lib/api.ts](../../apps/client/src/lib/api.ts) (sends `X-Workspace-Id`), shared
@@ -66,7 +66,7 @@ Add the `SupportTicketRow` / `SupportTicketDetail` / `SupportMessageView` /
   (server-enforced; UI just renders what it gets).
 
 ### 3.2 Create — `support/new/page.tsx`
-Form (react-hook-form + zod, matching existing forms):
+Form (plain controlled `useState` inputs (no react-hook-form/zod)):
 - **Subject** (text, 3–160).
 - **Description** (textarea, 1–5000) — `components/ui/textarea.tsx`.
 - **Scope** (select / `components/ui/popover` dropdown): General · Project · Billing

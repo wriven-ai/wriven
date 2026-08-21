@@ -60,7 +60,7 @@ export const adminAuditLog = authSchema.table('admin_audit_log', {
 // need no migration. See PlanLimits / PlanFeatures / PlanView in @wriven/contracts.
 export const plans = authSchema.table('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
-  key: text('key').notNull().unique(),     // 'free'|'pro'|'business'
+  key: text('key').notNull().unique(),     // 'free'|'starter'|'pro'
   name: text('name').notNull(),
   description: text('description'),
   sortOrder: integer('sort_order').notNull().default(0),
@@ -70,6 +70,8 @@ export const plans = authSchema.table('plans', {
   priceMonthly: integer('price_monthly'),
   priceYearly: integer('price_yearly'),
   currency: text('currency').notNull().default('usd'),
+  yearlyDiscountPercent: integer('yearly_discount_percent'),
+  yearlyDiscountAmount: integer('yearly_discount_amount'),
   stripeProductId: text('stripe_product_id'),
   stripePriceIdMonthly: text('stripe_price_id_monthly'),
   stripePriceIdYearly: text('stripe_price_id_yearly'),
@@ -101,6 +103,8 @@ export const subscriptions = authSchema.table('subscriptions', {
   trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
   canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  stripeEventCreatedAt: timestamp('stripe_event_created_at', { withTimezone: true }),  // last applied event (stale-event guard)
+  pendingChange: jsonb('pending_change'),                // deferred-downgrade hint (specs/16)
   overrides: jsonb('overrides'),                        // per-workspace limit overrides
   updatedBy: uuid('updated_by'),                        // admin_user id (no FK across concern)
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -119,16 +123,12 @@ export const subscriptions = authSchema.table('subscriptions', {
 
 `apps/auth-service/src/db/seed.ts`, run `pnpm db:auth:seed`:
 
-- Three plans, upserted on `key` (definitions are config, source of truth = seed):
-  - **free** — projects 2, members 3, 100 MB, 10 content types, 1k entries,
-    community support. $0.
-  - **pro** — projects 10, members 10, 5 GB, 50 content types, 50k entries,
-    scheduled publishing + revisions + preview, email support. ~$29/mo.
-  - **business** — unlimited projects/types/keys, members 50, 50 GB, SSO +
-    custom roles + audit log, priority support. ~$99/mo.
-- One bootstrap `admin` from env (`ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`) —
-  hashed at seed time; never commit a plaintext password.
+- **Plans are NOT seeded** ("Plans are NOT seeded — they are managed from the
+  admin panel", per `seed.ts`). Create free/starter/pro through the admin Plans
+  UI (`POST /admin/plans`, Stripe-first — see [09-plans.md](./09-plans.md));
+  current catalog values live in [plan-config](../../plan-config.md).
+- One bootstrap `admin` from env (`ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`,
+  `ADMIN_SEED_NAME`) — hashed at seed time; never commit a plaintext password.
 - Workspaces with no subscription row resolve to `free` in code.
-- Prices/limits are placeholders — tune in the seed or later via the admin Plans UI.
 
 See plan/subscription resolution + enforcement in [09-plans.md](./09-plans.md).

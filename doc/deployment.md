@@ -166,7 +166,7 @@ this app.
 
 ## 9. CORS
 
-The gateway is currently `origin: true, credentials: true` (reflects any origin).
+CORS is split: the public Delivery API (`/v1/projects/*`) reflects any origin without credentials (Bearer API keys — customer browser apps work from any domain); everything else uses the exact-origin allowlist `CORS_ORIGINS` with credentials (render.yaml sets wriven.tech + www + admin.wriven.tech + www.admin.wriven.tech).
 It works as-is, but for production **tighten it** to your origin in
 [main.ts](../apps/api-gateway/src/main.ts):
 

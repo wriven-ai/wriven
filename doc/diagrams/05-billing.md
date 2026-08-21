@@ -28,12 +28,12 @@ Any non-reactivation swap first releases a pending schedule (a scheduled sub blo
 Limits like `apiRequestsPerMonth` / `storageMb` are advertised by the plan but only bite once **measured**. core-service owns the counter (`usage_buckets`) + composes a `UsageView` (requests used + storage SUM + the limits above); the gateway batches Delivery-request increments off the hot path. Read at `GET /usage` + shown on the dashboard Usage page. Soft overage gate (`USAGE_ENFORCE`, default off). See [diagram 09](./09-usage-metering.md). `assetBandwidthGb` stays unmeasured for now.
 
 ## Plans + status
-- `plans` (free/starter/pro @ $0/$10/$18, 10% annual): limits + features JSON, sized to free-tier infra; `business` tier + `sso` removed (specs/15). AI text limits are enforced + cost-metered (specs/21); `revisionsPerEntry` enforced on every write. `assetBandwidthGb` + AI image stay forward. `stripePriceId` to be re-linked for the new tiers in the Stripe sandbox setup task.
-- Subscription states: `active / past_due / canceled / paused / incomplete`.
+- `plans` — **admin-panel-managed data, not seeded** (`db/seed.ts` deliberately skips them). Current catalog: free/starter/pro @ $0/$10/$18 (10% annual), limits + features JSON sized to free-tier infra; `business` tier + `sso` removed (specs/15). AI text limits are enforced + cost-metered (specs/21); `revisionsPerEntry` enforced on every write. `assetBandwidthGb` + AI image stay forward. `stripePriceId` linking happens through the admin plan sync (specs/11).
+- Subscription states: `active / past_due / canceled / paused / incomplete / trialing` (check constraint).
 - Trials removed (no trial system). Managed Payments dunning outcome (cancel vs `unpaid`) is an open product decision.
 
 ## Status
-Backend done ([specs/08](../../specs/08-stripe-billing.md) + `/billing/swap` + [specs/16](../../specs/16-deferred-plan-downgrade.md) deferred downgrades). Live e2e pending sandbox account config (publishable key + Managed Payments) + the client billing page.
+Backend done ([specs/08](../../specs/08-stripe-billing.md) + `/billing/swap` + [specs/16](../../specs/16-deferred-plan-downgrade.md) deferred downgrades) and the **client billing page is shipped**. Stripe keys are wired in the Render deploy and a payment-success fix has landed; the remaining step is confirming the full live-mode e2e.
 
 ## Source
 [`05-billing.svg`](./05-billing.svg) · code: [`apps/auth-service/src/billing/`](../../apps/auth-service/src/billing/)
