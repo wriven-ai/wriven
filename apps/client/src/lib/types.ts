@@ -571,3 +571,53 @@ export interface SwapPlanInput {
   planKey: 'free' | 'starter' | 'pro';
   billingCycle: BillingCycle;
 }
+
+// ── Workspace activity log ──────────────────────────────────────────────────
+
+/** Every action the backend audit interceptor emits (mirror of @wriven/contracts). */
+export type WorkspaceLogAction =
+  | 'workspace.update'
+  | 'member.add'
+  | 'member.update'
+  | 'member.remove'
+  | 'invitation.create'
+  | 'invitation.revoke'
+  | 'project.create'
+  | 'project.update'
+  | 'project.delete'
+  | 'billing.swap'
+  | 'contentType.create'
+  | 'contentType.update'
+  | 'contentType.delete'
+  | 'entry.create'
+  | 'entry.update'
+  | 'entry.delete'
+  | 'entry.publish'
+  | 'entry.restore'
+  | 'media.upload'
+  | 'media.delete'
+  | 'apiKey.create'
+  | 'apiKey.regenerate'
+  | 'apiKey.revoke'
+  | 'webhook.create'
+  | 'webhook.update'
+  | 'webhook.delete';
+
+/** A single workspace activity row. Actor fields are null when the member
+ *  was removed after the action (their rows survive, user_id set-null). */
+export interface WorkspaceLogView {
+  id: string;
+  userId: string | null;
+  userName: string | null;
+  userEmail: string | null;
+  action: WorkspaceLogAction;
+  targetType: string | null;
+  targetId: string | null;
+  projectId: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+/** Feed windows the backend accepts for `GET /logs` (7/30/90 days). */
+export const WORKSPACE_LOG_WINDOWS = [7, 30, 90] as const;
+export type WorkspaceLogWindow = (typeof WORKSPACE_LOG_WINDOWS)[number];

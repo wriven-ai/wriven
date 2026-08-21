@@ -49,6 +49,8 @@ import type {
   WorkspaceMemberView,
   WorkspaceRole,
   WorkspaceView,
+  WorkspaceLogView,
+  WorkspaceLogWindow,
 } from './types';
 
 const BASE_URL =
@@ -726,6 +728,20 @@ export const projectMemberApi = {
     request<{ success: true }>(`/projects/${projectId}/members/${userId}`, {
       method: 'DELETE',
     }),
+};
+
+export const workspaceLogApi = {
+  /** Activity feed for the active workspace, windowed by days (7/30/90). */
+  list: (params: { days?: WorkspaceLogWindow; page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params.days) qs.set('days', String(params.days));
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    const q = qs.toString();
+    return request<Paginated<WorkspaceLogView>>(`/logs${q ? `?${q}` : ''}`, {
+      workspace: true,
+    });
+  },
 };
 
 export const projectApi = {
