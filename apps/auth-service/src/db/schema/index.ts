@@ -229,6 +229,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   workspaceMemberships: many(workspaceMembers),
   projectMemberships: many(projectMembers),
   createdWorkspaces: many(workspaces),
+  activityLogs: many(workspaceActivityLog),
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
@@ -265,6 +266,7 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   }),
   members: many(workspaceMembers),
   projects: many(projects),
+  activityLogs: many(workspaceActivityLog),
 }));
 
 export const workspaceMembersRelations = relations(
@@ -432,6 +434,37 @@ export const adminAuditLog = authSchema.table(
   ],
 );
 
+/**
+ * Tenant activity log — one row per audited mutating request (written by the
+ * gateway interceptor, fire-and-forget). Rows die with the workspace
+ * (cascade) but survive member/project removal (set null), so a removed
+ * member's history stays visible with a null actor.
+ */
+export const workspaceActivityLog = authSchema.table(
+  'workspace_activity_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    projectId: uuid('project_id').references(() => projects.id, {
+      onDelete: 'set null',
+    }),
+    action: text('action').notNull(), // 'entry.publish', 'member.add', …
+    targetType: text('target_type'), // 'entry'|'member'|'apiKey'|…
+    targetId: text('target_id'),
+    metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('workspace_activity_log_ws_created_idx').on(t.workspaceId, t.createdAt),
+    index('workspace_activity_log_ws_user_idx').on(t.workspaceId, t.userId),
+  ],
+);
+
 // ── Plans & per-workspace assignment ───────────────────────────────────────
 
 export const plans = authSchema.table('plans', {
@@ -578,6 +611,24 @@ export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
     references: [adminUsers.id],
   }),
 }));
+
+export const workspaceActivityLogRelations = relations(
+  workspaceActivityLog,
+  ({ one }) => ({
+    workspace: one(workspaces, {
+      fields: [workspaceActivityLog.workspaceId],
+      references: [workspaces.id],
+    }),
+    user: one(users, {
+      fields: [workspaceActivityLog.userId],
+      references: [users.id],
+    }),
+    project: one(projects, {
+      fields: [workspaceActivityLog.projectId],
+      references: [projects.id],
+    }),
+  }),
+);
 
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   workspace: one(workspaces, {

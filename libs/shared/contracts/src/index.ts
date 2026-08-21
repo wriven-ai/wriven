@@ -25,3 +25,5 @@ export * from './lib/dto/support.dto';
 export * from './lib/types/support.types';
 export * from './lib/types/usage.types';
 export * from './lib/types/stats.types';
+export * from './lib/types/workspace-log.types';
+export * from './lib/dto/workspace-log.dto';

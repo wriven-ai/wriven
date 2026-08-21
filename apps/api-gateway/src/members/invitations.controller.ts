@@ -7,14 +7,18 @@ import {
   Param,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller()
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class InvitationsController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
@@ -24,6 +28,7 @@ export class InvitationsController {
 
   @Post('workspaces/:workspaceId/invitations')
   @UseGuards(JwtAuthGuard)
+  @WorkspaceAudit('invitation.create', 'invitation')
   createWorkspace(
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
@@ -42,6 +47,7 @@ export class InvitationsController {
 
   @Post('projects/:projectId/invitations')
   @UseGuards(JwtAuthGuard)
+  @WorkspaceAudit('invitation.create', 'invitation')
   createProject(
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
@@ -94,6 +100,7 @@ export class InvitationsController {
 
   @Delete('invitations/:id')
   @UseGuards(JwtAuthGuard)
+  @WorkspaceAudit('invitation.revoke', 'invitation')
   revoke(@CurrentUser() user: contracts.AuthUser, @Param('id') id: string) {
     return firstValueFrom(
       this.auth.send(contracts.INVITATION_PATTERNS.REVOKE, {

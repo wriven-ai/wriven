@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
@@ -21,9 +22,12 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
+import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller('content')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class ContentController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
@@ -33,6 +37,7 @@ export class ContentController {
 
   @Post('types')
   @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
+  @WorkspaceAudit('contentType.create', 'contentType')
   createType(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -81,6 +86,7 @@ export class ContentController {
 
   @Patch('types/:id')
   @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
+  @WorkspaceAudit('contentType.update', 'contentType')
   updateType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -99,6 +105,7 @@ export class ContentController {
 
   @Delete('types/:id')
   @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
+  @WorkspaceAudit('contentType.delete', 'contentType')
   deleteType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -113,6 +120,7 @@ export class ContentController {
 
   @Post('entries')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_CREATE)
+  @WorkspaceAudit('entry.create', 'entry')
   createEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -155,6 +163,7 @@ export class ContentController {
 
   @Patch('entries/:id')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_UPDATE)
+  @WorkspaceAudit('entry.update', 'entry')
   updateEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -175,6 +184,7 @@ export class ContentController {
 
   @Post('entries/:id/publish')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_PUBLISH)
+  @WorkspaceAudit('entry.publish', 'entry')
   publishEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -193,6 +203,7 @@ export class ContentController {
 
   @Delete('entries/:id')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_DELETE)
+  @WorkspaceAudit('entry.delete', 'entry')
   deleteEntry(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -221,6 +232,7 @@ export class ContentController {
 
   @Post('entries/:id/revisions/:version/restore')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_UPDATE)
+  @WorkspaceAudit('entry.restore', 'entry')
   restoreRevision(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,

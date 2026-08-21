@@ -15,6 +15,7 @@ import { MembersService } from './members.service';
 import { TokenService } from './token.service';
 import { WorkspacesController } from './workspaces.controller';
 import { WorkspacesService } from './workspaces.service';
+import { WorkspaceLogsService } from './workspace-logs.service';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
 
@@ -44,6 +45,7 @@ import { ProjectsService } from './projects.service';
     CleanupService,
     MembersService,
     WorkspacesService,
+    WorkspaceLogsService,
     ProjectsService,
     InvitationsService,
     EntitlementsService,

@@ -37,6 +37,7 @@ export enum Permission {
   WORKSPACE_PROJECT_CREATE = 'WORKSPACE_PROJECT_CREATE',
   WORKSPACE_BILLING_MANAGE = 'WORKSPACE_BILLING_MANAGE',
   WORKSPACE_USAGE_VIEW = 'WORKSPACE_USAGE_VIEW',
+  WORKSPACE_LOGS_VIEW = 'WORKSPACE_LOGS_VIEW',
 
   // Project level (also granted to workspace owner/admin via the cascade)
   PROJECT_VIEW = 'PROJECT_VIEW',
@@ -99,6 +100,7 @@ export const WORKSPACE_ROLE_PERMISSIONS: Record<WorkspaceRole, Set<Permission>> 
     Permission.WORKSPACE_PROJECT_CREATE,
     Permission.WORKSPACE_BILLING_MANAGE,
     Permission.WORKSPACE_USAGE_VIEW,
+    Permission.WORKSPACE_LOGS_VIEW,
     ...ALL_PROJECT_PERMISSIONS,
   ]),
 
@@ -106,6 +108,7 @@ export const WORKSPACE_ROLE_PERMISSIONS: Record<WorkspaceRole, Set<Permission>> 
   member: new Set<Permission>([
     Permission.WORKSPACE_VIEW,
     Permission.WORKSPACE_MEMBERS_VIEW,
+    Permission.WORKSPACE_LOGS_VIEW,
     Permission.PROJECT_VIEW,
     Permission.PROJECT_VIEW_ALL,
   ]),

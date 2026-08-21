@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
@@ -19,6 +20,8 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
+import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /**
  * Dashboard management of Delivery API keys (session/cookie auth). Distinct from
@@ -28,12 +31,14 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 @Controller('api-keys')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 @RequirePermission(contracts.Permission.API_KEY_MANAGE)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class ApiKeysController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Post()
+  @WorkspaceAudit('apiKey.create', 'apiKey')
   create(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
@@ -61,6 +66,7 @@ export class ApiKeysController {
   }
 
   @Post(':id/regenerate')
+  @WorkspaceAudit('apiKey.regenerate', 'apiKey')
   regenerate(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -76,6 +82,7 @@ export class ApiKeysController {
   }
 
   @Delete(':id')
+  @WorkspaceAudit('apiKey.revoke', 'apiKey')
   revoke(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,

@@ -40,6 +40,8 @@ export const WORKSPACE_PATTERNS = {
   UPDATE_MEMBER: 'auth.workspace.updateMember',
   REMOVE_MEMBER: 'auth.workspace.removeMember',
   STATS: 'auth.workspace.stats',
+  LOG_WRITE: 'auth.workspace.log.write',
+  LOG_LIST: 'auth.workspace.log.list',
 } as const;
 
 /**

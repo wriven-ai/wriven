@@ -5,11 +5,19 @@ import {
   UpdateWorkspaceDto,
   WORKSPACE_PATTERNS,
 } from '@wriven/contracts';
+import type {
+  WorkspaceLogQueryDto,
+  WorkspaceLogWritePayload,
+} from '@wriven/contracts';
 import { WorkspacesService } from './workspaces.service';
+import { WorkspaceLogsService } from './workspace-logs.service';
 
 @Controller()
 export class WorkspacesController {
-  constructor(private readonly workspaces: WorkspacesService) {}
+  constructor(
+    private readonly workspaces: WorkspacesService,
+    private readonly logs: WorkspaceLogsService,
+  ) {}
 
   @MessagePattern(WORKSPACE_PATTERNS.CREATE_WORKSPACE)
   create(@Payload() p: { userId: string; dto: CreateWorkspaceDto }) {
@@ -43,5 +51,17 @@ export class WorkspacesController {
   @MessagePattern(WORKSPACE_PATTERNS.STATS)
   stats(@Payload() p: { userId: string; workspaceId: string }) {
     return this.workspaces.stats(p);
+  }
+
+  /** Append an activity row (gateway audit interceptor, fire-and-forget). */
+  @MessagePattern(WORKSPACE_PATTERNS.LOG_WRITE)
+  writeLog(@Payload() p: WorkspaceLogWritePayload) {
+    return this.logs.write(p);
+  }
+
+  /** Activity feed for the workspace, windowed by `days` (7/30/90). */
+  @MessagePattern(WORKSPACE_PATTERNS.LOG_LIST)
+  listLog(@Payload() p: { workspaceId: string } & WorkspaceLogQueryDto) {
+    return this.logs.list(p);
   }
 }

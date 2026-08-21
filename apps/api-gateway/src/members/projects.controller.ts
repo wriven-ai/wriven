@@ -8,15 +8,19 @@ import {
   Patch,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class ProjectsController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
@@ -25,6 +29,7 @@ export class ProjectsController {
   // ── Project CRUD ────────────────────────────────────────────────────────────
 
   @Post('workspaces/:workspaceId/projects')
+  @WorkspaceAudit('project.create', 'project')
   async create(
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
@@ -63,6 +68,7 @@ export class ProjectsController {
   }
 
   @Patch('projects/:projectId')
+  @WorkspaceAudit('project.update', 'project')
   update(
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
@@ -78,6 +84,7 @@ export class ProjectsController {
   }
 
   @Delete('projects/:projectId')
+  @WorkspaceAudit('project.delete', 'project')
   remove(
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
