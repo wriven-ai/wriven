@@ -15,10 +15,8 @@ import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import {
-  AuditRequest,
-  WorkspaceAudit,
-} from '../common/workspace-audit.decorator';
+import type { AuditRequest } from '../common/workspace-audit.decorator';
+import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller()

@@ -22,10 +22,8 @@ import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 import { computeDowngradeBlocks, downgradeBlockedError } from './downgrade.guard';
 import { WorkspaceUsageComposer } from './workspace-usage.composer';
-import {
-  AuditRequest,
-  WorkspaceAudit,
-} from '../common/workspace-audit.decorator';
+import type { AuditRequest } from '../common/workspace-audit.decorator';
+import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /**

@@ -22,10 +22,8 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
-import {
-  AuditRequest,
-  WorkspaceAudit,
-} from '../common/workspace-audit.decorator';
+import type { AuditRequest } from '../common/workspace-audit.decorator';
+import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /** Dashboard management of outgoing webhooks (session/cookie auth). */
