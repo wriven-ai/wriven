@@ -37,6 +37,7 @@ If a doc and the code disagree, **the code wins** — fix the doc.
 
 - **Specs** — start a feature with the `/create-spec` command; it drafts `specs/NN-<slug>.md`.
 - **Plans** — for large features, `/create-plan <spec>` drafts an execution plan in `plans/NN-<slug>.md`; small features skip straight to plan mode.
+- **Learning** — `/explain-me <topic>` explains any feature/module (spec → docs → code trace, decisions + file map) — interview-prep oriented.
 - **Tasks** — run everything through `pnpm nx <target> <project>` (build/lint/typecheck/test), never the raw tooling.
 - **Commits** — one-line Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`), no body unless essential. Keep frontend and backend changes in **separate commits**. **Never** add an AI/Claude co-author trailer.
 
