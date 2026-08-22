@@ -30,6 +30,7 @@ NestJS TCP microservice (`:5001`) owning identity, sessions, and tenancy. Schema
 **workspace_members** — workspace_id→workspaces, user_id→users, `role` (`owner`\|`admin`\|`member`\|`guest` CHECK — `guest` is auto-seated for project-only invitees), `unique(workspace_id, user_id)`, `user_id` index.
 **projects** — id, workspace_id→workspaces (cascade), name, slug, `created_by`→users (restrict), `unique(workspace_id, slug)`, `deleted_at` (soft delete).
 **project_members** — project_id→projects (cascade), user_id→users (cascade), `role` (`admin`\|`editor`\|`viewer` CHECK), `unique(project_id, user_id)`, `user_id` index.
+**workspace_activity_log** — tenant activity feed (specs/23): `workspace_id`→workspaces (**cascade** — rows die with the workspace), `user_id`→users (**set null** — a removed member's rows survive with null actor), `project_id`→projects (set null), `action` (`entry.publish`, `member.add`, … — catalog in `@wriven/contracts`), `target_type`/`target_id` (text), `metadata` (jsonb), `created_at`; indexed `(workspace_id, created_at)` + `(workspace_id, user_id)`. Written only by the gateway's audit interceptor over TCP; pruned daily beyond `WORKSPACE_LOG_RETENTION_DAYS` (default 90) by the cleanup cron.
 
 ### Hierarchy
 
@@ -125,6 +126,7 @@ Expiry phrasing comes from the configured TTLs (`RESET_TOKEN_TTL`,
 
 - `auth.validateWorkspaceMember({ userId, workspaceId })` → `{ workspaceId, role, permissions }` or `FORBIDDEN`. Called by the gateway's `WorkspaceGuard`; `permissions` is the cascade-resolved set the gateway's `PermissionGuard` checks.
 - `auth.validateProjectMember({ userId, projectId })` → `{ projectId, role, permissions }` or `FORBIDDEN`. The cascade (workspace owner/admin → all project perms, even with no `project_members` row) is resolved here, so the gateway needs no bypass. `role` is null when access is workspace-derived only.
+- `auth.workspace.log.write` — appends a `workspace_activity_log` row (fire-and-forget; caller is the gateway's `WorkspaceAuditInterceptor`). `auth.workspace.log.list` — paginated feed for a workspace, windowed by `days` (7/30/90), actor name/email joined from `users` (specs/23). `WorkspaceLogsService` serves both.
 
 ## Billing (Stripe)
 
