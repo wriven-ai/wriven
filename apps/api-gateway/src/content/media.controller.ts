@@ -7,7 +7,9 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
@@ -20,9 +22,15 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller('content/media')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class MediaController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
@@ -48,13 +56,15 @@ export class MediaController {
 
   @Post()
   @RequirePermission(contracts.Permission.MEDIA_MANAGE)
-  create(
+  @WorkspaceAudit('media.upload', 'media')
+  async create(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateMediaDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.MediaView>(
       this.core.send(contracts.CORE_PATTERNS.MEDIA_CREATE, {
         workspaceId,
         projectId,
@@ -62,6 +72,12 @@ export class MediaController {
         dto,
       }),
     );
+    req.logMeta = {
+      filename: result.originalFilename ?? dto.key,
+      kind: result.kind,
+      ...(result.sizeBytes != null ? { size: result.sizeBytes } : {}),
+    };
+    return result;
   }
 
   @Get()
@@ -100,6 +116,7 @@ export class MediaController {
 
   @Delete(':id')
   @RequirePermission(contracts.Permission.MEDIA_MANAGE)
+  @WorkspaceAudit('media.delete', 'media')
   remove(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -113,17 +130,21 @@ export class MediaController {
   /** Bulk delete — atomic DB soft-delete (scoped to the project) + R2 cleanup. */
   @Post('bulk-delete')
   @RequirePermission(contracts.Permission.MEDIA_MANAGE)
-  removeMany(
+  @WorkspaceAudit('media.delete', 'media')
+  async removeMany(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.DeleteMediaBulkDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<{ success: boolean; deleted: number }>(
       this.core.send(contracts.CORE_PATTERNS.MEDIA_DELETE_BULK, {
         workspaceId,
         projectId,
         ids: dto.ids,
       }),
     );
+    req.logMeta = { count: result.deleted };
+    return result;
   }
 }

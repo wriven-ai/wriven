@@ -25,10 +25,11 @@ The only internet-facing service (HTTP `:5000`). Owns **no database tables and n
 - `@CurrentUser()` → `AuthUser { userId, email }` (from `JwtAuthGuard`).
 - `@CurrentWorkspace()` → validated `workspaceId` string (from `WorkspaceGuard`).
 - `@CurrentWorkspaceRole()` → caller's workspace role (`owner`|`admin`|`member`|`guest`, from `WorkspaceGuard`); forwarded to auth-service for billing mutation gating.
+- `@WorkspaceAudit(action, target?)` → marks a mutating workspace-scoped route for tenant activity logging; `WorkspaceAuditInterceptor` (bound per-controller, like the admin `AuditInterceptor`) writes a `workspace_activity_log` row via TCP after the handler succeeds — fire-and-forget, never fails the request. Workspace/project/target ids resolve from guard context, route params, or the handler result (specs/23).
 
 ## Controllers
 
-Feature dirs live under `src/` (admin, api-keys, auth, billing, content, delivery, members, plans, stats, support, usage, users, webhooks + `app/`).
+Feature dirs live under `src/` (admin, api-keys, auth, billing, content, delivery, logs, members, plans, stats, support, usage, users, webhooks + `app/` + `common/`).
 
 | Controller | Routes |
 |------------|--------|
@@ -47,6 +48,7 @@ Feature dirs live under `src/` (admin, api-keys, auth, billing, content, deliver
 | `PlansController` | public `GET /plans` (plan catalog for the pricing page) |
 | `StatsController` | `GET /stats/workspace` + `GET /stats/project` (specs/17) |
 | `UsageController` | `GET /usage` (requests/storage vs plan limits + AI text usage; specs/14, 21) |
+| `LogsController` | `GET /logs?days=7\|30\|90&page&limit` — workspace activity feed (JWT + WorkspaceGuard + `WORKSPACE_LOGS_VIEW`; specs/23). Mutating routes across ~8 controllers carry `@WorkspaceAudit` and are recorded by the interceptor |
 | `SupportController` | `/support/tickets/*` — create/list/detail/messages/patch + attachment presign (see [support-ticket](../support-ticket/)) |
 | `DeliveryController` | public Delivery API under `/v1/projects/:projectId/content/...` (API-key auth; excluded from the global `v1` prefix — see [wriven-display](../wriven-display/03-delivery-api.md)) |
 | `Admin*Controller` | 15 controllers under `/admin/*` — admin JWT verified locally (`ADMIN_JWT_SECRET`): auth, users, workspaces, projects, content, content-types, media, webhooks, api-keys, plans, admins, audit-log, metrics, support, support/metrics (see [admin-panel](../admin-panel/backend/06-endpoints.md)) |

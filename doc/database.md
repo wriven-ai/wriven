@@ -12,7 +12,7 @@ All services connect to **one** Postgres database. Isolation is by **Postgres sc
 
 | Service | Schema | Tables |
 |---------|--------|--------|
-| auth-service | `auth_svc` | users, refresh_tokens, password_reset_tokens, email_verification_tokens, workspaces, workspace_members, projects, project_members, invitations, plans, subscriptions, stripe_events, admin_users, admin_refresh_tokens, admin_audit_log |
+| auth-service | `auth_svc` | users, refresh_tokens, password_reset_tokens, email_verification_tokens, workspaces, workspace_members, projects, project_members, invitations, plans, subscriptions, stripe_events, admin_users, admin_refresh_tokens, admin_audit_log, workspace_activity_log |
 | core-service | `core_svc` | content_types, content_entries, content_revisions, media_assets, api_keys, webhooks, support_tickets, support_ticket_messages, support_ticket_attachments, usage_buckets, ai_generations, ai_profiles |
 | (migrations journal) | `drizzle` | `__drizzle_migrations_auth` + `__drizzle_migrations_core` (one per service — see below) |
 
@@ -97,6 +97,7 @@ Notes:
 - `workspaces`: `unique(created_by, slug)` (slug unique **per owner**, not globally). `projects`: `unique(workspace_id, slug)`. `content_entries`: `unique(project_id, content_type_id, slug)`, GIN index on `data` jsonb.
 - **Billing:** `plans.key` unique; `subscriptions` `uniqueIndex(workspace_id)` (one row per workspace) + `status` CHECK `in ('active','trialing','past_due','canceled','paused','incomplete')` + `pending_change` jsonb (deferred-downgrade hint, specs/16; cleared by the reconciler at period end); `stripe_events.event_id` unique (webhook idempotency dedupe) + `event_type` index.
 - **AI:** `ai_generations` `uniqueIndex(workspace_id, created_by, idempotency_key)` (replay/forgery guard), `status` CHECK `in ('pending','succeeded','failed')`, `target_kind` CHECK `in ('field','entry')` (nullable `field_key` + `applied_field_keys` jsonb for whole-entry `compose`), indexed on `(workspace_id, created_at)` for the period aggregate; `ai_profiles` `uniqueIndex(project_id)` (one voice profile per project).
+- **Activity log:** `workspace_activity_log` indexed on `(workspace_id, created_at)` (the days-windowed feed) + `(workspace_id, user_id)`; FKs — workspace **cascade** (log data belongs to the workspace), user/project **set null** (a removed member's/project's history survives with null fields). Rows pruned daily beyond the retention window (specs/23).
 - `users.updated_at` / workspace / content tables: `$onUpdate` auto-bump.
 
 ## RLS

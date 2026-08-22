@@ -7,16 +7,24 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller('workspaces')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class WorkspacesController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
@@ -57,18 +65,22 @@ export class WorkspacesController {
   }
 
   @Patch(':workspaceId')
-  update(
+  @WorkspaceAudit('workspace.update', 'workspace')
+  async update(
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Body() dto: contracts.UpdateWorkspaceDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.WorkspaceView>(
       this.auth.send(contracts.WORKSPACE_PATTERNS.UPDATE_WORKSPACE, {
         callerUserId: user.userId,
         workspaceId,
         dto,
       }),
     );
+    req.logMeta = { name: result.name };
+    return result;
   }
 
   @Delete(':workspaceId')
@@ -100,28 +112,38 @@ export class WorkspacesController {
   }
 
   @Post(':workspaceId/members')
-  addMember(
+  @WorkspaceAudit('member.add', 'member')
+  async addMember(
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Body() dto: contracts.AddWorkspaceMemberDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.WorkspaceMemberView>(
       this.auth.send(contracts.WORKSPACE_PATTERNS.ADD_MEMBER, {
         callerUserId: user.userId,
         workspaceId,
         dto,
       }),
     );
+    req.logMeta = {
+      email: result.user.email,
+      name: result.user.name,
+      role: result.role,
+    };
+    return result;
   }
 
   @Patch(':workspaceId/members/:userId')
-  updateMember(
+  @WorkspaceAudit('member.update', 'member')
+  async updateMember(
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Param('userId') targetUserId: string,
     @Body() dto: contracts.UpdateWorkspaceMemberDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.WorkspaceMemberView>(
       this.auth.send(contracts.WORKSPACE_PATTERNS.UPDATE_MEMBER, {
         callerUserId: user.userId,
         workspaceId,
@@ -129,9 +151,16 @@ export class WorkspacesController {
         dto,
       }),
     );
+    req.logMeta = {
+      email: result.user.email,
+      name: result.user.name,
+      role: result.role,
+    };
+    return result;
   }
 
   @Delete(':workspaceId/members/:userId')
+  @WorkspaceAudit('member.remove', 'member')
   removeMember(
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,

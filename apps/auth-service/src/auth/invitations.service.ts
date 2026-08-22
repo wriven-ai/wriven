@@ -129,14 +129,18 @@ export class InvitationsService {
     return rows.map((r) => this.toView(r, names.get(r.invitedBy) ?? null));
   }
 
-  async revoke(p: { callerUserId: string; id: string }): Promise<{ success: true }> {
+  async revoke(
+    p: { callerUserId: string; id: string },
+  ): Promise<{ success: true; workspaceId: string }> {
     const row = await this.requireInvitation(p.id);
     await this.authorizeManage(p.callerUserId, row);
     await this.db
       .update(invitations)
       .set({ status: 'revoked' })
       .where(eq(invitations.id, row.id));
-    return { success: true };
+    // Workspace id rides the result so the gateway can scope the activity
+    // log row (the revoke route itself carries no workspace context).
+    return { success: true, workspaceId: row.workspaceId };
   }
 
   async resend(p: { callerUserId: string; id: string }): Promise<InvitationView> {

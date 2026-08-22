@@ -25,6 +25,7 @@ import { AdminSupportMetricsController } from '../admin/admin-support-metrics.co
 import { AdminWebhooksController } from '../admin/admin-webhooks.controller';
 import { AdminWorkspacesController } from '../admin/admin-workspaces.controller';
 import { AuditInterceptor } from '../admin/audit.interceptor';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 import { AuthController } from '../auth/auth.controller';
 import { UsersController } from '../users/users.controller';
 import { GoogleStrategy } from '../auth/google.strategy';
@@ -50,6 +51,7 @@ import { StripeWebhookController } from '../billing/stripe-webhook.controller';
 import { UsageBufferService } from '../usage/usage-buffer.service';
 import { WorkspaceUsageComposer } from '../billing/workspace-usage.composer';
 import { UsageController } from '../usage/usage.controller';
+import { LogsController } from '../logs/logs.controller';
 import { StatsController } from '../stats/stats.controller';
 import { UsageEnforceService } from '../usage/usage-enforce.service';
 import { AppController } from './app.controller';
@@ -112,6 +114,7 @@ import { AppService } from './app.service';
     SupportController,
     PlansController,
     UsageController,
+    LogsController,
     StatsController,
     BillingController,
     StripeWebhookController,
@@ -141,6 +144,7 @@ import { AppService } from './app.service';
     AdminJwtGuard,
     AdminRolesGuard,
     AuditInterceptor,
+    WorkspaceAuditInterceptor,
     UsageBufferService,
     UsageEnforceService,
     WorkspaceUsageComposer,

@@ -73,7 +73,9 @@ env/
 *.env
 
 # Logs
-logs/
+# Root-anchored: a bare `logs/` would also ignore source dirs named "logs"
+# (e.g. the gateway logs controller and the client /logs page route).
+/logs/
 *.log
 
 # Test coverage

@@ -7,16 +7,24 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class ProjectsController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE) private readonly auth: ClientProxy,
@@ -25,18 +33,22 @@ export class ProjectsController {
   // ── Project CRUD ────────────────────────────────────────────────────────────
 
   @Post('workspaces/:workspaceId/projects')
+  @WorkspaceAudit('project.create', 'project')
   async create(
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Body() dto: contracts.CreateProjectDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom<{ id: string }>(
+    const result = await firstValueFrom<contracts.ProjectView>(
       this.auth.send(contracts.PROJECT_PATTERNS.CREATE_PROJECT, {
         callerUserId: user.userId,
         workspaceId,
         dto,
       }),
     );
+    req.logMeta = { name: result.name };
+    return result;
   }
 
   @Get('workspaces/:workspaceId/projects')
@@ -63,21 +75,26 @@ export class ProjectsController {
   }
 
   @Patch('projects/:projectId')
-  update(
+  @WorkspaceAudit('project.update', 'project')
+  async update(
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
     @Body() dto: contracts.UpdateProjectDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ProjectView>(
       this.auth.send(contracts.PROJECT_PATTERNS.UPDATE_PROJECT, {
         callerUserId: user.userId,
         projectId,
         dto,
       }),
     );
+    req.logMeta = { name: result.name };
+    return result;
   }
 
   @Delete('projects/:projectId')
+  @WorkspaceAudit('project.delete', 'project')
   remove(
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,

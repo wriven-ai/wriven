@@ -8,7 +8,9 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
@@ -21,9 +23,15 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller('content')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class ContentController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
@@ -33,13 +41,15 @@ export class ContentController {
 
   @Post('types')
   @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
-  createType(
+  @WorkspaceAudit('contentType.create', 'contentType')
+  async createType(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateContentTypeDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentTypeView>(
       this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_CREATE, {
         workspaceId,
         projectId,
@@ -47,6 +57,8 @@ export class ContentController {
         dto,
       }),
     );
+    req.logMeta = { name: result.name, apiId: result.apiId };
+    return result;
   }
 
   @Get('types')
@@ -81,13 +93,15 @@ export class ContentController {
 
   @Patch('types/:id')
   @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
-  updateType(
+  @WorkspaceAudit('contentType.update', 'contentType')
+  async updateType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Body() dto: contracts.UpdateContentTypeDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentTypeView>(
       this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_UPDATE, {
         workspaceId,
         projectId,
@@ -95,10 +109,13 @@ export class ContentController {
         dto,
       }),
     );
+    req.logMeta = { name: result.name };
+    return result;
   }
 
   @Delete('types/:id')
   @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
+  @WorkspaceAudit('contentType.delete', 'contentType')
   deleteType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -113,13 +130,15 @@ export class ContentController {
 
   @Post('entries')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_CREATE)
-  createEntry(
+  @WorkspaceAudit('entry.create', 'entry')
+  async createEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateEntryDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentEntryView>(
       this.core.send(contracts.CORE_PATTERNS.ENTRY_CREATE, {
         workspaceId,
         projectId,
@@ -127,6 +146,8 @@ export class ContentController {
         dto,
       }),
     );
+    req.logMeta = { slug: result.slug };
+    return result;
   }
 
   @Get('entries')
@@ -155,14 +176,16 @@ export class ContentController {
 
   @Patch('entries/:id')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_UPDATE)
-  updateEntry(
+  @WorkspaceAudit('entry.update', 'entry')
+  async updateEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Body() dto: contracts.UpdateEntryDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentEntryView>(
       this.core.send(contracts.CORE_PATTERNS.ENTRY_UPDATE, {
         workspaceId,
         projectId,
@@ -171,17 +194,21 @@ export class ContentController {
         dto,
       }),
     );
+    req.logMeta = { slug: result.slug };
+    return result;
   }
 
   @Post('entries/:id/publish')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_PUBLISH)
-  publishEntry(
+  @WorkspaceAudit('entry.publish', 'entry')
+  async publishEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentEntryView>(
       this.core.send(contracts.CORE_PATTERNS.ENTRY_PUBLISH, {
         workspaceId,
         projectId,
@@ -189,10 +216,13 @@ export class ContentController {
         id,
       }),
     );
+    req.logMeta = { slug: result.slug };
+    return result;
   }
 
   @Delete('entries/:id')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_DELETE)
+  @WorkspaceAudit('entry.delete', 'entry')
   deleteEntry(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
@@ -221,14 +251,16 @@ export class ContentController {
 
   @Post('entries/:id/revisions/:version/restore')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_UPDATE)
-  restoreRevision(
+  @WorkspaceAudit('entry.restore', 'entry')
+  async restoreRevision(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Param('version') version: string,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentEntryView>(
       this.core.send(contracts.CORE_PATTERNS.ENTRY_REVISION_RESTORE, {
         workspaceId,
         projectId,
@@ -237,5 +269,7 @@ export class ContentController {
         version: Number(version),
       }),
     );
+    req.logMeta = { slug: result.slug, version: Number(version) };
+    return result;
   }
 }

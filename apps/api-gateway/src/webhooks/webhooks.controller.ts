@@ -7,7 +7,9 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
@@ -20,10 +22,16 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /** Dashboard management of outgoing webhooks (session/cookie auth). */
 @Controller('webhooks')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class WebhooksController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
@@ -31,13 +39,15 @@ export class WebhooksController {
 
   @Post()
   @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
-  create(
+  @WorkspaceAudit('webhook.create', 'webhook')
+  async create(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateWebhookDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.CreateWebhookResult>(
       this.core.send(contracts.CORE_PATTERNS.WEBHOOK_CREATE, {
         workspaceId,
         projectId,
@@ -45,6 +55,8 @@ export class WebhooksController {
         dto,
       }),
     );
+    req.logMeta = { url: result.webhook.url };
+    return result;
   }
 
   @Get()
@@ -57,18 +69,23 @@ export class WebhooksController {
 
   @Patch(':id')
   @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
-  update(
+  @WorkspaceAudit('webhook.update', 'webhook')
+  async update(
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Body() dto: contracts.UpdateWebhookDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.WebhookView>(
       this.core.send(contracts.CORE_PATTERNS.WEBHOOK_UPDATE, { projectId, id, dto }),
     );
+    req.logMeta = { url: result.url };
+    return result;
   }
 
   @Delete(':id')
   @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
+  @WorkspaceAudit('webhook.delete', 'webhook')
   remove(@CurrentProject() projectId: string, @Param('id') id: string) {
     return firstValueFrom(
       this.core.send(contracts.CORE_PATTERNS.WEBHOOK_DELETE, { projectId, id }),

@@ -4,7 +4,9 @@ import {
   Get,
   Inject,
   Post,
+  Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 // Namespace import (not named) so DTO classes stay runtime values for
@@ -20,6 +22,11 @@ import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 import { computeDowngradeBlocks, downgradeBlockedError } from './downgrade.guard';
 import { WorkspaceUsageComposer } from './workspace-usage.composer';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /**
  * Customer-facing billing → auth-service over TCP. Reads open to any member;
@@ -28,6 +35,7 @@ import { WorkspaceUsageComposer } from './workspace-usage.composer';
  */
 @Controller('billing')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, PermissionGuard)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class BillingController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.AUTH_SERVICE)
@@ -97,19 +105,26 @@ export class BillingController {
    *  workspace holds more stock resources than the target plan allows. */
   @Post('swap')
   @RequirePermission(contracts.Permission.WORKSPACE_BILLING_MANAGE)
+  @WorkspaceAudit('billing.swap', 'subscription')
   async swapPlan(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @Body() dto: contracts.SwapPlanDto,
+    @Req() req: AuditRequest,
   ) {
     await this.assertDowngradeAllowed(workspaceId, dto.planKey);
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.SubscriptionView>(
       this.auth.send(contracts.BILLING_PATTERNS.SWAP_PLAN, {
         userId: user.userId,
         workspaceId,
         dto,
       }),
     );
+    req.logMeta = {
+      plan: result.planName,
+      ...(result.billingCycle ? { cycle: result.billingCycle } : {}),
+    };
+    return result;
   }
 
   /**

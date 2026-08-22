@@ -6,7 +6,9 @@ import {
   Inject,
   Param,
   Post,
+  Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
@@ -19,6 +21,11 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
+import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /**
  * Dashboard management of Delivery API keys (session/cookie auth). Distinct from
@@ -28,19 +35,22 @@ import { WorkspaceGuard } from '../auth/workspace.guard';
 @Controller('api-keys')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 @RequirePermission(contracts.Permission.API_KEY_MANAGE)
+@UseInterceptors(WorkspaceAuditInterceptor)
 export class ApiKeysController {
   constructor(
     @Inject(contracts.SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
   ) {}
 
   @Post()
-  create(
+  @WorkspaceAudit('apiKey.create', 'apiKey')
+  async create(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateApiKeyDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.CreateApiKeyResult>(
       this.core.send(contracts.CORE_PATTERNS.API_KEY_CREATE, {
         workspaceId,
         projectId,
@@ -48,6 +58,8 @@ export class ApiKeysController {
         dto,
       }),
     );
+    req.logMeta = { name: result.key.name, scope: result.key.scope };
+    return result;
   }
 
   @Get()
@@ -61,21 +73,26 @@ export class ApiKeysController {
   }
 
   @Post(':id/regenerate')
-  regenerate(
+  @WorkspaceAudit('apiKey.regenerate', 'apiKey')
+  async regenerate(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.CreateApiKeyResult>(
       this.core.send(contracts.CORE_PATTERNS.API_KEY_REGENERATE, {
         workspaceId,
         projectId,
         id,
       }),
     );
+    req.logMeta = { name: result.key.name };
+    return result;
   }
 
   @Delete(':id')
+  @WorkspaceAudit('apiKey.revoke', 'apiKey')
   revoke(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,

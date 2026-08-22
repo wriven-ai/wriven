@@ -1,6 +1,7 @@
 import {
   Activity,
   CreditCard,
+  History,
   LayoutDashboard,
   LifeBuoy,
   Settings,
@@ -33,6 +34,12 @@ export function buildWorkspaceNav(ctx: NavContext): NavGroup | null {
         label: 'Members',
         icon: Users,
         permission: Permission.WORKSPACE_MEMBERS_VIEW,
+      },
+      {
+        href: `${base}/logs`,
+        label: 'Activity Log',
+        icon: History,
+        permission: Permission.WORKSPACE_LOGS_VIEW,
       },
       {
         href: `${base}/usage`,

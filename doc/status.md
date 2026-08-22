@@ -34,6 +34,8 @@ _Last reviewed: 2026-08-20 — post-deploy (Render + Vercel + Supabase live), sp
 | Google OAuth (Passport strategy on gateway) | ✅ | |
 | Billing + Stripe webhook | ✅ | `/billing/*` (JWT + WorkspaceGuard) + public `POST /webhooks/stripe` (`rawBody: true`, forwards to auth-service) |
 | Support-ticket routes | ✅ | `/support/tickets` — create/list/detail/messages + attachment presign → core `support` RPC (per `doc/support-ticket/`) |
+| **Workspace activity log** (write side) | ✅ | `@WorkspaceAudit` + per-controller `WorkspaceAuditInterceptor` on ~28 mutating routes (workspaces/members/invitations/projects/billing/content/media/api-keys/webhooks) — fire-and-forget TCP write (specs/23) |
+| Activity log read | ✅ | `GET /logs?days=7\|30\|90&page&limit` — JWT + WorkspaceGuard + `WORKSPACE_LOGS_VIEW` (specs/23) |
 
 ## auth-service (TCP `:5001`)
 
@@ -56,6 +58,7 @@ _Last reviewed: 2026-08-20 — post-deploy (Render + Vercel + Supabase live), sp
 | **Plans** (free/starter/pro @ $0/$10/$18) | ✅ | realistic catalog + public `GET /plans` + revision-retention cap (specs/15); business tier + `sso` removed; AI text limit fields enforced (specs/19) |
 | **RBAC permission layer** (`AuthorizationService`, cascade resolver) | ✅ | `Permission` catalog + role→perm maps in `@wriven/contracts`; `validate*Member` returns cascade-resolved perms; role checks → `authorize()` (specs/12). Frontend `useCan()` filled against the shared cascade; nav + action buttons + management routes gated (specs/13) |
 | Token cleanup cron | ✅ | prunes expired tokens daily |
+| **Activity log storage + retention** | ✅ | `workspace_activity_log` (auth_svc; workspace cascade, user/project set-null); `WorkspaceLogsService` write/list; daily prune beyond `WORKSPACE_LOG_RETENTION_DAYS` (default 90) (specs/23) |
 | Invitation flow (invite → pending → accept) | ✅ | workspace + project invitations, email token + guest role, accept-on-signup (specs/05); invitation mail template shipped |
 | 6-digit OTP email verification | ✅ | alongside the link path; inline verify in the profile UI |
 
@@ -144,6 +147,7 @@ cost accounting — and calls ai-service over HTTP behind an `AiClient` seam
 | **Billing page** (dashboard) | ✅ | current plan, Checkout redirect, Billing Portal link, deferred-downgrade notice (specs/09, 10, 16) |
 | **User profile page** | ✅ | name/email/password + inline OTP email verify (specs/18) |
 | **Support page** (`/w/[wsSlug]/support`) | ✅ | create ticket w/ ≤3 image attachments + scope, my-tickets list, threaded replies |
+| **Activity Log page** (`/w/[wsSlug]/logs`) | ✅ | workspace feed with 7/30/90-day filter + pagination; gated `WORKSPACE_LOGS_VIEW` (hidden for guests) (specs/23) |
 | API key regeneration | ✅ | in-place token rotation action on the api-keys page |
 | **Marketing site** | ✅ | landing (auth-aware CTAs), `/about`, `/blog` + posts, `/contact` (API route w/ honeypot + rate limit), `/pricing` from live plan data; Vercel analytics |
 | **Public docs** (`/docs`) | ✅ | quickstart, content modeling, delivery API, querying, media, webhooks, preview, caching, rate limits, errors, rich text, SDK, Next.js |

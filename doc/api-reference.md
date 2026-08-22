@@ -314,6 +314,20 @@ Read-only aggregate counts for the dashboard. Header-scoped like `/usage` (the g
 - Bandwidth, AI text, AI image are **not metered yet** — their `used` is `null`; `limit` still resolves from the plan. The UI renders "not yet reported" for these.
 - `/stats/project` is core-only (no requests/bandwidth/AI — those are workspace-billing-unit dimensions).
 
+## Workspace activity log (specs/23)
+
+Who-did-what feed for the active workspace. Header-scoped like `/usage` (guards read `X-Workspace-Id`). **Protected** (JWT + workspace member + `WORKSPACE_LOGS_VIEW` — owner/admin/member; guests get 403).
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/logs?days=7\|30\|90&page=1&limit=20` | — | `Paginated<WorkspaceLogView>` |
+
+`WorkspaceLogView`: `{ id, userId, userName, userEmail, action, targetType, targetId, projectId, metadata, createdAt }`. `action` comes from the fixed catalog (`entry.publish`, `member.add`, `apiKey.revoke`, … — full list in `@wriven/contracts` `WORKSPACE_LOG_ACTIONS`); actor fields resolve at read time and are `null` when the member was removed after the action (their rows survive). No IP is stored or exposed on the tenant surface.
+
+- Writes happen in the gateway: mutating workspace routes carry `@WorkspaceAudit(...)` and a per-controller interceptor appends the row over TCP after the handler succeeds — fire-and-forget, a logging failure never fails the request. Covers workspace settings, members/invitations, projects, billing swap, content types/entries (create/update/delete/publish/restore), media, API keys, webhooks.
+- Deliberately **not** logged: `workspace.delete` (the cascade has already removed the FK target by the time the interceptor runs), invitation resend/accept (no workspace context), AI generations (audited separately in `ai_generations`), Delivery-API reads (usage metering).
+- `days` accepts exactly 7/30/90 (default 30) — anything else is 422 `VALIDATION_ERROR`. Rows older than the retention window (`WORKSPACE_LOG_RETENTION_DAYS`, default 90) are pruned by a daily cron in auth-service.
+
 ---
 
 ## Health

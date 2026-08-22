@@ -172,17 +172,23 @@ export class ProjectsService {
   async remove(p: {
     callerUserId: string;
     projectId: string;
-  }): Promise<{ success: true }> {
+  }): Promise<{ success: true; workspaceId: string }> {
     await this.authz.authorize({
       userId: p.callerUserId,
       permission: Permission.PROJECT_DELETE,
       projectId: p.projectId,
     });
+    // Workspace id rides the result so the gateway can scope the activity
+    // log row (the delete route itself carries no workspace context).
+    const [row] = await this.db
+      .select({ workspaceId: projects.workspaceId })
+      .from(projects)
+      .where(eq(projects.id, p.projectId));
     await this.db
       .update(projects)
       .set({ deletedAt: new Date() })
       .where(eq(projects.id, p.projectId));
-    return { success: true };
+    return { success: true, workspaceId: row.workspaceId };
   }
 
   // ── Project members ─────────────────────────────────────────────────────────
