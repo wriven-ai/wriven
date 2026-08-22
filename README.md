@@ -117,7 +117,7 @@ Microservices behind a single public gateway. Only the gateway is exposed to the
 | Rich text | TipTap (ProseMirror), rendered consumer-side by `@wriven-ai/react` |
 | Email | Nodemailer (SMTP) |
 | Tooling | ESLint 9, Prettier, Jest 30, pytest, Docker |
-| Deploy | Frontend → Vercel · Backend → Docker on a VPS · DB → Supabase · Media → Cloudflare R2 + CDN |
+| Deploy | Frontend → Vercel · Backend → Render (Docker, [`render.yaml`](./render.yaml)) · DB → Supabase · Media → Cloudflare R2 + CDN |
 
 ---
 

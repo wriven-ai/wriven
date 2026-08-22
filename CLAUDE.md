@@ -11,6 +11,7 @@ The maintained reference docs live under **[`doc/`](./doc/)** — start at [`doc
 - [`doc/api-reference`](./doc/api-reference.md) · [`doc/conventions`](./doc/conventions.md) · [`doc/status`](./doc/status.md)
 - Cross-cutting: [`doc/ai-governance.md`](./doc/ai-governance.md) (AI data controls, retention, billing/retry policy) · [`doc/plan-config.md`](./doc/plan-config.md) (plan tiers + limits, admin-managed — not seeded) · [`doc/support-ticket/`](./doc/support-ticket/) · [`doc/market-readiness.md`](./doc/market-readiness.md)
 - Per service: [`api-gateway`](./doc/api-gateway/) · [`auth-service`](./doc/auth-service/) · [`core-service`](./doc/core-service/) · [`admin-panel`](./doc/admin-panel/) · [`frontend`](./doc/frontend/) (incl. [`sidebar.md`](./doc/frontend/sidebar.md) — dashboard nav architecture)
+- Reference: [`doc/diagrams/`](./doc/diagrams/) (system diagrams — RBAC request flow, tenancy model, billing, AI generation flow) · [`doc/wriven-display/`](./doc/wriven-display/) (self-contained guide for building external display apps on the Delivery API — no Wriven source access needed)
 - Feature design docs: [`specs/`](./specs/) (every feature gets a spec before implementation, `NN-<slug>.md`)
 - Execution plans: [`plans/`](./plans/) (opt-in, large features — derived from a spec via `/create-plan`; plan numbering is independent of spec numbering, e.g. specs/21 ↔ plans/14)
 
@@ -74,6 +75,7 @@ pnpm sdk:build | sdk:test | sdk:check | sdk:publish
 Notes:
 - ai-service deps managed with **uv** (`uv lock` to update, `uv run` to execute) — see [`apps/ai-service/README.md`](./apps/ai-service/README.md).
 - Jest is wired at root but apps/libs currently have no spec files; the real suites are ai-service (pytest) and `packages/*` (node:test).
+- NestJS builds run with `isolatedModules` + `emitDecoratorMetadata`: a type referenced in a decorated signature (e.g. `@Req() req: AuditRequest`) must be brought in via `import type` or a namespace import (`import * as contracts from '@wriven/contracts'` — which is why contract types in decorated params work). A plain named type import fails TS1272 in the production webpack build only — `pnpm dev` / `nx serve` won't hard-fail on it. Run `pnpm nx build <service>` before pushing backend changes.
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
