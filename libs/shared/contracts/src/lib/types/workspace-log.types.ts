@@ -42,6 +42,26 @@ export interface WorkspaceLogWritePayload {
   action: WorkspaceLogAction;
   targetType?: string | null;
   targetId?: string | null;
+  /**
+   * Extra, human-useful detail for the activity feed (gateway handlers set
+   * `req.logMeta`). Keep payloads small and non-sensitive — ids, names/titles,
+   * and counts only; never tokens, bodies, or field content. Values are
+   * strings/numbers; omit null/undefined keys. Canonical keys per action:
+   *
+   * - `workspace.update` — `name`
+   * - `member.add` / `member.update` — `email`, `name`, `role` (new role)
+   * - `invitation.create` — `email`, `role`, `scope`
+   * - `project.create` / `project.update` — `name`
+   * - `billing.swap` — `plan`, `cycle` (omit when null)
+   * - `contentType.create` — `name`, `apiId`; `contentType.update` — `name`
+   * - `entry.create/update/publish` — `slug`; `entry.restore` — `slug`, `version`
+   * - `media.upload` — `filename`, `kind`, `size` (omit when null);
+   *   `media.delete` bulk — `count`
+   * - `apiKey.create` — `name`, `scope`; `apiKey.regenerate` — `name`
+   * - `webhook.create` / `webhook.update` — `url`
+   *
+   * Delete/revoke actions log no metadata (results carry no entity data).
+   */
   metadata?: Record<string, unknown>;
 }
 

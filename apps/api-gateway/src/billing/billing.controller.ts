@@ -4,6 +4,7 @@ import {
   Get,
   Inject,
   Post,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -21,7 +22,10 @@ import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 import { computeDowngradeBlocks, downgradeBlockedError } from './downgrade.guard';
 import { WorkspaceUsageComposer } from './workspace-usage.composer';
-import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /**
@@ -106,15 +110,21 @@ export class BillingController {
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @Body() dto: contracts.SwapPlanDto,
+    @Req() req: AuditRequest,
   ) {
     await this.assertDowngradeAllowed(workspaceId, dto.planKey);
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.SubscriptionView>(
       this.auth.send(contracts.BILLING_PATTERNS.SWAP_PLAN, {
         userId: user.userId,
         workspaceId,
         dto,
       }),
     );
+    req.logMeta = {
+      plan: result.planName,
+      ...(result.billingCycle ? { cycle: result.billingCycle } : {}),
+    };
+    return result;
   }
 
   /**

@@ -1,7 +1,11 @@
 import { SetMetadata } from '@nestjs/common';
 import type { WorkspaceLogAction } from '@wriven/contracts';
+import type { Request } from 'express';
 
 export const WS_AUDIT_KEY = 'workspaceAudit';
+
+/** Express request augmented with the audit context handlers may set. */
+export type AuditRequest = Request & { logMeta?: Record<string, unknown> };
 
 export interface WorkspaceAuditConfig {
   /** Action verb stored on the log row, e.g. 'entry.publish', 'member.add'. */

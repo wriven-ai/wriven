@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -21,7 +22,10 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
-import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /** Dashboard management of outgoing webhooks (session/cookie auth). */
@@ -36,13 +40,14 @@ export class WebhooksController {
   @Post()
   @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
   @WorkspaceAudit('webhook.create', 'webhook')
-  create(
+  async create(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateWebhookDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.CreateWebhookResult>(
       this.core.send(contracts.CORE_PATTERNS.WEBHOOK_CREATE, {
         workspaceId,
         projectId,
@@ -50,6 +55,8 @@ export class WebhooksController {
         dto,
       }),
     );
+    req.logMeta = { url: result.webhook.url };
+    return result;
   }
 
   @Get()
@@ -63,14 +70,17 @@ export class WebhooksController {
   @Patch(':id')
   @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
   @WorkspaceAudit('webhook.update', 'webhook')
-  update(
+  async update(
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Body() dto: contracts.UpdateWebhookDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.WebhookView>(
       this.core.send(contracts.CORE_PATTERNS.WEBHOOK_UPDATE, { projectId, id, dto }),
     );
+    req.logMeta = { url: result.url };
+    return result;
   }
 
   @Delete(':id')

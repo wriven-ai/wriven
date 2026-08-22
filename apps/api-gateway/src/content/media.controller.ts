@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -21,7 +22,10 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
-import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller('content/media')
@@ -53,13 +57,14 @@ export class MediaController {
   @Post()
   @RequirePermission(contracts.Permission.MEDIA_MANAGE)
   @WorkspaceAudit('media.upload', 'media')
-  create(
+  async create(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateMediaDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.MediaView>(
       this.core.send(contracts.CORE_PATTERNS.MEDIA_CREATE, {
         workspaceId,
         projectId,
@@ -67,6 +72,12 @@ export class MediaController {
         dto,
       }),
     );
+    req.logMeta = {
+      filename: result.originalFilename ?? dto.key,
+      kind: result.kind,
+      ...(result.sizeBytes != null ? { size: result.sizeBytes } : {}),
+    };
+    return result;
   }
 
   @Get()
@@ -120,17 +131,20 @@ export class MediaController {
   @Post('bulk-delete')
   @RequirePermission(contracts.Permission.MEDIA_MANAGE)
   @WorkspaceAudit('media.delete', 'media')
-  removeMany(
+  async removeMany(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.DeleteMediaBulkDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<{ success: boolean; deleted: number }>(
       this.core.send(contracts.CORE_PATTERNS.MEDIA_DELETE_BULK, {
         workspaceId,
         projectId,
         ids: dto.ids,
       }),
     );
+    req.logMeta = { count: result.deleted };
+    return result;
   }
 }

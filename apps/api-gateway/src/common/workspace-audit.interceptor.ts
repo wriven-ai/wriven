@@ -85,13 +85,21 @@ export class WorkspaceAuditInterceptor implements NestInterceptor {
           result && typeof result === 'object' && 'id' in result
             ? (result as { id?: unknown }).id
             : undefined;
+        // Nested create results (webhook/apiKey) carry the entity one level down.
+        const nestedResultId =
+          result && typeof result === 'object'
+            ? ((result as { webhook?: { id?: unknown } }).webhook?.id ??
+              (result as { key?: { id?: unknown } }).key?.id)
+            : undefined;
         const targetId =
           params['id'] ??
           params['userId'] ??
           params['projectId'] ??
-          (typeof resultId === 'string' || typeof resultId === 'number'
-            ? String(resultId)
-            : null);
+          (typeof nestedResultId === 'string' || typeof nestedResultId === 'number'
+            ? String(nestedResultId)
+            : typeof resultId === 'string' || typeof resultId === 'number'
+              ? String(resultId)
+              : null);
         const resultProjectId =
           result && typeof result === 'object' && 'projectId' in result
             ? ((result as { projectId?: unknown }).projectId as string | null)

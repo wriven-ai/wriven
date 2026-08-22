@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -22,7 +23,10 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
-import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller('content')
@@ -38,13 +42,14 @@ export class ContentController {
   @Post('types')
   @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
   @WorkspaceAudit('contentType.create', 'contentType')
-  createType(
+  async createType(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateContentTypeDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentTypeView>(
       this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_CREATE, {
         workspaceId,
         projectId,
@@ -52,6 +57,8 @@ export class ContentController {
         dto,
       }),
     );
+    req.logMeta = { name: result.name, apiId: result.apiId };
+    return result;
   }
 
   @Get('types')
@@ -87,13 +94,14 @@ export class ContentController {
   @Patch('types/:id')
   @RequirePermission(contracts.Permission.CONTENT_TYPE_MANAGE)
   @WorkspaceAudit('contentType.update', 'contentType')
-  updateType(
+  async updateType(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Body() dto: contracts.UpdateContentTypeDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentTypeView>(
       this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_UPDATE, {
         workspaceId,
         projectId,
@@ -101,6 +109,8 @@ export class ContentController {
         dto,
       }),
     );
+    req.logMeta = { name: result.name };
+    return result;
   }
 
   @Delete('types/:id')
@@ -121,13 +131,14 @@ export class ContentController {
   @Post('entries')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_CREATE)
   @WorkspaceAudit('entry.create', 'entry')
-  createEntry(
+  async createEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateEntryDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentEntryView>(
       this.core.send(contracts.CORE_PATTERNS.ENTRY_CREATE, {
         workspaceId,
         projectId,
@@ -135,6 +146,8 @@ export class ContentController {
         dto,
       }),
     );
+    req.logMeta = { slug: result.slug };
+    return result;
   }
 
   @Get('entries')
@@ -164,14 +177,15 @@ export class ContentController {
   @Patch('entries/:id')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_UPDATE)
   @WorkspaceAudit('entry.update', 'entry')
-  updateEntry(
+  async updateEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Body() dto: contracts.UpdateEntryDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentEntryView>(
       this.core.send(contracts.CORE_PATTERNS.ENTRY_UPDATE, {
         workspaceId,
         projectId,
@@ -180,18 +194,21 @@ export class ContentController {
         dto,
       }),
     );
+    req.logMeta = { slug: result.slug };
+    return result;
   }
 
   @Post('entries/:id/publish')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_PUBLISH)
   @WorkspaceAudit('entry.publish', 'entry')
-  publishEntry(
+  async publishEntry(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentEntryView>(
       this.core.send(contracts.CORE_PATTERNS.ENTRY_PUBLISH, {
         workspaceId,
         projectId,
@@ -199,6 +216,8 @@ export class ContentController {
         id,
       }),
     );
+    req.logMeta = { slug: result.slug };
+    return result;
   }
 
   @Delete('entries/:id')
@@ -233,14 +252,15 @@ export class ContentController {
   @Post('entries/:id/revisions/:version/restore')
   @RequirePermission(contracts.Permission.CONTENT_ENTRY_UPDATE)
   @WorkspaceAudit('entry.restore', 'entry')
-  restoreRevision(
+  async restoreRevision(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
     @Param('version') version: string,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ContentEntryView>(
       this.core.send(contracts.CORE_PATTERNS.ENTRY_REVISION_RESTORE, {
         workspaceId,
         projectId,
@@ -249,5 +269,7 @@ export class ContentController {
         version: Number(version),
       }),
     );
+    req.logMeta = { slug: result.slug, version: Number(version) };
+    return result;
   }
 }

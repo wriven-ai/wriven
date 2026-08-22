@@ -6,6 +6,7 @@ import {
   Inject,
   Param,
   Post,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -14,7 +15,10 @@ import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller()
@@ -29,12 +33,13 @@ export class InvitationsController {
   @Post('workspaces/:workspaceId/invitations')
   @UseGuards(JwtAuthGuard)
   @WorkspaceAudit('invitation.create', 'invitation')
-  createWorkspace(
+  async createWorkspace(
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Body() dto: contracts.CreateWorkspaceInvitationDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.InvitationView>(
       this.auth.send(contracts.INVITATION_PATTERNS.CREATE, {
         callerUserId: user.userId,
         scope: 'workspace',
@@ -43,17 +48,20 @@ export class InvitationsController {
         role: dto.role,
       }),
     );
+    req.logMeta = { email: result.email, role: result.role, scope: result.scope };
+    return result;
   }
 
   @Post('projects/:projectId/invitations')
   @UseGuards(JwtAuthGuard)
   @WorkspaceAudit('invitation.create', 'invitation')
-  createProject(
+  async createProject(
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
     @Body() dto: contracts.CreateProjectInvitationDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.InvitationView>(
       this.auth.send(contracts.INVITATION_PATTERNS.CREATE, {
         callerUserId: user.userId,
         scope: 'project',
@@ -62,6 +70,8 @@ export class InvitationsController {
         role: dto.role,
       }),
     );
+    req.logMeta = { email: result.email, role: result.role, scope: result.scope };
+    return result;
   }
 
   // ── List ──────────────────────────────────────────────────────────────────────

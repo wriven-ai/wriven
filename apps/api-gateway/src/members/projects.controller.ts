@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -15,7 +16,10 @@ import * as contracts from '@wriven/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 @Controller()
@@ -34,14 +38,17 @@ export class ProjectsController {
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
     @Body() dto: contracts.CreateProjectDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom<{ id: string }>(
+    const result = await firstValueFrom<contracts.ProjectView>(
       this.auth.send(contracts.PROJECT_PATTERNS.CREATE_PROJECT, {
         callerUserId: user.userId,
         workspaceId,
         dto,
       }),
     );
+    req.logMeta = { name: result.name };
+    return result;
   }
 
   @Get('workspaces/:workspaceId/projects')
@@ -69,18 +76,21 @@ export class ProjectsController {
 
   @Patch('projects/:projectId')
   @WorkspaceAudit('project.update', 'project')
-  update(
+  async update(
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
     @Body() dto: contracts.UpdateProjectDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.ProjectView>(
       this.auth.send(contracts.PROJECT_PATTERNS.UPDATE_PROJECT, {
         callerUserId: user.userId,
         projectId,
         dto,
       }),
     );
+    req.logMeta = { name: result.name };
+    return result;
   }
 
   @Delete('projects/:projectId')

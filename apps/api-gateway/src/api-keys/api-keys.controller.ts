@@ -6,6 +6,7 @@ import {
   Inject,
   Param,
   Post,
+  Req,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -20,7 +21,10 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ProjectGuard } from '../auth/project.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
-import { WorkspaceAudit } from '../common/workspace-audit.decorator';
+import {
+  AuditRequest,
+  WorkspaceAudit,
+} from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
 /**
@@ -39,13 +43,14 @@ export class ApiKeysController {
 
   @Post()
   @WorkspaceAudit('apiKey.create', 'apiKey')
-  create(
+  async create(
     @CurrentUser() user: contracts.AuthUser,
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Body() dto: contracts.CreateApiKeyDto,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.CreateApiKeyResult>(
       this.core.send(contracts.CORE_PATTERNS.API_KEY_CREATE, {
         workspaceId,
         projectId,
@@ -53,6 +58,8 @@ export class ApiKeysController {
         dto,
       }),
     );
+    req.logMeta = { name: result.key.name, scope: result.key.scope };
+    return result;
   }
 
   @Get()
@@ -67,18 +74,21 @@ export class ApiKeysController {
 
   @Post(':id/regenerate')
   @WorkspaceAudit('apiKey.regenerate', 'apiKey')
-  regenerate(
+  async regenerate(
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
     @Param('id') id: string,
+    @Req() req: AuditRequest,
   ) {
-    return firstValueFrom(
+    const result = await firstValueFrom<contracts.CreateApiKeyResult>(
       this.core.send(contracts.CORE_PATTERNS.API_KEY_REGENERATE, {
         workspaceId,
         projectId,
         id,
       }),
     );
+    req.logMeta = { name: result.key.name };
+    return result;
   }
 
   @Delete(':id')
