@@ -16,7 +16,10 @@ import {
   type RefreshPayload,
   UpdateAdminDto,
   UpdatePlanDto,
+  type WorkspaceLogQueryDto,
 } from '@wriven/contracts';
+import { WorkspaceLogsService } from '../auth/workspace-logs.service';
+import { rpcError } from '../common/rpc-error';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthService } from './admin-auth.service';
 import { AdminMetricsService } from './admin-metrics.service';
@@ -33,6 +36,7 @@ export class AdminController {
     private readonly audit: AdminAuditService,
     private readonly metrics: AdminMetricsService,
     private readonly tenancy: AdminTenancyService,
+    private readonly logs: WorkspaceLogsService,
     private readonly plans: AdminPlansService,
   ) {}
 
@@ -132,6 +136,16 @@ export class AdminController {
   @MessagePattern(ADMIN_PATTERNS.WORKSPACES_GET)
   getWorkspace(@Payload() payload: { id: string }) {
     return this.tenancy.getWorkspace(payload);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.WORKSPACES_LOGS)
+  async listWorkspaceLogs(
+    @Payload() payload: { id: string; query: WorkspaceLogQueryDto },
+  ) {
+    if (!(await this.tenancy.workspaceExists(payload.id))) {
+      throw rpcError('NOT_FOUND', 'Workspace not found.');
+    }
+    return this.logs.list({ workspaceId: payload.id, ...payload.query });
   }
 
   @MessagePattern(ADMIN_PATTERNS.PROJECTS_LIST)

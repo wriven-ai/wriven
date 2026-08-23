@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { StripeModule } from '../billing/stripe.module';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthService } from './admin-auth.service';
@@ -10,7 +11,7 @@ import { AdminTokenService } from './admin-token.service';
 import { AdminUsersService } from './admin-users.service';
 
 @Module({
-  imports: [StripeModule],
+  imports: [AuthModule, StripeModule],
   controllers: [AdminController],
   providers: [
     AdminAuthService,

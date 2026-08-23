@@ -193,6 +193,7 @@ export const ADMIN_PATTERNS = {
   WORKSPACES_LIST: 'admin.workspaces.list',
   WORKSPACES_GET: 'admin.workspaces.get',
   WORKSPACES_SET_PLAN: 'admin.workspaces.setPlan',
+  WORKSPACES_LOGS: 'admin.workspaces.logs',
   PROJECTS_LIST: 'admin.projects.list',
   PROJECTS_GET: 'admin.projects.get',
   PROJECTS_DELETE: 'admin.projects.delete',

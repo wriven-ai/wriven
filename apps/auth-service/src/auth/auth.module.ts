@@ -50,6 +50,6 @@ import { ProjectsService } from './projects.service';
     InvitationsService,
     EntitlementsService,
   ],
-  exports: [AuthorizationService],
+  exports: [AuthorizationService, WorkspaceLogsService],
 })
 export class AuthModule {}

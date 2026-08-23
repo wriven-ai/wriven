@@ -201,6 +201,15 @@ export class AdminTenancyService {
     return { items, page, limit, total };
   }
 
+  /** Cheap existence probe for admin workspace sub-resources (e.g. logs). */
+  async workspaceExists(id: string): Promise<boolean> {
+    const row = await this.db.query.workspaces.findFirst({
+      where: eq(workspaces.id, id),
+      columns: { id: true },
+    });
+    return Boolean(row);
+  }
+
   async getWorkspace(payload: { id: string }): Promise<AdminWorkspaceDetail> {
     const ws = await this.db.query.workspaces.findFirst({
       where: eq(workspaces.id, payload.id),
