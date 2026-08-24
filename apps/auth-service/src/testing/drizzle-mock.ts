@@ -98,3 +98,17 @@ export function createDbMock(): DbMock {
 export function asDb(mock: DbMock): DrizzleDB<typeof schema> {
   return mock as unknown as DrizzleDB<typeof schema>;
 }
+
+/**
+ * The chain returned by the `call`-th invocation of a write mock — for
+ * asserting what was passed to `.values(...)` / `.set(...)` on that call.
+ */
+export function chainOf(
+  mock: jest.Mock,
+  call = 0,
+): { values: jest.Mock; set: jest.Mock; returning: jest.Mock } & Record<
+  string,
+  jest.Mock
+> {
+  return mock.mock.results[call].value;
+}

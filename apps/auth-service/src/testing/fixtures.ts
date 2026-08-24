@@ -2,6 +2,7 @@ import type Stripe from 'stripe';
 import type * as schema from '../db/schema';
 
 type UserRow = typeof schema.users.$inferSelect;
+type WorkspaceRow = typeof schema.workspaces.$inferSelect;
 type PlanRow = typeof schema.plans.$inferSelect;
 type SubscriptionRow = typeof schema.subscriptions.$inferSelect;
 
@@ -18,6 +19,18 @@ export function userRow(overrides: Partial<UserRow> = {}): UserRow {
     passwordHash: 'hashed-password',
     emailVerified: false,
     suspendedAt: null,
+    createdAt: T0,
+    updatedAt: T0,
+    ...overrides,
+  };
+}
+
+export function workspaceRow(overrides: Partial<WorkspaceRow> = {}): WorkspaceRow {
+  return {
+    id: 'ws-1',
+    name: "Test User's Workspace",
+    slug: 'test-users-workspace',
+    createdBy: '11111111-1111-4111-8111-111111111111',
     createdAt: T0,
     updatedAt: T0,
     ...overrides,
