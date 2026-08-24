@@ -75,7 +75,7 @@ pnpm sdk:build | sdk:test | sdk:check | sdk:publish
 
 Notes:
 - ai-service deps managed with **uv** (`uv lock` to update, `uv run` to execute) — see [`apps/ai-service/README.md`](./apps/ai-service/README.md).
-- Jest per-project: the three NestJS apps (`api-gateway`, `auth-service`, `core-service`) each have `jest.config.cts` + `tsconfig.spec.json` (ts-jest, nodenext, node env, `reflect-metadata` setupFile) — run via `pnpm nx test <project>`. Spec tsconfigs must keep `moduleResolution: nodenext` (inherited) — overriding to `node10` breaks `customConditions` and stripe/postgres typings. Other suites: ai-service (pytest), `packages/*` (node:test).
+- Jest per-project: the three NestJS apps (`api-gateway`, `auth-service`, `core-service`) and `libs/shared/contracts` each have `jest.config.cts` + `tsconfig.spec.json` (ts-jest, nodenext, node env; apps add a `reflect-metadata` setupFile) — run via `pnpm nx test <project>`. Spec tsconfigs must keep `moduleResolution: nodenext` (inherited) — overriding to `node10` breaks `customConditions` and stripe/postgres typings. Other suites: ai-service (pytest), `packages/*` (node:test).
 - NestJS builds run with `isolatedModules` + `emitDecoratorMetadata`: a type referenced in a decorated signature (e.g. `@Req() req: AuditRequest`) must be brought in via `import type` or a namespace import (`import * as contracts from '@wriven/contracts'` — which is why contract types in decorated params work). A plain named type import fails TS1272 in the production webpack build only — `pnpm dev` / `nx serve` won't hard-fail on it. Run `pnpm nx build <service>` before pushing backend changes.
 
 <!-- nx configuration start-->

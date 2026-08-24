@@ -843,3 +843,123 @@ describe('AuthService.logout', () => {
     expect(chainOf(db.update).set).toHaveBeenCalledWith({ revoked: true });
   });
 });
+
+// ── Gateway membership validation ────────────────────────────────────────────
+
+describe('AuthService.validateWorkspaceMember', () => {
+  it('returns the membership with cascade-resolved permissions', async () => {
+    const { service, authz } = makeService();
+    authz.resolveRoles.mockResolvedValue({
+      workspaceId: 'ws-1',
+      projectId: null,
+      wsRole: 'admin',
+      projRole: null,
+      permissions: new Set(['WORKSPACE_VIEW', 'WORKSPACE_MEMBERS_VIEW']),
+    });
+
+    const membership = await service.validateWorkspaceMember({
+      userId: 'u1',
+      workspaceId: 'ws-1',
+    });
+
+    expect(membership).toEqual({
+      workspaceId: 'ws-1',
+      role: 'admin',
+      permissions: ['WORKSPACE_VIEW', 'WORKSPACE_MEMBERS_VIEW'],
+    });
+  });
+
+  it('no workspace role → FORBIDDEN', async () => {
+    const { service, authz } = makeService();
+    authz.resolveRoles.mockResolvedValue({
+      workspaceId: 'ws-1',
+      projectId: null,
+      wsRole: null,
+      projRole: null,
+      permissions: new Set(),
+    });
+
+    const err = await rejection(
+      service.validateWorkspaceMember({ userId: 'u1', workspaceId: 'ws-1' }),
+    );
+    expect(err.code).toBe(ERROR_CODES.FORBIDDEN.code);
+  });
+});
+
+describe('AuthService.validateProjectMember — the cascade bypass', () => {
+  function roles(overrides: Record<string, unknown>) {
+    return {
+      workspaceId: 'ws-1',
+      projectId: 'p1',
+      wsRole: null,
+      projRole: null,
+      permissions: new Set(['PROJECT_VIEW']),
+      ...overrides,
+    };
+  }
+
+  it('explicit project_members row → access with that role', async () => {
+    const { service, authz } = makeService();
+    authz.resolveRoles.mockResolvedValue(
+      roles({ projRole: 'editor', permissions: new Set(['PROJECT_VIEW', 'PROJECT_EDIT']) }),
+    );
+
+    const membership = await service.validateProjectMember({
+      userId: 'u1',
+      projectId: 'p1',
+    });
+
+    expect(membership).toEqual({
+      projectId: 'p1',
+      workspaceId: 'ws-1',
+      role: 'editor',
+      permissions: ['PROJECT_VIEW', 'PROJECT_EDIT'],
+    });
+  });
+
+  it.each(['owner', 'admin'] as const)(
+    'workspace %s gets project access with NO project_members row',
+    async (wsRole) => {
+      const { service, authz } = makeService();
+      authz.resolveRoles.mockResolvedValue(roles({ wsRole }));
+
+      const membership = await service.validateProjectMember({
+        userId: 'u1',
+        projectId: 'p1',
+      });
+
+      expect(membership.role).toBeNull(); // no explicit project role
+      expect(membership.workspaceId).toBe('ws-1');
+    },
+  );
+
+  it('plain workspace member without a project row → FORBIDDEN', async () => {
+    const { service, authz } = makeService();
+    authz.resolveRoles.mockResolvedValue(roles({ wsRole: 'member' }));
+
+    const err = await rejection(
+      service.validateProjectMember({ userId: 'u1', projectId: 'p1' }),
+    );
+    expect(err.code).toBe(ERROR_CODES.FORBIDDEN.code);
+  });
+
+  it('no access implies no workspace → NOT_FOUND guard', async () => {
+    const { service, authz } = makeService();
+    authz.resolveRoles.mockResolvedValue({
+      workspaceId: null,
+      projectId: 'p1',
+      wsRole: null,
+      projRole: null,
+      permissions: new Set(),
+    });
+
+    // Edge order: access check first — a "member" role that somehow carries no
+    // workspace would fall through to the NOT_FOUND guard.
+    const err = await rejection(
+      service.validateProjectMember({ userId: 'u1', projectId: 'p1' }),
+    );
+    expect([ERROR_CODES.FORBIDDEN.code, ERROR_CODES.NOT_FOUND.code]).toContain(
+      err.code,
+    );
+  });
+});
