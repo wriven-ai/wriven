@@ -9,8 +9,8 @@ export interface StripeMock {
   billingPortal: { sessions: { create: jest.Mock } };
   invoices: { list: jest.Mock };
   customers: { create: jest.Mock };
-  products: { create: jest.Mock };
-  prices: { create: jest.Mock };
+  products: { create: jest.Mock; update: jest.Mock };
+  prices: { create: jest.Mock; update: jest.Mock };
 }
 
 export function createStripeMock(): StripeMock {
@@ -34,8 +34,14 @@ export function createStripeMock(): StripeMock {
     },
     invoices: { list: jest.fn().mockResolvedValue({ data: [] }) },
     customers: { create: jest.fn().mockResolvedValue({ id: 'cus_mock' }) },
-    products: { create: jest.fn().mockResolvedValue({ id: 'prod_mock' }) },
-    prices: { create: jest.fn().mockResolvedValue({ id: 'price_mock' }) },
+    products: {
+      create: jest.fn().mockResolvedValue({ id: 'prod_mock' }),
+      update: jest.fn().mockResolvedValue({ id: 'prod_mock' }),
+    },
+    prices: {
+      create: jest.fn().mockResolvedValue({ id: 'price_mock' }),
+      update: jest.fn().mockResolvedValue({ id: 'price_mock' }),
+    },
   };
 }
 
