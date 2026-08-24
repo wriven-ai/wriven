@@ -96,11 +96,15 @@ export function stripeSub(overrides: Record<string, unknown> = {}) {
   return {
     id: 'sub_mock',
     status: 'active',
+    customer: 'cus_mock',
     metadata: { workspaceId: 'ws-1' },
     cancel_at_period_end: false,
+    trial_end: null,
+    canceled_at: null,
     items: {
       data: [
         {
+          id: 'si_1',
           price: { id: 'price_monthly_mock', recurring: { interval: 'month' } },
           current_period_start: 1767225600, // 2026-01-01T00:00:00Z
           current_period_end: 1769904000, // 2026-02-01T00:00:00Z
