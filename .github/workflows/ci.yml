@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # nx affected needs full history to diff the base
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive affected base
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Unit suites are fully mocked — no DB/Stripe/R2 secrets needed.
+      # Nx runs only the targets each project actually has (ai-service's
+      # pytest and the client's next lint live outside this sweep).
+      - name: Lint + typecheck + test (affected)
+        run: >
+          pnpm nx affected -t lint typecheck test
+          --base=${{ steps.base.outputs.sha }}
+
+      # Main pushes sweep everything, not just the affected graph.
+      - name: Full test sweep (main only)
+        if: github.event_name == 'push'
+        run: pnpm nx run-many -t test
