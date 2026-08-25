@@ -15,8 +15,8 @@ How the Wriven backend is tested: philosophy, layout, the shared mock toolkit, r
 | Project | Suite | Focus |
 |---|---|---|
 | `@wriven/auth-service` | ~343 tests | Auth flows, billing/webhooks, entitlements, invitations, members/projects/workspaces, cleanup cron, mail, workspace logs, admin (auth/tokens/users/audit/metrics/tenancy/plans) |
-| `@wriven/api-gateway` | ~49 tests | All guards (JWT, admin JWT, CSRF, permission, workspace/project), Google OAuth strategy, exceptions filter, response interceptor, downgrade guard |
-| `@wriven/core-service` | ~68 tests | Entitlements (fail-open/closed + cache), storage (R2 keys), media quota/key-pinning, webhooks (HMAC, retry), content validator, pricing, period/slug |
+| `@wriven/api-gateway` | ~81 tests | All guards (JWT, admin JWT, CSRF, permission, workspace/project, API key + cache), Google OAuth strategy, exceptions filter, response interceptor, downgrade guard, usage buffer/enforce, delivery controller (cache tags, project pinning) |
+| `@wriven/core-service` | ~120 tests | Entitlements (fail-open/closed + cache), storage (R2 keys), media quota/key-pinning, webhooks (HMAC, retry), content validator, pricing, period/slug, entries lifecycle + AI provenance, ai.service (quota, idempotent replay), api-keys |
 | `@wriven/contracts` | ~23 tests | RBAC permission matrix — literal expected sets, independent of the role maps under test |
 
 Other suites, outside the Jest projects: ai-service (**pytest**, `cd apps/ai-service && uv run pytest`), `packages/*` SDKs (**node:test** via tsx).

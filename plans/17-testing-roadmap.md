@@ -16,13 +16,18 @@ Execution plan for the backend test effort. Unit layers (Phases 1–2) are **com
 
 ## Phase 2 — auth-service depth ✅
 
-**Branch:** `feat/testing-auth-depth` · **Commit:** `2490465` (+ `e148ad0` docs)
+**Branch:** `feat/testing-auth-depth` · **Commits:** `2490465`, `55ee77d` (+ `e148ad0`/`6c9c5d3` docs)
 
-- 13 new spec files, +121 tests → auth-service at 343: invitations, members, projects, workspaces, cleanup cron, mail, workspace-logs, admin (auth/token/users/audit/metrics/tenancy)
+- 13 auth spec files, +121 tests → auth-service at 343: invitations, members, projects, workspaces, cleanup cron, mail, workspace-logs, admin (auth/token/users/audit/metrics/tenancy)
 - Review-hardened: WHERE scopes pinned via `serializeFragment` (invite revoke by id, admin theft-response revoke-all, retention cutoffs)
-- `doc/testing.md` written and indexed
+- `doc/testing.md` + this roadmap written and indexed
 
-**Unit scope is now complete.** Remaining untested: controllers only (thin `@MessagePattern` delegators — not worth unit specs).
+### Phase 2b — gateway/core leftovers ✅ (commit `55ee77d`)
+
+- Gateway +32 tests: api-key guard (bearer extraction, scope gate, 30s hash-keyed cache incl. null-caching), usage buffer (per-bucket aggregation, month-boundary split, threshold = distinct buckets), usage enforce (fail-open, RATE_LIMITED at limit, read cache), delivery controller (project pinning, preview never cached, CDN surrogate tags)
+- Core +52 tests: entries lifecycle (publish/unpublish/reslug webhook matrix, revision versioning, unique-field conflicts, AI-provenance forging guards), ai.service (validation-before-metering, quota gate, idempotent replay incl. key-reuse/expired/failed-code classes, provider-failure audit finalize, `:free` cost pricing), api-keys (sha256-only storage verified by recomputation, scope prefixes, rotate/revoke)
+
+**Unit scope is now complete across all services.** Remaining untested: controllers only (thin `@MessagePattern` delegators — not worth unit specs). Totals: auth 343 · gateway 81 · core 120 · contracts 23 = **567 tests**.
 
 ## Phase 3 — Integration tests (pending)
 
