@@ -112,6 +112,7 @@ Execution recipes derived from a spec — ordered steps, files per step, per-ste
 | [13 — AI Service Extraction](../plans/13-ai-service-extraction.md) | [20](../specs/20-ai-service-extraction.md) | (superseded by plan 14) |
 | [14 — AI Generation Redesign](../plans/14-ai-generation-redesign.md) | [21](../specs/21-ai-generation-redesign.md) | Typed AiOutput, compose, voice profile, ai-service extraction |
 | [15 — AI Generation Hardening](../plans/15-ai-generation-hardening.md) | [22](../specs/22-ai-generation-hardening.md) | Review-hardening fixes |
+| [17 — Testing Roadmap](../plans/17-testing-roadmap.md) | — (strategy doc) | Jest phases 1–2 (unit suites, CI — done) + phase 3 (testcontainers integration — pending) |
 
 > New plan? Run `/create-plan <spec number or slug>` — it reads the spec + codebase and drafts `../plans/<NN>-<slug>.md`.
 
