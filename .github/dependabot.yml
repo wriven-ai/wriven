@@ -1,15 +1,20 @@
 version: 2
 updates:
   # Single npm entry — pnpm uses one root lockfile for the whole monorepo.
-  # All minor/patch bumps bundled into ONE monthly PR; major bumps ignored
-  # (do those manually when you choose). Security alerts are separate (repo setting).
+  # `directories` (plural) + group-by: dependency-name is what actually merges
+  # the same dependency across apps/core-service, apps/auth-service, etc. into
+  # ONE PR instead of one per app — directory: / alone doesn't do this.
   - package-ecosystem: npm
-    directory: /
+    directories:
+      - '/'
+      - '/apps/*'
+      - '/libs/*'
     schedule:
       interval: monthly
     open-pull-requests-limit: 1
     groups:
       minor-and-patch:
+        group-by: dependency-name
         update-types:
           - minor
           - patch

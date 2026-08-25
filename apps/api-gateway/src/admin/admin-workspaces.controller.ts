@@ -38,6 +38,13 @@ export class AdminWorkspacesController {
     return firstValueFrom(this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_GET, { id }));
   }
 
+  @Get(':id/logs')
+  logs(@Param('id') id: string, @Query() query: contracts.WorkspaceLogQueryDto) {
+    return firstValueFrom(
+      this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_LOGS, { id, query }),
+    );
+  }
+
   @AdminRoles('admin')
   @Audit('workspace.setPlan', 'workspace')
   @Put(':id/plan')

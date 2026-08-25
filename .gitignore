@@ -78,6 +78,11 @@ env/
 /logs/
 *.log
 
+
+# /explain-me study notes — personal, local-only, don't commit
+doc/explanations/
+
+
 # Test coverage
 coverage/
 .nyc_output
