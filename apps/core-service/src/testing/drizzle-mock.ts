@@ -112,3 +112,18 @@ export function chainOf(
 > {
   return mock.mock.results[call].value;
 }
+
+/**
+ * Serialize a drizzle SQL fragment (where-clause, query args) with circular
+ * table refs cut, so bound params become assertable strings.
+ */
+export function serializeFragment(fragment: unknown): string {
+  const seen = new WeakSet();
+  return JSON.stringify(fragment, (_key, value: unknown) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[circular]';
+      seen.add(value);
+    }
+    return value;
+  });
+}
