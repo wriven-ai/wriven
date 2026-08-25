@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 concurrency:
@@ -33,10 +33,16 @@ jobs:
         id: base
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            SHA="${{ github.event.pull_request.base.sha }}"
           else
-            echo "sha=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            SHA="${{ github.event.before }}"
           fi
+          # Branch creation / force-push → event.before is all zeros; diff
+          # against the previous commit instead.
+          if [ "$SHA" = "0000000000000000000000000000000000000000" ]; then
+            SHA="HEAD~1"
+          fi
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
       # Unit suites are fully mocked — no DB/Stripe/R2 secrets needed.
       # Nx runs only the targets each project actually has (ai-service's
@@ -48,5 +54,5 @@ jobs:
 
       # Main pushes sweep everything, not just the affected graph.
       - name: Full test sweep (main only)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: pnpm nx run-many -t test
