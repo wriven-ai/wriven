@@ -319,12 +319,29 @@ describe('AiService.generate — idempotency (requestId replay)', () => {
     expect(replay.remaining).toBe(99);
   });
 
-  it('same key + DIFFERENT input → IDEMPOTENCY_KEY_REUSED', async () => {
+  it('same key + DIFFERENT input → IDEMPOTENCY_KEY_REUSED (hash sensitivity proven end-to-end)', async () => {
     const ctx = makeService();
     ctx.db.query.contentTypes.findFirst.mockResolvedValue(typeRow());
-    wireExisting(ctx.db, existingRow({ requestHash: 'different-hash' }));
 
-    const err = await rejection(ctx.service.generate({ ...base, dto: dto() }));
+    // First call stores the hash the service computed for this dto.
+    ctx.db.__tx.select
+      .mockImplementationOnce(() => chain([])) // existing-row lookup: none
+      .mockImplementationOnce(() => chain([{ n: 1 }])); // period count
+    ctx.db.__tx.insert.mockImplementationOnce(() => chain([{ id: 'gen-1' }]));
+    await ctx.service.generate({ ...base, dto: dto() });
+    const storedHash = (chainOf(ctx.db.__tx.insert).values.mock.calls[0][0] as Record<string, unknown>)
+      .requestHash as string;
+
+    // Same requestId, different instruction → the freshly computed hash must
+    // differ from the stored one, so the reserve rejects the reuse. (A literal
+    // fake hash here would not prove the service hashes input differences.)
+    wireExisting(ctx.db, existingRow({ requestHash: storedHash }));
+    const err = await rejection(
+      ctx.service.generate({
+        ...base,
+        dto: dto({ requestId: 'req-1', instruction: 'make it punchier' }),
+      }),
+    );
     expect(err.code).toBe('IDEMPOTENCY_KEY_REUSED');
   });
 
