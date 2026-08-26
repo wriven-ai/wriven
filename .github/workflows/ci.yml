@@ -26,6 +26,12 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # ai-service's test target runs `uv run pytest` (uv installs the env
+      # from uv.lock on first run).
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -45,8 +51,8 @@ jobs:
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
       # Unit suites are fully mocked — no DB/Stripe/R2 secrets needed.
-      # Nx runs only the targets each project actually has (ai-service's
-      # pytest and the client's next lint live outside this sweep).
+      # Nx runs only the targets each project actually has (the client's
+      # next lint lives outside this sweep).
       - name: Lint + typecheck + test (affected)
         run: >
           pnpm nx affected -t lint typecheck test
