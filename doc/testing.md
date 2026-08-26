@@ -63,9 +63,21 @@ Gateway/core have their own small `testing/` folders (`httpContext`, `httpHost`,
 - **HMAC recomputation** — webhook signatures verified by recomputing `createHmac('sha256', secret).update(\`${firedAt}.${body}\`)`, never by trusting the code under test.
 - **Cache-aware mocks** — services with a TTL cache (core `CoreEntitlementsService`, 30s) need distinct workspace IDs per sub-call in one test, or the cache swallows the second fetch.
 
+## Integration tests (Phase 3 — started)
+
+`apps/auth-service/test/integration/` — **real Postgres via testcontainers** (one ephemeral `postgres:16-alpine` container per spec file, the service's REAL migrations from `src/db/migrations`, `truncate()` between tests). Docker required; never touches dev/prod DBs.
+
+```bash
+pnpm nx test-integration @wriven/auth-service   # docker must be running
+```
+
+- Separate `jest.integ.config.cts` + `tsconfig.integration.json`; the unit suite excludes `test/` and stays docker-free. Target is `cache: false` (docker side effects).
+- Seams covered so far: invitation `accept` (upsert/`setWhere` guest-upgrade, no-downgrade, FK constraints, quota throw → real tx rollback with the invitation left pending), billing `swapPlan` (deferred downgrade pendingChange from the Stripe item period, upgrade mirror, Stripe-failure → no partial DB write, reactivation, free cancel).
+- Helpers: `test-db.ts` (`startTestDb()` → container/url/db/truncate/stop).
+
 ## Not covered (known gaps)
 
 - Controllers (`@MessagePattern` thin delegators) — no logic to test.
 - Concurrency/TOCTOU beyond the advisory-lock call assertions.
-- Real SQL behavior (constraint names, upsert semantics, `onConflict` clauses) — mock-level only. Phase 3 integration tests close this.
+- Integration seams still open (plan 17): quota advisory-lock serialization, webhook-reconciler idempotency via the real `stripe_events` unique index, cleanup-cron cutoffs.
 - ai-service provider orchestration depth; client/SDK UI tests.
