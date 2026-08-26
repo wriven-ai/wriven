@@ -29,17 +29,22 @@ Execution plan for the backend test effort. Unit layers (Phases 1–2) are **com
 
 **Unit scope is now complete across all services.** Remaining untested: controllers only (thin `@MessagePattern` delegators — not worth unit specs). Totals: auth 343 · gateway 81 · core 120 · contracts 23 = **567 tests**.
 
-## Phase 3 — Integration tests (pending)
+## Phase 3 — Integration tests (started)
 
-**Goal:** prove persistence + wiring claims the mocks can't see. Testcontainers Postgres, real service boot, real migrations (`drizzle-kit push`), no live Stripe/R2 (stripe-mock container or recorded fixtures; MinIO for S3-compatible).
+**Goal:** prove persistence + wiring claims the mocks can't see. Testcontainers Postgres (`@testcontainers/postgresql`, one `postgres:16-alpine` per spec file), REAL migrations from `src/db/migrations`, `truncate()` between tests, Stripe mocked at the client seam. Run: `pnpm nx test-integration @wriven/auth-service` (docker required; `cache: false`; unit suite stays docker-free via `testPathIgnorePatterns`).
 
-Priority seams, highest first:
+**Done (commit `17c2224`, 17 tests):**
+- Infrastructure: `test/integration/test-db.ts` helper + smoke spec
+- ~~billing `swapPlan`~~ — NOTE: swapPlan is sequential Stripe-then-DB writes (reconciler converges), not one tx. Proven instead: downgrade `pendingChange` from the real Stripe item period, upgrade mirror, **Stripe-failure → no partial DB write**, reactivation, free-cancel mirror
+- ~~invitation `accept`~~ — upsert/`setWhere` guest-upgrade under the real unique constraint, no-downgrade of higher roles, FK ordering, **quota throw → real tx rollback (invitation left pending, no seat consumed)**
 
-1. **billing `swapPlan`** — tx rollback when Stripe call fails mid-swap; `pendingChange` two-phase schedule state
-2. **invitation `accept`** — `onConflictDoUpdate` + `setWhere: role='guest'` upsert under real unique constraints
+Priority seams remaining:
+
 3. **quota asserts** — advisory lock actually serializes concurrent seat claims (TOCTOU)
 4. **webhook reconciler** — `stripeEvents` idempotency via real unique index; stale-guard with real timestamps
 5. **cleanup cron** — `lt(expiresAt, now)` deletes exactly expired rows
+
+Setup decisions still open: CI job shape (integration in the main workflow or separate docker-job workflow).
 
 Setup decisions pending: testcontainers vs docker-compose dev DB, per-suite schema isolation (`create schema` per run), CI job shape (separate workflow or same).
 
