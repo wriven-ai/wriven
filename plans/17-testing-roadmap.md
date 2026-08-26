@@ -44,7 +44,7 @@ Priority seams remaining:
 4. **webhook reconciler** — `stripeEvents` idempotency via real unique index; stale-guard with real timestamps
 5. **cleanup cron** — `lt(expiresAt, now)` deletes exactly expired rows
 
-Setup decisions still open: CI job shape (integration in the main workflow or separate docker-job workflow).
+CI: a dedicated `integration` job in `.github/workflows/ci.yml` runs `pnpm nx run-many -t test-integration` on every PR/push (ubuntu runners ship Docker; no extra setup).
 
 Setup decisions pending: testcontainers vs docker-compose dev DB, per-suite schema isolation (`create schema` per run), CI job shape (separate workflow or same).
 
