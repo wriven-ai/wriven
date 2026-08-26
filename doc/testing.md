@@ -72,12 +72,11 @@ pnpm nx test-integration @wriven/auth-service   # docker must be running
 ```
 
 - Separate `jest.integ.config.cts` + `tsconfig.integration.json`; the unit suite excludes `test/` and stays docker-free. Target is `cache: false` (docker side effects).
-- Seams covered so far: invitation `accept` (upsert/`setWhere` guest-upgrade, no-downgrade, FK constraints, quota throw → real tx rollback with the invitation left pending), billing `swapPlan` (deferred downgrade pendingChange from the Stripe item period, upgrade mirror, Stripe-failure → no partial DB write, reactivation, free cancel).
+- Seams covered: invitation `accept` (upsert/`setWhere` guest-upgrade, no-downgrade, FK constraints, quota throw → real tx rollback with the invitation left pending), billing `swapPlan` (deferred downgrade pendingChange from the Stripe item period, upgrade mirror, Stripe-failure → no partial DB write, reactivation, free cancel), **seat-quota advisory lock** (parallel claims on the last seat serialize — exactly one wins, loser rolls back), **webhook reconciler** (event-id re-delivery is a true no-op via the real unique index, strictly-older events skip state writes but dedupe, same-second applies, unmapped price → tx rollback of the idempotency insert), **cleanup cron** (exact expired-set deletes; revoked-but-unexpired refresh tokens kept for theft detection; retention window honored with the 90d default).
 - Helpers: `test-db.ts` (`startTestDb()` → container/url/db/truncate/stop).
 
 ## Not covered (known gaps)
 
 - Controllers (`@MessagePattern` thin delegators) — no logic to test.
-- Concurrency/TOCTOU beyond the advisory-lock call assertions.
-- Integration seams still open (plan 17): quota advisory-lock serialization, webhook-reconciler idempotency via the real `stripe_events` unique index, cleanup-cron cutoffs.
+- Concurrency/TOCTOU beyond the proven seat-quota advisory lock (other write paths assume serialized access by design).
 - ai-service provider orchestration depth; client/SDK UI tests.

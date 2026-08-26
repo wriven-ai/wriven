@@ -40,11 +40,13 @@ Execution plan for the backend test effort. Unit layers (Phases 1–2) are **com
 
 Priority seams remaining:
 
-3. **quota asserts** — advisory lock actually serializes concurrent seat claims (TOCTOU)
-4. **webhook reconciler** — `stripeEvents` idempotency via real unique index; stale-guard with real timestamps
-5. **cleanup cron** — `lt(expiresAt, now)` deletes exactly expired rows
+~~3. **quota asserts** — DONE: two PARALLEL invitation accepts on the last free seat → the `pg_advisory_xact_lock` serializes them; exactly one seat row lands, the loser rolls back to pending (`quota-lock.integ.spec.ts`)~~
+~~4. **webhook reconciler** — DONE: re-delivery of a known event id is a true no-op (real `stripe_events` unique index, row drift preserved), strictly-older events skip the state write but are still deduped, same-second events apply, unmapped price → INTERNAL_ERROR with the idempotency insert ROLLED BACK (`webhook-idempotency.integ.spec.ts`)~~
+~~5. **cleanup cron** — DONE: real `lt(expiresAt, now)` deletes exactly the expired set per token table; revoked-but-unexpired refresh tokens KEPT for theft detection; activity logs cut at the retention window, default 90d (`cleanup-cron.integ.spec.ts`)~~
 
 CI: a dedicated `integration` job in `.github/workflows/ci.yml` runs `pnpm nx run-many -t test-integration` on every PR/push (ubuntu runners ship Docker; no extra setup).
+
+**Phase 3 core seams complete — 27 integration tests.** Remaining backlog: replicate the integration harness in core-service if/when a core seam needs it; e2e journeys (lowest priority).
 
 Setup decisions pending: testcontainers vs docker-compose dev DB, per-suite schema isolation (`create schema` per run), CI job shape (separate workflow or same).
 
