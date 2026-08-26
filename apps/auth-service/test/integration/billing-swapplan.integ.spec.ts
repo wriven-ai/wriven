@@ -15,6 +15,8 @@ const STARTER_PLAN_ID = '66666666-6666-4666-8666-666666666666';
 /** Stripe item-level period (stripe@22 keeps it on the SubscriptionItem). */
 const PERIOD_END = Math.floor(Date.now() / 1000) + 30 * 86_400;
 
+jest.setTimeout(30_000);
+
 let testDb: TestDb;
 let db: TestDb['db'];
 let stripe: {

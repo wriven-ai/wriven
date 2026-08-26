@@ -11,6 +11,7 @@ module.exports = {
       { tsconfig: '<rootDir>/tsconfig.integration.json' },
     ],
   },
+  coverageDirectory: 'test-output/jest/coverage-integration',
   // Docker side effects are never cacheable.
   cache: false,
 };

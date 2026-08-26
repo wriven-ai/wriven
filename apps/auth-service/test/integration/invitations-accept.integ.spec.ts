@@ -10,6 +10,8 @@ import type { MailService } from '../../src/auth/mail.service';
 import * as schema from '../../src/db/schema';
 import { startTestDb, type TestDb } from './test-db';
 
+jest.setTimeout(30_000);
+
 const { users, workspaces, workspaceMembers, projects, projectMembers, invitations, plans, subscriptions } =
   schema;
 
@@ -104,7 +106,10 @@ async function memberRole(userId: string): Promise<string | undefined> {
 }
 
 async function invitationStatus(): Promise<string | undefined> {
-  const [row] = await db.select({ status: invitations.status }).from(invitations);
+  const [row] = await db
+    .select({ status: invitations.status })
+    .from(invitations)
+    .where(eq(invitations.email, 'invitee@example.com'));
   return row?.status;
 }
 
@@ -192,18 +197,18 @@ describe('InvitationsService.accept — against real Postgres', () => {
   it('wrong logged-in email → FORBIDDEN, no membership written', async () => {
     const token = await seedWorkspaceInvitation();
     await db.insert(users).values({
-      id: '33333333-3333-4333-8333-333333333333',
+      id: '99999999-9999-4999-8999-999999999999',
       email: 'other@example.com',
       name: 'Other',
       passwordHash: 'x',
     });
 
     const err = await rejection(
-      service.accept({ token, userId: '33333333-3333-4333-8333-333333333333' }),
+      service.accept({ token, userId: '99999999-9999-4999-8999-999999999999' }),
     );
 
     expect(err.code).toBe('FORBIDDEN');
-    expect(await memberRole('33333333-3333-4333-8333-333333333333')).toBeUndefined();
+    expect(await memberRole('99999999-9999-4999-8999-999999999999')).toBeUndefined();
   });
 
   it('project scope: baseline guest workspace seat + project membership, idempotent on re-run', async () => {

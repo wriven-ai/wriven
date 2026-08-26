@@ -8,6 +8,8 @@ const { users } = schema;
  * Infra smoke: proves the container boots, the REAL migrations apply, and
  * truncate() wipes between tests. Everything else in this tree builds on this.
  */
+jest.setTimeout(30_000);
+
 describe('integration test-db infrastructure', () => {
   let testDb: TestDb;
 
