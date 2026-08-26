@@ -6,7 +6,7 @@ import type { WebhooksService } from '../webhooks/webhooks.service';
 import type { CachePurgeService } from '../cache/cache-purge.service';
 import type { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 
 const { contentEntries, contentRevisions, aiGenerations } = schema;
 
@@ -80,8 +80,7 @@ const base = { workspaceId: 'ws-1', projectId: 'p1', userId: 'u1' };
 describe('EntriesService.create', () => {
   it('happy path: quota asserted, slug derived from the first text field, revision v1', async () => {
     const { service, db, entitlements } = makeService();
-    db.__tx.insert
-      .mockImplementationOnce(() => chain([entryRow()]))
+    db.__tx.insert.mockImplementationOnce(() => writeChain([entryRow()]))
       .mockImplementationOnce(() => chain([{ id: 'rev-1' }]));
 
     const view = await service.create({
@@ -104,8 +103,7 @@ describe('EntriesService.create', () => {
 
   it('created directly as published → publishedAt stamped', async () => {
     const { service, db } = makeService();
-    db.__tx.insert
-      .mockImplementationOnce(() => chain([entryRow({ status: 'published' })]))
+    db.__tx.insert.mockImplementationOnce(() => writeChain([entryRow({ status: 'published' })]))
       .mockImplementationOnce(() => chain([{ id: 'rev-1' }]));
 
     await service.create({
@@ -180,8 +178,8 @@ describe('EntriesService.update — webhook/cache side effects', () => {
     const ctx = makeService();
     ctx.db.query.contentEntries.findFirst.mockResolvedValue(entryRow(entry));
     ctx.db.select.mockImplementationOnce(() => chain([{ v: 2 }])); // nextVersion → 3
-    ctx.db.__tx.update.mockImplementationOnce(() => chain([entryRow(updated)]));
-    ctx.db.__tx.insert.mockImplementationOnce(() => chain([{ id: 'rev-2' }]));
+    ctx.db.__tx.update.mockImplementationOnce(() => writeChain([entryRow(updated)]));
+    ctx.db.__tx.insert.mockImplementationOnce(() => writeChain([{ id: 'rev-2' }]));
     return ctx;
   }
 
@@ -264,7 +262,7 @@ describe('EntriesService.remove / listRevisions / restoreRevision', () => {
     ctx.db.query.contentEntries.findFirst.mockResolvedValue(
       entryRow({ status: 'published', publishedAt: T0 }),
     );
-    ctx.db.update.mockImplementationOnce(() => chain([entryRow()]));
+    ctx.db.update.mockImplementationOnce(() => writeChain([entryRow()]));
 
     await expect(ctx.service.remove({ workspaceId: 'ws-1', projectId: 'p1', id: 'e-1' })).resolves.toEqual({
       success: true,
@@ -280,7 +278,7 @@ describe('EntriesService.remove / listRevisions / restoreRevision', () => {
   it('removing a draft fires no webhook', async () => {
     const ctx = makeService();
     ctx.db.query.contentEntries.findFirst.mockResolvedValue(entryRow());
-    ctx.db.update.mockImplementationOnce(() => chain([entryRow()]));
+    ctx.db.update.mockImplementationOnce(() => writeChain([entryRow()]));
 
     await ctx.service.remove({ workspaceId: 'ws-1', projectId: 'p1', id: 'e-1' });
     await tick();
@@ -304,9 +302,9 @@ describe('EntriesService.remove / listRevisions / restoreRevision', () => {
     });
     ctx.db.select.mockImplementationOnce(() => chain([{ v: 2 }]));
     ctx.db.__tx.update.mockImplementationOnce(() =>
-      chain([entryRow({ status: 'published', publishedAt: T0, data: { title: 'Old', body: 'Older' } })]),
+      writeChain([entryRow({ status: 'published', publishedAt: T0, data: { title: 'Old', body: 'Older' } })]),
     );
-    ctx.db.__tx.insert.mockImplementationOnce(() => chain([]));
+    ctx.db.__tx.insert.mockImplementationOnce(() => writeChain([]));
 
     const view = await ctx.service.restoreRevision({
       ...base,
@@ -355,8 +353,8 @@ describe('EntriesService — AI generation provenance (linkAiGenerationsToRevisi
     const ctx = makeService();
     ctx.db.query.contentEntries.findFirst.mockResolvedValue(entryRow());
     ctx.db.select.mockImplementationOnce(() => chain([{ v: 2 }]));
-    ctx.db.__tx.update.mockImplementationOnce(() => chain([entryRow()]));
-    ctx.db.__tx.insert.mockImplementationOnce(() => chain([{ id: 'rev-2' }]));
+    ctx.db.__tx.update.mockImplementationOnce(() => writeChain([entryRow()]));
+    ctx.db.__tx.insert.mockImplementationOnce(() => writeChain([{ id: 'rev-2' }]));
     return ctx;
   }
 

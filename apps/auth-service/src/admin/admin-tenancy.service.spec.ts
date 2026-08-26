@@ -1,7 +1,7 @@
 import { RpcException } from '@nestjs/microservices';
 import { AdminTenancyService } from './admin-tenancy.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { userRow, workspaceRow } from '../testing/fixtures';
 
 const { refreshTokens, projects } = schema;
@@ -82,8 +82,7 @@ describe('AdminTenancyService.getUser', () => {
 describe('AdminTenancyService.updateUser', () => {
   it('suspending stamps suspendedAt AND revokes every refresh token', async () => {
     const { service, db } = makeService();
-    db.update
-      .mockImplementationOnce(() => chain([userRow({ suspendedAt: T0 })])) // users
+    db.update.mockImplementationOnce(() => writeChain([userRow({ suspendedAt: T0 })])) // users
       .mockImplementationOnce(() => chain([])); // refreshTokens
     db.select.mockImplementationOnce(() => chain([{ id: USER_ID, c: 1 }]));
 
@@ -99,7 +98,7 @@ describe('AdminTenancyService.updateUser', () => {
 
   it('unsuspending clears suspendedAt and leaves sessions alone', async () => {
     const { service, db } = makeService();
-    db.update.mockImplementationOnce(() => chain([userRow()]));
+    db.update.mockImplementationOnce(() => writeChain([userRow()]));
     db.select.mockImplementationOnce(() => chain([{ id: USER_ID, c: 1 }]));
 
     await service.updateUser({ id: USER_ID, dto: { suspended: false } });
@@ -110,7 +109,7 @@ describe('AdminTenancyService.updateUser', () => {
 
   it('update matching no row → NOT_FOUND', async () => {
     const { service, db } = makeService();
-    db.update.mockImplementationOnce(() => chain([]));
+    db.update.mockImplementationOnce(() => writeChain([]));
 
     const err = await rejection(
       service.updateUser({ id: 'nope', dto: { emailVerified: true } }),
@@ -122,7 +121,7 @@ describe('AdminTenancyService.updateUser', () => {
 describe('AdminTenancyService.deleteUser', () => {
   it('missing row → NOT_FOUND', async () => {
     const { service, db } = makeService();
-    db.delete.mockImplementationOnce(() => chain([]));
+    db.delete.mockImplementationOnce(() => writeChain([]));
 
     const err = await rejection(service.deleteUser({ id: 'nope' }));
     expect(err.code).toBe('NOT_FOUND');
@@ -223,12 +222,12 @@ describe('AdminTenancyService.getWorkspace / workspaceExists / deleteProject', (
 
   it('deleteProject soft-deletes; missing → NOT_FOUND', async () => {
     const { service, db } = makeService();
-    db.update.mockImplementationOnce(() => chain([{ id: 'p1' }]));
+    db.update.mockImplementationOnce(() => writeChain([{ id: 'p1' }]));
     await expect(service.deleteProject({ id: 'p1' })).resolves.toEqual({ success: true });
     expect(chainOf(db.update).set).toHaveBeenCalledWith({ deletedAt: expect.any(Date) });
     expect(db.update).toHaveBeenCalledWith(projects);
 
-    db.update.mockImplementationOnce(() => chain([]));
+    db.update.mockImplementationOnce(() => writeChain([]));
     const err = await rejection(service.deleteProject({ id: 'nope' }));
     expect(err.code).toBe('NOT_FOUND');
   });

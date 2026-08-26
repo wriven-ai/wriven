@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import type Stripe from 'stripe';
 import { StripeWebhookService } from './stripe-webhook.service';
 import type { BillingService } from './billing.service';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { setEnv } from '../testing/env';
 import { asStripe, createStripeMock } from '../testing/stripe-mock';
 import { planRow, stripeSub } from '../testing/fixtures';
@@ -41,7 +41,7 @@ function makeService() {
 
 /** First tx.insert (stripeEvents) returns a fresh row → event is new. */
 function freshEvent(tx: ReturnType<typeof createDbMock>['__tx']) {
-  tx.insert.mockImplementationOnce(() => chain([{ id: 'se-1' }]));
+  tx.insert.mockImplementationOnce(() => writeChain([{ id: 'se-1' }]));
 }
 
 describe('StripeWebhookService.handleEvent — idempotency + dispatch', () => {
@@ -151,7 +151,7 @@ describe('StripeWebhookService — syncSubscription', () => {
       stripeEventCreatedAt: new Date(EVT_CREATED * 1000),
       pendingChange: null,
     });
-    tx.update.mockImplementationOnce(() => chain([{ id: 'sub-row' }]));
+    tx.update.mockImplementationOnce(() => writeChain([{ id: 'sub-row' }]));
 
     await service.handleEvent(
       stripeEvent('customer.subscription.updated', stripeSub()),
@@ -182,7 +182,7 @@ describe('StripeWebhookService — syncSubscription', () => {
   ])('maps Stripe status %s → %s', async (stripe, expected) => {
     const { service, tx } = makeService();
     freshEvent(tx);
-    tx.update.mockImplementationOnce(() => chain([{ id: 'sub-row' }]));
+    tx.update.mockImplementationOnce(() => writeChain([{ id: 'sub-row' }]));
 
     await service.handleEvent(
       stripeEvent(
@@ -199,7 +199,7 @@ describe('StripeWebhookService — syncSubscription', () => {
   it('yearly interval + item-level period dates land on the row', async () => {
     const { service, tx } = makeService();
     freshEvent(tx);
-    tx.update.mockImplementationOnce(() => chain([{ id: 'sub-row' }]));
+    tx.update.mockImplementationOnce(() => writeChain([{ id: 'sub-row' }]));
 
     await service.handleEvent(
       stripeEvent(
@@ -239,7 +239,7 @@ describe('StripeWebhookService — syncSubscription', () => {
       stripeEventCreatedAt: new Date(0),
       pendingChange: { planKey: 'pro' }, // matches the stub plan below
     });
-    tx.update.mockImplementationOnce(() => chain([{ id: 'sub-row' }]));
+    tx.update.mockImplementationOnce(() => writeChain([{ id: 'sub-row' }]));
 
     await service.handleEvent(
       stripeEvent('customer.subscription.updated', stripeSub()),
@@ -259,7 +259,7 @@ describe('StripeWebhookService — syncSubscription', () => {
       stripeEventCreatedAt: new Date(0),
       pendingChange: { planKey: 'pro' },
     });
-    tx.update.mockImplementationOnce(() => chain([{ id: 'sub-row' }]));
+    tx.update.mockImplementationOnce(() => writeChain([{ id: 'sub-row' }]));
 
     await service.handleEvent(
       stripeEvent('customer.subscription.updated', stripeSub()),
@@ -294,8 +294,7 @@ describe('StripeWebhookService — syncSubscription', () => {
   it('self-heal insert also conflicts (newer sub owns the row) → warn no-op, ok', async () => {
     const { service, tx } = makeService();
     freshEvent(tx);
-    tx.insert
-      .mockImplementationOnce(() => chain([{ id: 'se-1' }]))
+    tx.insert.mockImplementationOnce(() => writeChain([{ id: 'se-1' }]))
       .mockImplementationOnce(() => chain([]));
 
     const result = await service.handleEvent(

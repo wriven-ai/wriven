@@ -1,5 +1,5 @@
 import { AdminMetricsService } from './admin-metrics.service';
-import { asDb, chain, createDbMock } from '../testing/drizzle-mock';
+import { chain, asDb, createDbMock } from '../testing/drizzle-mock';
 import { planRow } from '../testing/fixtures';
 
 function makeService() {

@@ -9,7 +9,7 @@ import type { InvitationsService } from './invitations.service';
 import type { MailService } from './mail.service';
 import { TokenService } from './token.service';
 import { configStub } from '../testing/config-stub';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { userRow, workspaceRow } from '../testing/fixtures';
 import * as schema from '../db/schema';
 
@@ -208,8 +208,7 @@ describe('AuthService.register', () => {
     const { service, tx, invitations } = makeService();
     const user = userRow({ email: dto.email, name: dto.name });
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
-    tx.insert
-      .mockImplementationOnce(() => chain([user]))
+    tx.insert.mockImplementationOnce(() => writeChain([user]))
       .mockImplementationOnce(() => chain([workspaceRow()]));
 
     const result = await service.register(dto);
@@ -239,8 +238,7 @@ describe('AuthService.register', () => {
   it('missing free plan: skips the subscription insert, still succeeds', async () => {
     const { service, tx } = makeService();
     tx.query.plans.findFirst.mockResolvedValue(undefined);
-    tx.insert
-      .mockImplementationOnce(() => chain([userRow({ email: dto.email })]))
+    tx.insert.mockImplementationOnce(() => writeChain([userRow({ email: dto.email })]))
       .mockImplementationOnce(() => chain([workspaceRow()]));
 
     const result = await service.register(dto);
@@ -273,8 +271,7 @@ describe('AuthService.register', () => {
       code: '23505',
       constraint: 'workspaces_created_by_slug_uq',
     });
-    tx.insert
-      .mockImplementationOnce(() => chain([userRow({ email: dto.email })]))
+    tx.insert.mockImplementationOnce(() => writeChain([userRow({ email: dto.email })]))
       .mockImplementationOnce(() => {
         throw dup;
       });
@@ -293,8 +290,7 @@ describe('AuthService.register', () => {
   it('invite auto-claim failure is swallowed', async () => {
     const { service, tx, invitations } = makeService();
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
-    tx.insert
-      .mockImplementationOnce(() => chain([userRow({ email: dto.email })]))
+    tx.insert.mockImplementationOnce(() => writeChain([userRow({ email: dto.email })]))
       .mockImplementationOnce(() => chain([workspaceRow()]));
     invitations.claimPending.mockRejectedValue(new Error('invite svc down'));
 
@@ -563,7 +559,7 @@ describe('AuthService.verifyEmailCode', () => {
     db.query.emailVerificationTokens.findFirst.mockResolvedValue(
       codeRow({ attempts: 2 }),
     );
-    db.update.mockImplementationOnce(() => chain([{ attempts: 3 }]));
+    db.update.mockImplementationOnce(() => writeChain([{ attempts: 3 }]));
 
     const err = await rejection(
       service.verifyEmailCode({ userId, code: '123456' }),
@@ -583,7 +579,7 @@ describe('AuthService.verifyEmailCode', () => {
     db.query.emailVerificationTokens.findFirst.mockResolvedValue(
       codeRow({ attempts: 3 }),
     );
-    db.update.mockImplementationOnce(() => chain([{ attempts: 4 }]));
+    db.update.mockImplementationOnce(() => writeChain([{ attempts: 4 }]));
 
     const err = await rejection(
       service.verifyEmailCode({ userId, code: '123456' }),
@@ -616,7 +612,7 @@ describe('AuthService.verifyEmailCode', () => {
     db.query.emailVerificationTokens.findFirst.mockResolvedValue(
       codeRow({ codeHash: 'deadbeef', attempts: 0 }),
     );
-    db.update.mockImplementationOnce(() => chain([{ attempts: 1 }]));
+    db.update.mockImplementationOnce(() => writeChain([{ attempts: 1 }]));
 
     const err = await rejection(
       service.verifyEmailCode({ userId, code: '123456' }),
@@ -688,7 +684,7 @@ describe('AuthService.googleLogin', () => {
       .mockResolvedValueOnce(undefined) // by providerId
       .mockResolvedValueOnce(local); // by email
     db.update.mockImplementationOnce(() =>
-      chain([
+      writeChain([
         { ...local, providerId: 'g-1', emailVerified: true, avatar: profile.avatar },
       ]),
     );
@@ -716,8 +712,7 @@ describe('AuthService.googleLogin', () => {
       emailVerified: true,
     });
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
-    tx.insert
-      .mockImplementationOnce(() => chain([googleUser]))
+    tx.insert.mockImplementationOnce(() => writeChain([googleUser]))
       .mockImplementationOnce(() => chain([workspaceRow()]));
     withPrimaryWorkspace(db);
 
@@ -745,7 +740,7 @@ describe('AuthService.updateProfile', () => {
     const existing = userRow({ avatar: 'avatars/old/key.png' });
     db.query.users.findFirst.mockResolvedValue(existing);
     db.update.mockImplementationOnce(() =>
-      chain([{ ...existing, avatar: null }]),
+      writeChain([{ ...existing, avatar: null }]),
     );
 
     const result = await service.updateProfile({
@@ -762,7 +757,7 @@ describe('AuthService.updateProfile', () => {
     const existing = userRow();
     db.query.users.findFirst.mockResolvedValue(existing);
     db.update.mockImplementationOnce(() =>
-      chain([{ ...existing, avatar: 'https://x.example/a.png' }]),
+      writeChain([{ ...existing, avatar: 'https://x.example/a.png' }]),
     );
 
     await service.updateProfile({
@@ -779,7 +774,7 @@ describe('AuthService.updateProfile', () => {
     const { service, db } = makeService();
     const existing = userRow();
     db.query.users.findFirst.mockResolvedValue(existing);
-    db.update.mockImplementationOnce(() => chain([existing]));
+    db.update.mockImplementationOnce(() => writeChain([existing]));
 
     await service.updateProfile({
       userId: existing.id,
@@ -807,7 +802,7 @@ describe('AuthService.updateProfile', () => {
     const existing = userRow({ avatar: 'avatars/u1/k.png' });
     db.query.users.findFirst.mockResolvedValue(existing);
     db.update.mockImplementationOnce(() =>
-      chain([{ ...existing, name: 'Renamed' }]),
+      writeChain([{ ...existing, name: 'Renamed' }]),
     );
 
     const result = await service.updateProfile({

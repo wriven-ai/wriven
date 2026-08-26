@@ -1,6 +1,6 @@
 import { AdminAuditService } from './admin-audit.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 
 const { adminAuditLog } = schema;
 
@@ -15,7 +15,7 @@ function makeService() {
 describe('AdminAuditService.write', () => {
   it('normalizes optional fields and appends', async () => {
     const { service, db } = makeService();
-    db.insert.mockImplementationOnce(() => chain([]));
+    db.insert.mockImplementationOnce(() => writeChain([]));
 
     await service.write({ adminUserId: 'a-1', action: 'plan.updated' });
 

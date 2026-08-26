@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { AdminAuthService } from './admin-auth.service';
 import type { AdminTokenService } from './admin-token.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';
+import { writeChain, asDb, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';
 
 const { adminRefreshTokens } = schema;
 
@@ -106,8 +106,8 @@ describe('AdminAuthService.login', () => {
     const { service, db } = makeService();
     db.query.adminUsers.findFirst.mockResolvedValue(adminRow());
     compare.mockResolvedValueOnce(true);
-    db.insert.mockImplementationOnce(() => chain([]));
-    db.update.mockImplementationOnce(() => chain([adminRow()]));
+    db.insert.mockImplementationOnce(() => writeChain([]));
+    db.update.mockImplementationOnce(() => writeChain([adminRow()]));
 
     const result = await service.login({ email: 'admin@wriven.dev', password: 'pw' });
 
@@ -150,7 +150,7 @@ describe('AdminAuthService.refresh — rotation + theft detection', () => {
     db.query.adminRefreshTokens.findFirst.mockResolvedValue(
       refreshTokenRow({ revoked: true }),
     );
-    db.update.mockImplementationOnce(() => chain([]));
+    db.update.mockImplementationOnce(() => writeChain([]));
 
     const err = await rejection(service.refresh({ refreshToken: 'raw-token' }));
 
@@ -209,7 +209,7 @@ describe('AdminAuthService.refresh — rotation + theft detection', () => {
 describe('AdminAuthService.logout / getById', () => {
   it('logout revokes exactly the presented token', async () => {
     const { service, db } = makeService();
-    db.update.mockImplementationOnce(() => chain([]));
+    db.update.mockImplementationOnce(() => writeChain([]));
 
     await expect(
       service.logout({ refreshToken: 'raw-token' }),

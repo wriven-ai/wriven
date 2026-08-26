@@ -8,7 +8,7 @@ import type { EntitlementsService } from './entitlements.service';
 import type { ProjectsService } from './projects.service';
 import type { MailService } from './mail.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock, serializeFragment, type DbMock } from '../testing/drizzle-mock';
+import { writeChain, asDb, chainOf, createDbMock, serializeFragment, type DbMock } from '../testing/drizzle-mock';
 import { configStub } from '../testing/config-stub';
 import { userRow } from '../testing/fixtures';
 
@@ -90,7 +90,7 @@ describe('InvitationsService.create', () => {
   it('workspace scope: authorizes, stores only the sha256 of a 32-byte token, mails the raw link', async () => {
     const { service, db, mail } = makeService();
     routeUsers(db, undefined, userRow({ name: 'Inviter' })); // no invitee account yet
-    db.insert.mockImplementationOnce(() => chain([invitationRow()]));
+    db.insert.mockImplementationOnce(() => writeChain([invitationRow()]));
     db.query.workspaces.findFirst.mockResolvedValue({ name: 'Acme' });
 
     const view = await service.create({
@@ -127,7 +127,7 @@ describe('InvitationsService.create', () => {
         return { name: 'Blog' };
       },
     );
-    db.insert.mockImplementationOnce(() => chain([invitationRow({ scope: 'project', projectId: 'p1' })]));
+    db.insert.mockImplementationOnce(() => writeChain([invitationRow({ scope: 'project', projectId: 'p1' })]));
 
     await service.create({
       callerUserId: USER_ID,
@@ -168,7 +168,7 @@ describe('InvitationsService.create', () => {
   it('revokes any older pending invite for the same email before inserting', async () => {
     const { service, db } = makeService();
     routeUsers(db, undefined, null);
-    db.insert.mockImplementationOnce(() => chain([invitationRow()]));
+    db.insert.mockImplementationOnce(() => writeChain([invitationRow()]));
 
     await service.create({
       callerUserId: USER_ID,
@@ -204,7 +204,7 @@ describe('InvitationsService.create', () => {
     const { service, db } = makeService();
     routeUsers(db, userRow({ id: 'u-2' }), null);
     db.query.workspaceMembers.findFirst.mockResolvedValue({ role: 'guest' });
-    db.insert.mockImplementationOnce(() => chain([invitationRow()]));
+    db.insert.mockImplementationOnce(() => writeChain([invitationRow()]));
 
     await expect(
       service.create({
@@ -225,8 +225,8 @@ describe('InvitationsService.accept', () => {
     db.query.invitations.findFirst.mockResolvedValue(invitationRow());
     routeUsers(db, userRow({ id: 'u-2', email: 'invitee@example.com' }), null);
     db.__tx.query.workspaceMembers.findFirst.mockResolvedValue(undefined);
-    db.__tx.insert.mockImplementationOnce(() => chain([]));
-    db.__tx.update.mockImplementationOnce(() => chain([]));
+    db.__tx.insert.mockImplementationOnce(() => writeChain([]));
+    db.__tx.update.mockImplementationOnce(() => writeChain([]));
     db.query.workspaces.findFirst.mockResolvedValue({ slug: 'acme' });
 
     const result = await service.accept({ token: 'raw-token', userId: 'u-2' });
@@ -267,8 +267,8 @@ describe('InvitationsService.accept', () => {
       invitationRow({ scope: 'project', projectId: 'p1', role: 'editor' }),
     );
     routeUsers(db, userRow({ id: 'u-2', email: 'invitee@example.com' }), null);
-    db.__tx.insert.mockImplementationOnce(() => chain([]));
-    db.__tx.update.mockImplementationOnce(() => chain([]));
+    db.__tx.insert.mockImplementationOnce(() => writeChain([]));
+    db.__tx.update.mockImplementationOnce(() => writeChain([]));
     db.query.workspaces.findFirst.mockResolvedValue({ slug: 'acme' });
     db.query.projects.findFirst.mockResolvedValue({ slug: 'blog' });
 
@@ -361,7 +361,7 @@ describe('InvitationsService.revoke / resend', () => {
   it('revoke: authorizes at the invite scope and returns the workspaceId', async () => {
     const { service, db, authz } = makeService();
     db.query.invitations.findFirst.mockResolvedValue(invitationRow());
-    db.update.mockImplementationOnce(() => chain([invitationRow({ status: 'revoked' })]));
+    db.update.mockImplementationOnce(() => writeChain([invitationRow({ status: 'revoked' })]));
 
     const result = await service.revoke({ callerUserId: USER_ID, id: 'inv-1' });
 
@@ -389,7 +389,7 @@ describe('InvitationsService.revoke / resend', () => {
   it('resend: rotates the token hash and resets the TTL, re-mails', async () => {
     const { service, db, mail } = makeService();
     db.query.invitations.findFirst.mockResolvedValue(invitationRow({ tokenHash: 'old' }));
-    db.update.mockImplementationOnce(() => chain([invitationRow()]));
+    db.update.mockImplementationOnce(() => writeChain([invitationRow()]));
     routeUsers(db, undefined, userRow({ name: 'Inviter' }));
     db.query.workspaces.findFirst.mockResolvedValue({ name: 'Acme' });
 

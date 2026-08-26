@@ -5,7 +5,7 @@ import { AiService } from './ai.service';
 import { AiClientError, type AiClient } from './ai-client.interface';
 import type { AiProfileService } from './ai-profile.service';
 import type { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { configStub } from '../testing/config-stub';
 
 const FIELDS = [
@@ -67,7 +67,7 @@ function wireFreshReserve(db: ReturnType<typeof createDbMock>, periodCount: numb
   db.__tx.select
     .mockImplementationOnce(() => chain([])) // existing idempotency row: none
     .mockImplementationOnce(() => chain([{ n: periodCount }]));
-  db.__tx.insert.mockImplementationOnce(() => chain([{ id: 'gen-1' }]));
+  db.__tx.insert.mockImplementationOnce(() => writeChain([{ id: 'gen-1' }]));
 }
 
 async function rejection(promise: Promise<unknown>) {
@@ -211,7 +211,7 @@ describe('AiService.generate — happy path (field)', () => {
     const ctx = makeService({ limit: null });
     ctx.db.query.contentTypes.findFirst.mockResolvedValue(typeRow());
     ctx.db.__tx.select.mockImplementationOnce(() => chain([])); // existing: none
-    ctx.db.__tx.insert.mockImplementationOnce(() => chain([{ id: 'gen-1' }]));
+    ctx.db.__tx.insert.mockImplementationOnce(() => writeChain([{ id: 'gen-1' }]));
     // No count query on the unlimited path.
 
     const result = await ctx.service.generate({ ...base, dto: dto() });
@@ -231,7 +231,7 @@ describe('AiService.generate — provider failure', () => {
     const ctx = makeService({ generate: jest.fn().mockRejectedValue(failure) });
     ctx.db.query.contentTypes.findFirst.mockResolvedValue(typeRow());
     wireFreshReserve(ctx.db, 1);
-    ctx.db.update.mockImplementationOnce(() => chain([]));
+    ctx.db.update.mockImplementationOnce(() => writeChain([]));
 
     const err = await rejection(ctx.service.generate({ ...base, dto: dto() }));
 
@@ -299,7 +299,7 @@ describe('AiService.generate — idempotency (requestId replay)', () => {
     // that will match by running the identical dto — simulate via capturing
     // the requestHash the service stores on a fresh reserve, then replay.
     ctx.db.__tx.select.mockImplementationOnce(() => chain([])); // no existing row
-    ctx.db.__tx.insert.mockImplementationOnce(() => chain([{ id: 'gen-1' }]));
+    ctx.db.__tx.insert.mockImplementationOnce(() => writeChain([{ id: 'gen-1' }]));
     ctx.db.__tx.select.mockImplementationOnce(() => chain([{ n: 1 }]));
     await ctx.service.generate({ ...base, dto: dto() });
     const storedHash = (chainOf(ctx.db.__tx.insert).values.mock.calls[0][0] as Record<string, unknown>)
@@ -327,7 +327,7 @@ describe('AiService.generate — idempotency (requestId replay)', () => {
     ctx.db.__tx.select
       .mockImplementationOnce(() => chain([])) // existing-row lookup: none
       .mockImplementationOnce(() => chain([{ n: 1 }])); // period count
-    ctx.db.__tx.insert.mockImplementationOnce(() => chain([{ id: 'gen-1' }]));
+    ctx.db.__tx.insert.mockImplementationOnce(() => writeChain([{ id: 'gen-1' }]));
     await ctx.service.generate({ ...base, dto: dto() });
     const storedHash = (chainOf(ctx.db.__tx.insert).values.mock.calls[0][0] as Record<string, unknown>)
       .requestHash as string;
@@ -393,7 +393,7 @@ describe('AiService.generate — idempotency (requestId replay)', () => {
 describe('AiService.redactExpiredAuditData — retention', () => {
   it('nulls recoverable content past the window and reports the count', async () => {
     const ctx = makeService();
-    ctx.db.update.mockImplementationOnce(() => chain([{ n: 7 }]));
+    ctx.db.update.mockImplementationOnce(() => writeChain([{ n: 7 }]));
 
     const n = await ctx.service.redactExpiredAuditData();
 

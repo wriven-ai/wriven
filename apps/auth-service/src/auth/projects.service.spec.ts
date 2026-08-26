@@ -5,7 +5,7 @@ import type { AuthorizationService } from './authorization.service';
 import type { EntitlementsService } from './entitlements.service';
 import type { MembersService } from './members.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { userRow } from '../testing/fixtures';
 
 const { projects, projectMembers, workspaceMembers } = schema;
@@ -67,8 +67,7 @@ async function rejection(promise: Promise<unknown>) {
 describe('ProjectsService.create', () => {
   it('creates inside a tx: quota assert, project row, creator as project admin', async () => {
     const { service, db, entitlements } = makeService();
-    db.__tx.insert
-      .mockImplementationOnce(() => chain([projectRow()]))
+    db.__tx.insert.mockImplementationOnce(() => writeChain([projectRow()]))
       .mockImplementationOnce(() => chain([]));
 
     const view = await service.create({
@@ -165,7 +164,7 @@ describe('ProjectsService.list — scope-driven visibility', () => {
 describe('ProjectsService.update', () => {
   it('slug is normalized and only provided fields are written', async () => {
     const { service, db } = makeService();
-    db.update.mockImplementationOnce(() => chain([projectRow({ name: 'New', slug: 'my-blog' })]));
+    db.update.mockImplementationOnce(() => writeChain([projectRow({ name: 'New', slug: 'my-blog' })]));
     db.query.projectMembers.findFirst.mockResolvedValue({ role: 'editor' });
 
     const view = await service.update({
@@ -199,7 +198,7 @@ describe('ProjectsService.remove — soft delete', () => {
   it('marks deletedAt and returns the owning workspaceId for activity logging', async () => {
     const { service, db, authz } = makeService();
     db.select.mockImplementationOnce(() => chain([{ workspaceId: 'ws-9' }]));
-    db.update.mockImplementationOnce(() => chain([projectRow()]));
+    db.update.mockImplementationOnce(() => writeChain([projectRow()]));
 
     const result = await service.remove({ callerUserId: USER_ID, projectId: 'p1' });
 
@@ -217,8 +216,7 @@ describe('ProjectsService.addMember', () => {
   it('baseline workspace membership + project membership in one tx', async () => {
     const { service, db, entitlements } = makeService();
     db.query.projects.findFirst.mockResolvedValue(projectRow());
-    db.__tx.insert
-      .mockImplementationOnce(() => chain([])) // workspaceMembers (guest seat)
+    db.__tx.insert.mockImplementationOnce(() => writeChain([])) // workspaceMembers (guest seat)
       .mockImplementationOnce(() => chain([{ id: 'pm-1', projectId: 'p1', userId: 'u-2', role: 'editor', createdAt: T0 }]));
 
     const view = await service.addMember({
@@ -306,7 +304,7 @@ describe('ProjectsService.ensureWorkspaceMember', () => {
   it('new seat → quota asserted, guest row inserted with conflict-do-nothing', async () => {
     const { service, db, entitlements } = makeService();
     db.__tx.query.workspaceMembers.findFirst.mockResolvedValue(undefined);
-    db.__tx.insert.mockImplementationOnce(() => chain([]));
+    db.__tx.insert.mockImplementationOnce(() => writeChain([]));
 
     await service.ensureWorkspaceMember(asTx(db.__tx), 'ws-1', 'u-2');
 

@@ -2,7 +2,7 @@ import { RpcException } from '@nestjs/microservices';
 import { MediaService } from './media.service';
 import type { StorageService } from '../storage/storage.service';
 import type { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 
 function makeService() {
   const db = createDbMock();
@@ -187,7 +187,7 @@ describe('MediaService.create — key pinning + conflict', () => {
 
   it('kind is derived from the mime when present', async () => {
     const { service, db } = makeService();
-    db.insert.mockImplementationOnce(() => chain([{
+    db.insert.mockImplementationOnce(() => writeChain([{
       id: 'm-1', workspaceId: 'ws-1', projectId: 'p1',
       r2Key: 'projects/p1/a.png', kind: 'image', mime: 'image/png',
       sizeBytes: null, width: null, height: null, alt: null,

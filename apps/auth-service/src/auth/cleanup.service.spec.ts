@@ -1,6 +1,6 @@
 import { CleanupService } from './cleanup.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';import { setEnv } from '../testing/env';
+import { writeChain, asDb, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';import { setEnv } from '../testing/env';
 
 const { refreshTokens, passwordResetTokens, emailVerificationTokens, workspaceActivityLog } =
   schema;
@@ -31,7 +31,7 @@ afterEach(() => {
 describe('CleanupService.pruneExpiredTokens', () => {
   it('deletes expired rows from all three token tables', async () => {
     const { service, db } = makeService();
-    db.delete.mockImplementation(() => chain([{ id: 'x' }]));
+    db.delete.mockImplementation(() => writeChain([{ id: 'x' }]));
 
     await service.pruneExpiredTokens();
 
@@ -47,7 +47,7 @@ describe('CleanupService.pruneExpiredTokens', () => {
 describe('CleanupService.pruneActivityLogs', () => {
   it('cuts off at exactly now − retention days', async () => {
     const { service, db } = makeService();
-    db.delete.mockImplementation(() => chain([]));
+    db.delete.mockImplementation(() => writeChain([]));
     setEnv({ WORKSPACE_LOG_RETENTION_DAYS: '30' });
 
     await service.pruneActivityLogs();
@@ -59,7 +59,7 @@ describe('CleanupService.pruneActivityLogs', () => {
 
   it('garbage retention env falls back to 90 days', async () => {
     const { service, db } = makeService();
-    db.delete.mockImplementation(() => chain([]));
+    db.delete.mockImplementation(() => writeChain([]));
     setEnv({ WORKSPACE_LOG_RETENTION_DAYS: 'not-a-number' });
 
     await service.pruneActivityLogs();
@@ -70,7 +70,7 @@ describe('CleanupService.pruneActivityLogs', () => {
 
   it('zero/negative retention also falls back to 90 days', async () => {
     const { service, db } = makeService();
-    db.delete.mockImplementation(() => chain([]));
+    db.delete.mockImplementation(() => writeChain([]));
     setEnv({ WORKSPACE_LOG_RETENTION_DAYS: '-5' });
 
     await service.pruneActivityLogs();

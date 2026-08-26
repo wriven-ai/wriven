@@ -2,7 +2,7 @@ import { RpcException } from '@nestjs/microservices';
 import * as bcrypt from 'bcrypt';
 import { AdminUsersService } from './admin-users.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { configStub } from '../testing/config-stub';
 
 const { adminUsers } = schema;
@@ -61,7 +61,7 @@ describe('AdminUsersService.create', () => {
 
   it('hashes with the configured rounds and never returns the hash', async () => {
     const { service, db } = makeService();
-    db.insert.mockImplementationOnce(() => chain([adminRow()]));
+    db.insert.mockImplementationOnce(() => writeChain([adminRow()]));
 
     const view = await service.create({
       email: 'other@wriven.dev',
@@ -113,7 +113,7 @@ describe('AdminUsersService.update — self + last-admin guards', () => {
   it('inactive admins never trigger the last-admin guard', async () => {
     const { service, db } = makeService();
     db.query.adminUsers.findFirst.mockResolvedValue(adminRow({ active: false }));
-    db.update.mockImplementationOnce(() => chain([adminRow({ active: false })]));
+    db.update.mockImplementationOnce(() => writeChain([adminRow({ active: false })]));
 
     await expect(
       service.update({
@@ -128,7 +128,7 @@ describe('AdminUsersService.update — self + last-admin guards', () => {
   it('only provided fields are patched', async () => {
     const { service, db } = makeService();
     db.query.adminUsers.findFirst.mockResolvedValue(adminRow({ role: 'moderator', active: false }));
-    db.update.mockImplementationOnce(() => chain([adminRow({ role: 'moderator', active: false })]));
+    db.update.mockImplementationOnce(() => writeChain([adminRow({ role: 'moderator', active: false })]));
 
     await service.update({
       id: 'a-2',

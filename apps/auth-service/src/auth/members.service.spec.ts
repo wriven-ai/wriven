@@ -4,7 +4,7 @@ import { MembersService } from './members.service';
 import type { AuthorizationService } from './authorization.service';
 import type { EntitlementsService } from './entitlements.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { userRow } from '../testing/fixtures';
 
 const { workspaceMembers } = schema;
@@ -82,7 +82,7 @@ describe('MembersService.addWorkspaceMember', () => {
   it('happy path: quota asserted inside the tx, then the seat insert', async () => {
     const { service, db, entitlements } = makeService();
     db.query.users.findFirst.mockResolvedValue(userRow({ id: 'u-2' }));
-    db.__tx.insert.mockImplementationOnce(() => chain([memberRow({ role: 'admin' })]));
+    db.__tx.insert.mockImplementationOnce(() => writeChain([memberRow({ role: 'admin' })]));
 
     const view = await service.addWorkspaceMember({
       callerUserId: USER_ID,
@@ -125,7 +125,7 @@ describe('MembersService.updateWorkspaceMember — owner-role guard', () => {
 
   it('granting owner requires the owner-only WORKSPACE_ROLE_ASSIGN on top of MANAGE', async () => {
     const { service, db, authz } = setup('member');
-    db.update.mockImplementationOnce(() => chain([memberRow({ role: 'owner' })]));
+    db.update.mockImplementationOnce(() => writeChain([memberRow({ role: 'owner' })]));
     db.query.users.findFirst.mockResolvedValue(userRow({ id: 'u-2' }));
 
     await service.updateWorkspaceMember({
@@ -162,7 +162,7 @@ describe('MembersService.updateWorkspaceMember — owner-role guard', () => {
   it('demoting an owner with a co-owner present → allowed', async () => {
     const { service, db } = setup('owner');
     db.$count.mockResolvedValue(2);
-    db.update.mockImplementationOnce(() => chain([memberRow({ role: 'member' })]));
+    db.update.mockImplementationOnce(() => writeChain([memberRow({ role: 'member' })]));
     db.query.users.findFirst.mockResolvedValue(userRow({ id: 'u-2' }));
 
     const view = await service.updateWorkspaceMember({

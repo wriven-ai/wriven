@@ -1,6 +1,6 @@
 import { WorkspaceLogsService } from './workspace-logs.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 
 const { workspaceActivityLog } = schema;
 
@@ -15,7 +15,7 @@ function makeService() {
 describe('WorkspaceLogsService.write', () => {
   it('normalizes optional fields to nulls/empty metadata', async () => {
     const { service, db } = makeService();
-    db.insert.mockImplementationOnce(() => chain([]));
+    db.insert.mockImplementationOnce(() => writeChain([]));
 
     await service.write({
       workspaceId: 'ws-1',

@@ -3,7 +3,7 @@ import { Permission } from '@wriven/contracts';
 import { WorkspacesService } from './workspaces.service';
 import type { AuthorizationService } from './authorization.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { workspaceRow } from '../testing/fixtures';
 
 const { workspaces, workspaceMembers, projects, projectMembers, subscriptions } = schema;
@@ -35,8 +35,7 @@ async function rejection(promise: Promise<unknown>) {
 describe('WorkspacesService.create — full bootstrap tx', () => {
   it('workspace + owner seat + default project + project-admin + free sub', async () => {
     const { service, db } = makeService();
-    db.__tx.insert
-      .mockImplementationOnce(() => chain([workspaceRow()])) // workspaces
+    db.__tx.insert.mockImplementationOnce(() => writeChain([workspaceRow()])) // workspaces
       .mockImplementationOnce(() => chain([])) // workspaceMembers (owner)
       .mockImplementationOnce(() => chain([{ id: 'p-default' }])) // projects
       .mockImplementationOnce(() => chain([])) // projectMembers (admin)
@@ -77,8 +76,7 @@ describe('WorkspacesService.create — full bootstrap tx', () => {
 
   it('no free plan seeded → skips the subscription insert (4 inserts)', async () => {
     const { service, db } = makeService();
-    db.__tx.insert
-      .mockImplementationOnce(() => chain([workspaceRow()]))
+    db.__tx.insert.mockImplementationOnce(() => writeChain([workspaceRow()]))
       .mockImplementationOnce(() => chain([]))
       .mockImplementationOnce(() => chain([{ id: 'p-default' }]))
       .mockImplementationOnce(() => chain([]));
@@ -170,7 +168,7 @@ describe('WorkspacesService.update', () => {
   it('only provided fields written; slug normalized', async () => {
     const { service, db } = makeService();
     db.update.mockImplementationOnce(() =>
-      chain([workspaceRow({ name: 'New', slug: 'new-name' })]),
+      writeChain([workspaceRow({ name: 'New', slug: 'new-name' })]),
     );
     db.query.workspaceMembers.findFirst.mockResolvedValue({ role: 'owner' });
 

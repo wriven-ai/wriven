@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { ApiKeysService } from './api-keys.service';
 import type { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 import * as schema from '../db/schema';
-import { asDb, chain, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';
+import { writeChain, asDb, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';
 
 const { apiKeys } = schema;
 
@@ -52,7 +52,7 @@ async function rejection(promise: Promise<unknown>) {
 describe('ApiKeysService.create — minting', () => {
   it('stores only the sha256 of a scope-prefixed token; raw returned once', async () => {
     const { service, db, entitlements } = makeService();
-    db.insert.mockImplementationOnce(() => chain([keyRow()]));
+    db.insert.mockImplementationOnce(() => writeChain([keyRow()]));
 
     const result = await service.create({
       workspaceId: 'ws-1',
@@ -76,7 +76,7 @@ describe('ApiKeysService.create — minting', () => {
 
   it('scope prefixes are distinct per scope', async () => {
     const { service, db } = makeService();
-    db.insert.mockImplementationOnce(() => chain([keyRow({ scope: 'manage' })]));
+    db.insert.mockImplementationOnce(() => writeChain([keyRow({ scope: 'manage' })]));
 
     const result = await service.create({
       workspaceId: 'ws-1',
@@ -149,7 +149,7 @@ describe('ApiKeysService.revoke / regenerate', () => {
   it('revoke stamps revokedAt', async () => {
     const { service, db } = makeService();
     db.query.apiKeys.findFirst.mockResolvedValue(keyRow());
-    db.update.mockImplementationOnce(() => chain([keyRow({ revokedAt: new Date() })]));
+    db.update.mockImplementationOnce(() => writeChain([keyRow({ revokedAt: new Date() })]));
 
     await expect(
       service.revoke({ workspaceId: 'ws-1', projectId: 'p1', id: 'key-1' }),
@@ -160,7 +160,7 @@ describe('ApiKeysService.revoke / regenerate', () => {
   it('regenerate: same row, fresh secret, scope preserved, lastUsedAt reset', async () => {
     const { service, db } = makeService();
     db.query.apiKeys.findFirst.mockResolvedValue(keyRow({ scope: 'preview' }));
-    db.update.mockImplementationOnce(() => chain([keyRow({ scope: 'preview' })]));
+    db.update.mockImplementationOnce(() => writeChain([keyRow({ scope: 'preview' })]));
 
     const result = await service.regenerate({ workspaceId: 'ws-1', projectId: 'p1', id: 'key-1' });
 
@@ -173,7 +173,7 @@ describe('ApiKeysService.revoke / regenerate', () => {
   it('regenerate on a concurrently-revoked key (empty returning) → NOT_FOUND', async () => {
     const { service, db } = makeService();
     db.query.apiKeys.findFirst.mockResolvedValue(keyRow());
-    db.update.mockImplementationOnce(() => chain([])); // row gone at write time
+    db.update.mockImplementationOnce(() => writeChain([])); // row gone at write time
 
     const err = await rejection(
       service.regenerate({ workspaceId: 'ws-1', projectId: 'p1', id: 'key-1' }),
