@@ -6,6 +6,7 @@ import type { EntitlementsService } from './entitlements.service';
 import type { MembersService } from './members.service';
 import * as schema from '../db/schema';
 import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { serializeFragment } from '../testing/drizzle-mock';
 import { userRow } from '../testing/fixtures';
 
 const { projects, projectMembers, workspaceMembers } = schema;
@@ -264,6 +265,10 @@ describe('ProjectsService.updateMember / removeMember — last-admin guard', () 
     );
     expect(err.code).toBe('CONFLICT');
     expect(err.message).toContain('at least one admin');
+    // Admin-count predicate pin (same rationale as the last-owner guard).
+    const countWhere = serializeFragment(db.$count.mock.calls[0]?.[1]);
+    expect(countWhere).toContain('p1');
+    expect(countWhere).toContain('admin');
     expect(db.update).not.toHaveBeenCalled();
   });
 

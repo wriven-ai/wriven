@@ -5,6 +5,11 @@ import { setEnv } from '../testing/env';
 import { asStripe, createStripeMock } from '../testing/stripe-mock';
 import { planRow, stripeSub, subRow } from '../testing/fixtures';
 
+afterEach(() => {
+  jest.useRealTimers(); // inline restores leak fake timers when an expect throws
+});
+
+
 function makeService() {
   const db = createDbMock();
   const stripe = createStripeMock();

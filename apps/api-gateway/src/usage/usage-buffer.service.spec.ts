@@ -102,12 +102,15 @@ describe('UsageBufferService — lifecycle', () => {
 
     service.onApplicationBootstrap();
     service.bump('ws-1');
-    jest.advanceTimersByTime(15_000); // interval fires → background flush
+    await jest.advanceTimersByTimeAsync(15_000); // interval fires → flush #1
+    expect(emit).toHaveBeenCalledTimes(1);
 
+    service.bump('ws-1'); // buffered again — below threshold, no inline flush
     service.onModuleDestroy();
-    await Promise.resolve(); // let the best-effort final drain settle
+    expect(emit).toHaveBeenCalledTimes(2); // final drain flushed the buffered bucket
 
-    expect(emit.mock.calls.every((c) => c[0] === USAGE_PATTERNS.RECORD)).toBe(true);
-    expect(emit).toHaveBeenCalled();
+    service.bump('ws-2'); // post-destroy bump has no interval to flush it
+    await jest.advanceTimersByTimeAsync(60_000);
+    expect(emit).toHaveBeenCalledTimes(2); // interval is dead — nothing new fires
   });
 });

@@ -3,6 +3,11 @@ import { createHash } from 'node:crypto';
 import { AdminTokenService } from './admin-token.service';
 import { configStub } from '../testing/config-stub';
 
+afterEach(() => {
+  jest.useRealTimers(); // inline restores leak fake timers when an expect throws
+});
+
+
 const SECRET = 'admin-secret';
 
 function makeService(map: Record<string, unknown> = {}) {

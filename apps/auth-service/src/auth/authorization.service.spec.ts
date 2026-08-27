@@ -101,6 +101,30 @@ describe('AuthorizationService.authorize / can', () => {
     ).rejects.toThrow('You do not have permission');
   });
 
+  it('authorize throws FORBIDDEN against a NON-empty set that lacks the permission', async () => {
+    // Non-tautological negative: a member resolves a real permission set, but
+    // WORKSPACE_MEMBERS_MANAGE is owner/admin-only — containment must reject.
+    const { service, db } = makeService();
+    db.query.workspaceMembers.findFirst.mockResolvedValue({ role: 'member' });
+
+    await expect(
+      service.authorize({
+        userId: 'u1',
+        permission: Permission.WORKSPACE_MEMBERS_MANAGE,
+        workspaceId: 'ws-1',
+      }),
+    ).rejects.toThrow('You do not have permission');
+
+    // And the boolean mirror says false, not throw.
+    await expect(
+      service.can({
+        userId: 'u1',
+        permission: Permission.WORKSPACE_MEMBERS_MANAGE,
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(false);
+  });
+
   it('can() returns the boolean without throwing', async () => {
     const owner = ownerService();
     const roles = await owner.service.resolveRoles('u1', { workspaceId: 'ws-1' });

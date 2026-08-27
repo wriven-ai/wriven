@@ -16,7 +16,9 @@ const { invitations, workspaceMembers, projectMembers } = schema;
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const T0 = new Date('2026-01-01T00:00:00.000Z');
-const FUTURE = new Date('2030-01-06T00:00:00.000Z');
+// Relative to the real clock (service compares against Date.now) — a fixed
+// far-future date would rot in 2030.
+const FUTURE = new Date(Date.now() + 7 * 86_400_000);
 
 beforeAll(() => {
   Logger.overrideLogger([]);

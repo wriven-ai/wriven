@@ -24,35 +24,42 @@ export interface TestDb {
 
 export async function startTestDb(): Promise<TestDb> {
   const container = await new PostgreSqlContainer('postgres:16-alpine').start();
-  const url = container.getConnectionUri();
-  const client = postgres(url, { prepare: false, max: 10 });
-  const db = drizzle(client, { schema });
+  // A failed connect/migrate after .start() must never strand the container —
+  // jest's afterAll only runs when beforeAll succeeds.
+  try {
+    const url = container.getConnectionUri();
+    const client = postgres(url, { prepare: false, max: 10 });
+    const db = drizzle(client, { schema });
 
-  // Same journal location as drizzle.config.ts, so these ARE the prod migrations.
-  await migrate(db, {
-    migrationsFolder: `${__dirname}/../../src/db/migrations`,
-    migrationsSchema: 'drizzle',
-    migrationsTable: '__drizzle_migrations_auth',
-  });
+    // Same journal location as drizzle.config.ts, so these ARE the prod migrations.
+    await migrate(db, {
+      migrationsFolder: `${__dirname}/../../src/db/migrations`,
+      migrationsSchema: 'drizzle',
+      migrationsTable: '__drizzle_migrations_auth',
+    });
 
-  const truncate = async () => {
-    const tables = await db.execute<{ table_name: string }>(
-      sql`select table_name from information_schema.tables where table_schema = 'auth_svc'`,
-    );
-    const names = tables.map((r) => `"auth_svc"."${r.table_name}"`);
-    if (names.length > 0) {
-      await db.execute(sql.raw(`TRUNCATE TABLE ${names.join(', ')} CASCADE`));
-    }
-  };
+    const truncate = async () => {
+      const tables = await db.execute<{ table_name: string }>(
+        sql`select table_name from information_schema.tables where table_schema = 'auth_svc'`,
+      );
+      const names = tables.map((r) => `"auth_svc"."${r.table_name}"`);
+      if (names.length > 0) {
+        await db.execute(sql.raw(`TRUNCATE TABLE ${names.join(', ')} CASCADE`));
+      }
+    };
 
-  return {
-    container,
-    url,
-    db,
-    truncate,
-    stop: async () => {
-      await client.end();
-      await container.stop();
-    },
-  };
+    return {
+      container,
+      url,
+      db,
+      truncate,
+      stop: async () => {
+        await client.end();
+        await container.stop();
+      },
+    };
+  } catch (err) {
+    await container.stop();
+    throw err;
+  }
 }

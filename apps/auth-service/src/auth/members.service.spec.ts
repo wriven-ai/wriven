@@ -5,6 +5,7 @@ import type { AuthorizationService } from './authorization.service';
 import type { EntitlementsService } from './entitlements.service';
 import * as schema from '../db/schema';
 import { writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { serializeFragment } from '../testing/drizzle-mock';
 import { userRow } from '../testing/fixtures';
 
 const { workspaceMembers } = schema;
@@ -156,6 +157,11 @@ describe('MembersService.updateWorkspaceMember — owner-role guard', () => {
     );
     expect(err.code).toBe('CONFLICT');
     expect(err.message).toContain('at least one owner');
+    // Predicate pin: the count targets OWNERS of THIS workspace — counting
+    // the wrong role/id would keep tests green while gutting the guard.
+    const countWhere = serializeFragment(db.$count.mock.calls[0]?.[1]);
+    expect(countWhere).toContain('ws-1');
+    expect(countWhere).toContain('owner');
     expect(db.update).not.toHaveBeenCalled();
   });
 

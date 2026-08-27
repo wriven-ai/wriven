@@ -3,6 +3,11 @@ import { of } from 'rxjs';
 import { ApiKeyGuard } from './api-key.guard';
 import { httpContext } from '../testing/http';
 
+afterEach(() => {
+  jest.useRealTimers(); // inline restores leak fake timers when an expect throws
+});
+
+
 function resolution(overrides: Record<string, unknown> = {}) {
   return {
     id: 'key-1',
