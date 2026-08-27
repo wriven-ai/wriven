@@ -54,7 +54,13 @@ CI: a dedicated `integration` job in `.github/workflows/ci.yml` runs `pnpm nx ru
 
 **Phase 3 core seams complete — 27 integration tests.** Remaining backlog: replicate the integration harness in core-service if/when a core seam needs it; e2e journeys (lowest priority).
 
-Setup decisions pending: testcontainers vs docker-compose dev DB, per-suite schema isolation (`create schema` per run), CI job shape (separate workflow or same).
+Setup decisions (resolved): testcontainers (not docker-compose) with one container per spec file; CI = separate `integration` job in the same workflow.
+
+## Backlog (from the 2026-08 audit — nice-to-haves, no open findings)
+
+- **Hygiene batch**: promote `drizzle-mock` (+ `chain`/`chainOf`/`serializeFragment`) to `libs/shared/testing` — auth/core/gateway carry near-identical copies; dedupe the local `rejection()` helper (~11 copies); type the Stripe fixtures as literal-backed `Stripe.Event` objects
+- **Tenant-side edge specs**: `JwtAuthGuard` typ-field defence + real-JWT spec; CSRF guard `verify-email-code` boundary case; invitation `tokenHash` recomputation cross-check (accept path recomputes the hash from the presented token)
+- nx remote cache (Nx Cloud or self-hosted) — speed only, needs a decision + token
 
 ## Out of scope / deferred
 
