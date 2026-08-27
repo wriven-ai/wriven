@@ -1,5 +1,5 @@
 import { AdminPlansService } from './admin-plans.service';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { asStripe, createStripeMock } from '../testing/stripe-mock';
 import { planRow } from '../testing/fixtures';
 import * as schema from '../db/schema';
@@ -18,7 +18,7 @@ function wireHappy(
   db: ReturnType<typeof createDbMock>,
   row = planRow({ key: 'pro' }),
 ) {
-  db.insert.mockImplementationOnce(() => chain([row]));
+  db.insert.mockImplementationOnce(() => writeChain([row]));
   return row;
 }
 
@@ -210,7 +210,7 @@ describe('AdminPlansService.update — retire path', () => {
       stripePriceIdMonthly: 'price_monthly_mock',
       stripePriceIdYearly: 'price_yearly_mock',
     });
-    db.update.mockImplementationOnce(() => chain([planRow({ active: false })]));
+    db.update.mockImplementationOnce(() => writeChain([planRow({ active: false })]));
 
     const result = await service.update({
       id: 'plan-1',
@@ -237,7 +237,7 @@ describe('AdminPlansService.update — retire path', () => {
       stripePriceIdMonthly: null,
       stripePriceIdYearly: null,
     });
-    db.update.mockImplementationOnce(() => chain([planRow()]));
+    db.update.mockImplementationOnce(() => writeChain([planRow()]));
 
     await service.update({ id: 'plan-1', dto: { name: 'Renamed' } as never });
 

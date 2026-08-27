@@ -5,6 +5,11 @@ import { setEnv } from '../testing/env';
 import { asStripe, createStripeMock } from '../testing/stripe-mock';
 import { planRow, stripeSub, subRow } from '../testing/fixtures';
 
+afterEach(() => {
+  jest.useRealTimers(); // inline restores leak fake timers when an expect throws
+});
+
+
 function makeService() {
   const db = createDbMock();
   const stripe = createStripeMock();
@@ -297,7 +302,15 @@ describe('BillingService.swapPlan', () => {
 
   it('tier upgrade: immediate prorated update + row mirror', async () => {
     const { service, db, stripe } = makeService();
-    const teamPlan = planRow({ key: 'team', name: 'Team', sortOrder: 20 });
+    // Distinct price id from the CURRENT item's (fixtures default both to
+    // 'price_monthly_mock') so the assertion can't be satisfied by the
+    // current-price regression.
+    const teamPlan = planRow({
+      key: 'team',
+      name: 'Team',
+      sortOrder: 20,
+      stripePriceIdMonthly: 'price_team_monthly',
+    });
     wireCurrent(db);
     db.query.plans.findFirst.mockResolvedValue(teamPlan);
     stripe.subscriptions.retrieve.mockResolvedValue(stripeSub());
@@ -309,7 +322,7 @@ describe('BillingService.swapPlan', () => {
     });
 
     expect(stripe.subscriptions.update).toHaveBeenCalledWith('sub_mock', {
-      items: [{ id: 'si_1', price: 'price_monthly_mock' }],
+      items: [{ id: 'si_1', price: 'price_team_monthly' }],
       proration_behavior: 'always_invoice',
       cancel_at_period_end: false,
       metadata: {

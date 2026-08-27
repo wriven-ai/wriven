@@ -3,6 +3,11 @@ import { createHash, createHmac } from 'crypto';
 import { TokenService } from './token.service';
 import { configStub } from '../testing/config-stub';
 
+afterEach(() => {
+  jest.useRealTimers(); // inline restores leak fake timers when an expect throws
+});
+
+
 function makeService(configMap: Record<string, unknown> = {}) {
   const jwt = { sign: jest.fn().mockReturnValue('signed-token') };
   const config = configStub(configMap);

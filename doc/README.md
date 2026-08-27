@@ -21,6 +21,7 @@ The docs split into three layers:
 | [Database](./database.md) | Drizzle ORM, single shared Postgres DB, schema isolation, migrations workflow |
 | [API Reference](./api-reference.md) | Every gateway endpoint: method, auth, headers, body, responses |
 | [Conventions](./conventions.md) | Response envelope, error codes, rate limits, env, commands, commit style |
+| [Testing](./testing.md) | Unit-test suites (Jest): philosophy, per-project layout, the `src/testing/` mock toolkit (drizzle-mock, chain/chainOf, serializeFragment), recurring patterns + gotchas, known coverage gaps |
 | [AI Governance](./ai-governance.md) | AI data controls, retention, billing/retry policy, and monitoring |
 | [Plan Config](./plan-config.md) | Plan tiers (`free`/`starter`/`pro`): pricing, limits, features — managed via the admin panel (not seeded) |
 | [Support Tickets](./support-ticket/README.md) | Workspace-level support ticketing: subject + description + ≤3 images + scope dropdown, threaded user↔staff conversation, status/priority. Separate plans: [backend](./support-ticket/backend.md) · [client](./support-ticket/client.md) · [admin-panel](./support-ticket/admin-panel.md) |
@@ -111,6 +112,7 @@ Execution recipes derived from a spec — ordered steps, files per step, per-ste
 | [13 — AI Service Extraction](../plans/13-ai-service-extraction.md) | [20](../specs/20-ai-service-extraction.md) | (superseded by plan 14) |
 | [14 — AI Generation Redesign](../plans/14-ai-generation-redesign.md) | [21](../specs/21-ai-generation-redesign.md) | Typed AiOutput, compose, voice profile, ai-service extraction |
 | [15 — AI Generation Hardening](../plans/15-ai-generation-hardening.md) | [22](../specs/22-ai-generation-hardening.md) | Review-hardening fixes |
+| [17 — Testing Roadmap](../plans/17-testing-roadmap.md) | — (strategy doc) | Jest phases 1–2 (unit suites, CI — done) + phase 3 (testcontainers integration — pending) |
 
 > New plan? Run `/create-plan <spec number or slug>` — it reads the spec + codebase and drafts `../plans/<NN>-<slug>.md`.
 

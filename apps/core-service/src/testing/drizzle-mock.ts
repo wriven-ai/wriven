@@ -9,21 +9,34 @@ import * as schema from '../db/schema';
  * which table was touched, call counts/order, and resolved values only.
  */
 
-/** Fluent awaitable chain: unknown methods return the chain; `returning()` resolves rows. */
-export function chain(rows: unknown[] = []) {
+/**
+ * Fluent awaitable chain: unknown methods return the chain; `returning()` resolves rows.
+ *
+ * `kind` matters: a real drizzle WRITE (insert/update/delete) awaited without
+ * `.returning()` resolves an EMPTY driver result — so a write chain resolves
+ * `[]` unless `.returning()` ran on it, and a dropped `.returning()` fails
+ * specs loudly instead of silently returning stub rows. Reads (select) always
+ * resolve rows.
+ */
+export function chain(rows: unknown[] = [], kind: 'read' | 'write' = 'read') {
   // Drizzle builders are dynamically dispatched — an any-typed target keeps
   // the Proxy honest without modelling the whole builder surface.
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const target: any = {
-    returning: jest.fn().mockResolvedValue(rows),
+    returning: jest.fn(() => {
+      target.__returned = true;
+      return Promise.resolve(rows);
+    }),
+    __returned: false,
   };
   const proxy = new Proxy(target, {
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     get(t: any, prop: string | symbol) {
       if (prop === 'then') {
+        const resolved = kind === 'write' && !t.__returned ? [] : rows;
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         return (resolve: any, reject: any) =>
-          Promise.resolve(rows).then(resolve, reject);
+          Promise.resolve(resolved).then(resolve, reject);
       }
       if (!(prop in t)) {
         t[prop] = jest.fn().mockReturnValue(proxy);
@@ -32,6 +45,11 @@ export function chain(rows: unknown[] = []) {
     },
   });
   return proxy as unknown as { returning: jest.Mock } & Record<string, jest.Mock>;
+}
+
+/** Write-chain variant for insert/update/delete mocks (see `chain`). */
+export function writeChain(rows: unknown[] = []) {
+  return chain(rows, 'write');
 }
 
 export interface QueryMock {
@@ -71,9 +89,9 @@ function queryMap(): Record<string, QueryMock> {
 
 function surface(query: Record<string, QueryMock>): DbSurfaceMock {
   return {
-    insert: jest.fn(() => chain()),
-    update: jest.fn(() => chain()),
-    delete: jest.fn(() => chain()),
+    insert: jest.fn(() => writeChain()),
+    update: jest.fn(() => writeChain()),
+    delete: jest.fn(() => writeChain()),
     select: jest.fn(() => chain()),
     execute: jest.fn().mockResolvedValue(undefined),
     $count: jest.fn().mockResolvedValue(0),
@@ -111,4 +129,19 @@ export function chainOf(
   jest.Mock
 > {
   return mock.mock.results[call].value;
+}
+
+/**
+ * Serialize a drizzle SQL fragment (where-clause, query args) with circular
+ * table refs cut, so bound params become assertable strings.
+ */
+export function serializeFragment(fragment: unknown): string {
+  const seen = new WeakSet();
+  return JSON.stringify(fragment, (_key, value: unknown) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[circular]';
+      seen.add(value);
+    }
+    return value;
+  });
 }
