@@ -14,8 +14,8 @@ import { serializeFragment } from '../testing/drizzle-mock';
 import { userRow, workspaceRow } from '../testing/fixtures';
 import * as schema from '../db/schema';
 
-// The class field `dummyHash = bcrypt.hashSync(..., 12)` runs on every
-// instantiation — the module mock keeps suite startup instant.
+// AuthService hashes a dummy password on first unknown-email login
+// (anti-enumeration timing) — the module mock keeps suite startup instant.
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed-new'),
   compare: jest.fn().mockResolvedValue(false),
@@ -35,6 +35,7 @@ const {
 // jest.mocked() collapses bcrypt's overloaded signatures to `never` params.
 const mockedHash = bcrypt.hash as unknown as jest.Mock;
 const mockedCompare = bcrypt.compare as unknown as jest.Mock;
+const mockedHashSync = jest.requireMock('bcrypt').hashSync as jest.Mock;
 
 beforeAll(() => {
   Logger.overrideLogger([]);
@@ -100,6 +101,8 @@ describe('AuthService.login', () => {
     );
     expect(err.code).toBe(ERROR_CODES.INVALID_CREDENTIALS.code);
     expect(mockedCompare).toHaveBeenCalledWith('pw', 'dummy-hash');
+    // Dummy hash derives from the SAME configured rounds as real hashes.
+    expect(mockedHashSync).toHaveBeenCalledWith('wriven-dummy-password', 12);
     expect(db.insert).not.toHaveBeenCalled();
   });
 
@@ -113,6 +116,8 @@ describe('AuthService.login', () => {
     );
     expect(err.code).toBe(ERROR_CODES.INVALID_CREDENTIALS.code);
     expect(mockedCompare).toHaveBeenCalledWith('pw', 'dummy-hash');
+    // Dummy hash derives from the SAME configured rounds as real hashes.
+    expect(mockedHashSync).toHaveBeenCalledWith('wriven-dummy-password', 12);
   });
 
   it('wrong password → INVALID_CREDENTIALS, no session', async () => {

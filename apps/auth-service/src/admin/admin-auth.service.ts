@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   AdminAuthResult,
   AdminLoginDto,
@@ -20,12 +21,22 @@ type AdminRow = typeof adminUsers.$inferSelect;
 
 @Injectable()
 export class AdminAuthService {
-  // Equalise bcrypt timing for unknown emails (anti-enumeration).
-  private readonly dummyHash = bcrypt.hashSync('wriven-admin-dummy', 12);
+  // Equalise bcrypt timing for unknown emails (anti-enumeration), at the SAME
+  // configured rounds as real hashes. Lazy: `config` isn't assigned yet during
+  // field initialization.
+  private dummyHashCache: string | null = null;
+  private get dummyHash(): string {
+    this.dummyHashCache ??= bcrypt.hashSync(
+      'wriven-admin-dummy',
+      Number(this.config.get('BCRYPT_ROUNDS', 12)),
+    );
+    return this.dummyHashCache;
+  }
 
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
     private readonly tokens: AdminTokenService,
+    private readonly config: ConfigService,
   ) {}
 
   async login(dto: AdminLoginDto): Promise<AdminAuthResult> {

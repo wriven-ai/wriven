@@ -5,15 +5,17 @@ import { AdminAuthService } from './admin-auth.service';
 import type { AdminTokenService } from './admin-token.service';
 import * as schema from '../db/schema';
 import { writeChain, asDb, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';
+import { configStub } from '../testing/config-stub';
 
 const { adminRefreshTokens } = schema;
 
-// AdminAuthService hashes a dummy password at construction (anti-enumeration
+// AdminAuthService hashes a dummy password on first login (anti-enumeration
 // timing) — the module must be mocked wherever the class is instantiated.
 jest.mock('bcrypt', () => ({
   compare: jest.fn().mockResolvedValue(false),
   hashSync: jest.fn(() => 'dummy-hash'),
 }));
+const hashSync = jest.requireMock('bcrypt').hashSync as jest.Mock;
 const compare = bcrypt.compare as unknown as jest.Mock;
 
 const ADMIN_ID = 'a-1';
@@ -45,7 +47,11 @@ function tokenStub() {
 function makeService() {
   const db = createDbMock();
   const tokens = tokenStub();
-  const service = new AdminAuthService(asDb(db), tokens as unknown as AdminTokenService);
+  const service = new AdminAuthService(
+    asDb(db),
+    tokens as unknown as AdminTokenService,
+    configStub({ BCRYPT_ROUNDS: 4 }),
+  );
   return { service, db, tokens };
 }
 
@@ -77,6 +83,9 @@ describe('AdminAuthService.login', () => {
 
     expect(err.code).toBe('INVALID_CREDENTIALS');
     expect(compare).toHaveBeenCalledWith('pw', 'dummy-hash');
+    // The dummy hash uses the SAME configured rounds as real hashes — timing
+    // stays equalised after a prod BCRYPT_ROUNDS bump.
+    expect(hashSync).toHaveBeenCalledWith('wriven-admin-dummy', 4);
   });
 
   it('wrong password → INVALID_CREDENTIALS', async () => {

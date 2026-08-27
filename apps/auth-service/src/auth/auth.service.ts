@@ -58,8 +58,18 @@ const OTP_MAX_ATTEMPTS = 5;
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  // Used to equalise bcrypt timing when an email isn't found (anti-enumeration).
-  private readonly dummyHash = bcrypt.hashSync('wriven-dummy-password', 12);
+  // Equalise bcrypt timing for unknown emails (anti-enumeration), at the SAME
+  // configured rounds as real hashes — a prod BCRYPT_ROUNDS bump must not make
+  // unknown-email logins cheaper to answer than known ones. Lazy: `config`
+  // isn't assigned yet during field initialization.
+  private dummyHashCache: string | null = null;
+  private get dummyHash(): string {
+    this.dummyHashCache ??= bcrypt.hashSync(
+      'wriven-dummy-password',
+      Number(this.config.get('BCRYPT_ROUNDS', 12)),
+    );
+    return this.dummyHashCache;
+  }
 
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDB<typeof schema>,
