@@ -53,9 +53,9 @@ jobs:
       # Unit suites are fully mocked — no DB/Stripe/R2 secrets needed.
       # Nx runs only the targets each project actually has (the client's
       # next lint lives outside this sweep).
-      - name: Lint + typecheck + test (affected)
+      - name: Lint + typecheck + test + build (affected)
         run: >
-          pnpm nx affected -t lint typecheck test
+          pnpm nx affected -t lint typecheck test build
           --base=${{ steps.base.outputs.sha }}
 
       # Main pushes sweep everything, not just the affected graph.

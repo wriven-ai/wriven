@@ -8,7 +8,7 @@ How the Wriven backend is tested: philosophy, layout, the shared mock toolkit, r
 - **Specs live next to the code** (`foo.service.ts` + `foo.service.spec.ts`) — the Angular/Nx convention. Shared helpers live in each app's `src/testing/` (never matched by testMatch, excluded from the app tsconfig).
 - **Assert behavior, not builder args** — drizzle query-builder fragments (`eq`/`and`/`lt`/`sql`) are treated as opaque: specs assert *which table* was touched, call counts/order, and resolved values. Where the WHERE scope is security-relevant (revoke-by-id, retention cutoff, token-hash lookup), it is pinned via `serializeFragment()` (below) instead of trusted.
 - **Error contracts** — thrown `RpcException`s are unwrapped (`err.getError()`) and matched against `ERROR_CODES.X` from `@wriven/contracts`; messages asserted by substring only.
-- **Integration tests are deferred** (Phase 3): testcontainers Postgres + TCP e2e across gateway↔auth↔core. Unit mocks cannot catch SQL-shape or wiring regressions — that gap is known and accepted for now.
+- **Integration tests** exist for auth-service (see the section below): testcontainers Postgres with the real migrations, Stripe mocked at the client seam. Still uncovered: gateway↔auth↔core TCP e2e journeys, and core-service integration seams (the delivery JSONB filter, usage upserts) — unit mocks cannot catch those SQL-shape regressions.
 
 ## What exists
 
@@ -30,7 +30,7 @@ pnpm nx run-many -t lint typecheck test                    # whole workspace
 pnpm nx affected -t lint typecheck test                    # changed code only
 ```
 
-CI (`.github/workflows/ci.yml`) runs the affected sweep on PRs and pushes to `main`/`dev`, plus a full test sweep on `main`. No secrets needed — suites are fully mocked.
+CI (`.github/workflows/ci.yml`) runs the affected `lint typecheck test build` sweep on PRs and pushes to `main`/`dev`, a full test sweep on `main`, and a separate always-on `integration` job (testcontainers, Docker on the runner). The unit sweep also runs ai-service's pytest via its nx `test` target. No secrets needed.
 
 ## Jest setup (per project)
 

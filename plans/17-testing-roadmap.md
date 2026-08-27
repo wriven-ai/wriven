@@ -1,6 +1,6 @@
 # 17 — Testing Roadmap
 
-Execution plan for the backend test effort. Unit layers (Phases 1–2) are **complete**; integration (Phase 3) is pending opt-in.
+Execution plan for the backend test effort. Unit layers (Phases 1–2) are **complete**; integration (Phase 3) auth-service seams are **done** (see below); TCP e2e journeys remain deferred.
 
 > No backing spec — this plan captures the agreed testing strategy itself. Reference doc: [`doc/testing.md`](../doc/testing.md).
 
@@ -31,7 +31,7 @@ Execution plan for the backend test effort. Unit layers (Phases 1–2) are **com
 
 ## Phase 3 — Integration tests (started)
 
-**Goal:** prove persistence + wiring claims the mocks can't see. Testcontainers Postgres (`@testcontainers/postgresql`, one `postgres:16-alpine` per spec file), REAL migrations from `src/db/migrations`, `truncate()` between tests, Stripe mocked at the client seam. Run: `pnpm nx test-integration @wriven/auth-service` (docker required; `cache: false`; unit suite stays docker-free via `testPathIgnorePatterns`).
+**Goal:** prove persistence claims the mocks can't see (real constraints, upserts, advisory locks, tx rollback). NOTE: wiring (module bootstrap, TCP plumbing) is NOT covered — every spec constructs its service graph directly; a `Test.createTestingModule` bootstrap smoke remains future work. Testcontainers Postgres (`@testcontainers/postgresql`, one `postgres:16-alpine` per spec file), REAL migrations from `src/db/migrations`, `truncate()` between tests, Stripe mocked at the client seam. Run: `pnpm nx test-integration @wriven/auth-service` (docker required; `cache: false`; unit suite stays docker-free via `testPathIgnorePatterns`).
 
 **Done (commit `17c2224`, 17 tests):**
 - Infrastructure: `test/integration/test-db.ts` helper + smoke spec
