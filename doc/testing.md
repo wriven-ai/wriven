@@ -75,6 +75,21 @@ pnpm nx test-integration @wriven/auth-service   # docker must be running
 - Seams covered: invitation `accept` (upsert/`setWhere` guest-upgrade, no-downgrade, FK constraints, quota throw → real tx rollback with the invitation left pending), billing `swapPlan` (deferred downgrade pendingChange from the Stripe item period, upgrade mirror, Stripe-failure → no partial DB write, reactivation, free cancel), **seat-quota advisory lock** (parallel claims on the last seat serialize — exactly one wins, loser rolls back), **webhook reconciler** (event-id re-delivery is a true no-op via the real unique index, strictly-older events skip state writes but dedupe, same-second applies, unmapped price → tx rollback of the idempotency insert), **cleanup cron** (exact expired-set deletes; revoked-but-unexpired refresh tokens kept for theft detection; retention window honored with the 90d default).
 - Helpers: `test-db.ts` (`startTestDb()` → container/url/db/truncate/stop).
 
+## Adding a new module — checklist
+
+Every new service/guard/interceptor follows the same bar:
+
+1. **Spec lives next to the code** (`foo.service.ts` + `foo.service.spec.ts`), built around a `makeService()` factory that does `new Service(deps)` with mocks. No `Test.createTestingModule` for pure constructor-injection services — only the module smoke uses it.
+2. **Reuse `src/testing/` helpers** (`createDbMock`, `chain`/`writeChain`, `chainOf`, `serializeFragment`, `configStub`, `setEnv`). Extend them; don't invent local one-off mocks.
+3. **Coverage bar per unit**: the happy path, every distinct error the code throws (unwrapped `RpcException` vs `ERROR_CODES.X`), and any clock/boundary condition (fake timers + `useRealTimers()` in `afterEach`; date fixtures far-future/past, never "a few months out").
+4. **Writes use `writeChain`** and are asserted via `chainOf(...).values/.set` — a dropped `.returning()` must fail the spec. **Security-relevant WHERE scopes are pinned** with `serializeFragment` (revoke-by-id, retention cutoffs, quota predicates) — never trusted.
+5. **Never trust the code under test for crypto** — recompute hashes/HMACs/sha256 token digests from the presented input and compare.
+6. **Wiring is already covered** — a new provider registered in `AppModule` is exercised by the `app.module.spec.ts` bootstrap smoke automatically.
+7. **Persistence claims** (unique constraints, upserts, tx rollback, advisory locks) get an **integration spec** in `apps/auth-service/test/integration/` (or the core equivalent when it exists) — unit mocks cannot catch SQL-shape regressions.
+8. **Gateway routes**: controllers are skipped when they purely delegate; guards, cookie/CSRF handling, payload shaping, and envelope mapping DO get specs.
+9. **Python side**: new ai-service behavior gets pytest under `apps/ai-service/tests/` (runs through the same nx `test` target).
+10. **Before pushing**: `pnpm nx test <project>` green + `pnpm nx run-many -t lint typecheck -p <project>`. CI's affected sweep handles the rest.
+
 ## Not covered (known gaps)
 
 - Controllers (`@MessagePattern` thin delegators) — no logic to test.
