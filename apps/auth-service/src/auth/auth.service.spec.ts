@@ -10,6 +10,7 @@ import type { MailService } from './mail.service';
 import { TokenService } from './token.service';
 import { configStub } from '../testing/config-stub';
 import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { serializeFragment } from '../testing/drizzle-mock';
 import { userRow, workspaceRow } from '../testing/fixtures';
 import * as schema from '../db/schema';
 
@@ -329,6 +330,11 @@ describe('AuthService.refresh', () => {
     expect(err.code).toBe(ERROR_CODES.INVALID_REFRESH_TOKEN.code);
     expect(db.update).toHaveBeenCalledWith(refreshTokens);
     expect(chainOf(db.update).set).toHaveBeenCalledWith({ revoked: true });
+    // Scope pin: the revoke targets the USER (all their tokens), never just
+    // the presented row — revoke-one would silently gut theft detection.
+    const where = serializeFragment(chainOf(db.update).where.mock.calls[0][0]);
+    expect(where).toContain(row.userId);
+    expect(where).not.toContain(row.id);
     expect(db.transaction).not.toHaveBeenCalled();
   });
 
@@ -361,6 +367,9 @@ describe('AuthService.refresh', () => {
     expect(err.code).toBe(ERROR_CODES.FORBIDDEN.code);
     expect(db.update).toHaveBeenCalledWith(refreshTokens);
     expect(chainOf(db.update).set).toHaveBeenCalledWith({ revoked: true });
+    const suspendWhere = serializeFragment(chainOf(db.update).where.mock.calls[0][0]);
+    expect(suspendWhere).toContain(row.userId);
+    expect(suspendWhere).not.toContain(row.id);
   });
 
   it('success: rotation tx revokes old, inserts new preserving rememberMe', async () => {
@@ -423,6 +432,8 @@ describe('AuthService.resetPassword', () => {
       refreshTokens,
     ]);
     expect(chainOf(tx.update, 2).set).toHaveBeenCalledWith({ revoked: true });
+    const resetWhere = serializeFragment(chainOf(tx.update, 2).where.mock.calls[0][0]);
+    expect(resetWhere).toContain(validRow.userId);
   });
 });
 

@@ -2,6 +2,7 @@ import { RpcException } from '@nestjs/microservices';
 import { AdminTenancyService } from './admin-tenancy.service';
 import * as schema from '../db/schema';
 import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { serializeFragment } from '../testing/drizzle-mock';
 import { userRow, workspaceRow } from '../testing/fixtures';
 
 const { refreshTokens, projects } = schema;
@@ -93,6 +94,8 @@ describe('AdminTenancyService.updateUser', () => {
     });
     expect(db.update).toHaveBeenNthCalledWith(2, refreshTokens);
     expect(chainOf(db.update, 1).set).toHaveBeenCalledWith({ revoked: true });
+    const where = serializeFragment(chainOf(db.update, 1).where.mock.calls[0][0]);
+    expect(where).toContain(USER_ID);
     expect(row.suspended).toBe(true);
   });
 
