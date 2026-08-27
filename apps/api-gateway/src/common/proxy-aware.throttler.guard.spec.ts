@@ -3,11 +3,14 @@ import { THROTTLER_LIMIT, THROTTLER_TTL } from '@nestjs/throttler/dist/throttler
 import { ProxyAwareThrottlerGuard } from './proxy-aware.throttler.guard';
 import { AuthController } from '../auth/auth.controller';
 
-/** No base-class wiring needed — getTracker reads only the request. */
-const guard = Object.create(ProxyAwareThrottlerGuard.prototype) as ProxyAwareThrottlerGuard;
+/** getTracker is protected — invoke it through the prototype like the guard does. */
+const proto = ProxyAwareThrottlerGuard.prototype as unknown as {
+  getTracker: (req: Record<string, unknown>) => Promise<string>;
+};
+const getTracker = proto.getTracker.bind(ProxyAwareThrottlerGuard.prototype);
 
 async function tracker(headers: Record<string, unknown>, ip?: string): Promise<string> {
-  return guard.getTracker({ headers, ip } as never);
+  return getTracker({ headers, ip });
 }
 
 describe('ProxyAwareThrottlerGuard.getTracker — client-IP resolution', () => {
