@@ -196,4 +196,70 @@ describe('WebhooksService.dispatch', () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it('retry-then-succeed: first attempt 500, second 200 → exactly 2 calls, lastStatus 200', async () => {
+    const { service, db } = makeService();
+    const fetchSpy = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({ ok: false, status: 500 } as never)
+      .mockResolvedValueOnce({ ok: true, status: 200 } as never);
+    db.query.webhooks.findMany.mockResolvedValue([webhookRow()]);
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
+
+    jest.useFakeTimers();
+    const dispatched = service.dispatch('p1', payload());
+    await jest.advanceTimersByTimeAsync(500); // first backoff elapses, retry fires
+    await dispatched;
+    jest.useRealTimers();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(chainOf(db.update).set).toHaveBeenCalledWith(
+      expect.objectContaining({ lastStatus: 200 }), // the EVENTUAL status persists
+    );
+  });
+
+  it('non-2xx exhaustion: 3 attempts, the last HTTP status persisted', async () => {
+    const { service, db } = makeService();
+    const fetchSpy = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue({ ok: false, status: 503 } as never);
+    db.query.webhooks.findMany.mockResolvedValue([webhookRow()]);
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
+
+    jest.useFakeTimers();
+    const dispatched = service.dispatch('p1', payload());
+    await jest.advanceTimersByTimeAsync(3_000); // both backoffs
+    await dispatched;
+    jest.useRealTimers();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(chainOf(db.update).set).toHaveBeenCalledWith(
+      expect.objectContaining({ lastStatus: 503 }),
+    );
+  });
+
+  it('a wedged endpoint aborts at 10s and counts as a failed attempt (status 0)', async () => {
+    const { service, db } = makeService();
+    const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          // Never settles on its own — only the AbortController timer ends it.
+          init?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+        }) as never,
+    );
+    db.query.webhooks.findMany.mockResolvedValue([webhookRow()]);
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
+
+    jest.useFakeTimers();
+    const dispatched = service.dispatch('p1', payload());
+    // 3 attempts x (10s abort window + backoff) — burn the whole schedule.
+    await jest.advanceTimersByTimeAsync(40_000);
+    await dispatched;
+    jest.useRealTimers();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(chainOf(db.update).set).toHaveBeenCalledWith(
+      expect.objectContaining({ lastStatus: 0 }),
+    );
+  });
 });
