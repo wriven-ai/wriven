@@ -5,7 +5,7 @@ import { StripeWebhookService } from '../../src/billing/stripe-webhook.service';
 import * as schema from '../../src/db/schema';
 import { startTestDb, type TestDb } from './test-db';
 
-const { users, workspaces, workspaceMembers, plans, subscriptions, stripeEvents } = schema;
+const { users, workspaces, workspaceMembers, plans, subscriptions } = schema;
 
 const OWNER_ID = '11111111-1111-4111-8111-111111111111';
 const WS_ID = '33333333-3333-4333-8333-333333333333';
