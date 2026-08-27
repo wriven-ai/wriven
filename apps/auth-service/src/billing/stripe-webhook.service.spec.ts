@@ -359,4 +359,30 @@ describe('StripeWebhookService.verifyAndHandle', () => {
     expect(result).toEqual({ ok: true });
     expect(tx.insert).toHaveBeenCalledWith(stripeEvents);
   });
+
+  it('the SDK receives (RAW payload buffer, signature header, secret) together', async () => {
+    // Signature binding: verification must run over the raw request body — a
+    // re-serialization (JSON.parse → stringify) would break the HMAC. Pin all
+    // three arguments and the Buffer type.
+    restoreSecret = setEnv({ STRIPE_WEBHOOK_SECRET: 'whsec_test' });
+    const { service, tx, stripe } = makeService();
+    stripe.webhooks.constructEvent.mockReturnValue(
+      stripeEvent('payment_intent.succeeded', { id: 'pi_1' }),
+    );
+    freshEvent(tx);
+
+    const rawBody = '{"raw":"bytes"}';
+    await service.verifyAndHandle(rawBody, 't=1,sig=sig-header');
+
+    expect(stripe.webhooks.constructEvent).toHaveBeenCalledTimes(1);
+    const [body, sig, secret] = stripe.webhooks.constructEvent.mock.calls[0] as [
+      unknown,
+      string,
+      string,
+    ];
+    expect(Buffer.isBuffer(body)).toBe(true);
+    expect((body as Buffer).toString('utf8')).toBe(rawBody); // exact bytes, not re-serialized
+    expect(sig).toBe('t=1,sig=sig-header');
+    expect(secret).toBe('whsec_test');
+  });
 });
