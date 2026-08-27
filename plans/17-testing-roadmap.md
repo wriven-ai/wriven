@@ -29,9 +29,15 @@ Execution plan for the backend test effort. Unit layers (Phases 1–2) are **com
 
 **Unit scope is now complete across all services.** Remaining untested: controllers only (thin `@MessagePattern` delegators — not worth unit specs). Totals: auth 343 · gateway 81 · core 120 · contracts 23 = **567 tests**.
 
+### Phase 2c — audit leftovers ✅
+
+- Bootstrap smoke per service (`app/app.module.spec.ts` ×3): `Test.createTestingModule(AppModule).compile()` — catches broken provider tokens / missing exports / throwing constructors the hand-built unit graphs can't (gateway +3, auth +3, core +2)
+- Core read-model admin specs (17 tests): admin-media (pagination + shared where between items/total, storage aggregation coercion, purge soft-delete + NOT_FOUND), admin-metrics (totals merge, empty-media 0, published-predicate pin), admin-project-usage (13-query nested view assembly, null-cost passthrough, per-predicate project-scope pin), admin-webhooks (unfiltered → no where, never-fired null date, disable kill switch), admin-content-types (soft-delete exclusion + date serialization)
+- Running totals after 2c: auth 352 · gateway 138 · core 197 · contracts 23
+
 ## Phase 3 — Integration tests (started)
 
-**Goal:** prove persistence claims the mocks can't see (real constraints, upserts, advisory locks, tx rollback). NOTE: wiring (module bootstrap, TCP plumbing) is NOT covered — every spec constructs its service graph directly; a `Test.createTestingModule` bootstrap smoke remains future work. Testcontainers Postgres (`@testcontainers/postgresql`, one `postgres:16-alpine` per spec file), REAL migrations from `src/db/migrations`, `truncate()` between tests, Stripe mocked at the client seam. Run: `pnpm nx test-integration @wriven/auth-service` (docker required; `cache: false`; unit suite stays docker-free via `testPathIgnorePatterns`).
+**Goal:** prove persistence claims the mocks can't see (real constraints, upserts, advisory locks, tx rollback). Module wiring IS smoke-covered (`app/app.module.spec.ts` per service — `Test.createTestingModule(AppModule).compile()` proves the real DI graph resolves, lazy externals never connect); TCP e2e journeys remain uncovered. Testcontainers Postgres (`@testcontainers/postgresql`, one `postgres:16-alpine` per spec file), REAL migrations from `src/db/migrations`, `truncate()` between tests, Stripe mocked at the client seam. Run: `pnpm nx test-integration @wriven/auth-service` (docker required; `cache: false`; unit suite stays docker-free via `testPathIgnorePatterns`).
 
 **Done (commit `17c2224`, 17 tests):**
 - Infrastructure: `test/integration/test-db.ts` helper + smoke spec

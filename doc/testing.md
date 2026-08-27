@@ -14,9 +14,9 @@ How the Wriven backend is tested: philosophy, layout, the shared mock toolkit, r
 
 | Project | Suite | Focus |
 |---|---|---|
-| `@wriven/auth-service` | ~343 tests | Auth flows, billing/webhooks, entitlements, invitations, members/projects/workspaces, cleanup cron, mail, workspace logs, admin (auth/tokens/users/audit/metrics/tenancy/plans) |
-| `@wriven/api-gateway` | ~81 tests | All guards (JWT, admin JWT, CSRF, permission, workspace/project, API key + cache), Google OAuth strategy, exceptions filter, response interceptor, downgrade guard, usage buffer/enforce, delivery controller (cache tags, project pinning) |
-| `@wriven/core-service` | ~120 tests | Entitlements (fail-open/closed + cache), storage (R2 keys), media quota/key-pinning, webhooks (HMAC, retry), content validator, pricing, period/slug, entries lifecycle + AI provenance, ai.service (quota, idempotent replay), api-keys |
+| `@wriven/auth-service` | ~352 tests | Auth flows, billing/webhooks, entitlements, invitations, members/projects/workspaces, cleanup cron, mail, workspace logs, admin (auth/tokens/users/audit/metrics/tenancy/plans), module bootstrap smoke |
+| `@wriven/api-gateway` | ~138 tests | All guards (JWT, admin JWT, CSRF, permission, workspace/project, API key + cache, throttler), Google OAuth strategy, exceptions filter, response interceptor, downgrade guard, auth/AI controllers, audit interceptors, usage buffer/enforce, delivery controller (cache tags, project pinning), module bootstrap smoke |
+| `@wriven/core-service` | ~197 tests | Entitlements (fail-open/closed + cache), storage (R2 keys), media quota/key-pinning, webhooks (HMAC, retry + timeout), content validator, pricing, period/slug, entries lifecycle + AI provenance, ai.service (quota, idempotent replay), ai-client, api-keys, usage, support, admin read-models (media/metrics/project-usage/webhooks/content-types), module bootstrap smoke |
 | `@wriven/contracts` | ~23 tests | RBAC permission matrix — literal expected sets, independent of the role maps under test |
 
 Other suites, outside the Jest projects: ai-service (**pytest**, `cd apps/ai-service && uv run pytest`), `packages/*` SDKs (**node:test** via tsx).
