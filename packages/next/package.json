@@ -47,7 +47,7 @@
     "next": ">=14"
   },
   "devDependencies": {
-    "@types/node": "^20"
+    "@types/node": "^26"
   },
   "publishConfig": {
     "access": "public"
