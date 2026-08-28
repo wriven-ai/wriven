@@ -84,7 +84,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/microservices": "^11.1.26",
     "@nestjs/passport": "^11.0.5",
-    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/platform-express": "^11.2.3",
     "@nestjs/throttler": "^6.5.0",
     "@wriven/contracts": "workspace:*",
     "class-transformer": "^0.5.1",
