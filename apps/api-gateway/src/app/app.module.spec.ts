@@ -6,6 +6,14 @@ import { AdminJwtGuard } from '../admin/admin-jwt.guard';
 import { UsageBufferService } from '../usage/usage-buffer.service';
 import { GoogleStrategy } from '../auth/google.strategy';
 
+// Fail-fast provider needs these at construct time — passport-oauth20 throws
+// on a missing clientID/clientSecret/callbackURL, and CI has no .env to
+// satisfy it (locally apps/api-gateway/.env masks this). ??= keeps local
+// values when present.
+process.env.GOOGLE_CLIENT_ID ??= 'smoke-client-id';
+process.env.GOOGLE_CLIENT_SECRET ??= 'smoke-client-secret';
+process.env.GOOGLE_CALLBACK_URL ??= 'https://api.smoke.test/v1/auth/google/callback';
+
 /**
  * Bootstrap smoke: prove the real AppModule wires — every controller,
  * guard, interceptor, and client factory resolves. Unit specs construct
