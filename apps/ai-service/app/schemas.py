@@ -25,7 +25,11 @@ from pydantic.alias_generators import to_camel
 # the internal boundary rejects oversized payloads even if a caller bypasses core.
 _MAX_FIELD_KEY = 60
 _MAX_LABEL = 120
-_MAX_CONTENT_TYPE = 120
+# Glossary term/prefer and the content-type NAME are capped at 80 on the TS
+# side (ai.dto.ts AiGlossaryTermDto, cms.dto.ts CreateContentTypeDto) — keep
+# the parity test below in sync.
+_MAX_GLOSSARY_TERM = 80
+_MAX_CONTENT_TYPE = 80
 _MAX_INSTRUCTION = 2000
 _MAX_SOURCE_CONTENT = 24_000
 _MAX_TURN_CONTENT = 8000
@@ -108,8 +112,8 @@ class AiTurnIn(CamelModel):
 
 
 class GlossaryTermIn(CamelModel):
-    term: str = Field(min_length=1, max_length=_MAX_LABEL)
-    prefer: str = Field(min_length=1, max_length=_MAX_LABEL)
+    term: str = Field(min_length=1, max_length=_MAX_GLOSSARY_TERM)
+    prefer: str = Field(min_length=1, max_length=_MAX_GLOSSARY_TERM)
 
 
 class ProfileIn(CamelModel):

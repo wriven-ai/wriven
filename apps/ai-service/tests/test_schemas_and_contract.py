@@ -120,3 +120,103 @@ class SchemaAndContractTests(unittest.TestCase):
             missing,
             f"Python request fields missing from TS AiGenerateRequest: {missing}",
         )
+
+
+class CapsParityTests(unittest.TestCase):
+    """The pydantic caps are hand-mirrored from the TS DTOs — this parses the
+    TypeScript decorators so a one-sided cap change fails CI instead of
+    drifting silently (term/prefer drifted 120-vs-80 once already)."""
+
+    ROOT = Path(__file__).resolve().parents[3]
+
+    @classmethod
+    def _class_caps(cls, rel_path: str, class_name: str) -> dict[str, dict[str, int]]:
+        source = (cls.ROOT / rel_path).read_text()
+        block = re.search(
+            rf"(?:export )?class {class_name} \{{(.*?)\n\}}", source, re.DOTALL
+        )
+        if block is None:
+            raise AssertionError(f"{class_name} not found in {rel_path}")
+        caps: dict[str, dict[str, int]] = {}
+        pending: list[tuple[str, int]] = []
+        for line in block.group(1).splitlines():
+            deco = re.match(r"\s*@(MaxLength|MinLength|ArrayMaxSize)\((\d+)", line)
+            if deco:
+                pending.append((deco.group(1), int(deco.group(2))))
+                continue
+            prop = re.match(r"\s*(\w+)[!?]?\s*:", line)
+            if prop and pending:
+                caps.setdefault(prop.group(1), {}).update(dict(pending))
+                pending = []
+        return caps
+
+    def test_ai_dto_caps_match_pydantic(self) -> None:
+        import app.schemas as schemas
+
+        ai_caps = {
+            "AiTurnDto": self._class_caps(
+                "libs/shared/contracts/src/lib/dto/ai.dto.ts", "AiTurnDto"
+            ),
+            "AiGenerateDto": self._class_caps(
+                "libs/shared/contracts/src/lib/dto/ai.dto.ts", "AiGenerateDto"
+            ),
+            "AiGlossaryTermDto": self._class_caps(
+                "libs/shared/contracts/src/lib/dto/ai.dto.ts", "AiGlossaryTermDto"
+            ),
+            "UpdateAiProfileDto": self._class_caps(
+                "libs/shared/contracts/src/lib/dto/ai.dto.ts", "UpdateAiProfileDto"
+            ),
+        }
+
+        expected = {
+            "AiTurnDto": {
+                "content": {"MinLength": 1, "MaxLength": schemas._MAX_TURN_CONTENT},
+            },
+            "AiGenerateDto": {
+                "fieldKey": {"MaxLength": schemas._MAX_FIELD_KEY},
+                "instruction": {"MaxLength": schemas._MAX_INSTRUCTION},
+                "sourceContent": {"MaxLength": schemas._MAX_SOURCE_CONTENT},
+                "history": {"ArrayMaxSize": schemas._MAX_HISTORY_TURNS},
+            },
+            "AiGlossaryTermDto": {
+                "term": {"MinLength": 1, "MaxLength": schemas._MAX_GLOSSARY_TERM},
+                "prefer": {"MinLength": 1, "MaxLength": schemas._MAX_GLOSSARY_TERM},
+            },
+            "UpdateAiProfileDto": {
+                "brandVoice": {"MaxLength": 2000},
+                "glossary": {"ArrayMaxSize": 50},
+                "language": {"MaxLength": 20},
+            },
+        }
+        for dto, props in expected.items():
+            for prop, caps in props.items():
+                self.assertEqual(
+                    ai_caps[dto].get(prop),
+                    caps,
+                    f"{dto}.{prop} caps drifted from pydantic",
+                )
+
+    def test_cms_dto_caps_match_pydantic(self) -> None:
+        import app.schemas as schemas
+
+        field_def = self._class_caps(
+            "libs/shared/contracts/src/lib/dto/cms.dto.ts", "FieldDefDto"
+        )
+        content_type = self._class_caps(
+            "libs/shared/contracts/src/lib/dto/cms.dto.ts", "CreateContentTypeDto"
+        )
+
+        self.assertEqual(
+            field_def.get("key"), {"MaxLength": schemas._MAX_FIELD_KEY}
+        )
+        self.assertEqual(
+            field_def.get("label"), {"MinLength": 1, "MaxLength": schemas._MAX_LABEL}
+        )
+        self.assertEqual(
+            field_def.get("options"),
+            {"ArrayMaxSize": schemas._MAX_OPTIONS, "MaxLength": schemas._MAX_LABEL},
+        )
+        self.assertEqual(
+            content_type.get("name"),
+            {"MinLength": 1, "MaxLength": schemas._MAX_CONTENT_TYPE},
+        )
