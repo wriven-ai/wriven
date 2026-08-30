@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CacheModule } from '../cache/cache.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 import { AdminContentService } from './admin-content.service';
 import { AdminContentTypesService } from './admin-content-types.service';
 import { AdminProjectUsageService } from './admin-project-usage.service';
@@ -10,7 +11,7 @@ import { AdminMetricsService } from './admin-metrics.service';
 import { AdminWebhooksService } from './admin-webhooks.service';
 
 @Module({
-  imports: [CacheModule],
+  imports: [CacheModule, WebhooksModule],
   controllers: [AdminController],
   providers: [
     AdminMetricsService,

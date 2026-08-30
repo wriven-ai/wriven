@@ -88,6 +88,13 @@ services:
         sync: false
       - key: R2_PUBLIC_URL
         sync: false
+      # Cloudflare CDN purge (cache-purge.service). Without both keys the purge
+      # is a silent no-op — published-content invalidation (incl. moderation
+      # takedowns) then relies solely on s-maxage TTLs.
+      - key: CF_ZONE_ID
+        sync: false
+      - key: CF_API_TOKEN
+        sync: false
       # ai-service (internal HTTP :8000). INTERNAL_SECRET authenticates the hop.
       - key: AI_SERVICE_URL
         value: http://wriven-ai:8000

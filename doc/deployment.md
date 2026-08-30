@@ -119,7 +119,7 @@ hostname, and paste it into the gateway's `AUTH_SERVICE_HOST` / `CORE_SERVICE_HO
 | Service | Extra keys |
 |---------|------------|
 | **wriven-auth** | `GOOGLE_CLIENT_SECRET`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM` |
-| **wriven-core** | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL` |
+| **wriven-core** | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`, `R2_PUBLIC_URL`, `CF_ZONE_ID`, `CF_API_TOKEN` (CDN purge — without both, cache invalidation incl. takedowns is a no-op) |
 | **wriven-gateway** | `ADMIN_JWT_SECRET`, `AUTH_SERVICE_HOST`, `AUTH_SERVICE_PORT=5001`, `CORE_SERVICE_HOST`, `CORE_SERVICE_PORT=5002`, `FRONTEND_URL=https://wriven.tech`, `USAGE_ENFORCE=false` |
 
 > All of these are already declared in `render.yaml` (`sync: false` for secrets).
