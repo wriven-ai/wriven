@@ -73,3 +73,22 @@ describe('StorageService.delete', () => {
     await expect(service.delete('projects/p1/a.png')).resolves.toBeUndefined();
   });
 });
+
+describe('StorageService.presignUpload — content-length binding', () => {
+  it('signs the declared content length into the URL', async () => {
+    const service = makeService(FULL_R2);
+    const url = await service.presignUpload('projects/p1/a.png', 'image/png', {
+      contentLength: 1234,
+    });
+    // SigV4 signs the content-length header → storage rejects a PUT whose
+    // body length differs from the quota-charged declaration.
+    expect(url).toContain('X-Amz-SignedHeaders=content-length%3Bhost');
+  });
+
+  it('omits the binding when no length is given (back-compat)', async () => {
+    const service = makeService(FULL_R2);
+    const url = await service.presignUpload('k', 'image/png');
+    expect(url).toContain('X-Amz-SignedHeaders=host');
+    expect(url).not.toContain('content-length');
+  });
+});

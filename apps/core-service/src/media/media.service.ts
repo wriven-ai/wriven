@@ -59,7 +59,7 @@ export class MediaService {
       throw rpcError('VALIDATION_ERROR', 'Unsupported file type.');
     }
     const maxBytes = maxBytesForContentType(p.dto.contentType);
-    if (p.dto.size != null && p.dto.size > maxBytes) {
+    if (p.dto.size > maxBytes) {
       const mb = Math.round(maxBytes / (1024 * 1024));
       throw rpcError(
         'VALIDATION_ERROR',
@@ -67,28 +67,28 @@ export class MediaService {
       );
     }
     // Per-workspace storage quota from the plan (storageMb). Block before signing.
-    if (p.dto.size != null) {
-      const limitBytes = await this.entitlements.storageLimitBytes(
-        p.workspaceId,
-      );
-      if (limitBytes != null) {
-        const used = await this.workspaceUsage(p.workspaceId);
-        if (used + p.dto.size > limitBytes) {
-          const quotaMb = Math.round(limitBytes / (1024 * 1024));
-          const remainingMb = Math.max(
-            0,
-            (limitBytes - used) / (1024 * 1024),
-          ).toFixed(1);
-          throw rpcError(
-            'PLAN_LIMIT_REACHED',
-            `Workspace storage limit reached (${quotaMb} MB). ${remainingMb} MB free — delete some media or upgrade.`,
-          );
-        }
+    // `size` is required on the DTO — an omitted size used to skip this whole
+    // block (quota bypass), which is why the null-checks are gone.
+    const limitBytes = await this.entitlements.storageLimitBytes(p.workspaceId);
+    if (limitBytes != null) {
+      const used = await this.workspaceUsage(p.workspaceId);
+      if (used + p.dto.size > limitBytes) {
+        const quotaMb = Math.round(limitBytes / (1024 * 1024));
+        const remainingMb = Math.max(
+          0,
+          (limitBytes - used) / (1024 * 1024),
+        ).toFixed(1);
+        throw rpcError(
+          'PLAN_LIMIT_REACHED',
+          `Workspace storage limit reached (${quotaMb} MB). ${remainingMb} MB free — delete some media or upgrade.`,
+        );
       }
     }
     const ext = extFromFilename(p.dto.filename);
     const key = `projects/${p.projectId}/${randomUUID()}${ext ? `.${ext}` : ''}`;
-    const uploadUrl = await this.storage.presignUpload(key, p.dto.contentType);
+    const uploadUrl = await this.storage.presignUpload(key, p.dto.contentType, {
+      contentLength: p.dto.size,
+    });
     return { uploadUrl, key };
   }
 
@@ -106,13 +106,15 @@ export class MediaService {
       throw rpcError('VALIDATION_ERROR', 'Avatar must be an image file.');
     }
     const maxBytes = maxBytesForContentType(p.dto.contentType);
-    if (p.dto.size != null && p.dto.size > maxBytes) {
+    if (p.dto.size > maxBytes) {
       const mb = Math.round(maxBytes / (1024 * 1024));
       throw rpcError('VALIDATION_ERROR', `Avatar too large. Max ${mb} MB.`);
     }
     const ext = extFromFilename(p.dto.filename);
     const key = `avatars/${p.userId}/${randomUUID()}${ext ? `.${ext}` : ''}`;
-    const uploadUrl = await this.storage.presignUpload(key, p.dto.contentType);
+    const uploadUrl = await this.storage.presignUpload(key, p.dto.contentType, {
+      contentLength: p.dto.size,
+    });
     return { uploadUrl, key };
   }
 

@@ -205,3 +205,20 @@ describe('MediaService.create — key pinning + conflict', () => {
     );
   });
 });
+
+describe('MediaService.presign — declared size is bound into the upload', () => {
+  it('forwards the declared size as the signed content length', async () => {
+    const { service, storage } = makeService();
+    await service.presign({
+      workspaceId: 'ws-1',
+      projectId: 'p1',
+      userId: 'u1',
+      dto: { filename: 'a.png', contentType: 'image/png', size: 42 } as never,
+    });
+    expect(storage.presignUpload).toHaveBeenCalledWith(
+      expect.any(String),
+      'image/png',
+      { contentLength: 42 },
+    );
+  });
+});
