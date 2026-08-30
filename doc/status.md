@@ -30,7 +30,7 @@ _Last reviewed: 2026-08-20 — post-deploy (Render + Vercel + Supabase live), sp
 | `ApiKeyGuard` (`Bearer wrk_…` → project scope, TTL cache) | ✅ | public Delivery API auth (plans/01 P2) |
 | Rate limiting (`@nestjs/throttler`) | ✅ | global + per-route |
 | **Usage metering** (Delivery API counter) | 🟡 | in-process buffer flushes to `core.usage.record`; `GET /usage`; soft overage gate `USAGE_ENFORCE` (default off, fail-open) (specs/14) |
-| CORS | ✅ | management routes: allowlist `CORS_ORIGINS` + credentials (dev localhost:3000/3001; prod wriven.tech/www + admin.wriven.tech/www); Delivery API `/v1/projects/*`: reflects any origin, no credentials (Bearer keys only) |
+| CORS | ✅ | management routes: allowlist `CORS_ORIGINS` + credentials (dev localhost:3000/3001; prod wriven.tech/www + admin.wriven.tech/www) — includes project-scoped routes under `/v1/projects/:projectId`; Delivery API `/v1/projects/:projectId/content|media/*`: reflects any origin, no credentials (Bearer keys only) |
 | Google OAuth (Passport strategy on gateway) | ✅ | |
 | Billing + Stripe webhook | ✅ | `/billing/*` (JWT + WorkspaceGuard) + public `POST /webhooks/stripe` (`rawBody: true`, forwards to auth-service) |
 | Support-ticket routes | ✅ | `/support/tickets` — create/list/detail/messages + attachment presign → core `support` RPC (per `doc/support-ticket/`) |
