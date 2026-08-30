@@ -1,6 +1,6 @@
 import { ERROR_CODES, PlanLimits } from '@wriven/contracts';
 import { EntitlementsService } from './entitlements.service';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 import { setEnv } from '../testing/env';
 import { planRow, subRow } from '../testing/fixtures';
 

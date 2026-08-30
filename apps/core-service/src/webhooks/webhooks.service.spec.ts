@@ -3,7 +3,7 @@ import { WEBHOOK_EVENTS, WebhookPayload } from '@wriven/contracts';
 import { createHmac } from 'node:crypto';
 import type { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 import { WebhooksService } from './webhooks.service';
-import { asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 
 beforeAll(() => {
   Logger.overrideLogger([]);
@@ -63,7 +63,7 @@ function payload(overrides: Record<string, unknown> = {}): WebhookPayload {
 describe('WebhooksService.create', () => {
   it('mints a whsec_ secret, asserts quota first, returns both once', async () => {
     const { service, db, entitlements } = makeService();
-    db.insert.mockImplementationOnce(() => chain([webhookRow()]));
+    db.insert.mockImplementationOnce(() => writeChain([webhookRow()]));
 
     const result = await service.create({
       workspaceId: 'ws-1',
@@ -79,7 +79,7 @@ describe('WebhooksService.create', () => {
 
   it('empty events list subscribes to every WEBHOOK_EVENTS entry', async () => {
     const { service, db } = makeService();
-    db.insert.mockImplementationOnce(() => chain([webhookRow()]));
+    db.insert.mockImplementationOnce(() => writeChain([webhookRow()]));
 
     await service.create({
       workspaceId: 'ws-1',
@@ -98,7 +98,7 @@ describe('WebhooksService.update — partial patch', () => {
   it('only provided fields are written; url untouched when only active sent', async () => {
     const { service, db } = makeService();
     db.query.webhooks.findFirst.mockResolvedValue(webhookRow());
-    db.update.mockImplementationOnce(() => chain([webhookRow({ active: false })]));
+    db.update.mockImplementationOnce(() => writeChain([webhookRow({ active: false })]));
 
     await service.update({
       projectId: 'p1',
@@ -134,7 +134,7 @@ describe('WebhooksService.dispatch', () => {
       webhookRow({ id: 'wh-2', events: ['entry.deleted'] }), // wrong event
       webhookRow({ id: 'wh-3', events: ['entry.deleted'] }), // would-be-inactive row
     ]);
-    db.update.mockImplementation(() => chain([webhookRow()]));
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
 
     await service.dispatch('p1', payload());
 
@@ -150,7 +150,7 @@ describe('WebhooksService.dispatch', () => {
       .spyOn(global, 'fetch')
       .mockResolvedValue({ ok: true, status: 200 } as never);
     db.query.webhooks.findMany.mockResolvedValue([webhookRow()]);
-    db.update.mockImplementation(() => chain([webhookRow()]));
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
 
     const event = payload();
     await service.dispatch('p1', event);
@@ -173,7 +173,7 @@ describe('WebhooksService.dispatch', () => {
       .spyOn(global, 'fetch')
       .mockRejectedValue(new Error('ECONNREFUSED'));
     db.query.webhooks.findMany.mockResolvedValue([webhookRow()]);
-    db.update.mockImplementation(() => chain([webhookRow()]));
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
 
     jest.useFakeTimers();
     const dispatched = service.dispatch('p1', payload());
@@ -195,5 +195,71 @@ describe('WebhooksService.dispatch', () => {
     await service.dispatch('p1', payload());
 
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('retry-then-succeed: first attempt 500, second 200 → exactly 2 calls, lastStatus 200', async () => {
+    const { service, db } = makeService();
+    const fetchSpy = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({ ok: false, status: 500 } as never)
+      .mockResolvedValueOnce({ ok: true, status: 200 } as never);
+    db.query.webhooks.findMany.mockResolvedValue([webhookRow()]);
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
+
+    jest.useFakeTimers();
+    const dispatched = service.dispatch('p1', payload());
+    await jest.advanceTimersByTimeAsync(500); // first backoff elapses, retry fires
+    await dispatched;
+    jest.useRealTimers();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(chainOf(db.update).set).toHaveBeenCalledWith(
+      expect.objectContaining({ lastStatus: 200 }), // the EVENTUAL status persists
+    );
+  });
+
+  it('non-2xx exhaustion: 3 attempts, the last HTTP status persisted', async () => {
+    const { service, db } = makeService();
+    const fetchSpy = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue({ ok: false, status: 503 } as never);
+    db.query.webhooks.findMany.mockResolvedValue([webhookRow()]);
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
+
+    jest.useFakeTimers();
+    const dispatched = service.dispatch('p1', payload());
+    await jest.advanceTimersByTimeAsync(3_000); // both backoffs
+    await dispatched;
+    jest.useRealTimers();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(chainOf(db.update).set).toHaveBeenCalledWith(
+      expect.objectContaining({ lastStatus: 503 }),
+    );
+  });
+
+  it('a wedged endpoint aborts at 10s and counts as a failed attempt (status 0)', async () => {
+    const { service, db } = makeService();
+    const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          // Never settles on its own — only the AbortController timer ends it.
+          init?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+        }) as never,
+    );
+    db.query.webhooks.findMany.mockResolvedValue([webhookRow()]);
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
+
+    jest.useFakeTimers();
+    const dispatched = service.dispatch('p1', payload());
+    // 3 attempts x (10s abort window + backoff) — burn the whole schedule.
+    await jest.advanceTimersByTimeAsync(40_000);
+    await dispatched;
+    jest.useRealTimers();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(chainOf(db.update).set).toHaveBeenCalledWith(
+      expect.objectContaining({ lastStatus: 0 }),
+    );
   });
 });

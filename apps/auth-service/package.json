@@ -4,6 +4,29 @@
   "private": true,
   "nx": {
     "targets": {
+      "test-integration": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "jest --config jest.integ.config.cts --runInBand",
+          "cwd": "apps/auth-service"
+        },
+        "cache": false,
+        "inputs": [
+          "default",
+          "^production",
+          "{workspaceRoot}/jest.preset.js",
+          {
+            "externalDependencies": [
+              "jest",
+              "@nx/jest",
+              "reflect-metadata",
+              "ts-jest",
+              "testcontainers",
+              "@testcontainers/postgresql"
+            ]
+          }
+        ]
+      },
       "build": {
         "executor": "nx:run-commands",
         "options": {

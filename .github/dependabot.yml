@@ -1,9 +1,5 @@
 version: 2
 updates:
-  # Single npm entry — pnpm uses one root lockfile for the whole monorepo.
-  # `directories` (plural) + group-by: dependency-name is what actually merges
-  # the same dependency across apps/core-service, apps/auth-service, etc. into
-  # ONE PR instead of one per app — directory: / alone doesn't do this.
   - package-ecosystem: npm
     directories:
       - '/'
@@ -15,16 +11,18 @@ updates:
     groups:
       minor-and-patch:
         group-by: dependency-name
+        patterns:
+          - '*'
         update-types:
           - minor
           - patch
     ignore:
-      - update-types: [major]
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: chore
       include: scope
 
-  # Keep GitHub Actions current — one monthly PR.
   - package-ecosystem: github-actions
     directory: /
     schedule:
