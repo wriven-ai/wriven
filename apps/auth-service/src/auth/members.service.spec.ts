@@ -4,7 +4,7 @@ import { MembersService } from './members.service';
 import type { AuthorizationService } from './authorization.service';
 import type { EntitlementsService } from './entitlements.service';
 import * as schema from '../db/schema';
-import { writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { writeChain, asDb, chainOf, createDbMock, expectScopedWhere } from '../testing/drizzle-mock';
 import { serializeFragment } from '../testing/drizzle-mock';
 import { userRow } from '../testing/fixtures';
 
@@ -179,6 +179,9 @@ describe('MembersService.updateWorkspaceMember — owner-role guard', () => {
     });
 
     expect(chainOf(db.update).set).toHaveBeenCalledWith({ role: 'member' });
+    // Tenancy pin: the role change is scoped to THIS member of THIS workspace —
+    // a dropped predicate would change another tenant's role and stay green.
+    expectScopedWhere(db.update, 0, 'ws-1', 'u-2');
     expect(view.role).toBe('member');
   });
 });
@@ -212,6 +215,9 @@ describe('MembersService.removeWorkspaceMember', () => {
       }),
     ).resolves.toEqual({ success: true });
     expect(db.delete).toHaveBeenCalledWith(workspaceMembers);
+    // Tenancy pin: the delete removes THIS user's seat in THIS workspace only —
+    // a dropped workspaceId predicate would eject them from every workspace.
+    expectScopedWhere(db.delete, 0, 'ws-1', 'u-2');
   });
 });
 

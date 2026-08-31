@@ -3,13 +3,20 @@ import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import { ERROR_CODES, GoogleProfile } from '@wriven/contracts';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'node:crypto';
 import { AuthService } from './auth.service';
 import type { AuthorizationService } from './authorization.service';
 import type { InvitationsService } from './invitations.service';
 import type { MailService } from './mail.service';
 import { TokenService } from './token.service';
 import { configStub } from '../testing/config-stub';
-import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import {
+  writeChain,
+  asDb,
+  chainOf,
+  createDbMock,
+  expectScopedWhere,
+} from '../testing/drizzle-mock';
 import { serializeFragment } from '../testing/drizzle-mock';
 import { userRow, workspaceRow } from '../testing/fixtures';
 import * as schema from '../db/schema';
@@ -215,7 +222,7 @@ describe('AuthService.register', () => {
     const user = userRow({ email: dto.email, name: dto.name });
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
     tx.insert.mockImplementationOnce(() => writeChain([user]))
-      .mockImplementationOnce(() => chain([workspaceRow()]));
+      .mockImplementationOnce(() => writeChain([workspaceRow()]));
 
     const result = await service.register(dto);
 
@@ -245,7 +252,7 @@ describe('AuthService.register', () => {
     const { service, tx } = makeService();
     tx.query.plans.findFirst.mockResolvedValue(undefined);
     tx.insert.mockImplementationOnce(() => writeChain([userRow({ email: dto.email })]))
-      .mockImplementationOnce(() => chain([workspaceRow()]));
+      .mockImplementationOnce(() => writeChain([workspaceRow()]));
 
     const result = await service.register(dto);
 
@@ -297,7 +304,7 @@ describe('AuthService.register', () => {
     const { service, tx, invitations } = makeService();
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
     tx.insert.mockImplementationOnce(() => writeChain([userRow({ email: dto.email })]))
-      .mockImplementationOnce(() => chain([workspaceRow()]));
+      .mockImplementationOnce(() => writeChain([workspaceRow()]));
     invitations.claimPending.mockRejectedValue(new Error('invite svc down'));
 
     const result = await service.register(dto);
@@ -729,7 +736,7 @@ describe('AuthService.googleLogin', () => {
     });
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
     tx.insert.mockImplementationOnce(() => writeChain([googleUser]))
-      .mockImplementationOnce(() => chain([workspaceRow()]));
+      .mockImplementationOnce(() => writeChain([workspaceRow()]));
     withPrimaryWorkspace(db);
 
     const result = await service.googleLogin(profile);
@@ -852,6 +859,15 @@ describe('AuthService.logout', () => {
     expect(result).toEqual({ success: true });
     expect(db.update).toHaveBeenCalledWith(refreshTokens);
     expect(chainOf(db.update).set).toHaveBeenCalledWith({ revoked: true });
+    // Scope pin: the revoke targets the sha256 of the presented token —
+    // never the raw string (it isn't stored), and never a whole user's
+    // sessions (that would log the user out of every device).
+    const expectedHash = createHash('sha256').update('raw').digest('hex');
+    expectScopedWhere(db.update, 0, expectedHash);
+    // And the raw token string never appears in the lookup (circular-safe).
+    expect(serializeFragment(chainOf(db.update).where.mock.calls[0][0])).not.toContain(
+      'raw',
+    );
   });
 });
 
