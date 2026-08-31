@@ -211,3 +211,27 @@ test('isWrivenError separates SDK errors from foreign errors', async () => {
     assert.equal(isWrivenError('string'), false);
   }
 });
+
+test('cache and next pass through to fetch (the ISR cache-tag vehicle)', async () => {
+  let init: RequestInit | undefined;
+  const client = createClient({
+    projectId: 'p',
+    token: 't',
+    fetch: async (_u, i) => {
+      init = i;
+      return ok({ items: [], page: 1, limit: 20, total: 0 });
+    },
+  });
+  // next.tags is what registers fetch cache tags so the webhook package's
+  // revalidateTag can invalidate pages — dropping this pass-through breaks
+  // tag-based ISR for every Next.js consumer with zero errors.
+  await client.getEntries('post', {
+    cache: 'force-cache',
+    next: { tags: ['entry_1', 'type_post'], revalidate: 60 },
+  } as never);
+  assert.equal((init as { cache?: string }).cache, 'force-cache');
+  assert.deepEqual((init as { next?: unknown }).next, {
+    tags: ['entry_1', 'type_post'],
+    revalidate: 60,
+  });
+});
