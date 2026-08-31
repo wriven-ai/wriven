@@ -1083,7 +1083,7 @@ describe('AuthService.resendVerification', () => {
   });
 
   it('unverified → prior unused tokens invalidated, fresh token+code issued, mail sent', async () => {
-    const { service, db, tokens, mail } = makeService(
+    const { service, db, mail } = makeService(
       { EMAIL_VERIFY_TTL: '24h', OTP_TTL: '10m' },
     );
     db.query.users.findFirst.mockResolvedValue({
@@ -1100,11 +1100,16 @@ describe('AuthService.resendVerification', () => {
     const invalidateWhere = serializeFragment(chainOf(db.update).where.mock.calls[0][0]);
     expect(invalidateWhere).toContain(userId);
     // 2. New row: opaque token hash + code hash, distinct TTLs.
-    const values = chainOf(db.insert).values.mock.calls[0][0] as Record<string, unknown>;
+    const values = chainOf(db.insert).values.mock.calls[0][0] as Record<
+      string,
+      { getTime(): number } | string
+    >;
     expect(values.tokenHash).toEqual(expect.any(String));
     expect(values.tokenHash).not.toContain('raw');
     expect(values.codeHash).toEqual(expect.any(String));
-    expect(values.expiresAt.getTime()).toBeGreaterThan(values.codeExpiresAt.getTime());
+    expect((values.expiresAt as Date).getTime()).toBeGreaterThan(
+      (values.codeExpiresAt as Date).getTime(),
+    );
     // 3. Mail dispatched with the verify link.
     expect(mail.sendVerification).toHaveBeenCalledWith(
       'u@x.y',
