@@ -1,4 +1,4 @@
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import * as contracts from '@wriven/contracts';
 import { BillingController } from './billing.controller';
 import { computeDowngradeBlocks } from './downgrade.guard';
@@ -92,13 +92,10 @@ describe('BillingController.swapPlan — the downgrade gate', () => {
     await controller.swapPlan(user, 'ws-1', swap, req as never);
 
     expect(usage.compose).toHaveBeenCalledTimes(1);
-    expect(
-      send.mock.calls.some(
-        (c) =>
-          c[0] === contracts.BILLING_PATTERNS.SWAP_PLAN &&
-          (c[1] as { workspaceId: string }).workspaceId === 'ws-1',
-      ),
-    ).toBe(true);
+    const swapCall = send.mock.calls.find(
+      (c) => c[0] === contracts.BILLING_PATTERNS.SWAP_PLAN,
+    ) as unknown[][];
+    expect((swapCall?.[1] as unknown as { workspaceId: string }).workspaceId).toBe('ws-1');
     expect(req.logMeta).toEqual({ plan: 'Starter', cycle: 'monthly' });
   });
 

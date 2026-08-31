@@ -11,7 +11,7 @@ import { AdminAuthController } from './admin-auth.controller';
 
 function adminResult() {
   return {
-    admin: { adminUserId: 'a-1', email: 'staff@wriven.tech', role: 'admin' },
+    admin: { id: 'a-1', email: 'staff@wriven.tech', role: 'admin' },
     accessToken: 'at',
     refreshToken: 'rt',
     refreshExpiresAt: '2026-01-22T10:00:00.000Z',
@@ -71,7 +71,7 @@ describe('AdminAuthController.login — cookie flags (dev)', () => {
     const [, csrfCookie, csrfOpts] = calls[2];
     expect(csrfCookie).toBe(body.csrfToken);
     expect(csrfOpts.httpOnly).toBe(true);
-    expect(body.admin.adminUserId).toBe('a-1');
+    expect(body.admin.id).toBe('a-1');
   });
 });
 
