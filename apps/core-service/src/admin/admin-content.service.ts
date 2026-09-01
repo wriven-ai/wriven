@@ -81,6 +81,9 @@ export class AdminContentService {
       .set({ status: payload.dto.status, publishedAt: null })
       .where(eq(contentEntries.id, payload.id))
       .returning();
+    // Hard-deletes don't exist today, but a race (or a future hard-delete
+    // path) must surface NOT_FOUND, not a TypeError on `entry.contentTypeId`.
+    if (!entry) throw rpcError('NOT_FOUND', 'Entry not found.');
 
     const type = await this.db.query.contentTypes.findFirst({
       where: eq(contentTypes.id, entry.contentTypeId),
