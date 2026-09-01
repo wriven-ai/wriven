@@ -28,7 +28,7 @@ jobs:
 
       # ai-service's test target runs `uv run pytest` (uv installs the env
       # from uv.lock on first run).
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
