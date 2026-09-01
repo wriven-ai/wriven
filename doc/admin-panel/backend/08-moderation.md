@@ -16,7 +16,10 @@ Status: **Phase C (done)**.
 - **takedown** `[admin|moderator]` — set `status` to `draft` (unpublish) or
   `archived` (hide) **and clear `publishedAt`** so it's not reported as published.
   Then **purge the CDN** for that entry (`CachePurgeService.purgeEntry(apiId, id)`)
-  so the taken-down entry stops being served from cache. The moderation trail lives
+  so the taken-down entry stops being served from cache, and — when the entry was
+  previously `published` — **fire `entry.unpublished`** to the project's webhook
+  subscribers (best-effort, like every entries emit) so webhook-driven display
+  sites revalidate. The moderation trail lives
   in `admin_audit_log` (not the tenant's revision history).
 
 ---

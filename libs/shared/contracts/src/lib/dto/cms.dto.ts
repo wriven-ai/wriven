@@ -207,11 +207,13 @@ export class PresignUploadDto {
   @MaxLength(150)
   contentType!: string;
 
-  @IsOptional()
+  // Required: the declared size drives the storage-quota check and is bound
+  // into the presigned PUT (Content-Length) so R2 rejects a body that lies
+  // about it. Optional size = quota bypass.
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  size?: number;
+  size!: number;
 }
 
 export class CreateMediaDto {

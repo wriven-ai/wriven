@@ -404,3 +404,66 @@ describe('AiService.redactExpiredAuditData — retention', () => {
     });
   });
 });
+
+describe('AiService.generate — sibling context (entry scope)', () => {
+  it('truncates sibling values to the ai-service wire cap (8000)', async () => {
+    const ctx = makeService();
+    // Target field opts its sibling `title` into AI context.
+    ctx.db.query.contentTypes.findFirst.mockResolvedValue({
+      id: 'ct-1',
+      name: 'Post',
+      apiId: 'post',
+      fields: [
+        { key: 'title', label: 'Title', type: 'text' },
+        { key: 'body', label: 'Body', type: 'richtext', aiContextFields: ['title'] },
+      ],
+    });
+    ctx.db.query.contentEntries.findFirst.mockResolvedValue({
+      id: 'e-1',
+      workspaceId: 'ws-1',
+      projectId: 'p1',
+      contentTypeId: 'ct-1',
+      data: { title: 'T'.repeat(9001), body: 'draft' },
+    });
+    wireFreshReserve(ctx.db, 0);
+
+    await ctx.service.generate({ ...base, dto: dto({ entryId: 'e-1' }) });
+
+    const req = ctx.client.generate.mock.calls[0][0] as {
+      siblingValues: { label: string; value: string }[];
+    };
+    expect(req.siblingValues).toEqual([
+      { label: 'Title', value: 'T'.repeat(8000) },
+    ]);
+  });
+
+  it('excludes aiPrivate and non-allowlisted siblings', async () => {
+    const ctx = makeService();
+    ctx.db.query.contentTypes.findFirst.mockResolvedValue({
+      id: 'ct-1',
+      name: 'Post',
+      apiId: 'post',
+      fields: [
+        { key: 'title', label: 'Title', type: 'text' },
+        { key: 'secret', label: 'Secret', type: 'text', aiPrivate: true },
+        { key: 'other', label: 'Other', type: 'text' },
+        { key: 'body', label: 'Body', type: 'richtext', aiContextFields: ['title'] },
+      ],
+    });
+    ctx.db.query.contentEntries.findFirst.mockResolvedValue({
+      id: 'e-1',
+      workspaceId: 'ws-1',
+      projectId: 'p1',
+      contentTypeId: 'ct-1',
+      data: { title: 'ctx', secret: 's3cret', other: 'nope', body: 'draft' },
+    });
+    wireFreshReserve(ctx.db, 0);
+
+    await ctx.service.generate({ ...base, dto: dto({ entryId: 'e-1' }) });
+
+    const req = ctx.client.generate.mock.calls[0][0] as {
+      siblingValues: { label: string; value: string }[];
+    };
+    expect(req.siblingValues).toEqual([{ label: 'Title', value: 'ctx' }]);
+  });
+});

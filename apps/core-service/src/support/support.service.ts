@@ -50,14 +50,16 @@ export class SupportService {
       throw rpcError('VALIDATION_ERROR', 'Only image attachments are allowed.');
     }
     const maxBytes = 5 * 1024 * 1024;
-    if (p.dto.size != null && p.dto.size > maxBytes) {
+    if (p.dto.size > maxBytes) {
       throw rpcError('VALIDATION_ERROR', 'Image must be under 5 MB.');
     }
     const ext = p.dto.filename.includes('.')
       ? p.dto.filename.slice(p.dto.filename.lastIndexOf('.') + 1).toLowerCase()
       : '';
     const key = `support/${p.workspaceId}/${randomUUID()}${ext ? `.${ext}` : ''}`;
-    const uploadUrl = await this.storage.presignUpload(key, p.dto.contentType);
+    const uploadUrl = await this.storage.presignUpload(key, p.dto.contentType, {
+      contentLength: p.dto.size,
+    });
     return { uploadUrl, key };
   }
 
