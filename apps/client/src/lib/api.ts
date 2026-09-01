@@ -249,7 +249,7 @@ export const authApi = {
   avatarPresign: (dto: {
     filename: string;
     contentType: string;
-    size?: number;
+    size: number;
   }) =>
     request<PresignResult>('/users/me/avatar-presign', {
       method: 'POST',
@@ -477,7 +477,7 @@ export const webhookApi = {
 };
 
 export const mediaApi = {
-  presign: (dto: { filename: string; contentType: string; size?: number }) =>
+  presign: (dto: { filename: string; contentType: string; size: number }) =>
     request<PresignResult>('/content/media/presign', {
       method: 'POST',
       body: dto,
@@ -488,7 +488,7 @@ export const mediaApi = {
     key: string;
     kind: 'image' | 'video' | 'file';
     mime?: string;
-    size?: number;
+    size: number;
     width?: number;
     height?: number;
     alt?: string;
@@ -771,7 +771,7 @@ export const projectApi = {
 };
 
 export const supportApi = {
-  presign: (dto: { filename: string; contentType: string; size?: number }) =>
+  presign: (dto: { filename: string; contentType: string; size: number }) =>
     request<{ uploadUrl: string; key: string }>(
       '/support/tickets/attachments/presign',
       {

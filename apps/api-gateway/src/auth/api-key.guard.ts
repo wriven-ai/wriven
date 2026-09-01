@@ -31,7 +31,6 @@ interface CacheEntry {
 
 /** Short in-memory TTL so a busy site doesn't hit core-service per request. */
 const CACHE_TTL_MS = 30_000;
-const cache = new Map<string, CacheEntry>();
 
 /**
  * Authenticates a public Delivery API request by its `Authorization: Bearer
@@ -42,6 +41,14 @@ const cache = new Map<string, CacheEntry>();
  */
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
+  /**
+   * Cache keyed by token hash — never hold the raw token in memory. Instance
+   * state: the guard is registered once in AppModule, so this is process-wide.
+   */
+  private readonly cache = new Map<string, CacheEntry>();
+  /** Timestamp of the last eviction sweep (see sweepExpired). */
+  private lastSweep = 0;
+
   constructor(
     @Inject(SERVICE_TOKENS.CORE_SERVICE) private readonly core: ClientProxy,
     private readonly reflector: Reflector,
@@ -84,11 +91,26 @@ export class ApiKeyGuard implements CanActivate {
     return token.length > 0 ? token : null;
   }
 
-  /** Cache keyed by token hash — never hold the raw token in memory. */
+  /**
+   * Expired entries must be evicted, not just ignored on read: the key space
+   * is attacker-controlled (every unique Bearer string on the public edge
+   * allocates an entry, valid or not), so without a sweep the map grows for
+   * the whole process lifetime. Sweeping at most once per TTL bounds it to
+   * the live window; a swept entry could never produce a hit again, so the
+   * observable semantics are unchanged. (Same shape as AiBurstGuard.)
+   */
+  private sweepExpired(now: number): void {
+    if (now - this.lastSweep < CACHE_TTL_MS) return;
+    this.lastSweep = now;
+    for (const [key, entry] of this.cache) {
+      if (entry.expiresAt <= now) this.cache.delete(key);
+    }
+  }
+
   private async resolve(token: string): Promise<ApiKeyResolution | null> {
     const key = createHash('sha256').update(token).digest('hex');
     const now = Date.now();
-    const hit = cache.get(key);
+    const hit = this.cache.get(key);
     if (hit && hit.expiresAt > now) return hit.resolution;
 
     const resolution = await firstValueFrom(
@@ -96,7 +118,8 @@ export class ApiKeyGuard implements CanActivate {
         token,
       }),
     );
-    cache.set(key, { resolution, expiresAt: now + CACHE_TTL_MS });
+    this.sweepExpired(now);
+    this.cache.set(key, { resolution, expiresAt: now + CACHE_TTL_MS });
     return resolution;
   }
 }

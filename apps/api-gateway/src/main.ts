@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { AppModule } from './app/app.module';
 import { CsrfGuard } from './auth/csrf.guard';
+import { resolveCorsPolicy } from './common/cors-policy';
 
 async function bootstrap() {
   // rawBody: true exposes req.rawBody (Buffer) so the Stripe webhook route can
@@ -44,13 +45,14 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  // Two CORS policies:
-  // 1. Delivery API (/v1/projects/…) — browser-fetched from ANY origin
-  //    (Contentful/Sanity CDA model). Reflect the origin; credentials OFF —
-  //    these routes use Bearer API keys, never cookies.
+  // Two CORS policies (see common/cors-policy.ts — extracted so the routing
+  // rule is spec'd):
+  // 1. Delivery API (/v1/projects/:projectId/content|media/…) — browser-fetched
+  //    from ANY origin (Contentful/Sanity CDA model). Reflect the origin;
+  //    credentials OFF — these routes use Bearer API keys, never cookies.
   // 2. Management + admin — exact-origin allowlist from CORS_ORIGINS
-  //    (credentials need a specific origin, never `*`).
-  // No Origin header (curl, same-origin, server-to-server) isn't CORS.
+  //    (credentials need a specific origin, never `*`). Includes the
+  //    project-scoped management routes that share the /v1/projects prefix.
   const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:3001')
     .split(',')
     .map((origin) => origin.trim())
@@ -60,15 +62,8 @@ async function bootstrap() {
       // cors' CorsRequest type omits path; the underlying object is the Express
       // request, which has it.
       const path = (req as { path?: string }).path ?? '';
-      const isDelivery = path.startsWith('/v1/projects/');
       const origin = req.headers.origin ?? '';
-      if (isDelivery) {
-        return callback(null, { origin: true, credentials: false });
-      }
-      callback(null, {
-        origin: !origin || corsOrigins.includes(origin),
-        credentials: true,
-      });
+      callback(null, resolveCorsPolicy(path, origin, corsOrigins));
     }),
   );
 

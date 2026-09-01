@@ -34,6 +34,14 @@ const { contentTypes, contentEntries, aiGenerations } = schema;
 
 /** Fields eligible for AI generation (Tier 1). */
 const TIER1: readonly FieldType[] = ['text', 'richtext', 'select'];
+/**
+ * ai-service's SiblingValue.value is capped at 8000 chars (schemas.py
+ * _MAX_TURN_CONTENT). Entry text fields have no length cap, so an opted-in
+ * sibling longer than this would 422 the whole generate call (surfacing as
+ * AI_GENERATION_FAILED) — truncate at the seam. ai-service further truncates
+ * to 500 chars when building the actual prompt.
+ */
+const MAX_SIBLING_VALUE_CHARS = 8_000;
 const STALE_RESERVATION_SQL = sql`now() - interval '5 minutes'`;
 // v4: topical anchor in both prompts — whatever the instruction asks, the
 // answer must be publishable field/entry content, never chat (off-topic or
@@ -657,7 +665,10 @@ export class AiService {
       const v = data[f.key];
       if (v == null) continue;
       if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
-        out.push({ label: f.label, value: String(v) });
+        out.push({
+          label: f.label,
+          value: String(v).slice(0, MAX_SIBLING_VALUE_CHARS),
+        });
       }
     }
     return out;

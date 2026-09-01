@@ -1,6 +1,10 @@
 import { effectivePermissions, Permission } from '@wriven/contracts';
 import { AuthorizationService } from './authorization.service';
-import { asDb, createDbMock } from '../testing/drizzle-mock';
+import { asDb, createDbMock, serializeFragment } from '../testing/drizzle-mock';
+
+/** Serialize the where-fragment of the `call`-th findFirst on a query mock. */
+const lookupWhere = (mock: jest.Mock, call = 0) =>
+  serializeFragment(mock.mock.calls[call][0].where);
 
 function makeService() {
   const db = createDbMock();
@@ -26,6 +30,18 @@ describe('AuthorizationService.resolveRoles', () => {
     // The cascade math itself lives in @wriven/contracts — same definition the
     // frontend useCan() shares. Assert against the real function, not a copy.
     expect(roles.permissions).toEqual(effectivePermissions('member', 'editor'));
+
+    // Tenancy pins — these lookups are the RBAC chokepoint (every authorize()
+    // and every gateway workspace/project guard funnels through them). A
+    // dropped predicate would resolve roles from an unrelated tenant while
+    // every mock-based assertion stays green.
+    const projectWhere = lookupWhere(db.query.projects.findFirst);
+    expect(projectWhere).toContain('p1');
+    expect(projectWhere).toContain('deletedAt'); // soft-deleted projects grant nothing
+    expect(lookupWhere(db.query.projectMembers.findFirst)).toContain('p1');
+    expect(lookupWhere(db.query.projectMembers.findFirst)).toContain('u1');
+    expect(lookupWhere(db.query.workspaceMembers.findFirst)).toContain('ws-1');
+    expect(lookupWhere(db.query.workspaceMembers.findFirst)).toContain('u1');
   });
 
   it('soft-deleted or missing project → no roles, empty permission set', async () => {
@@ -55,6 +71,10 @@ describe('AuthorizationService.resolveRoles', () => {
       projRole: null,
     });
     expect(roles.permissions).toEqual(effectivePermissions('owner', null));
+    // Tenancy pin: the workspace role is resolved for THIS user in THIS workspace.
+    const wsWhere = lookupWhere(db.query.workspaceMembers.findFirst);
+    expect(wsWhere).toContain('ws-1');
+    expect(wsWhere).toContain('u1');
   });
 
   it('non-member → null roles and an empty permission set', async () => {

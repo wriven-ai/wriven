@@ -5,6 +5,15 @@ import type { CoreEntitlementsService } from '../entitlements/core-entitlements.
 import { WebhooksService } from './webhooks.service';
 import { writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
 
+// The URL guard does real DNS in production — the unit suite stays
+// network-free, so mock the module and drive it via the spy below.
+jest.mock('./url-guard', () => ({
+  assertPublicHttpUrl: jest.fn().mockResolvedValue(undefined),
+}));
+const urlGuard = require('./url-guard') as {
+  assertPublicHttpUrl: jest.Mock;
+};
+
 beforeAll(() => {
   Logger.overrideLogger([]);
 });
@@ -258,6 +267,57 @@ describe('WebhooksService.dispatch', () => {
     jest.useRealTimers();
 
     expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(chainOf(db.update).set).toHaveBeenCalledWith(
+      expect.objectContaining({ lastStatus: 0 }),
+    );
+  });
+});
+
+describe('WebhooksService — SSRF URL guard wiring', () => {
+  beforeEach(() => {
+    urlGuard.assertPublicHttpUrl.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('create checks the target URL before inserting', async () => {
+    const { service, db } = makeService();
+    urlGuard.assertPublicHttpUrl.mockRejectedValue(new Error('blocked'));
+    await expect(
+      service.create({
+        workspaceId: 'ws-1',
+        projectId: 'p1',
+        userId: 'u1',
+        dto: { url: 'http://wriven-auth:5001/x' } as never,
+      }),
+    ).rejects.toThrow('blocked');
+    expect(urlGuard.assertPublicHttpUrl).toHaveBeenCalledWith('http://wriven-auth:5001/x');
+    expect(db.insert).not.toHaveBeenCalled();
+  });
+
+  it('update checks a new URL but not other patches', async () => {
+    const { service, db } = makeService();
+    db.query.webhooks.findFirst.mockResolvedValue(webhookRow());
+    db.update.mockImplementation(() => writeChain([webhookRow()]));
+    await service.update({ projectId: 'p1', id: 'wh-1', dto: { active: false } as never });
+    expect(urlGuard.assertPublicHttpUrl).not.toHaveBeenCalled();
+    await service.update({
+      projectId: 'p1',
+      id: 'wh-1',
+      dto: { url: 'https://new.example/cb' } as never,
+    });
+    expect(urlGuard.assertPublicHttpUrl).toHaveBeenCalledWith('https://new.example/cb');
+  });
+
+  it('dispatch blocks a non-public target: no fetch, lastStatus 0', async () => {
+    const { service, db } = makeService();
+    db.query.webhooks.findMany.mockResolvedValue([
+      webhookRow({ url: 'http://169.254.169.254/latest' }),
+    ]);
+    const fetchSpy = jest.spyOn(global, 'fetch' as never) as never as jest.Mock;
+    urlGuard.assertPublicHttpUrl.mockRejectedValue(new Error('blocked'));
+
+    await service.dispatch('p1', payload());
+
+    expect(fetchSpy).not.toHaveBeenCalled();
     expect(chainOf(db.update).set).toHaveBeenCalledWith(
       expect.objectContaining({ lastStatus: 0 }),
     );

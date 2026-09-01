@@ -54,18 +54,28 @@ export class StorageService {
     return this.client;
   }
 
-  /** Presigned PUT URL for a direct browser upload. Short-lived. */
+  /**
+   * Presigned PUT URL for a direct browser upload. Short-lived. When
+   * `contentLength` is given it is signed into the URL — S3/R2 then reject a
+   * PUT whose body length differs, so a client cannot presign a small size
+   * and upload more.
+   */
   async presignUpload(
     key: string,
     contentType: string,
-    ttlSeconds = 300,
+    opts: { contentLength?: number; ttlSeconds?: number } = {},
   ): Promise<string> {
     const cmd = new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
+      ...(opts.contentLength != null
+        ? { ContentLength: opts.contentLength }
+        : {}),
     });
-    return getSignedUrl(this.getClient(), cmd, { expiresIn: ttlSeconds });
+    return getSignedUrl(this.getClient(), cmd, {
+      expiresIn: opts.ttlSeconds ?? 300,
+    });
   }
 
   /** Public read URL for a stored object key (reconstructed from config). */

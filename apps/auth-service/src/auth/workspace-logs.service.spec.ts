@@ -1,6 +1,13 @@
 import { WorkspaceLogsService } from './workspace-logs.service';
 import * as schema from '../db/schema';
-import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import {
+  chain,
+  writeChain,
+  asDb,
+  chainOf,
+  createDbMock,
+  serializeFragment,
+} from '../testing/drizzle-mock';
 
 const { workspaceActivityLog } = schema;
 
@@ -71,6 +78,15 @@ describe('WorkspaceLogsService.list', () => {
     const selectChain = chainOf(db.select);
     expect(selectChain.limit).toHaveBeenCalledWith(10);
     expect(selectChain.offset).toHaveBeenCalledWith(10); // (page - 1) * limit
+    // Tenancy pin: the feed reads THIS workspace's log window — a dropped
+    // workspaceId predicate would mix every tenant's activity into the view.
+    const listWhere = serializeFragment(selectChain.where.mock.calls[0][0]);
+    expect(listWhere).toContain('ws-1');
+    expect(listWhere).toContain('createdAt'); // time-window cutoff present
+    expect(db.$count).toHaveBeenCalledWith(
+      workspaceActivityLog,
+      expect.anything(),
+    );
   });
 
   it('defaults to page 1 / limit 20', async () => {

@@ -15,6 +15,7 @@ import { and, eq } from 'drizzle-orm';
 import { rpcError } from '../common/rpc-error';
 import * as schema from '../db/schema';
 import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
+import { assertPublicHttpUrl } from './url-guard';
 
 const { webhooks } = schema;
 type WebhookRow = typeof webhooks.$inferSelect;
@@ -38,6 +39,9 @@ export class WebhooksService {
     dto: CreateWebhookDto;
   }): Promise<CreateWebhookResult> {
     await this.entitlements.assertWebhookQuota(p.workspaceId);
+    // SSRF guard: core fetches this URL from the private network — it must
+    // resolve to a public address. Re-checked at dispatch time.
+    await assertPublicHttpUrl(p.dto.url);
     const secret = `whsec_${randomBytes(24).toString('base64url')}`;
     const events = p.dto.events?.length ? p.dto.events : [...WEBHOOK_EVENTS];
 
@@ -70,6 +74,7 @@ export class WebhooksService {
     dto: UpdateWebhookDto;
   }): Promise<WebhookView> {
     await this.requireRow(p.projectId, p.id);
+    if (p.dto.url !== undefined) await assertPublicHttpUrl(p.dto.url);
     const [row] = await this.db
       .update(webhooks)
       .set({
@@ -123,8 +128,21 @@ export class WebhooksService {
       'X-Wriven-Signature': `sha256=${signature}`,
     };
 
-    const backoff = [500, 2000]; // ms before retry 2 and 3
+    // Dispatch-time SSRF guard — the authoritative one (create/update can be
+    // bypassed by DNS rebinding; rows predating the guard still fire).
     let status = 0;
+    try {
+      await assertPublicHttpUrl(hook.url);
+    } catch {
+      this.logger.warn(`Webhook ${hook.id} blocked: non-public target ${hook.url}`);
+      await this.db
+        .update(webhooks)
+        .set({ lastStatus: 0, lastFiredAt: new Date() })
+        .where(eq(webhooks.id, hook.id));
+      return;
+    }
+
+    const backoff = [500, 2000]; // ms before retry 2 and 3
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const controller = new AbortController();
@@ -134,12 +152,15 @@ export class WebhooksService {
           headers,
           body,
           signal: controller.signal,
+          // A public URL that redirects to an internal host must not be
+          // followed — undici follows redirects by default.
+          redirect: 'error',
         });
         clearTimeout(timer);
         status = res.status;
         if (res.ok) break;
       } catch {
-        status = 0; // network error / timeout
+        status = 0; // network error / timeout / redirect
       }
       if (attempt < backoff.length) await sleep(backoff[attempt]);
     }

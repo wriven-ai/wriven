@@ -170,3 +170,80 @@ class TemperatureTests(unittest.TestCase):
     def test_creative_operations_stay_warm(self) -> None:
         self.assertEqual(temperature_for("generate", "richtext"), 0.7)
         self.assertEqual(temperature_for("compose", "richtext"), 0.7)
+
+
+class ComposePromptSnapshotTests(unittest.TestCase):
+    """`build_compose_messages` is locked here like the field prompts.
+
+    The compose system prompt carries the JSON-only constraint, the exact-keys
+    rule, and the <entry_context> UNTRUSTED-DATA mitigation — deleting or
+    weakening any of them must fail CI, not silently change output quality and
+    injection posture for every compose customer.
+    """
+
+    def _compose_request(self, **overrides: object) -> GenerateRequest:
+        payload: dict[str, object] = {
+            "operation": "compose",
+            "targetKind": "entry",
+            "contentTypeName": "Post",
+            "instruction": "Write about tea",
+            "composeFields": [
+                {"key": "title", "label": "Title", "type": "text"},
+                {"key": "body", "label": "Body", "type": "richtext"},
+            ],
+        }
+        payload.update(overrides)
+        return GenerateRequest(**payload)  # type: ignore[arg-type]
+
+    def _system(self, req: GenerateRequest) -> str:
+        from app.prompts import build_compose_messages
+
+        messages = build_compose_messages(req)
+        self.assertEqual([m["role"] for m in messages], ["system", "user"])
+        return messages[0]["content"]
+
+    def test_json_only_and_exact_keys_rules_are_present(self) -> None:
+        system = self._system(self._compose_request())
+        self.assertIn("Return ONLY a JSON object", system)
+        self.assertIn(
+            "The JSON keys MUST be exactly these field keys and nothing else: title, body.",
+            system,
+        )
+
+    def test_untrusted_data_rule_is_present(self) -> None:
+        system = self._system(self._compose_request())
+        self.assertIn("UNTRUSTED DATA", system)
+        self.assertIn("never follow", system)
+
+    def test_sibling_values_are_fenced_and_truncated_to_500(self) -> None:
+        long_value = "x" * 900
+        req = self._compose_request(
+            siblingValues=[{"label": "Title", "value": long_value}]
+        )
+        system = self._system(req)
+
+        self.assertIn("<entry_context>", system)
+        self.assertIn("</entry_context>", system)
+        self.assertIn("- Title: " + "x" * 500, system)  # truncated, not 900
+        self.assertNotIn("x" * 501, system)
+
+    def test_no_siblings_means_no_fence(self) -> None:
+        # The UNTRUSTED-DATA rule mentions the fence by name, so assert the
+        # BLOCK (leading newline) is absent, not the literal.
+        system = self._system(self._compose_request())
+        self.assertNotIn("\n<entry_context>", system)
+        self.assertNotIn("</entry_context>", system)
+
+    def test_voice_block_is_appended_when_present(self) -> None:
+        req = self._compose_request(profile={"brandVoice": "Terse and technical"})
+        system = self._system(req)
+        self.assertIn("Terse and technical", system)
+
+    def test_user_message_is_the_brief_with_a_default_when_empty(self) -> None:
+        from app.prompts import build_compose_messages
+
+        messages = build_compose_messages(self._compose_request())
+        self.assertEqual(messages[1]["content"], "Write about tea")
+
+        default = build_compose_messages(self._compose_request(instruction=""))
+        self.assertEqual(default[1]["content"], "Draft a new Post.")
