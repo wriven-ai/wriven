@@ -31,10 +31,9 @@ export class PresignTicketAttachmentDto {
   @IsString()
   contentType!: string;
 
-  @IsOptional()
   @IsInt()
   @Min(1)
-  size?: number;
+  size!: number;
 }
 
 export class CreateTicketDto {

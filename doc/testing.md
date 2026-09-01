@@ -8,7 +8,7 @@ How the Wriven backend is tested: philosophy, layout, the shared mock toolkit, r
 - **Specs live next to the code** (`foo.service.ts` + `foo.service.spec.ts`) — the Angular/Nx convention. Shared helpers live in each app's `src/testing/` (never matched by testMatch, excluded from the app tsconfig).
 - **Assert behavior, not builder args** — drizzle query-builder fragments (`eq`/`and`/`lt`/`sql`) are treated as opaque: specs assert *which table* was touched, call counts/order, and resolved values. Where the WHERE scope is security-relevant (revoke-by-id, retention cutoff, token-hash lookup), it is pinned via `serializeFragment()` (below) instead of trusted.
 - **Error contracts** — thrown `RpcException`s are unwrapped (`err.getError()`) and matched against `ERROR_CODES.X` from `@wriven/contracts`; messages asserted by substring only.
-- **Integration tests** exist for auth-service (see the section below): testcontainers Postgres with the real migrations, Stripe mocked at the client seam. Still uncovered: gateway↔auth↔core TCP e2e journeys, and core-service integration seams (the delivery JSONB filter, usage upserts) — unit mocks cannot catch those SQL-shape regressions.
+- **Integration tests** exist for auth-service and core-service (see the section below): testcontainers Postgres with the real migrations, Stripe mocked at the client seam. Still uncovered: gateway↔auth↔core TCP e2e journeys.
 
 ## What exists
 
@@ -63,17 +63,20 @@ Gateway/core have their own small `testing/` folders (`httpContext`, `httpHost`,
 - **HMAC recomputation** — webhook signatures verified by recomputing `createHmac('sha256', secret).update(\`${firedAt}.${body}\`)`, never by trusting the code under test.
 - **Cache-aware mocks** — services with a TTL cache (core `CoreEntitlementsService`, 30s) need distinct workspace IDs per sub-call in one test, or the cache swallows the second fetch.
 
-## Integration tests (Phase 3 — started)
+## Integration tests (Phase 3 — auth, Phase 4 started — core)
 
-`apps/auth-service/test/integration/` — **real Postgres via testcontainers** (one ephemeral `postgres:16-alpine` container per spec file, the service's REAL migrations from `src/db/migrations`, `truncate()` between tests). Docker required; never touches dev/prod DBs.
+`apps/auth-service/test/integration/` and `apps/core-service/test/integration/` — **real Postgres via testcontainers** (one ephemeral `postgres:16-alpine` container per spec file, the service's REAL migrations from `src/db/migrations`, `truncate()` between tests). Docker required; never touches dev/prod DBs.
 
 ```bash
 pnpm nx test-integration @wriven/auth-service   # docker must be running
+pnpm nx test-integration @wriven/core-service
 ```
 
-- Separate `jest.integ.config.cts` + `tsconfig.integration.json`; the unit suite excludes `test/` and stays docker-free. Target is `cache: false` (docker side effects).
-- Seams covered: invitation `accept` (upsert/`setWhere` guest-upgrade, no-downgrade, FK constraints, quota throw → real tx rollback with the invitation left pending), billing `swapPlan` (deferred downgrade pendingChange from the Stripe item period, upgrade mirror, Stripe-failure → no partial DB write, reactivation, free cancel), **seat-quota advisory lock** (parallel claims on the last seat serialize — exactly one wins, loser rolls back), **webhook reconciler** (event-id re-delivery is a true no-op via the real unique index, strictly-older events skip state writes but dedupe, same-second applies, unmapped price → tx rollback of the idempotency insert), **cleanup cron** (exact expired-set deletes; revoked-but-unexpired refresh tokens kept for theft detection; retention window honored with the 90d default).
-- Helpers: `test-db.ts` (`startTestDb()` → container/url/db/truncate/stop).
+- Separate `jest.integ.config.cts` + `tsconfig.integration.json` per app; each unit suite excludes `test/` and stays docker-free. Targets are `cache: false` (docker side effects).
+- auth-service seams covered: invitation `accept` (upsert/`setWhere` guest-upgrade, no-downgrade, FK constraints, quota throw → real tx rollback with the invitation left pending), billing `swapPlan` (deferred downgrade pendingChange from the Stripe item period, upgrade mirror, Stripe-failure → no partial DB write, reactivation, free cancel), **seat-quota advisory lock** (parallel claims on the last seat serialize — exactly one wins, loser rolls back), **webhook reconciler** (event-id re-delivery is a true no-op via the real unique index, strictly-older events skip state writes but dedupe, same-second applies, unmapped price → tx rollback of the idempotency insert), **cleanup cron** (exact expired-set deletes; revoked-but-unexpired refresh tokens kept for theft detection; retention window honored with the 90d default).
+- core-service seams covered (Phase 4 start): **usage upsert** (repeat flushes accumulate through the real `(workspace, period)` unique index — never overwrite; period + workspace isolation; `read()` composition), **revision pruning** (the raw cap-bound DELETE keeps only the newest `cap` revisions of THIS entry — the other entry's history untouched), **delivery reads** (JSONB equality filters, published-only visibility vs preview, draft-slug NOT_FOUND, cross-project tenant isolation).
+- Helpers: `test-db.ts` per app (`startTestDb()` → container/db/truncate/stop). Core's pre-creates a stub `auth_svc.projects` — migration 0003 backfills `project_id` from it (in prod the auth schema exists on the shared DB; in a core-only container it must be stubbed).
+- Still uncovered: gateway↔auth↔core TCP e2e journeys.
 
 ## Adding a new module — checklist
 

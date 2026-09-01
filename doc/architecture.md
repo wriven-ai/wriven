@@ -84,7 +84,7 @@ this.core.send(CORE_PATTERNS.ENTRY_CREATE, { workspaceId, userId, dto });
 - **Workspace membership** validated via TCP `auth.validateWorkspaceMember` before forwarding workspace-scoped requests.
 - **Rate limiting** (`@nestjs/throttler`) — global default + tighter per-route limits.
 - **Response envelope** — `ResponseInterceptor` (success) + `AllExceptionsFilter` (errors). See [Conventions](./conventions.md).
-- **CORS** — split policy: the public Delivery API (`/v1/projects/*`) reflects any origin, credentials **off** (Bearer API keys, never cookies — customer browser apps); all other routes use the exact-origin allowlist `CORS_ORIGINS` with credentials (dev `localhost:3000,3001`; prod wriven.tech/www + admin.wriven.tech/www). `CLIENT_ORIGIN` is used for the Google-OAuth callback redirect.
+- **CORS** — split policy: the public Delivery API (`/v1/projects/:projectId/content|media/*`) reflects any origin, credentials **off** (Bearer API keys, never cookies — customer browser apps); all other routes — including the project-scoped management routes that share the `/v1/projects` prefix (`members`, `invitations`, project get/patch/delete) — use the exact-origin allowlist `CORS_ORIGINS` with credentials (dev `localhost:3000,3001`; prod wriven.tech/www + admin.wriven.tech/www). `CLIENT_ORIGIN` is used for the Google-OAuth callback redirect.
 - Owns **no database tables and no business logic** — it routes and guards.
 
 ## Service boundaries

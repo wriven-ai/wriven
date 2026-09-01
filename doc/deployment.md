@@ -166,7 +166,7 @@ this app.
 
 ## 9. CORS
 
-CORS is split: the public Delivery API (`/v1/projects/*`) reflects any origin without credentials (Bearer API keys — customer browser apps work from any domain); everything else uses the exact-origin allowlist `CORS_ORIGINS` with credentials (render.yaml sets wriven.tech + www + admin.wriven.tech + www.admin.wriven.tech).
+CORS is split: the public Delivery API (`/v1/projects/:projectId/content|media/*`) reflects any origin without credentials (Bearer API keys — customer browser apps work from any domain); everything else — including project-scoped management routes under the same prefix — uses the exact-origin allowlist `CORS_ORIGINS` with credentials (render.yaml sets wriven.tech + www + admin.wriven.tech + www.admin.wriven.tech).
 It works as-is, but for production **tighten it** to your origin in
 [main.ts](../apps/api-gateway/src/main.ts):
 

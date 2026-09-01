@@ -155,4 +155,40 @@ describe('ApiKeyGuard — resolution cache (30s TTL, hash-keyed)', () => {
     await guard.canActivate(httpContext(reqWith(freshToken())));
     expect(send).toHaveBeenCalledTimes(2);
   });
+
+  it('expired entries are swept from the map (bounded memory)', async () => {
+    // The key space is attacker-controlled on the public edge — without a
+    // sweep, one Map entry per distinct sprayed token lives forever.
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    const { guard, send } = makeGuard();
+    const stale = freshToken();
+    await guard.canActivate(httpContext(reqWith(stale)));
+
+    const cache = (
+      guard as unknown as { cache: Map<string, { expiresAt: number }> }
+    ).cache;
+    expect(cache.size).toBe(1);
+
+    // Advance past the TTL so the next resolution sweeps the stale entry.
+    jest.setSystemTime(new Date('2026-01-01T00:00:31.000Z'));
+    await guard.canActivate(httpContext(reqWith(freshToken())));
+
+    expect(cache.size).toBe(1); // stale entry evicted, only the fresh one kept
+    expect(send).toHaveBeenCalledTimes(2); // each distinct token resolved once
+  });
+
+  it('sweep runs at most once per TTL window', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    const { guard } = makeGuard();
+    await guard.canActivate(httpContext(reqWith(freshToken())));
+
+    // +1s: within the sweep's own window — no sweep, both entries present.
+    jest.setSystemTime(new Date('2026-01-01T00:00:01.000Z'));
+    await guard.canActivate(httpContext(reqWith(freshToken())));
+
+    const cache = (
+      guard as unknown as { cache: Map<string, { expiresAt: number }> }
+    ).cache;
+    expect(cache.size).toBe(2);
+  });
 });

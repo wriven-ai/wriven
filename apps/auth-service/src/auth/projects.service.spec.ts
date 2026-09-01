@@ -218,7 +218,7 @@ describe('ProjectsService.addMember', () => {
     const { service, db, entitlements } = makeService();
     db.query.projects.findFirst.mockResolvedValue(projectRow());
     db.__tx.insert.mockImplementationOnce(() => writeChain([])) // workspaceMembers (guest seat)
-      .mockImplementationOnce(() => chain([{ id: 'pm-1', projectId: 'p1', userId: 'u-2', role: 'editor', createdAt: T0 }]));
+      .mockImplementationOnce(() => writeChain([{ id: 'pm-1', projectId: 'p1', userId: 'u-2', role: 'editor', createdAt: T0 }]));
 
     const view = await service.addMember({
       callerUserId: USER_ID,

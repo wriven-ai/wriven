@@ -62,7 +62,7 @@ On boot call `GET /admin/auth/me` to hydrate session; 401 → redirect `/login`.
 | GET | `/admin/content/:id` | any | — | `AdminEntryDetail` |
 | PATCH | `/admin/content/:id` | `[admin, moderator]` | `{ status: 'draft' \| 'archived' }` | `AdminEntryRow` |
 
-`status` filter ∈ `draft|published|archived`. PATCH = takedown (also purges CDN).
+`status` filter ∈ `draft|published|archived`. PATCH = takedown (also purges CDN + fires `entry.unpublished` webhooks when previously published).
 
 ### Content types
 | GET | `/admin/content-types?page&limit&workspaceId?&projectId?` | any | — | `Paginated<AdminContentTypeRow>` |

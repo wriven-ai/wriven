@@ -6,7 +6,14 @@ import type { WebhooksService } from '../webhooks/webhooks.service';
 import type { CachePurgeService } from '../cache/cache-purge.service';
 import type { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
 import * as schema from '../db/schema';
-import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import {
+  chain,
+  writeChain,
+  asDb,
+  chainOf,
+  createDbMock,
+  serializeFragment,
+} from '../testing/drizzle-mock';
 
 const { contentEntries, contentRevisions, aiGenerations } = schema;
 
@@ -81,7 +88,7 @@ describe('EntriesService.create', () => {
   it('happy path: quota asserted, slug derived from the first text field, revision v1', async () => {
     const { service, db, entitlements } = makeService();
     db.__tx.insert.mockImplementationOnce(() => writeChain([entryRow()]))
-      .mockImplementationOnce(() => chain([{ id: 'rev-1' }]));
+      .mockImplementationOnce(() => writeChain([{ id: 'rev-1' }]));
 
     const view = await service.create({
       ...base,
@@ -104,7 +111,7 @@ describe('EntriesService.create', () => {
   it('created directly as published → publishedAt stamped', async () => {
     const { service, db } = makeService();
     db.__tx.insert.mockImplementationOnce(() => writeChain([entryRow({ status: 'published' })]))
-      .mockImplementationOnce(() => chain([{ id: 'rev-1' }]));
+      .mockImplementationOnce(() => writeChain([{ id: 'rev-1' }]));
 
     await service.create({
       ...base,
@@ -405,5 +412,49 @@ describe('EntriesService — AI generation provenance (linkAiGenerationsToRevisi
       ctx.service.update({ ...base, id: 'e-1', dto: { data: {}, aiGenerationIds: ['gen-1'] } }),
     );
     expect(err.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('EntriesService — plan-capped revision pruning', () => {
+  it('deletes only THIS entry\'s revisions beyond the cap, keeping the newest', async () => {
+    // Every other test mocks revisionsCap to null (unlimited → no-op). This
+    // pins the raw DELETE itself: a wrong entry_id binding, an inverted ORDER
+    // BY (keeps oldest, deletes newest), or an off-by-one cap would destroy
+    // the wrong revision history while the suite stays green.
+    const ctx = makeService();
+    ctx.entitlements.revisionsCap.mockResolvedValue(5);
+    ctx.db.__tx.insert
+      .mockImplementationOnce(() => writeChain([entryRow()]))
+      .mockImplementationOnce(() => writeChain([{ id: 'rev-1' }]));
+
+    await ctx.service.create({
+      ...base,
+      dto: { contentTypeId: 'ct-1', data: { title: 'Hello' } },
+    });
+
+    expect(ctx.db.__tx.execute).toHaveBeenCalledTimes(1);
+    const pruneSql = serializeFragment(
+      ctx.db.__tx.execute.mock.calls[0][0],
+    );
+    // Bound params: the entry (twice) and the cap.
+    expect(pruneSql.match(/"e-1"/g)?.length).toBe(2);
+    expect(pruneSql).toContain('5');
+    // Direction: newest versions survive.
+    expect(pruneSql).toContain('ORDER BY version DESC');
+    expect(pruneSql).toContain('content_revisions');
+  });
+
+  it('unlimited (null cap) never executes the prune DELETE', async () => {
+    const ctx = makeService(); // default revisionsCap → null
+    ctx.db.__tx.insert
+      .mockImplementationOnce(() => writeChain([entryRow()]))
+      .mockImplementationOnce(() => writeChain([{ id: 'rev-1' }]));
+
+    await ctx.service.create({
+      ...base,
+      dto: { contentTypeId: 'ct-1', data: { title: 'Hello' } },
+    });
+
+    expect(ctx.db.__tx.execute).not.toHaveBeenCalled();
   });
 });

@@ -106,3 +106,93 @@ class LlmClientChatTests(unittest.TestCase):
         self.assertIs(
             client._client.chat.completions.create.call_args.kwargs["timeout"], NOT_GIVEN
         )
+
+
+class LlmClientFailureMappingTests(unittest.TestCase):
+    """RateLimitError / OpenAIError -> ProviderError, without leaking bodies."""
+
+    def _client_raising(self, exc: BaseException) -> tuple[LlmClient, AsyncMock]:
+        client = LlmClient.__new__(LlmClient)
+        client._model = "test-model"
+        create = AsyncMock(side_effect=exc)
+        sdk = SimpleNamespace()
+        sdk.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
+        client._client = sdk
+        return client, create
+
+    def test_rate_limit_maps_to_friendly_provider_error(self) -> None:
+        from openai import RateLimitError
+
+        err = RateLimitError(
+            message="Rate limit reached",
+            response=SimpleNamespace(
+                status_code=429, headers={}, request=SimpleNamespace(method="POST", url="https://x")
+            ),
+            body=None,
+        )
+        client, create = self._client_raising(err)
+
+        with self.assertRaises(ProviderError) as ctx:
+            asyncio.run(client.chat([{"role": "user", "content": "x"}], 0.2, "generate"))
+
+        self.assertIn("busy", str(ctx.exception))
+        self.assertEqual(create.await_count, 1)  # no blind retry at this layer
+
+    def test_generic_openai_error_collapses_to_opaque_provider_error(self) -> None:
+        from openai import APIError
+
+        err = APIError(
+            message="upstream exploded: SECRET INTERNAL BODY",
+            request=SimpleNamespace(method="POST", url="https://x"),
+            body=None,
+        )
+        client, _ = self._client_raising(err)
+
+        with self.assertRaises(ProviderError) as ctx:
+            asyncio.run(client.chat([{"role": "user", "content": "x"}], 0.2, "generate"))
+
+        # The provider response body (which can quote request content) never
+        # reaches the raised message — governance rule.
+        self.assertNotIn("SECRET", str(ctx.exception))
+        self.assertNotIn("BODY", str(ctx.exception))
+
+    def test_throttle_counter_is_recorded_on_rate_limit(self) -> None:
+        from openai import RateLimitError
+        from app import observability
+
+        err = RateLimitError(
+            message="Rate limit reached",
+            response=SimpleNamespace(
+                status_code=429, headers={}, request=SimpleNamespace(method="POST", url="https://x")
+            ),
+            body=None,
+        )
+        client, _ = self._client_raising(err)
+
+        before = observability._provider_throttles_total
+        with self.assertRaises(ProviderError):
+            asyncio.run(client.chat([{"role": "user", "content": "x"}], 0.2, "generate"))
+        self.assertEqual(observability._provider_throttles_total, before + 1)
+
+
+class OperationTokenCapTests(unittest.TestCase):
+    """Spend policy: per-operation output caps are enforced at the SDK call."""
+
+    def _client_capturing(self) -> tuple[LlmClient, AsyncMock]:
+        client = LlmClient.__new__(LlmClient)
+        client._model = "test-model"
+        create = AsyncMock(return_value=_completion())
+        sdk = SimpleNamespace()
+        sdk.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
+        client._client = sdk
+        return client, create
+
+    def test_known_operation_uses_its_cap(self) -> None:
+        client, create = self._client_capturing()
+        asyncio.run(client.chat([{"role": "user", "content": "x"}], 0.2, "shorten"))
+        self.assertEqual(create.await_args.kwargs["max_tokens"], 1_200)
+
+    def test_unknown_operation_falls_back_to_the_global_ceiling(self) -> None:
+        client, create = self._client_capturing()
+        asyncio.run(client.chat([{"role": "user", "content": "x"}], 0.2, "mystery-op"))
+        self.assertEqual(create.await_args.kwargs["max_tokens"], 8_000)
