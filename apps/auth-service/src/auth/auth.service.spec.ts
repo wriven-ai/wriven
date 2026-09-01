@@ -3,13 +3,20 @@ import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import { ERROR_CODES, GoogleProfile } from '@wriven/contracts';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'node:crypto';
 import { AuthService } from './auth.service';
 import type { AuthorizationService } from './authorization.service';
 import type { InvitationsService } from './invitations.service';
 import type { MailService } from './mail.service';
 import { TokenService } from './token.service';
 import { configStub } from '../testing/config-stub';
-import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import {
+  writeChain,
+  asDb,
+  chainOf,
+  createDbMock,
+  expectScopedWhere,
+} from '../testing/drizzle-mock';
 import { serializeFragment } from '../testing/drizzle-mock';
 import { userRow, workspaceRow } from '../testing/fixtures';
 import * as schema from '../db/schema';
@@ -215,7 +222,7 @@ describe('AuthService.register', () => {
     const user = userRow({ email: dto.email, name: dto.name });
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
     tx.insert.mockImplementationOnce(() => writeChain([user]))
-      .mockImplementationOnce(() => chain([workspaceRow()]));
+      .mockImplementationOnce(() => writeChain([workspaceRow()]));
 
     const result = await service.register(dto);
 
@@ -245,7 +252,7 @@ describe('AuthService.register', () => {
     const { service, tx } = makeService();
     tx.query.plans.findFirst.mockResolvedValue(undefined);
     tx.insert.mockImplementationOnce(() => writeChain([userRow({ email: dto.email })]))
-      .mockImplementationOnce(() => chain([workspaceRow()]));
+      .mockImplementationOnce(() => writeChain([workspaceRow()]));
 
     const result = await service.register(dto);
 
@@ -297,7 +304,7 @@ describe('AuthService.register', () => {
     const { service, tx, invitations } = makeService();
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
     tx.insert.mockImplementationOnce(() => writeChain([userRow({ email: dto.email })]))
-      .mockImplementationOnce(() => chain([workspaceRow()]));
+      .mockImplementationOnce(() => writeChain([workspaceRow()]));
     invitations.claimPending.mockRejectedValue(new Error('invite svc down'));
 
     const result = await service.register(dto);
@@ -729,7 +736,7 @@ describe('AuthService.googleLogin', () => {
     });
     tx.query.plans.findFirst.mockResolvedValue({ id: 'free-plan-id' });
     tx.insert.mockImplementationOnce(() => writeChain([googleUser]))
-      .mockImplementationOnce(() => chain([workspaceRow()]));
+      .mockImplementationOnce(() => writeChain([workspaceRow()]));
     withPrimaryWorkspace(db);
 
     const result = await service.googleLogin(profile);
@@ -852,6 +859,15 @@ describe('AuthService.logout', () => {
     expect(result).toEqual({ success: true });
     expect(db.update).toHaveBeenCalledWith(refreshTokens);
     expect(chainOf(db.update).set).toHaveBeenCalledWith({ revoked: true });
+    // Scope pin: the revoke targets the sha256 of the presented token —
+    // never the raw string (it isn't stored), and never a whole user's
+    // sessions (that would log the user out of every device).
+    const expectedHash = createHash('sha256').update('raw').digest('hex');
+    expectScopedWhere(db.update, 0, expectedHash);
+    // And the raw token string never appears in the lookup (circular-safe).
+    expect(serializeFragment(chainOf(db.update).where.mock.calls[0][0])).not.toContain(
+      'raw',
+    );
   });
 });
 
@@ -972,5 +988,147 @@ describe('AuthService.validateProjectMember — the cascade bypass', () => {
     expect([ERROR_CODES.FORBIDDEN.code, ERROR_CODES.NOT_FOUND.code]).toContain(
       err.code,
     );
+  });
+});
+
+describe('AuthService.verifyEmail — link-token path', () => {
+  const userId = '11111111-1111-4111-8111-111111111111';
+  const FUTURE = new Date('2030-01-01T00:00:00.000Z');
+
+  function tokenRow(overrides: Record<string, unknown> = {}) {
+    const { tokens } = makeService();
+    return {
+      id: 'evt-1',
+      userId,
+      tokenHash: tokens.hash('raw-token'),
+      used: false,
+      expiresAt: FUTURE,
+      codeHash: 'x',
+      codeExpiresAt: FUTURE,
+      attempts: 0,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      ...overrides,
+    };
+  }
+
+  it.each([
+    ['unknown token', undefined],
+    ['already used', tokenRow({ used: true })],
+    ['expired', tokenRow({ expiresAt: new Date('2026-01-01T00:00:00.000Z') })],
+  ])('%s → INVALID_VERIFICATION_TOKEN, no write', async (_name, row) => {
+    const { service, db } = makeService();
+    db.query.emailVerificationTokens.findFirst.mockResolvedValue(row);
+
+    const err = await rejection(service.verifyEmail({ token: 'raw-token' }));
+    expect(err.code).toBe(ERROR_CODES.INVALID_VERIFICATION_TOKEN.code);
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it('the lookup is by the sha256 of the presented token — never the raw string', async () => {
+    const { service, db, tokens } = makeService();
+    db.query.emailVerificationTokens.findFirst.mockResolvedValue(tokenRow());
+
+    await service.verifyEmail({ token: 'raw-token' });
+
+    const lookupWhere = serializeFragment(
+      db.query.emailVerificationTokens.findFirst.mock.calls[0][0].where,
+    );
+    expect(lookupWhere).toContain(tokens.hash('raw-token'));
+    expect(lookupWhere).not.toContain('raw-token');
+  });
+
+  it('valid token → user marked verified and the token burned, in one tx', async () => {
+    const { service, db } = makeService();
+    const row = tokenRow();
+    db.query.emailVerificationTokens.findFirst.mockResolvedValue(row);
+
+    const result = await service.verifyEmail({ token: 'raw-token' });
+
+    expect(result).toEqual({ success: true });
+    expect(db.__tx.update).toHaveBeenNthCalledWith(1, users);
+    expect(chainOf(db.__tx.update, 0).set).toHaveBeenCalledWith({
+      emailVerified: true,
+    });
+    expect(serializeFragment(chainOf(db.__tx.update, 0).where.mock.calls[0][0])).toContain(
+      userId,
+    );
+    expect(db.__tx.update).toHaveBeenNthCalledWith(2, emailVerificationTokens);
+    expect(chainOf(db.__tx.update, 1).set).toHaveBeenCalledWith({ used: true });
+    // Burn exactly THIS token row.
+    expect(serializeFragment(chainOf(db.__tx.update, 1).where.mock.calls[0][0])).toContain(
+      'evt-1',
+    );
+  });
+});
+
+describe('AuthService.resendVerification', () => {
+  const userId = '11111111-1111-4111-8111-111111111111';
+
+  it('unknown user → NOT_FOUND', async () => {
+    const { service, db } = makeService();
+    db.query.users.findFirst.mockResolvedValue(undefined);
+    const err = await rejection(service.resendVerification({ userId }));
+    expect(err.code).toBe(ERROR_CODES.NOT_FOUND.code);
+  });
+
+  it('already verified → success with NO mail (no enumeration via resend)', async () => {
+    const { service, db, mail } = makeService();
+    db.query.users.findFirst.mockResolvedValue({ id: userId, emailVerified: true });
+
+    const result = await service.resendVerification({ userId });
+
+    expect(result).toEqual({ success: true });
+    expect(mail.sendVerification).not.toHaveBeenCalled();
+    expect(db.insert).not.toHaveBeenCalled();
+  });
+
+  it('unverified → prior unused tokens invalidated, fresh token+code issued, mail sent', async () => {
+    const { service, db, mail } = makeService(
+      { EMAIL_VERIFY_TTL: '24h', OTP_TTL: '10m' },
+    );
+    db.query.users.findFirst.mockResolvedValue({
+      id: userId,
+      email: 'u@x.y',
+      emailVerified: false,
+    });
+
+    const result = await service.resendVerification({ userId });
+
+    expect(result).toEqual({ success: true });
+    // 1. Old unused tokens burned for THIS user only.
+    expect(chainOf(db.update).set).toHaveBeenCalledWith({ used: true });
+    const invalidateWhere = serializeFragment(chainOf(db.update).where.mock.calls[0][0]);
+    expect(invalidateWhere).toContain(userId);
+    // 2. New row: opaque token hash + code hash, distinct TTLs.
+    const values = chainOf(db.insert).values.mock.calls[0][0] as Record<
+      string,
+      { getTime(): number } | string
+    >;
+    expect(values.tokenHash).toEqual(expect.any(String));
+    expect(values.tokenHash).not.toContain('raw');
+    expect(values.codeHash).toEqual(expect.any(String));
+    expect((values.expiresAt as Date).getTime()).toBeGreaterThan(
+      (values.codeExpiresAt as Date).getTime(),
+    );
+    // 3. Mail dispatched with the verify link.
+    expect(mail.sendVerification).toHaveBeenCalledWith(
+      'u@x.y',
+      expect.stringContaining('/verify-email?token='),
+      expect.any(String),
+    );
+  });
+
+  it('a mail failure never fails the resend (logged, swallowed)', async () => {
+    const { service, db, mail } = makeService();
+    db.query.users.findFirst.mockResolvedValue({
+      id: userId,
+      email: 'u@x.y',
+      emailVerified: false,
+    });
+    mail.sendVerification.mockRejectedValue(new Error('SMTP down'));
+
+    await expect(service.resendVerification({ userId })).resolves.toEqual({
+      success: true,
+    });
   });
 });

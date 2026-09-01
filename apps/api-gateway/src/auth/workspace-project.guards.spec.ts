@@ -103,4 +103,32 @@ describe('ProjectGuard', () => {
     expect(req.projectRole).toBeNull();
     expect(req.projectPermissions).toBeInstanceOf(Set);
   });
+
+  it('no req.user (JwtAuthGuard skipped) → UNAUTHORIZED', async () => {
+    const guard = new ProjectGuard(clientMock());
+    await expect(
+      guard.canActivate(httpContext({ headers: { 'x-project-id': 'p1' } })),
+    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  it('auth-service FORBIDDEN rejection propagates', async () => {
+    // The sole barrier for a cross-workspace owner/admin: their own workspace
+    // membership is valid (WorkspaceGuard passes) and their workspace
+    // permission set contains every project permission, so this guard's
+    // error propagation IS the cross-tenant deny. A regression that swallows
+    // the observable (catchError default, fire-and-forget) admits them.
+    const client = clientMock();
+    client.send.mockReturnValue(
+      throwError(() => ({ code: 'FORBIDDEN', statusCode: 403, message: 'no' })),
+    );
+    const guard = new ProjectGuard(client);
+    await expect(
+      guard.canActivate(
+        httpContext({
+          headers: { 'x-project-id': 'p1' },
+          user: { userId: 'u1' },
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
 });

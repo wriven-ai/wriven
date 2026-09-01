@@ -1,6 +1,6 @@
 import { ERROR_CODES, PlanLimits } from '@wriven/contracts';
 import { EntitlementsService } from './entitlements.service';
-import { chain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, asDb, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';
 import { setEnv } from '../testing/env';
 import { planRow, subRow } from '../testing/fixtures';
 
@@ -211,12 +211,19 @@ describe('EntitlementsService.resolveLimits', () => {
 });
 
 describe('EntitlementsService.usage', () => {
-  it('counts non-deleted projects and members', async () => {
+  it('counts non-deleted projects and members, scoped to the workspace', async () => {
     const { service, db } = makeService();
     db.$count.mockResolvedValueOnce(3).mockResolvedValueOnce(5);
 
     expect(await service.usage('ws-1')).toEqual({ projects: 3, members: 5 });
     expect(db.$count).toHaveBeenCalledTimes(2);
+    // Tenancy pins: a dropped workspaceId filter counts EVERY tenant's rows
+    // (spurious PLAN_LIMIT_REACHED lockouts); a dropped deletedAt filter
+    // counts soft-deleted projects toward quota.
+    const projectFilter = serializeFragment(db.$count.mock.calls[0][1]);
+    expect(projectFilter).toContain('ws-1');
+    expect(projectFilter).toContain('deletedAt');
+    expect(serializeFragment(db.$count.mock.calls[1][1])).toContain('ws-1');
   });
 });
 
@@ -258,6 +265,11 @@ describe('EntitlementsService.assertProjectQuotaTx', () => {
       expect(payload.message).toContain('allows 2 projects');
     }
     expect(tx.execute).toHaveBeenCalledTimes(1); // advisory lock taken
+    // Tenancy pin: the quota count selects THIS workspace's non-deleted
+    // projects — the mock is where-opaque, so pin the fragment itself.
+    const countWhere = serializeFragment(chainOf(tx.select).where.mock.calls[0][0]);
+    expect(countWhere).toContain('ws-1');
+    expect(countWhere).toContain('deletedAt');
   });
 
   it('under the limit → passes with the advisory lock held', async () => {
@@ -291,5 +303,9 @@ describe('EntitlementsService.assertMemberQuotaTx', () => {
       expect(payload.message).toContain('allows 1 member.');
     }
     expect(chainOf(tx.select).from).toHaveBeenCalled();
+    // Tenancy pin: the seat count is scoped to this workspace's members.
+    expect(serializeFragment(chainOf(tx.select).where.mock.calls[0][0])).toContain(
+      'ws-1',
+    );
   });
 });

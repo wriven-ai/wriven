@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/integration",
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "jest.integ.config.cts",
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "test/integration/**/*.ts"
+  ]
+}

@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { UsageService } from './usage.service';
 import type { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
-import { writeChain, asDb, chain, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { writeChain, asDb, chain, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';
 
 beforeAll(() => {
   Logger.overrideLogger([]);
@@ -36,8 +36,19 @@ describe('UsageService.record — batched upsert', () => {
     expect(db.insert.mock.calls).toHaveLength(2);
     const values = chainOf(db.insert).values.mock.calls[0][0] as Record<string, unknown>;
     expect(values).toMatchObject({ workspaceId: 'ws-1', requestCount: 3 });
-    // The set uses a SQL increment (request_count + n), never an overwrite.
-    expect(chainOf(db.insert).set).toBeDefined();
+    // The upsert set is a SQL increment (request_count + n), never an
+    // overwrite — an overwrite silently switches Delivery-API metering to
+    // last-flush-wins and undercounts usage that feeds plan-limit views.
+    const upsert = chainOf(db.insert).onConflictDoUpdate.mock.calls[0][0] as {
+      target: unknown[];
+      set: unknown;
+    };
+    const setFragment = serializeFragment(upsert.set);
+    expect(setFragment).toContain('requestCount');
+    expect(setFragment).toContain(' + ');
+    expect(setFragment).toContain('3'); // the bound increment param
+    // Conflict target: the (workspace, period) bucket identity.
+    expect(upsert.target).toHaveLength(2);
   });
 
   it('one failed bucket never drops the rest (per-bucket isolation)', async () => {

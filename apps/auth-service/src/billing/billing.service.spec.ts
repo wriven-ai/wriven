@@ -1,3 +1,4 @@
+import { RpcException } from '@nestjs/microservices';
 import { SubscriptionView } from '@wriven/contracts';
 import { BillingService } from './billing.service';
 import { asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
@@ -648,5 +649,85 @@ describe('BillingService.listInvoices', () => {
       description: 'Pro monthly',
       url: 'https://invoice.example/1',
     });
+  });
+});
+
+describe('BillingService.createPortal', () => {
+  /** Unwrap RpcException like the sibling suites — assert CODES, not substrings. */
+  async function rejection(promise: Promise<unknown>) {
+    try {
+      await promise;
+    } catch (err) {
+      if (err instanceof RpcException) {
+        return err.getError() as { code: string; message: string };
+      }
+      throw err;
+    }
+    throw new Error('expected rejection');
+  }
+
+  it('no billing account yet → NOT_FOUND (code-pinned)', async () => {
+    const { service, db, stripe } = makeService();
+    db.query.subscriptions.findFirst.mockResolvedValue({
+      stripeCustomerId: null,
+    });
+
+    const err = await rejection(
+      service.createPortal({ workspaceId: 'ws-1', returnUrl: 'https://x/y' }),
+    );
+    expect(err.code).toBe('NOT_FOUND');
+    expect(stripe.billingPortal.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it('missing subscriptions row entirely → same NOT_FOUND', async () => {
+    const { service, db } = makeService();
+    db.query.subscriptions.findFirst.mockResolvedValue(undefined);
+
+    const err = await rejection(service.createPortal({ workspaceId: 'ws-1' }));
+    expect(err.code).toBe('NOT_FOUND');
+  });
+
+  it('creates the portal session for the stored customer with the safeUrl-guarded return', async () => {
+    const { service, db, stripe } = makeService();
+    db.query.subscriptions.findFirst.mockResolvedValue({
+      stripeCustomerId: 'cus_1',
+    });
+    stripe.billingPortal.sessions.create.mockResolvedValue({ url: 'https://portal' });
+
+    const view = await service.createPortal({
+      workspaceId: 'ws-1',
+      returnUrl: 'https://evil.example/steal',
+    });
+
+    expect(view).toEqual({ url: 'https://portal' });
+    // The open-redirect guard runs before Stripe sees the URL: a cross-origin
+    // candidate collapses to the APP_URL-anchored fallback path.
+    expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+      customer: 'cus_1',
+      return_url: 'http://localhost:3000/billing',
+    });
+  });
+
+  it('an APP_URL-origin return_url keeps its own path', async () => {
+    const restore = setEnv({ APP_URL: 'https://wriven.tech' });
+    try {
+      const { service, db, stripe } = makeService();
+      db.query.subscriptions.findFirst.mockResolvedValue({
+        stripeCustomerId: 'cus_1',
+      });
+      stripe.billingPortal.sessions.create.mockResolvedValue({ url: 'u' });
+
+      await service.createPortal({
+        workspaceId: 'ws-1',
+        returnUrl: 'https://wriven.tech/billing?tab=invoices',
+      });
+
+      expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+        customer: 'cus_1',
+        return_url: 'https://wriven.tech/billing?tab=invoices',
+      });
+    } finally {
+      restore();
+    }
   });
 });
