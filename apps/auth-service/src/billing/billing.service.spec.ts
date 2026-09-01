@@ -27,6 +27,14 @@ const safeUrl = (
     safeUrl: (c: string | undefined, f: string) => string;
   }).safeUrl(candidate, fallback);
 
+// Env set via setEnv in ANY test of this file is restored after each test —
+// an inline restore() after the assertions leaks on every failure path.
+let envRestore: (() => void) | undefined;
+afterEach(() => {
+  envRestore?.();
+  envRestore = undefined;
+});
+
 describe('BillingService.safeUrl (open-redirect guard)', () => {
   let restore: () => void;
 
@@ -496,7 +504,7 @@ describe('BillingService.createCheckout', () => {
   });
 
   it('classic Checkout by default; managed_payments only when opted in', async () => {
-    const restore = setEnv({
+    envRestore = setEnv({
       STRIPE_MANAGED_PAYMENTS: undefined,
       APP_URL: 'https://app.test',
     });
@@ -511,11 +519,10 @@ describe('BillingService.createCheckout', () => {
     expect(stripe.checkout.sessions.create.mock.calls[0][0]).toMatchObject({
       managed_payments: { enabled: false },
     });
-    restore();
   });
 
   it('STRIPE_MANAGED_PAYMENTS=true omits the managed_payments override', async () => {
-    const restore = setEnv({
+    envRestore = setEnv({
       STRIPE_MANAGED_PAYMENTS: 'true',
       APP_URL: 'https://app.test',
     });
@@ -530,11 +537,10 @@ describe('BillingService.createCheckout', () => {
     expect(stripe.checkout.sessions.create.mock.calls[0][0]).not.toHaveProperty(
       'managed_payments',
     );
-    restore();
   });
 
   it('safeUrl applies to success/cancel URLs (cross-origin rejected)', async () => {
-    const restore = setEnv({ APP_URL: 'https://app.test' });
+    envRestore = setEnv({ APP_URL: 'https://app.test' });
     const { service, db, stripe } = makeService();
     db.query.plans.findFirst.mockResolvedValue(planRow());
     db.query.subscriptions.findFirst
@@ -550,7 +556,6 @@ describe('BillingService.createCheckout', () => {
     const [params] = stripe.checkout.sessions.create.mock.calls[0];
     expect(params.success_url).toBe('https://app.test/billing?checkout=success');
     expect(params.cancel_url).toBe('https://app.test/billing');
-    restore();
   });
 });
 
@@ -688,6 +693,9 @@ describe('BillingService.createPortal', () => {
   });
 
   it('creates the portal session for the stored customer with the safeUrl-guarded return', async () => {
+    // Hermetic: safeUrl anchors the fallback to the AMBIENT APP_URL, which CI
+    // sets and local shells don't — pin it so the expectation is deterministic.
+    envRestore = setEnv({ APP_URL: 'https://app.test' });
     const { service, db, stripe } = makeService();
     db.query.subscriptions.findFirst.mockResolvedValue({
       stripeCustomerId: 'cus_1',
@@ -704,30 +712,26 @@ describe('BillingService.createPortal', () => {
     // candidate collapses to the APP_URL-anchored fallback path.
     expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
       customer: 'cus_1',
-      return_url: 'http://localhost:3000/billing',
+      return_url: 'https://app.test/billing',
     });
   });
 
   it('an APP_URL-origin return_url keeps its own path', async () => {
-    const restore = setEnv({ APP_URL: 'https://wriven.tech' });
-    try {
-      const { service, db, stripe } = makeService();
-      db.query.subscriptions.findFirst.mockResolvedValue({
-        stripeCustomerId: 'cus_1',
-      });
-      stripe.billingPortal.sessions.create.mockResolvedValue({ url: 'u' });
+    envRestore = setEnv({ APP_URL: 'https://wriven.tech' });
+    const { service, db, stripe } = makeService();
+    db.query.subscriptions.findFirst.mockResolvedValue({
+      stripeCustomerId: 'cus_1',
+    });
+    stripe.billingPortal.sessions.create.mockResolvedValue({ url: 'u' });
 
-      await service.createPortal({
-        workspaceId: 'ws-1',
-        returnUrl: 'https://wriven.tech/billing?tab=invoices',
-      });
+    await service.createPortal({
+      workspaceId: 'ws-1',
+      returnUrl: 'https://wriven.tech/billing?tab=invoices',
+    });
 
-      expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
-        customer: 'cus_1',
-        return_url: 'https://wriven.tech/billing?tab=invoices',
-      });
-    } finally {
-      restore();
-    }
+    expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+      customer: 'cus_1',
+      return_url: 'https://wriven.tech/billing?tab=invoices',
+    });
   });
 });
