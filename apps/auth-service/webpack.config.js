@@ -31,6 +31,9 @@ module.exports = {
       generatePackageJson: false,
       sourceMap: true,
       mergeExternals: true,
+      // 'none' suppresses Nx's extra root-node_modules externalizer —
+      // only the app-local externals above decide bundled vs required.
+      externalDependencies: 'none',
     }),
   ],
 };
