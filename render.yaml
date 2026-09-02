@@ -178,6 +178,10 @@ services:
       # is core→ai (core has its own AI_SERVICE_URL). ai /health is unauthenticated.
       - key: AI_SERVICE_URL
         value: http://wriven-ai:8000
+      # Structured request logging level (pino). info = one JSON line per request
+      # (health checks excluded). Raise to warn to quiet request lines.
+      - key: LOG_LEVEL
+        value: info
       # Google OAuth — the passport strategy lives on the gateway. Redirect URI
       # must match the Google Cloud console exactly (see doc/deployment.md).
       - key: GOOGLE_CLIENT_SECRET
