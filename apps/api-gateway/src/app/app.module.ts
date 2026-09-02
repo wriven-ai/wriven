@@ -5,8 +5,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { PassportModule } from '@nestjs/passport';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
 import { SERVICE_TOKENS } from '@wriven/contracts';
 import { ProxyAwareThrottlerGuard } from '../common/proxy-aware.throttler.guard';
+import { buildPinoHttpConfig } from '../common/pino-logger.config';
 import { AdminAdminsController } from '../admin/admin-admins.controller';
 import { AdminApiKeysController } from '../admin/admin-apikeys.controller';
 import { AdminAuditController } from '../admin/admin-audit.controller';
@@ -62,6 +64,12 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: 'apps/api-gateway/.env',
+    }),
+    // Structured JSON request logging (see common/pino-logger.config.ts for
+    // the redaction / request-id / health-noise policy).
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({ pinoHttp: buildPinoHttpConfig(cfg) }),
     }),
     JwtModule.registerAsync({
       inject: [ConfigService],
