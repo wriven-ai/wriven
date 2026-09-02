@@ -74,7 +74,8 @@
   },
   "targetDefaults": {
     "build": {
-      "cache": true
+      "cache": true,
+      "inputs": ["production", "^production"]
     },
     "test": {
       "cache": true,
