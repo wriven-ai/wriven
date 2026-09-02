@@ -248,6 +248,9 @@ importers:
       pino-http:
         specifier: ^11.0.0
         version: 11.0.0
+      pino-std-serializers:
+        specifier: ^7.1.0
+        version: 7.1.0
       reflect-metadata:
         specifier: ^0.1.13
         version: 0.1.14
