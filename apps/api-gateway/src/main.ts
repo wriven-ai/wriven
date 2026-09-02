@@ -48,7 +48,7 @@ async function bootstrap() {
   // Two CORS policies (see common/cors-policy.ts — extracted so the routing
   // rule is spec'd):
   // 1. Delivery API (/v1/projects/:projectId/content|media/…) — browser-fetched
-  //    from ANY origin (Contentful/Sanity CDA model). Reflect the origin;
+  //    from ANY origin. Reflect the origin;
   //    credentials OFF — these routes use Bearer API keys, never cookies.
   // 2. Management + admin — exact-origin allowlist from CORS_ORIGINS
   //    (credentials need a specific origin, never `*`). Includes the

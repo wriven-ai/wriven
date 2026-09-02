@@ -12,7 +12,10 @@
       "!{projectRoot}/src/test-setup.[jt]s",
       "!{projectRoot}/test-setup.[jt]s"
     ],
-    "sharedGlobals": []
+    "sharedGlobals": [
+      "{workspaceRoot}/pnpm-lock.yaml",
+      "{workspaceRoot}/package.json"
+    ]
   },
   "plugins": [
     {
@@ -71,7 +74,8 @@
   },
   "targetDefaults": {
     "build": {
-      "cache": true
+      "cache": true,
+      "inputs": ["production", "^production"]
     },
     "test": {
       "cache": true,
