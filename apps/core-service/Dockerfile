@@ -29,7 +29,8 @@ RUN pnpm exec tsc -b \
       libs/shared/types/tsconfig.lib.json \
       libs/shared/common/tsconfig.lib.json \
       libs/shared/constants/tsconfig.lib.json && \
-    pnpm nx build core-service --skip-sync
+    pnpm nx build core-service --skip-sync && \
+    pnpm --filter=@wriven/core-service deploy --prod --legacy /build/runtime
 
 FROM node:22-alpine AS runner
 
@@ -42,7 +43,7 @@ RUN addgroup -g 1001 -S wriven && \
 
 COPY --from=builder /build/apps/core-service/dist ./dist
 COPY --from=builder /build/apps/core-service/package.json ./
-COPY --from=builder /build/node_modules ./node_modules
+COPY --from=builder /build/runtime/node_modules ./node_modules
 
 USER wriven
 
