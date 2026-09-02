@@ -1,7 +1,17 @@
 const { NxAppWebpackPlugin } = require('@nx/webpack/app-plugin');
 const { join } = require('path');
+const nodeExternals = require('webpack-node-externals');
 
 module.exports = {
+  externals: [
+    // The plugin defaults its externals scan to the workspace-root node_modules,
+    // which only holds root-manifest deps. Scan this app's own node_modules
+    // (pnpm workspace) instead; @wriven/* TS-source libs stay bundled via allowlist.
+    nodeExternals({
+      modulesDir: join(__dirname, 'node_modules'),
+      allowlist: [/^@wriven\//],
+    }),
+  ],
   output: {
     path: join(__dirname, 'dist'),
     clean: true,
@@ -20,6 +30,7 @@ module.exports = {
       outputHashing: 'none',
       generatePackageJson: false,
       sourceMap: true,
+      mergeExternals: true,
     }),
   ],
 };
