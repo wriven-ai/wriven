@@ -10,7 +10,7 @@ The operational console for Wriven staff — cross-tenant. **Separate identity a
 - **AdminRolesGuard** + `@AdminRoles(...)` — mirrors the tenant `PermissionGuard` (which copied *its* pattern). FORBIDDEN on role miss.
 
 ## Services (platform scope, cross-tenant)
-tenancy moderation · content/media/key/webhook moderation · **support-ticket queue** (assignment, priority, staff replies + internal notes, ticket metrics) · plans CRUD + assignment (+ Stripe sync) · plan-limit enforcement · metrics · **audit log** (platform-side; tenants have none).
+tenancy moderation · content/media/key/webhook moderation · **support-ticket queue** (assignment, priority, staff replies + internal notes, ticket metrics) · plans CRUD + assignment (+ Stripe sync) · plan-limit enforcement · metrics · **audit log** (platform-side; tenants have their own activity feed since [specs/23](../../specs/23-workspace-activity-logs.md) — same interceptor pattern, separate table).
 
 ## Frontend
 Separate repo (not `apps/client`), talks to the same gateway `/admin/*` routes — **deployed at `admin.wriven.tech`** with all console sections functional.

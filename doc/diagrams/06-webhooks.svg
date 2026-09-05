@@ -57,7 +57,7 @@
     <text x="220" y="324" text-anchor="middle" fill="#5eead4" font-size="11" font-weight="bold">webhooks (core_svc)</text>
     <line x1="40" y1="332" x2="400" y2="332" stroke="#334155"/>
     <text x="44" y="352" fill="#e2e8f0" font-size="10">url · active · events[]</text>
-    <text x="44" y="370" fill="#fcd34d" font-size="10">secret (hashed at rest; plaintext once)</text>
+    <text x="44" y="370" fill="#fcd34d" font-size="10">secret (plaintext — needed to sign; shown once)</text>
     <text x="44" y="388" fill="#94a3b8" font-size="10">lastStatus · lastFiredAt</text>
     <text x="44" y="406" fill="#64748b" font-size="9">project-scoped; create/list/update/delete + pause</text></g>
 
@@ -65,7 +65,7 @@
   <g><rect x="450" y="300" width="380" height="120" rx="8" fill="#0f172a" stroke="#334155" stroke-width="2"/>
     <text x="640" y="324" text-anchor="middle" fill="#cbd5e1" font-size="11" font-weight="bold">consumer (your backend)</text>
     <line x1="460" y1="332" x2="820" y2="332" stroke="#334155"/>
-    <text x="460" y="352" fill="#94a3b8" font-size="10">verify: HMAC-SHA256(secret, raw body)</text>
+    <text x="460" y="352" fill="#94a3b8" font-size="10">verify: HMAC-SHA256(secret, "ts.body")</text>
     <text x="460" y="370" fill="#94a3b8" font-size="10">== X-Wriven-Signature</text>
     <text x="460" y="392" fill="#fda4af" font-size="10">reject on mismatch (constant-time)</text>
     <text x="460" y="410" fill="#64748b" font-size="9">rebuild cache / sync downstream on receipt</text></g>

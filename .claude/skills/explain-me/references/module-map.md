@@ -26,6 +26,7 @@ Verify code paths with Glob/Grep — the map is a starting point, code wins.
 | Database (schemas, migrations, Drizzle) | — | — | `doc/database.md` | `doc/diagrams/02-tenancy-data-model.md` | `apps/auth-service/drizzle` / `apps/core-service` schema dirs |
 | Deployment (Render, Docker, prod env) | — | — | `doc/deployment.md`, `DOCKER_SETUP.md` | — | `render.yaml`, per-service `Dockerfile` |
 | Cross-cutting contracts (DTOs, error codes, TCP patterns) | — | — | `doc/conventions.md`, `doc/api-reference.md` | — | `libs/shared/contracts` (`errors.ts`, `messages.ts`) |
+| Testing strategy (unit suites, mocks, testcontainers, CI) | — | — | `doc/testing.md` | — | per-project `*.spec.ts` + `src/testing/`, `apps/*/test/integration/` (testcontainers), `apps/ai-service/tests/` (pytest), `.github/workflows/ci.yml` |
 
 Notes:
 

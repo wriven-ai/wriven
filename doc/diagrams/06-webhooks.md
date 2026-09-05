@@ -13,7 +13,7 @@ core_svc fires signed HTTP POSTs on entry events; consumers verify the HMAC sign
 6. Records `lastStatus` / `lastFiredAt`.
 
 ## Secrets
-Per-webhook secret; **plaintext revealed exactly once** on create (store it). Hashed at rest. Consumer verifies with two headers — `X-Wriven-Timestamp: <firedAt>` and `X-Wriven-Signature: sha256=<hex>` — where the MAC is `HMAC-SHA256(secret, "<firedAt>.<rawBody>")` (timestamp-prefixed body, constant-time compare). `@wriven-ai/next`'s `verifyWrivenSignature` implements this scheme.
+Per-webhook secret; **plaintext revealed exactly once** on create (store it). Stored **plaintext** (not hashed) — unlike refresh/reset tokens, the signing secret is *needed* on every dispatch to compute the HMAC, so it can't be a one-way hash; a DB leak means customers rotate webhook secrets. Consumer verifies with two headers — `X-Wriven-Timestamp: <firedAt>` and `X-Wriven-Signature: sha256=<hex>` — where the MAC is `HMAC-SHA256(secret, "<firedAt>.<rawBody>")` (timestamp-prefixed body, constant-time compare). `@wriven-ai/next`'s `verifyWrivenSignature` implements this scheme.
 
 ## Gaps (P2)
 Delivery log / retry-history UI, test-send, more event types — not built. Dispatch + retry engine is shipped; observability isn't.
