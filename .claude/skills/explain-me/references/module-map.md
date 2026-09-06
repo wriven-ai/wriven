@@ -27,6 +27,7 @@ Verify code paths with Glob/Grep — the map is a starting point, code wins.
 | Deployment (Render, Docker, prod env) | — | — | `doc/deployment.md`, `DOCKER_SETUP.md` | — | `render.yaml`, per-service `Dockerfile` |
 | Cross-cutting contracts (DTOs, error codes, TCP patterns) | — | — | `doc/conventions.md`, `doc/api-reference.md` | — | `libs/shared/contracts` (`errors.ts`, `messages.ts`) |
 | Testing strategy (unit suites, mocks, testcontainers, CI) | — | — | `doc/testing.md` | — | per-project `*.spec.ts` + `src/testing/`, `apps/*/test/integration/` (testcontainers), `apps/ai-service/tests/` (pytest), `.github/workflows/ci.yml` |
+| Nx / monorepo tooling (workspace, affected, caching, package inference) | — | — | `doc/conventions.md` §Nx notes | — | `nx.json`, `tsconfig.base.json` (customConditions), `pnpm-workspace.yaml`, root `package.json` scripts, per-app `package.json` nx blocks, `packages/*` exports |
 
 Notes:
 
