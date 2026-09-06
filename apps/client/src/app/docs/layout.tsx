@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
 import Footer from '../../components/Footer';
 import Header from '../../components/Header';
 import { DocsSidebar } from '../../components/docs/docs-sidebar';
+
+// Fallback description for doc pages that only export a title.
+export const metadata: Metadata = {
+  description:
+    'Wriven developer documentation — content modeling, the REST delivery API, SDKs, webhooks, caching, and rate limits.',
+  alternates: { canonical: '/docs' },
+};
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
