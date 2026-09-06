@@ -38,7 +38,7 @@ Wriven at a glance: one HTTP edge, three NestJS microservices behind it (TCP), a
 
 ## Deploy (live)
 
-- **Shipped:** gateway/auth/core/ai on **Render** (gateway public at `api.wriven.tech`, the rest private services — [`render.yaml`](../../render.yaml) Blueprint); client on **Vercel** (`wriven.tech`); admin SPA on **`admin.wriven.tech`**; Postgres on **Supabase**; media on Cloudflare R2. Runbook: [doc/deployment.md](../deployment.md). Remaining infra gaps (CI, staging): [doc/market-readiness.md](../market-readiness.md).
+- **Shipped:** gateway/auth/core/ai on **Render** (gateway public at `api.wriven.tech`, the rest private services — [`render.yaml`](../../render.yaml) Blueprint); client on **Vercel** (`wriven.tech`); admin SPA on **`admin.wriven.tech`**; Postgres on **Supabase**; media on Cloudflare R2. Runbook: [doc/deployment.md](../deployment.md). CI is live ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) — `nx affected` lint/typecheck/test/build + an always-on testcontainers job); remaining infra gap: a staging environment — [doc/market-readiness.md](../market-readiness.md).
 
 ## Next diagrams
 

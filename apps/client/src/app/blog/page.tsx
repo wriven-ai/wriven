@@ -15,8 +15,8 @@ export default function Blog() {
     date: "June 08, 2026",
     readingTime: "6 min read",
     coverImage: "https://picsum.photos/seed/injection/800/500",
-    authorName: "Marcus Weave",
-    authorImage: "https://picsum.photos/seed/marcus/100/100"
+    authorName: "Anowar Hosen",
+    authorImage: "/anowar-dp_compressed.jpg"
   };
 
   const remainingPosts = [
@@ -28,7 +28,7 @@ export default function Blog() {
       date: "May 24, 2026",
       readingTime: "4 min read",
       coverImage: "https://picsum.photos/seed/density/600/400",
-      authorName: "Elena Rostova"
+      authorName: "Anowar Hosen"
     },
     {
       title: "Optimizing JSON Feed Pipelines Over Vercel Edge Serverless",
@@ -38,7 +38,7 @@ export default function Blog() {
       date: "May 11, 2026",
       readingTime: "8 min read",
       coverImage: "https://picsum.photos/seed/pipeline/600/400",
-      authorName: "Sophia Wright"
+      authorName: "Anowar Hosen"
     },
     {
       title: "The Copilot Manifest: Bridging AI Drafts and Editorial Craft",
@@ -48,7 +48,7 @@ export default function Blog() {
       date: "April 29, 2026",
       readingTime: "5 min read",
       coverImage: "https://picsum.photos/seed/copilot/600/400",
-      authorName: "Marcus Weave"
+      authorName: "Anowar Hosen"
     }
   ];
 
@@ -75,8 +75,8 @@ export default function Blog() {
           {/* Featured Post Block - Designed like elegant broadsheet news lead */}
           {featuredPost && (
             <div className="mb-20 bg-brand-surface border border-brand-border-button rounded-xl overflow-hidden shadow-2xl relative neo-shadow-lg" id="featured-blog-block">
-              <div className="absolute top-0 right-0 p-4 z-20">
-                <span className="bg-brand-secondary border border-brand-border-button text-white text-sm font-semibold tracking-wider px-3 py-1.5 rounded-md uppercase">
+              <div className="absolute top-0 right-0 p-3 z-20">
+                <span className="bg-brand-secondary border border-brand-border-button text-white text-xs font-semibold tracking-wide px-2.5 py-1 rounded-md uppercase">
                   Featured — {featuredPost.category}
                 </span>
               </div>

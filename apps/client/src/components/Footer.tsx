@@ -13,7 +13,7 @@ export default function Footer() {
     { name: 'Developer Docs', href: '/docs' },
     { name: 'Sandbox Demo', href: '/#sandbox' },
     { name: 'API Reference', href: '/docs/delivery-api' },
-    { name: 'Demo Contents', href: 'https://content.wriven.tech', external: true },
+    { name: 'Demo Contents', href: 'https://contents.wriven.tech', external: true },
   ];
 
   const companyLinks = [

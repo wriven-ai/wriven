@@ -3,7 +3,7 @@
 import React from 'react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
-import { Sparkles, Layers, Target, Compass, User } from 'lucide-react';
+import { Sparkles, Layers, Target, Compass, CodeXml, Briefcase } from 'lucide-react';
 
 export default function About() {
   const values = [
@@ -24,26 +24,12 @@ export default function About() {
     }
   ];
 
-  const team = [
-    {
-      name: "Marcus Weave",
-      role: "Co-Founder & CEO",
-      bio: "Former Head of Platform at Contentful. Loves structured datasets, high-contrast typographies, and editorial design.",
-      avatar: "https://picsum.photos/seed/marcus/300/300"
-    },
-    {
-      name: "Sophia Wright",
-      role: "Co-Founder & CTO",
-      bio: "Author of popular open-source GraphQL engines. Spearheads Wriven's serverless edge and Gemini micro-services.",
-      avatar: "https://picsum.photos/seed/sophia/300/300"
-    },
-    {
-      name: "Elena Rostova",
-      role: "Head of Product Design",
-      bio: "Previously Senior Designer at Stripe. Passionate about micro-interactions, responsive grids, and calm interfaces.",
-      avatar: "https://picsum.photos/seed/elena/300/300"
-    }
-  ];
+  const founder = {
+    name: "Anowar Hosen",
+    role: "Founder & Developer",
+    bio: "Wriven is built by one person. the editor, the AI drafting, and the delivery API, all end to end.",
+    avatar: "/anowar-dp_compressed.jpg"
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg text-text-primary editorial-grid relative paper-grain" id="wriven-about-page">
@@ -138,45 +124,59 @@ export default function About() {
           </div>
         </section>
 
-        {/* Team section */}
-        <section className="py-20 relative" id="team">
+        {/* Founder section */}
+        <section className="py-20 relative" id="founder">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto space-y-4 mb-20">
-              <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase">Mission Specialists</span>
+            <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
+              <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase">Who builds this</span>
               <h2 className="font-display font-medium tracking-tight text-text-primary text-3xl sm:text-4xl">
-                Led by content veterans
+                Built by one developer
               </h2>
               <p className="text-text-secondary text-sm font-light">
-                We are a small, focused cohort of builders, developers, and product minds committed to making APIs lightweight and layouts elegant.
+                Wriven is designed, engineered, and maintained by a single person. That means fast decisions, honest roadmaps, and a direct line to the person writing the code.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto" id="team-grid">
-              {team.map((member) => (
-                <div key={member.name} className="flex flex-col bg-brand-surface border border-brand-border-button rounded-xl overflow-hidden shadow-2xl neo-shadow-lg transition-all" id={`team-card-${member.name.toLowerCase().split(' ')[0]}`}>
-                  <div className="aspect-square relative w-full overflow-hidden bg-brand-surface-soft border-b border-brand-border-button">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={member.avatar}
-                      alt={member.name}
-                      referrerPolicy="no-referrer"
-                      className="object-cover w-full h-full grayscale hover:grayscale-0 transition-all duration-350"
-                    />
-                  </div>
-                  <div className="p-6 space-y-3 flex-1 flex flex-col justify-between text-left">
-                    <div>
-                      <h3 className="font-display font-bold text-sm text-text-primary">{member.name}</h3>
-                      <span className="text-sm font-mono font-bold text-brand-accent block uppercase mt-0.5">{member.role}</span>
-                      <p className="text-sm text-text-secondary mt-3 leading-relaxed font-light">{member.bio}</p>
-                    </div>
-
-                    <div className="pt-4 border-t border-brand-border mt-4 flex items-center gap-1.5 text-sm font-mono font-bold text-brand-accent uppercase">
-                      <User className="w-3.5 h-3.5 text-brand-accent" />
-                      <span>Verified Core Team Member</span>
-                    </div>
-                  </div>
+            <div
+              className="flex flex-col sm:flex-row items-center sm:items-stretch bg-brand-surface border border-brand-border-button rounded-xl overflow-hidden shadow-2xl neo-shadow-lg max-w-3xl mx-auto"
+              id="founder-card"
+            >
+              <div className="sm:w-56 shrink-0 relative overflow-hidden bg-brand-surface-soft sm:border-r border-b sm:border-b-0 border-brand-border-button aspect-square sm:aspect-auto">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={founder.avatar}
+                  alt={founder.name}
+                  className="object-cover w-full h-full grayscale hover:grayscale-0 transition-all duration-350"
+                />
+              </div>
+              <div className="p-8 space-y-4 flex-1 flex flex-col justify-between text-left">
+                <div>
+                  <h3 className="font-display font-bold text-lg text-text-primary">{founder.name}</h3>
+                  <span className="text-sm font-mono font-bold text-brand-accent block uppercase mt-0.5">{founder.role}</span>
+                  <p className="text-sm text-text-secondary mt-3 leading-relaxed font-light">{founder.bio}</p>
                 </div>
-              ))}
+
+                <div className="pt-4 border-t border-brand-border mt-4 flex items-center gap-4 text-sm font-mono font-bold text-brand-accent uppercase">
+                  <a
+                    href="https://github.com/anowarzz"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 hover:text-text-primary transition-colors"
+                  >
+                    <CodeXml className="w-4 h-4" />
+                    <span>GitHub</span>
+                  </a>
+                  <a
+                    href="https://www.linkedin.com/in/anowarzz"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 hover:text-text-primary transition-colors"
+                  >
+                    <Briefcase className="w-4 h-4" />
+                    <span>LinkedIn</span>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </section>

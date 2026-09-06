@@ -20,8 +20,8 @@ export const mockPosts: BlogPost[] = [
     date: 'June 08, 2026',
     readingTime: '6 min read',
     coverImage: 'https://picsum.photos/seed/injection/800/500',
-    authorName: 'Marcus Weave',
-    authorImage: 'https://picsum.photos/seed/marcus/100/100',
+    authorName: 'Anowar Hosen',
+    authorImage: '/anowar-dp_compressed.jpg',
   },
   {
     title: 'Designing Minimalist Interfaces for Information Density',
@@ -32,8 +32,8 @@ export const mockPosts: BlogPost[] = [
     date: 'May 24, 2026',
     readingTime: '4 min read',
     coverImage: 'https://picsum.photos/seed/density/600/400',
-    authorName: 'Elena Rostova',
-    authorImage: 'https://picsum.photos/seed/elena/100/100',
+    authorName: 'Anowar Hosen',
+    authorImage: '/anowar-dp_compressed.jpg',
   },
   {
     title: 'Optimizing JSON Feed Pipelines Over Vercel Edge Serverless',
@@ -44,8 +44,8 @@ export const mockPosts: BlogPost[] = [
     date: 'May 11, 2026',
     readingTime: '8 min read',
     coverImage: 'https://picsum.photos/seed/pipeline/600/400',
-    authorName: 'Sophia Wright',
-    authorImage: 'https://picsum.photos/seed/sophia/100/100',
+    authorName: 'Anowar Hosen',
+    authorImage: '/anowar-dp_compressed.jpg',
   },
   {
     title: 'The Copilot Manifest: Bridging AI Drafts and Editorial Craft',
@@ -56,7 +56,7 @@ export const mockPosts: BlogPost[] = [
     date: 'April 29, 2026',
     readingTime: '5 min read',
     coverImage: 'https://picsum.photos/seed/copilot/600/400',
-    authorName: 'Marcus Weave',
-    authorImage: 'https://picsum.photos/seed/marcus/100/100',
+    authorName: 'Anowar Hosen',
+    authorImage: '/anowar-dp_compressed.jpg',
   },
 ];
