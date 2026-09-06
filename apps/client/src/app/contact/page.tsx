@@ -137,7 +137,7 @@ export default function Contact() {
                       id="contact-name"
                       type="text"
                       required
-                      placeholder="Sophia Wright"
+                      placeholder="Your full name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full text-sm font-mono rounded-lg bg-brand-surface-soft border border-brand-border px-4 py-3 focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-text-primary"
