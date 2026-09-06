@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import type { Metadata } from 'next';
 import WrivenLogo from '@/components/WrivenLogo';
+
+// Auth screens have no search value — keep them out of indexes.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /** Shared chrome for all auth pages (login, register, forgot/reset password). */
 export default function AuthLayout({ children }: { children: ReactNode }) {
