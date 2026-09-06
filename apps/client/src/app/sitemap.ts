@@ -22,28 +22,24 @@ const DOC_SLUGS = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
-
+  // No lastmod for static/doc routes — no reliable modification source;
+  // omitting beats lying (Google discounts inaccurate lastmod).
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: SITE, changeFrequency: 'weekly', priority: 1 },
-    { url: `${SITE}/pricing`, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE}/about`, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE}/blog`, changeFrequency: 'weekly', priority: 0.7 },
-    { url: `${SITE}/contact`, changeFrequency: 'yearly', priority: 0.5 },
-    { url: `${SITE}/docs`, changeFrequency: 'weekly', priority: 0.8 },
+    { url: SITE },
+    { url: `${SITE}/pricing` },
+    { url: `${SITE}/about` },
+    { url: `${SITE}/blog` },
+    { url: `${SITE}/contact` },
+    { url: `${SITE}/docs` },
   ];
 
   const docRoutes: MetadataRoute.Sitemap = DOC_SLUGS.map((slug) => ({
     url: `${SITE}/docs/${slug}`,
-    changeFrequency: 'monthly',
-    priority: 0.6,
   }));
 
   const blogRoutes: MetadataRoute.Sitemap = mockPosts.map((post) => ({
     url: `${SITE}/blog/${post.slug}`,
-    lastModified: now,
-    changeFrequency: 'yearly',
-    priority: 0.5,
+    lastModified: new Date(post.date),
   }));
 
   return [...staticRoutes, ...docRoutes, ...blogRoutes];
