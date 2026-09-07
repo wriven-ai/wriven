@@ -31,6 +31,15 @@ export function Providers({ children }: { children: ReactNode }) {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
 
+    // proxy.ts maintains a readable `wriven_session` flag alongside the
+    // httpOnly refresh cookie (which browser JS cannot see). No flag → no
+    // session to restore → skip the /auth/me + /auth/refresh round trips
+    // entirely on public pages.
+    if (!document.cookie.includes('wriven_session=')) {
+      useAuthStore.getState().setUnauthenticated();
+      return;
+    }
+
     // Silent session restore: the access cookie may be expired after a while,
     // but the refresh cookie persists. /auth/me 401s → the client refreshes via
     // the cookie and retries; success restores the session.

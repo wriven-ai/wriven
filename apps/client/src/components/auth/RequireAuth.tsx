@@ -8,8 +8,9 @@ import { WrivenLoader } from '../ui/wriven-loader';
 /**
  * Client-side route guard. Wrap protected areas (e.g. the dashboard layout).
  * Redirects to /login once the session bootstrap resolves to unauthenticated.
- * The HttpOnly refresh token can't be read in middleware, so guarding happens
- * here after the silent refresh in <Providers>.
+ * src/proxy.ts handles the instant edge redirect when no refresh cookie
+ * exists; this guard covers the remaining case (cookie present but invalid)
+ * after the silent refresh in <Providers>.
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const router = useRouter();

@@ -1,6 +1,5 @@
-'use client';
-
 import React from 'react';
+import Image from 'next/image';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { Sparkles, Layers, Target, Compass, CodeXml, Briefcase } from 'lucide-react';
@@ -142,11 +141,12 @@ export default function About() {
               id="founder-card"
             >
               <div className="sm:w-56 shrink-0 relative overflow-hidden bg-brand-surface-soft sm:border-r border-b sm:border-b-0 border-brand-border-button aspect-square sm:aspect-auto">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={founder.avatar}
                   alt={founder.name}
-                  className="object-cover w-full h-full grayscale hover:grayscale-0 transition-all duration-350"
+                  fill
+                  sizes="(min-width: 640px) 224px, 100vw"
+                  className="object-cover grayscale hover:grayscale-0 transition-all duration-350"
                 />
               </div>
               <div className="p-8 space-y-4 flex-1 flex flex-col justify-between text-left">

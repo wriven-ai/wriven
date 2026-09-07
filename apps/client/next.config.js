@@ -16,14 +16,23 @@ const nextConfig = {
   // host (uploaded photos) or Google (OAuth avatars). Register both so
   // `next/image` (`UserAvatar`) can optimize/render them (specs/18).
   images: {
+    // Serve AVIF where supported (WebP fallback) for optimized <Image> output.
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: '*.r2.dev' },
       { protocol: 'https', hostname: '*.googleusercontent.com' },
+      // Placeholder covers for the mock blog posts (blogData.ts).
+      { protocol: 'https', hostname: 'picsum.photos' },
     ],
   },
-  // Use this to set Nx-specific options
-  // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
+  // Don't advertise the framework in response headers.
+  poweredByHeader: false,
+  // Client router cache: reuse visited routes' RSC payloads briefly instead
+  // of refetching on every navigation (dashboard back/forward, repeat visits).
+  experimental: {
+    staleTimes: { dynamic: 30, static: 180 },
+  },
 };
 
 const plugins = [

@@ -1,56 +1,16 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { Calendar, Clock, ArrowRight, User } from 'lucide-react';
+import { mockPosts } from '../../lib/blogData';
 
 export default function Blog() {
-  const featuredPost = {
-    title: "The Architecture of Headless Content Injections",
-    slug: "headless-content-injections",
-    category: "Architecture",
-    excerpt: "Dismantling the constraints of monolithic layout definitions. Learn how we feed raw content schemas directly into lightweight React layers at low latency, and why inline prompt engineering is changing the speed of digital media production.",
-    date: "June 08, 2026",
-    readingTime: "6 min read",
-    coverImage: "https://picsum.photos/seed/injection/800/500",
-    authorName: "Anowar Hosen",
-    authorImage: "/anowar-dp_compressed.jpg"
-  };
-
-  const remainingPosts = [
-    {
-      title: "Designing Minimalist Interfaces for Information Density",
-      slug: "minimalist-interfaces",
-      category: "Design",
-      excerpt: "Why high-contrast editorial layouts outperform cluttered purple grids. Exploring Swiss print aesthetics, offset shadows, and calm color rules.",
-      date: "May 24, 2026",
-      readingTime: "4 min read",
-      coverImage: "https://picsum.photos/seed/density/600/400",
-      authorName: "Anowar Hosen"
-    },
-    {
-      title: "Optimizing JSON Feed Pipelines Over Vercel Edge Serverless",
-      slug: "optimizing-json-pipelines",
-      category: "Engineering",
-      excerpt: "Deep dives into stateful API caches, query optimizations, and token security boundaries. How to deliver markdown content streams globally under 12ms.",
-      date: "May 11, 2026",
-      readingTime: "8 min read",
-      coverImage: "https://picsum.photos/seed/pipeline/600/400",
-      authorName: "Anowar Hosen"
-    },
-    {
-      title: "The Copilot Manifest: Bridging AI Drafts and Editorial Craft",
-      slug: "copilot-manifest",
-      category: "Workflows",
-      excerpt: "An investigation on how content producers collaborate with inline algorithms without sacrificing brand voice integrity or premium editorial cadence.",
-      date: "April 29, 2026",
-      readingTime: "5 min read",
-      coverImage: "https://picsum.photos/seed/copilot/600/400",
-      authorName: "Anowar Hosen"
-    }
-  ];
+  // Single source of truth: lib/blogData.ts (newest first). The featured post
+  // is the newest; everything else fills the grid below.
+  const featuredPost = mockPosts[0];
+  const remainingPosts = mockPosts.slice(1);
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg text-text-primary editorial-grid relative paper-grain" id="wriven-blog-page">
@@ -58,7 +18,7 @@ export default function Blog() {
 
       <main className="flex-grow py-16 lg:py-24 relative z-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          
+
           {/* Header Info */}
           <div className="max-w-3xl mx-auto text-center space-y-4 mb-16" id="blog-header-box">
             <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase animate-fade-in">
@@ -83,12 +43,12 @@ export default function Blog() {
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
                 <div className="lg:col-span-7 aspect-[16/10] relative bg-brand-surface-soft overflow-hidden border-r border-brand-border-button">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={featuredPost.coverImage}
                     alt={featuredPost.title}
-                    referrerPolicy="no-referrer"
-                    className="object-cover w-full h-full hover:scale-[1.01] transition-transform duration-350"
+                    fill
+                    sizes="(min-width: 1024px) 58vw, 100vw"
+                    className="object-cover hover:scale-[1.01] transition-transform duration-350"
                   />
                 </div>
 
@@ -110,11 +70,11 @@ export default function Blog() {
 
                   <div className="pt-6 border-t border-brand-border mt-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={featuredPost.authorImage}
                         alt={featuredPost.authorName}
-                        referrerPolicy="no-referrer"
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-full border border-brand-border"
                       />
                       <div>
@@ -146,12 +106,12 @@ export default function Blog() {
                 id={`blog-card-${post.slug}`}
               >
                 <div className="aspect-[16/10] bg-[#FAF8F5] overflow-hidden relative border-b border-brand-border-button">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={post.coverImage}
                     alt={post.title}
-                    referrerPolicy="no-referrer"
-                    className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-transform duration-350"
+                    fill
+                    sizes="(min-width: 768px) 33vw, 100vw"
+                    className="object-cover grayscale group-hover:grayscale-0 transition-transform duration-350"
                   />
                   <div className="absolute top-3 left-3">
                     <span className="bg-brand-surface border border-brand-border-button text-brand-secondary text-sm font-semibold tracking-wider px-2.5 py-1 rounded">
