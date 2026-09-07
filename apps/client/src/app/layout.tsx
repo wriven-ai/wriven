@@ -1,11 +1,18 @@
 import { Analytics } from '@vercel/analytics/next';
 import { cn } from '@/lib/utils';
 import { Manrope } from 'next/font/google';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './global.css';
 import { Providers } from './providers';
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#faf8f5' },
+    { media: '(prefers-color-scheme: dark)', color: '#060417' },
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.wriven.tech'),

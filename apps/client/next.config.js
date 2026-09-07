@@ -25,9 +25,14 @@ const nextConfig = {
       { protocol: 'https', hostname: 'picsum.photos' },
     ],
   },
-  // Use this to set Nx-specific options
-  // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
+  // Don't advertise the framework in response headers.
+  poweredByHeader: false,
+  // Client router cache: reuse visited routes' RSC payloads briefly instead
+  // of refetching on every navigation (dashboard back/forward, repeat visits).
+  experimental: {
+    staleTimes: { dynamic: 30, static: 180 },
+  },
 };
 
 const plugins = [
