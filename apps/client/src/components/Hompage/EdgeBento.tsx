@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Activity, KeyRound, RefreshCw } from 'lucide-react';
-import { motion } from 'motion/react';
 
 export default function EdgeBento() {
   const [showHeaders, setShowHeaders] = useState(false);
@@ -64,11 +63,9 @@ export default function EdgeBento() {
                   {/* Decorative bar visual */}
                   {[65, 87, 92, 79, 84, 98, 92, 99].map((height, idx) => (
                     <div key={idx} className="w-3.5 bg-brand-accent/10 rounded-t relative group flex flex-col justify-end h-16">
-                      <motion.div
-                        className="bg-brand-accent rounded-t w-full"
-                        initial={{ height: 0 }}
-                        animate={{ height: `${height}%` }}
-                        transition={{ duration: 1, delay: idx * 0.1 }}
+                      <div
+                        className="bg-brand-accent rounded-t w-full animate-bar-grow"
+                        style={{ height: `${height}%`, animationDelay: `${idx * 0.1}s` }}
                       />
                     </div>
                   ))}

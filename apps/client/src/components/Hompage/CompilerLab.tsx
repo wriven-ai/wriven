@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Terminal, Check, RefreshCw, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 export default function CompilerLab() {
   const [compilerStage, setCompilerStage] = useState(0);
@@ -81,15 +80,11 @@ export default function CompilerLab() {
           </div>
 
           <div className="lg:col-span-8 lg:border-l lg:border-brand-border lg:pl-10">
-            <AnimatePresence mode="wait">
+            <>
               {compilerStage === 0 && (
-                <motion.div
+                <div
                   key="stage-0"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-4"
+                  className="animate-stage-in space-y-4"
                 >
                   <span className="text-brand-accent font-mono text-sm font-bold block">POST /v1/content/entries</span>
                   <div className="text-sm text-text-secondary font-mono leading-relaxed space-y-1">
@@ -114,17 +109,13 @@ export default function CompilerLab() {
   }
 }`}
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {compilerStage === 1 && (
-                <motion.div
+                <div
                   key="stage-1"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-4"
+                  className="animate-stage-in space-y-4"
                 >
                   <span className="text-brand-accent font-mono text-sm font-bold block">POST /v1/content/entries/entry_771891/publish</span>
                   <div className="text-sm text-text-secondary font-mono leading-relaxed space-y-3">
@@ -143,17 +134,13 @@ export default function CompilerLab() {
                   <div className="bg-brand-surface-soft p-4 border border-brand-border rounded-lg text-sm font-mono text-text-secondary">
                     [PUBLISHED] Entry live on the delivery API. Cache-Tag purge dispatched.
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {compilerStage === 2 && (
-                <motion.div
+                <div
                   key="stage-2"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-4"
+                  className="animate-stage-in space-y-4"
                 >
                   <span className="text-brand-accent font-mono text-sm font-bold block">GET /v1/projects/prj_2f9c/content/posts</span>
                   <div className="text-sm text-text-secondary font-mono leading-relaxed">
@@ -172,9 +159,9 @@ export default function CompilerLab() {
                   <div className="text-sm bg-brand-surface-soft text-text-primary p-4 border border-brand-border rounded-lg overflow-x-auto font-mono">
                     {"{\"success\": true, \"data\": {\"items\": [{\"fields\": {\"title\": \"Headless Content, Woven Together\"}}]}}"}
                   </div>
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
+            </>
           </div>
         </div>
 
