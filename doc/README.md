@@ -48,6 +48,7 @@ The docs split into three layers:
 |-----|--------|
 | [frontend/frontend.md](./frontend/frontend.md) | Stack, project structure, cookie auth + CSRF, Zustand/Query state, the API client, scope, guards, env |
 | [frontend/sidebar.md](./frontend/sidebar.md) | Dashboard nav architecture: URL-driven scope, nav-config brain vs shell, builders, active-state rule, RBAC seam |
+| [frontend/nextjs-review.md](./frontend/nextjs-review.md) | Next.js 16 performance review (2026-09): findings F1–F13 — all fixed; documents the SSG/ISR/proxy/state of the client |
 
 **Consumer integration**
 
