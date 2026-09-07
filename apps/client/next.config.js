@@ -16,6 +16,8 @@ const nextConfig = {
   // host (uploaded photos) or Google (OAuth avatars). Register both so
   // `next/image` (`UserAvatar`) can optimize/render them (specs/18).
   images: {
+    // Serve AVIF where supported (WebP fallback) for optimized <Image> output.
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: '*.r2.dev' },
       { protocol: 'https', hostname: '*.googleusercontent.com' },

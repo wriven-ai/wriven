@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { Calendar, Clock, ArrowRight, User } from 'lucide-react';
@@ -42,12 +43,12 @@ export default function Blog() {
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
                 <div className="lg:col-span-7 aspect-[16/10] relative bg-brand-surface-soft overflow-hidden border-r border-brand-border-button">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={featuredPost.coverImage}
                     alt={featuredPost.title}
-                    referrerPolicy="no-referrer"
-                    className="object-cover w-full h-full hover:scale-[1.01] transition-transform duration-350"
+                    fill
+                    sizes="(min-width: 1024px) 58vw, 100vw"
+                    className="object-cover hover:scale-[1.01] transition-transform duration-350"
                   />
                 </div>
 
@@ -69,11 +70,11 @@ export default function Blog() {
 
                   <div className="pt-6 border-t border-brand-border mt-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={featuredPost.authorImage}
                         alt={featuredPost.authorName}
-                        referrerPolicy="no-referrer"
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-full border border-brand-border"
                       />
                       <div>
@@ -105,12 +106,12 @@ export default function Blog() {
                 id={`blog-card-${post.slug}`}
               >
                 <div className="aspect-[16/10] bg-[#FAF8F5] overflow-hidden relative border-b border-brand-border-button">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={post.coverImage}
                     alt={post.title}
-                    referrerPolicy="no-referrer"
-                    className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-transform duration-350"
+                    fill
+                    sizes="(min-width: 768px) 33vw, 100vw"
+                    className="object-cover grayscale group-hover:grayscale-0 transition-transform duration-350"
                   />
                   <div className="absolute top-3 left-3">
                     <span className="bg-brand-surface border border-brand-border-button text-brand-secondary text-sm font-semibold tracking-wider px-2.5 py-1 rounded">
