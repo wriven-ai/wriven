@@ -19,6 +19,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '*.r2.dev' },
       { protocol: 'https', hostname: '*.googleusercontent.com' },
+      // Placeholder covers for the mock blog posts (blogData.ts).
+      { protocol: 'https', hostname: 'picsum.photos' },
     ],
   },
   // Use this to set Nx-specific options
