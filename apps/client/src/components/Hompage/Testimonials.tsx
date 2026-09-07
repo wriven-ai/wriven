@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { History, ShieldCheck, Webhook, Sparkles } from 'lucide-react';
 

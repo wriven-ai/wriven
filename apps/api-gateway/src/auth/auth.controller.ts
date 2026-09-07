@@ -21,7 +21,10 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 const MINUTE = 60000;
 
 const REFRESH_COOKIE = 'refresh_token';
-const REFRESH_COOKIE_PATH = '/v1/auth';
+// Root path so the Next.js client's proxy.ts can detect the session on
+// client-origin requests (cookies match by path, and /v1/auth would hide it).
+// The API still reads it on /v1/auth/* — a root path is a superset.
+const REFRESH_COOKIE_PATH = '/';
 
 // Access + CSRF cookies share the access TTL. Both httpOnly; the CSRF token
 // reaches the SPA via the response body (different hosts — JS can't read the

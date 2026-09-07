@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Terminal, Check } from 'lucide-react';
-import { motion } from 'motion/react';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function Hero() {
@@ -56,20 +55,18 @@ export default function Hero() {
           <div className="lg:col-span-6 flex flex-col justify-center relative lg:min-h-[440px]" id="hero-visual-block">
             <div className="absolute inset-0 pointer-events-none opacity-[0.25]">
               <svg className="w-full h-full" viewBox="0 0 400 400" fill="none">
-                <motion.path 
-                  d="M 40 120 Q 200 220 360 120" 
-                  stroke="var(--brand-accent)" 
-                  strokeWidth="1.5" 
+                <path
+                  d="M 40 120 Q 200 220 360 120"
+                  stroke="var(--brand-accent)"
+                  strokeWidth="1.5"
                   strokeDasharray="6 4"
-                  animate={{ strokeDashoffset: [0, -30] }}
-                  transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                  className="animate-dash-march"
                 />
-                <motion.path 
-                  d="M 360 120 Q 200 270 40 320" 
-                  stroke="var(--brand-accent)" 
+                <path
+                  d="M 360 120 Q 200 270 40 320"
+                  stroke="var(--brand-accent)"
                   strokeWidth="1"
-                  animate={{ strokeDashoffset: [0, 30] }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  className="animate-dash-march-rev"
                 />
                 <circle cx="40" cy="120" r="4" fill="var(--brand-accent)" />
                 <circle cx="360" cy="120" r="4" fill="var(--brand-accent)" />

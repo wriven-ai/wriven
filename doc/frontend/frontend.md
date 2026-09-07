@@ -53,7 +53,8 @@ apps/client/src/
 Auth is **fully cookie-based** — the access and refresh tokens live in `httpOnly` cookies the client never reads. There is no token in JS memory.
 
 - **CSRF (double-submit):** the gateway returns a `csrfToken` in auth response bodies (login/register/refresh/me). The client holds it in memory only and echoes it back as `X-CSRF-Token` on every mutating request. Never persisted, never read from a cookie.
-- **Silent restore:** on mount, `Providers` calls `authApi.me()`. If the access cookie expired, the client refreshes via the cookie and retries; success restores the session, failure marks it unauthenticated.
+- **Edge guard (`src/proxy.ts`, Next 16's middleware rename):** unauthenticated hits on `/dashboard|/w|/workspaces|/profile|/billing` redirect to `/login?next=…` instantly (UX fast-path only — the gateway remains the auth boundary). It also mirrors the httpOnly `refresh_token` cookie's presence into a readable `wriven_session=1` flag.
+- **Silent restore:** on mount, `Providers` calls `authApi.me()` **only when the `wriven_session` flag is present** — anonymous visitors on public pages skip the doomed `/auth/me` + `/auth/refresh` round trips. If the access cookie expired, the client refreshes via the cookie and retries; success restores the session, failure marks it unauthenticated.
 - **401 → refresh → retry:** `request()` intercepts 401 on authenticated calls, rotates the session once (a single de-duplicated refresh handles a burst of 401s), and replays the original request. A second failure calls `onAuthFailure` → unauthenticated.
 
 ## State

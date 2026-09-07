@@ -247,6 +247,74 @@ body {
   animation: otp-blink 1s step-end infinite;
 }
 
+/* Marketing homepage decorations (pure CSS — replaces the motion library) */
+
+/* Hero curves: infinite dashed-line marching */
+@keyframes dash-march {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+@keyframes dash-march-rev {
+  to {
+    stroke-dashoffset: 30;
+  }
+}
+
+.animate-dash-march {
+  animation: dash-march 6s linear infinite;
+}
+
+.animate-dash-march-rev {
+  animation: dash-march-rev 8s linear infinite;
+}
+
+/* EdgeBento CDN graphic: staggered bar fill from zero */
+@keyframes bar-grow {
+  from {
+    height: 0;
+  }
+}
+
+.animate-bar-grow {
+  animation: bar-grow 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Tab/stage panel swaps: enter-only fades (keyed remount replays them) */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+.animate-panel-in {
+  animation: panel-in 0.25s ease-out both;
+}
+
+@keyframes stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.animate-stage-in {
+  animation: stage-in 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dash-march,
+  .animate-dash-march-rev,
+  .animate-bar-grow,
+  .animate-panel-in,
+  .animate-stage-in {
+    animation: none;
+  }
+}
+
+
 /* Notched "identity tag" badge used for the small uppercase eyebrow labels */
 .id-tag {
   clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);

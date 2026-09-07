@@ -52,7 +52,7 @@ describe('AuthController — session cookie mechanics', () => {
       httpOnly: true,
       secure: false, // dev
       sameSite: 'lax',
-      path: '/v1/auth', // refresh is ONLY sent to auth routes
+      path: '/', // root so the client proxy can detect the session cookie
     });
     expect(refreshOpts.expires).toEqual(new Date(result.refreshExpiresAt));
 
@@ -121,7 +121,7 @@ describe('AuthController.logout', () => {
     expect(send).not.toHaveBeenCalled(); // nothing to revoke
     const clears = res.clearCookie.mock.calls as Array<[string, Record<string, unknown>]>;
     expect(clears).toEqual([
-      ['refresh_token', { path: '/v1/auth' }],
+      ['refresh_token', { path: '/' }],
       ['access_token', { path: '/v1' }],
       ['csrf_token', { path: '/v1' }],
     ]);

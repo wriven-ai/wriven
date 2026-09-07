@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Globe, Cpu, Layers3, FileJson, Layers, Bookmark, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
 export default function OutputRegistry() {
   const [activeOutputTab, setActiveOutputTab] = useState<'nextjs' | 'ios' | 'json' | 'astro'>('nextjs');
@@ -91,15 +90,11 @@ export default function OutputRegistry() {
             {/* Display Port */}
             <div className="flex-grow flex items-center justify-center relative">
               
-              <AnimatePresence mode="wait">
+              <>
                 {activeOutputTab === 'nextjs' && (
-                  <motion.div
+                  <div
                     key="render-nextjs"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.25 }}
-                    className="w-full bg-brand-bg border border-brand-border rounded-lg p-6 shadow-sm text-left font-sans space-y-4 relative overflow-hidden"
+                    className="animate-panel-in w-full bg-brand-bg border border-brand-border rounded-lg p-6 shadow-sm text-left font-sans space-y-4 relative overflow-hidden"
                   >
                     {/* Fake browser bar */}
                     <div className="flex items-center gap-1.5 pb-3 border-b border-brand-border mb-2 text-text-muted">
@@ -140,17 +135,13 @@ export default function OutputRegistry() {
                         <ArrowRight className="w-3 h-3" />
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {activeOutputTab === 'ios' && (
-                  <motion.div
+                  <div
                     key="render-ios"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.25 }}
-                    className="w-full max-w-[280px] bg-brand-bg border border-brand-border rounded-2xl p-4 shadow-md text-left font-sans space-y-4 relative"
+                    className="animate-panel-in w-full max-w-[280px] bg-brand-bg border border-brand-border rounded-2xl p-4 shadow-md text-left font-sans space-y-4 relative"
                   >
                     {/* iOS top notch simulation bar */}
                     <div className="flex justify-between items-center text-sm font-mono text-text-muted px-1.5 pb-2">
@@ -185,17 +176,13 @@ export default function OutputRegistry() {
                         <span className="text-brand-accent font-bold">200 OK</span>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {activeOutputTab === 'astro' && (
-                  <motion.div
+                  <div
                     key="render-astro"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.25 }}
-                    className="w-full bg-brand-bg border border-brand-border rounded-lg p-8 shadow-sm text-left font-serif space-y-6"
+                    className="animate-panel-in w-full bg-brand-bg border border-brand-border rounded-lg p-8 shadow-sm text-left font-serif space-y-6"
                   >
                     <div className="border-b border-brand-border pb-4 space-y-1">
                       <div className="text-sm font-mono text-text-muted font-bold tracking-widest uppercase">
@@ -219,17 +206,13 @@ export default function OutputRegistry() {
                         Publish from Wriven and the affected CDN cache tags are purged automatically — rebuilds always see fresh content.
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {activeOutputTab === 'json' && (
-                  <motion.div
+                  <div
                     key="render-json"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.25 }}
-                    className="w-full bg-brand-bg border border-brand-border rounded-lg p-5 shadow-sm text-left font-mono text-sm overflow-x-auto relative"
+                    className="animate-panel-in w-full bg-brand-bg border border-brand-border rounded-lg p-5 shadow-sm text-left font-mono text-sm overflow-x-auto relative"
                   >
                     <div className="flex items-center justify-between gap-2 pb-3 border-b border-brand-border mb-3 text-text-muted">
                       <span className="min-w-0 truncate">GET /v1/projects/prj_2f9c/content/posts/wearables-wellness</span>
@@ -250,9 +233,9 @@ export default function OutputRegistry() {
   }
 }`}
                     </pre>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
+              </>
 
             </div>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { mockPosts } from '@/lib/blogData';
 
 type Props = { children: React.ReactNode; params: Promise<{ slug: string }> };
@@ -6,10 +7,7 @@ type Props = { children: React.ReactNode; params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = mockPosts.find((p) => p.slug === slug);
-
-  if (!post) {
-    return { title: 'Blog' };
-  }
+  if (!post) notFound();
 
   return {
     title: post.title,
