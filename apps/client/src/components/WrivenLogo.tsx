@@ -1,8 +1,4 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useTheme } from 'next-themes';
 import darkLogo from '@/assets/wriven-dark-logo.png';
 import lightLogo from '@/assets/wriven-light-logo.png';
 
@@ -16,9 +12,11 @@ interface LogoProps {
 }
 
 /**
- * Brand lockup: PNG mark + typographic "Wriven". Theme-aware — navy-ink mark
- * on light surfaces, light-ink mark on dark ones. Both PNGs are normalized to
- * the same 2:1 canvas so the theme swap causes no layout shift.
+ * Brand lockup: PNG mark + typographic "Wriven". Theme-aware with pure CSS —
+ * both PNGs render (hidden via `dark:` classes since next-themes toggles
+ * `class="dark"` on `<html>`), so the correct mark paints server-side with no
+ * flash and no hydration work. Both PNGs are normalized to the same 2:1 canvas
+ * so the theme swap causes no layout shift.
  */
 export default function WrivenLogo({
   className = '',
@@ -26,28 +24,31 @@ export default function WrivenLogo({
   textOnly = false,
   iconSize = 28,
 }: LogoProps) {
-  const { resolvedTheme } = useTheme();
-
-  // next-themes resolves on the client only — paint the light-theme (navy)
-  // mark during SSR/first render, then swap once the theme is known.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const logo = mounted && resolvedTheme === 'dark' ? lightLogo : darkLogo;
-
   return (
     <div
       className={`flex items-center gap-2.5 select-none ${className}`}
       id="wriven-logo-container"
     >
       {!textOnly && (
-        <Image
-          src={logo}
-          alt="Wriven"
-          width={iconSize * 2}
-          height={iconSize}
-          priority
-          className="shrink-0"
-        />
+        <>
+          <Image
+            src={darkLogo}
+            alt="Wriven"
+            width={iconSize * 2}
+            height={iconSize}
+            priority
+            className="shrink-0 dark:hidden"
+          />
+          <Image
+            src={lightLogo}
+            alt=""
+            aria-hidden
+            width={iconSize * 2}
+            height={iconSize}
+            priority
+            className="hidden shrink-0 dark:block"
+          />
+        </>
       )}
       {!iconOnly && (
         <span

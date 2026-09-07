@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { PenTool, Image as ImageIcon, LayoutGrid, Webhook } from 'lucide-react';
 

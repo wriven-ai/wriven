@@ -1,56 +1,15 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { Calendar, Clock, ArrowRight, User } from 'lucide-react';
+import { mockPosts } from '../../lib/blogData';
 
 export default function Blog() {
-  const featuredPost = {
-    title: "The Architecture of Headless Content Injections",
-    slug: "headless-content-injections",
-    category: "Architecture",
-    excerpt: "Dismantling the constraints of monolithic layout definitions. Learn how we feed raw content schemas directly into lightweight React layers at low latency, and why inline prompt engineering is changing the speed of digital media production.",
-    date: "June 08, 2026",
-    readingTime: "6 min read",
-    coverImage: "https://picsum.photos/seed/injection/800/500",
-    authorName: "Anowar Hosen",
-    authorImage: "/anowar-dp_compressed.jpg"
-  };
-
-  const remainingPosts = [
-    {
-      title: "Designing Minimalist Interfaces for Information Density",
-      slug: "minimalist-interfaces",
-      category: "Design",
-      excerpt: "Why high-contrast editorial layouts outperform cluttered purple grids. Exploring Swiss print aesthetics, offset shadows, and calm color rules.",
-      date: "May 24, 2026",
-      readingTime: "4 min read",
-      coverImage: "https://picsum.photos/seed/density/600/400",
-      authorName: "Anowar Hosen"
-    },
-    {
-      title: "Optimizing JSON Feed Pipelines Over Vercel Edge Serverless",
-      slug: "optimizing-json-pipelines",
-      category: "Engineering",
-      excerpt: "Deep dives into stateful API caches, query optimizations, and token security boundaries. How to deliver markdown content streams globally under 12ms.",
-      date: "May 11, 2026",
-      readingTime: "8 min read",
-      coverImage: "https://picsum.photos/seed/pipeline/600/400",
-      authorName: "Anowar Hosen"
-    },
-    {
-      title: "The Copilot Manifest: Bridging AI Drafts and Editorial Craft",
-      slug: "copilot-manifest",
-      category: "Workflows",
-      excerpt: "An investigation on how content producers collaborate with inline algorithms without sacrificing brand voice integrity or premium editorial cadence.",
-      date: "April 29, 2026",
-      readingTime: "5 min read",
-      coverImage: "https://picsum.photos/seed/copilot/600/400",
-      authorName: "Anowar Hosen"
-    }
-  ];
+  // Single source of truth: lib/blogData.ts (newest first). The featured post
+  // is the newest; everything else fills the grid below.
+  const featuredPost = mockPosts[0];
+  const remainingPosts = mockPosts.slice(1);
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-bg text-text-primary editorial-grid relative paper-grain" id="wriven-blog-page">
@@ -58,7 +17,7 @@ export default function Blog() {
 
       <main className="flex-grow py-16 lg:py-24 relative z-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          
+
           {/* Header Info */}
           <div className="max-w-3xl mx-auto text-center space-y-4 mb-16" id="blog-header-box">
             <span className="text-sm font-semibold tracking-wider text-brand-secondary uppercase animate-fade-in">
