@@ -2,7 +2,14 @@ import { Controller, Get, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy } from '@nestjs/microservices';
 import { AUTH_PATTERNS, CORE_PATTERNS, SERVICE_TOKENS } from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of, TimeoutError } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
+
+/** Per-TCP-dependency budget. Render's health check kills the instance at 5s,
+ * so this route must answer well under that no matter what the dependencies
+ * do — see the 2026-09-09 incident where an auth/core restart left these
+ * sends hung forever and Render killed a perfectly healthy gateway. */
+const PING_TIMEOUT_MS = 2_000;
 
 @Controller()
 export class AppController {
@@ -24,17 +31,44 @@ export class AppController {
     };
   }
 
-  /** GET /v1/health — verifies gateway can reach both TCP services + the HTTP
-   *  ai-service. auth/core are fatal (routing depends on them); ai is reported
-   *  but non-fatal — the CMS still serves when only AI generation is down. */
+  /** GET /v1/health — reports the gateway's view of every dependency, always
+   *  200. Each ping runs concurrently and is bounded; a slow or dead
+   *  dependency degrades to a `{ status: 'down' }` field instead of hanging
+   *  the route past Render's 5s limit. Failing the health check for a
+   *  downstream blip would only restart the one component that was healthy —
+   *  the gateway — so non-200 is reserved for gateway-level failures that
+   *  Render can actually fix by restarting it. */
   @Get('health')
   async health() {
-    const [auth, core] = await Promise.all([
-      firstValueFrom(this.authClient.send(AUTH_PATTERNS.PING, {})),
-      firstValueFrom(this.coreClient.send(CORE_PATTERNS.PING, {})),
+    const [auth, core, ai] = await Promise.all([
+      this.pingDownstream(this.authClient, AUTH_PATTERNS.PING),
+      this.pingDownstream(this.coreClient, CORE_PATTERNS.PING),
+      this.pingAi(),
     ]);
-    const ai = await this.pingAi();
     return { gateway: 'up', auth, core, ai };
+  }
+
+  /** One TCP ping with a hard timeout. NestJS ClientTCP sends never time out
+   *  on their own — a write into a socket whose server died mid-restart never
+   *  errors the observable — so the timeout is the only thing that turns a
+   *  hang into a reported `down`. */
+  private pingDownstream(client: ClientProxy, pattern: string): Promise<unknown> {
+    return firstValueFrom(
+      client.send(pattern, {}).pipe(
+        timeout(PING_TIMEOUT_MS),
+        catchError((err: unknown) =>
+          of({
+            status: 'down',
+            error:
+              err instanceof TimeoutError
+                ? `timeout after ${PING_TIMEOUT_MS}ms`
+                : err instanceof Error
+                  ? err.message
+                  : String(err),
+          }),
+        ),
+      ),
+    );
   }
 
   /** Liveness ping to the FastAPI ai-service over HTTP (the only non-TCP
