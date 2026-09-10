@@ -206,7 +206,9 @@ genuinely cross-site.)
 ```bash
 # 1. Gateway health (confirms TCP wiring to auth + core)
 curl https://api.wriven.tech/v1/health
-# → { "success": true, "data": { "gateway": "ok", "auth": "ok", "core": "ok" } }
+# → { "success": true, "data": { "gateway": "up", "auth": { "db": "up", ... }, "core": { "db": "up", ... }, "ai": ... } }
+# The route always returns 200 — assert auth.db === "up" and core.db === "up"
+# in the payload; a "status": "down" entry names the broken dependency.
 
 # 2. Public plan catalog (no auth)
 curl https://api.wriven.tech/v1/plans

@@ -5,7 +5,7 @@ import { AiService } from './ai.service';
 import { AiClientError, type AiClient } from './ai-client.interface';
 import type { AiProfileService } from './ai-profile.service';
 import type { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
-import { chain, writeChain, asDb, chainOf, createDbMock } from '../testing/drizzle-mock';
+import { chain, writeChain, asDb, chainOf, createDbMock, serializeFragment } from '../testing/drizzle-mock';
 import { configStub } from '../testing/config-stub';
 
 const FIELDS = [
@@ -393,15 +393,17 @@ describe('AiService.generate — idempotency (requestId replay)', () => {
 describe('AiService.redactExpiredAuditData — retention', () => {
   it('nulls recoverable content past the window and reports the count', async () => {
     const ctx = makeService();
-    ctx.db.update.mockImplementationOnce(() => writeChain([{ n: 7 }]));
+    ctx.db.execute.mockResolvedValueOnce([{ n: 7 }]);
 
     const n = await ctx.service.redactExpiredAuditData();
 
     expect(n).toBe(7);
-    expect(chainOf(ctx.db.update).set).toHaveBeenCalledWith({
-      output: null,
-      requestHash: null,
-    });
+    // Raw CTE (window functions are illegal in RETURNING) — pin the redaction
+    // shape so a regression back to the invalid query fails loudly.
+    const fragment = serializeFragment(ctx.db.execute.mock.calls[0][0]);
+    expect(fragment).toContain('output = null');
+    expect(fragment).toContain('request_hash = null');
+    expect(fragment).toContain('created_at');
   });
 });
 
