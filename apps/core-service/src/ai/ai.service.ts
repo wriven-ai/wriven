@@ -14,7 +14,7 @@ import {
 } from '@wriven/contracts';
 import { DRIZZLE } from '@wriven/database';
 import type { DrizzleDB } from '@wriven/database';
-import { and, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { currentPeriod } from '../common/period';
 import { rpcError } from '../common/rpc-error';
 import { CoreEntitlementsService } from '../entitlements/core-entitlements.service';
@@ -387,18 +387,20 @@ export class AiService {
     const cutoff = new Date(
       Date.now() - this.auditRetentionDays * 24 * 60 * 60 * 1000,
     );
-    const rows = await this.db
-      .update(aiGenerations)
-      .set({ output: null, requestHash: null })
-      .where(
-        and(
-          lt(aiGenerations.createdAt, cutoff),
-          or(isNotNull(aiGenerations.output), isNotNull(aiGenerations.requestHash)),
-        ),
+    // Postgres rejects window functions in RETURNING (42P20), so the count
+    // comes from a data-modifying CTE — still one statement, one round trip,
+    // and no ids materialized into Node when retention touches thousands of rows.
+    const rows = await this.db.execute<{ n: number }>(sql`
+      with redacted as (
+        update ${aiGenerations}
+        set output = null, request_hash = null
+        where ${aiGenerations.createdAt} < ${cutoff}
+          and (${aiGenerations.output} is not null
+            or ${aiGenerations.requestHash} is not null)
+        returning 1
       )
-      // Window count instead of materializing ids into Node — retention can
-      // touch thousands of rows.
-      .returning({ n: sql<number>`count(*) over ()` });
+      select count(*)::int as n from redacted
+    `);
     return rows[0]?.n ?? 0;
   }
 
