@@ -5,10 +5,10 @@ import {
   AdminMetricsOverview,
   SERVICE_TOKENS,
 } from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRolesGuard } from './admin-roles.guard';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 interface AuthMetrics {
   users: { total: number; verified: number };
   workspaces: { total: number };
@@ -32,12 +32,8 @@ export class AdminMetricsController {
   @Get('overview')
   async overview(): Promise<AdminMetricsOverview> {
     const [a, c] = await Promise.all([
-      firstValueFrom(
-        this.auth.send<AuthMetrics>(ADMIN_PATTERNS.METRICS_AUTH, {}),
-      ),
-      firstValueFrom(
-        this.core.send<ContentMetrics>(ADMIN_PATTERNS.METRICS_CONTENT, {}),
-      ),
+      sendWithTimeout<AuthMetrics>(this.auth, ADMIN_PATTERNS.METRICS_AUTH, {}),
+      sendWithTimeout<ContentMetrics>(this.core, ADMIN_PATTERNS.METRICS_CONTENT, {}),
     ]);
     return {
       users: a.users,

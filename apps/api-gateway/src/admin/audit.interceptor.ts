@@ -15,7 +15,8 @@ import {
   SERVICE_TOKENS,
 } from '@wriven/contracts';
 import type { Request } from 'express';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, timeout } from 'rxjs';
+import { DEFAULT_TCP_TIMEOUT_MS } from '../common/send-with-timeout';
 import { AUDIT_KEY, AuditConfig } from './audit.decorator';
 
 /**
@@ -65,12 +66,17 @@ export class AuditInterceptor implements NestInterceptor {
           metadata: req.auditMeta ?? {},
           ip: req.ip ?? null,
         };
-        this.auth.send(ADMIN_PATTERNS.AUDIT_WRITE, payload).subscribe({
-          error: (err) =>
-            this.logger.error(
-              `Failed to write audit entry "${meta.action}": ${String(err)}`,
-            ),
-        });
+        // Bounded so a wedged auth-service can't park these fire-and-forget
+        // subscriptions forever; the timeout lands in the error handler below.
+        this.auth
+          .send(ADMIN_PATTERNS.AUDIT_WRITE, payload)
+          .pipe(timeout(DEFAULT_TCP_TIMEOUT_MS))
+          .subscribe({
+            error: (err) =>
+              this.logger.error(
+                `Failed to write audit entry "${meta.action}": ${String(err)}`,
+              ),
+          });
       }),
     );
   }

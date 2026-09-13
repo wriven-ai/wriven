@@ -13,7 +13,6 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRoles } from './admin-roles.decorator';
 import { AdminRolesGuard } from './admin-roles.guard';
@@ -21,6 +20,7 @@ import { Audit } from './audit.decorator';
 import { AuditInterceptor } from './audit.interceptor';
 import { CurrentAdmin } from './current-admin.decorator';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** Manage platform admins. `admin` role only. */
 @UseGuards(AdminJwtGuard, AdminRolesGuard)
 @UseInterceptors(AuditInterceptor)
@@ -33,13 +33,13 @@ export class AdminAdminsController {
 
   @Get()
   list(@Query() query: contracts.AdminListQueryDto) {
-    return firstValueFrom(this.auth.send(contracts.ADMIN_PATTERNS.ADMINS_LIST, query));
+    return sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.ADMINS_LIST, query);
   }
 
   @Audit('admin.create', 'admin_user')
   @Post()
   create(@Body() dto: contracts.CreateAdminDto) {
-    return firstValueFrom(this.auth.send(contracts.ADMIN_PATTERNS.ADMINS_CREATE, dto));
+    return sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.ADMINS_CREATE, dto);
   }
 
   @Audit('admin.update', 'admin_user')
@@ -49,23 +49,19 @@ export class AdminAdminsController {
     @Body() dto: contracts.UpdateAdminDto,
     @CurrentAdmin() admin: contracts.AdminAuthUser,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.ADMIN_PATTERNS.ADMINS_UPDATE, {
+    return sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.ADMINS_UPDATE, {
         id,
         dto,
         actingAdminId: admin.adminUserId,
-      }),
-    );
+      });
   }
 
   @Audit('admin.delete', 'admin_user')
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentAdmin() admin: contracts.AdminAuthUser) {
-    return firstValueFrom(
-      this.auth.send(contracts.ADMIN_PATTERNS.ADMINS_DELETE, {
+    return sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.ADMINS_DELETE, {
         id,
         actingAdminId: admin.adminUserId,
-      }),
-    );
+      });
   }
 }

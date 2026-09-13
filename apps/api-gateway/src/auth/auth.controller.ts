@@ -14,10 +14,10 @@ import * as contracts from '@wriven/contracts';
 import { Throttle } from '@nestjs/throttler';
 import { randomBytes } from 'crypto';
 import type { Request, Response } from 'express';
-import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from './current-user.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 const MINUTE = 60000;
 
 const REFRESH_COOKIE = 'refresh_token';
@@ -46,9 +46,7 @@ export class AuthController {
     @Body() dto: contracts.RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await firstValueFrom(
-      this.auth.send<contracts.AuthResult>(contracts.AUTH_PATTERNS.REGISTER, dto),
-    );
+    const result = await sendWithTimeout<contracts.AuthResult>(this.auth, contracts.AUTH_PATTERNS.REGISTER, dto);
     return this.completeAuth(res, result);
   }
 
@@ -58,9 +56,7 @@ export class AuthController {
     @Body() dto: contracts.LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await firstValueFrom(
-      this.auth.send<contracts.AuthResult>(contracts.AUTH_PATTERNS.LOGIN, dto),
-    );
+    const result = await sendWithTimeout<contracts.AuthResult>(this.auth, contracts.AUTH_PATTERNS.LOGIN, dto);
     return this.completeAuth(res, result);
   }
 
@@ -73,11 +69,9 @@ export class AuthController {
     if (!token) {
       throw this.error('INVALID_REFRESH_TOKEN', 'No refresh token provided.');
     }
-    const result = await firstValueFrom(
-      this.auth.send<contracts.RefreshResult>(contracts.AUTH_PATTERNS.REFRESH, {
+    const result = await sendWithTimeout<contracts.RefreshResult>(this.auth, contracts.AUTH_PATTERNS.REFRESH, {
         refreshToken: token,
-      }),
-    );
+      });
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
     const csrfToken = this.setAccessCookies(res, result.accessToken);
     return { csrfToken };
@@ -90,9 +84,7 @@ export class AuthController {
   ) {
     const token = req.cookies?.[REFRESH_COOKIE];
     if (token) {
-      await firstValueFrom(
-        this.auth.send(contracts.AUTH_PATTERNS.LOGOUT, { refreshToken: token }),
-      );
+      await sendWithTimeout(this.auth, contracts.AUTH_PATTERNS.LOGOUT, { refreshToken: token });
     }
     res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
     res.clearCookie(ACCESS_COOKIE, { path: API_COOKIE_PATH });
@@ -103,32 +95,28 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: MINUTE } })
   @Post('forgot-password')
   async forgotPassword(@Body() dto: contracts.ForgotPasswordDto) {
-    return firstValueFrom(
-      this.auth.send(contracts.AUTH_PATTERNS.FORGOT_PASSWORD, dto),
-    );
+    return sendWithTimeout(this.auth, contracts.AUTH_PATTERNS.FORGOT_PASSWORD, dto);
   }
 
   @Throttle({ default: { limit: 5, ttl: MINUTE } })
   @Post('reset-password')
   async resetPassword(@Body() dto: contracts.ResetPasswordDto) {
-    return firstValueFrom(this.auth.send(contracts.AUTH_PATTERNS.RESET_PASSWORD, dto));
+    return sendWithTimeout(this.auth, contracts.AUTH_PATTERNS.RESET_PASSWORD, dto);
   }
 
   @Throttle({ default: { limit: 10, ttl: MINUTE } })
   @Post('verify-email')
   async verifyEmail(@Body() dto: contracts.VerifyEmailDto) {
-    return firstValueFrom(this.auth.send(contracts.AUTH_PATTERNS.VERIFY_EMAIL, dto));
+    return sendWithTimeout(this.auth, contracts.AUTH_PATTERNS.VERIFY_EMAIL, dto);
   }
 
   @Throttle({ default: { limit: 3, ttl: MINUTE } })
   @UseGuards(JwtAuthGuard)
   @Post('resend-verification')
   async resendVerification(@CurrentUser() user: contracts.AuthUser) {
-    return firstValueFrom(
-      this.auth.send(contracts.AUTH_PATTERNS.RESEND_VERIFICATION, {
+    return sendWithTimeout(this.auth, contracts.AUTH_PATTERNS.RESEND_VERIFICATION, {
         userId: user.userId,
-      }),
-    );
+      });
   }
 
   @Throttle({ default: { limit: 10, ttl: MINUTE } })
@@ -138,20 +126,16 @@ export class AuthController {
     @Body() dto: contracts.VerifyEmailCodeDto,
     @CurrentUser() user: contracts.AuthUser,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.AUTH_PATTERNS.VERIFY_EMAIL_CODE, {
+    return sendWithTimeout(this.auth, contracts.AUTH_PATTERNS.VERIFY_EMAIL_CODE, {
         userId: user.userId,
         code: dto.code,
-      }),
-    );
+      });
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@CurrentUser() user: contracts.AuthUser, @Req() req: Request) {
-    const session = await firstValueFrom(
-      this.auth.send(contracts.AUTH_PATTERNS.GET_SESSION, { userId: user.userId }),
-    );
+    const session = await sendWithTimeout(this.auth, contracts.AUTH_PATTERNS.GET_SESSION, { userId: user.userId });
     // Hand the SPA the current CSRF token on reload (the cookie is httpOnly).
     return { ...(session as object), csrfToken: req.cookies?.[CSRF_COOKIE] ?? null };
   }
@@ -159,11 +143,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('workspaces')
   async workspaces(@CurrentUser() user: contracts.AuthUser) {
-    return firstValueFrom(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.LIST_WORKSPACES, {
+    return sendWithTimeout(this.auth, contracts.WORKSPACE_PATTERNS.LIST_WORKSPACES, {
         userId: user.userId,
-      }),
-    );
+      });
   }
 
   // ── Google OAuth ────────────────────────────────────────────────────────────
@@ -179,9 +161,7 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
     const profile = req.user as contracts.GoogleProfile;
-    const result = await firstValueFrom(
-      this.auth.send<contracts.AuthResult>(contracts.AUTH_PATTERNS.GOOGLE_LOGIN, profile),
-    );
+    const result = await sendWithTimeout<contracts.AuthResult>(this.auth, contracts.AUTH_PATTERNS.GOOGLE_LOGIN, profile);
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
     this.setAccessCookies(res, result.accessToken);
     const origin = process.env.CLIENT_ORIGIN ?? 'http://localhost:3000';

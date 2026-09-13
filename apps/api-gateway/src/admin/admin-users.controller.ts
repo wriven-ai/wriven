@@ -17,13 +17,13 @@ import {
   AdminUsersQueryDto,
   SERVICE_TOKENS,
 } from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRoles } from './admin-roles.decorator';
 import { AdminRolesGuard } from './admin-roles.guard';
 import { Audit } from './audit.decorator';
 import { AuditInterceptor } from './audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** Cross-tenant user oversight. Read = any admin; writes gated + audited. */
 @UseGuards(AdminJwtGuard, AdminRolesGuard)
 @UseInterceptors(AuditInterceptor)
@@ -35,27 +35,25 @@ export class AdminUsersController {
 
   @Get()
   list(@Query() query: AdminUsersQueryDto) {
-    return firstValueFrom(this.auth.send(ADMIN_PATTERNS.USERS_LIST, query));
+    return sendWithTimeout(this.auth, ADMIN_PATTERNS.USERS_LIST, query);
   }
 
   @Get(':id')
   get(@Param('id') id: string) {
-    return firstValueFrom(this.auth.send(ADMIN_PATTERNS.USERS_GET, { id }));
+    return sendWithTimeout(this.auth, ADMIN_PATTERNS.USERS_GET, { id });
   }
 
   @AdminRoles('admin', 'moderator')
   @Audit('user.update', 'user')
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
-    return firstValueFrom(
-      this.auth.send(ADMIN_PATTERNS.USERS_UPDATE, { id, dto }),
-    );
+    return sendWithTimeout(this.auth, ADMIN_PATTERNS.USERS_UPDATE, { id, dto });
   }
 
   @AdminRoles('admin')
   @Audit('user.delete', 'user')
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return firstValueFrom(this.auth.send(ADMIN_PATTERNS.USERS_DELETE, { id }));
+    return sendWithTimeout(this.auth, ADMIN_PATTERNS.USERS_DELETE, { id });
   }
 }

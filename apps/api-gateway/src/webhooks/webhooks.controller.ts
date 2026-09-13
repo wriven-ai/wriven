@@ -13,7 +13,6 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
@@ -26,6 +25,7 @@ import type { AuditRequest } from '../common/workspace-audit.decorator';
 import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** Dashboard management of outgoing webhooks (session/cookie auth). */
 @Controller('webhooks')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
@@ -45,14 +45,12 @@ export class WebhooksController {
     @Body() dto: contracts.CreateWebhookDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.CreateWebhookResult>(
-      this.core.send(contracts.CORE_PATTERNS.WEBHOOK_CREATE, {
+    const result = await sendWithTimeout<contracts.CreateWebhookResult>(this.core, contracts.CORE_PATTERNS.WEBHOOK_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
         dto,
-      }),
-    );
+      });
     req.logMeta = { url: result.webhook.url };
     return result;
   }
@@ -60,9 +58,7 @@ export class WebhooksController {
   @Get()
   @RequirePermission(contracts.Permission.PROJECT_VIEW)
   list(@CurrentProject() projectId: string) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.WEBHOOK_LIST, { projectId }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.WEBHOOK_LIST, { projectId });
   }
 
   @Patch(':id')
@@ -74,9 +70,7 @@ export class WebhooksController {
     @Body() dto: contracts.UpdateWebhookDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.WebhookView>(
-      this.core.send(contracts.CORE_PATTERNS.WEBHOOK_UPDATE, { projectId, id, dto }),
-    );
+    const result = await sendWithTimeout<contracts.WebhookView>(this.core, contracts.CORE_PATTERNS.WEBHOOK_UPDATE, { projectId, id, dto });
     req.logMeta = { url: result.url };
     return result;
   }
@@ -85,8 +79,6 @@ export class WebhooksController {
   @RequirePermission(contracts.Permission.WEBHOOK_MANAGE)
   @WorkspaceAudit('webhook.delete', 'webhook')
   remove(@CurrentProject() projectId: string, @Param('id') id: string) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.WEBHOOK_DELETE, { projectId, id }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.WEBHOOK_DELETE, { projectId, id });
   }
 }

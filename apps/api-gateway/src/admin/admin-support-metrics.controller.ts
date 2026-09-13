@@ -1,10 +1,10 @@
 import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { ADMIN_PATTERNS, SERVICE_TOKENS } from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRolesGuard } from './admin-roles.guard';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 @UseGuards(AdminJwtGuard, AdminRolesGuard)
 @Controller('admin/support')
 export class AdminSupportMetricsController {
@@ -14,6 +14,6 @@ export class AdminSupportMetricsController {
 
   @Get('metrics')
   metrics() {
-    return firstValueFrom(this.core.send(ADMIN_PATTERNS.SUPPORT_METRICS, {}));
+    return sendWithTimeout(this.core, ADMIN_PATTERNS.SUPPORT_METRICS, {});
   }
 }

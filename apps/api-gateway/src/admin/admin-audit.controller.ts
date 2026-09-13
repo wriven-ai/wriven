@@ -5,10 +5,10 @@ import {
   AdminAuditQueryDto,
   SERVICE_TOKENS,
 } from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRolesGuard } from './admin-roles.guard';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** Read the admin audit log. Any authenticated admin (read-only feed). */
 @UseGuards(AdminJwtGuard, AdminRolesGuard)
 @Controller('admin/audit-log')
@@ -19,6 +19,6 @@ export class AdminAuditController {
 
   @Get()
   list(@Query() query: AdminAuditQueryDto) {
-    return firstValueFrom(this.auth.send(ADMIN_PATTERNS.AUDIT_LIST, query));
+    return sendWithTimeout(this.auth, ADMIN_PATTERNS.AUDIT_LIST, query);
   }
 }

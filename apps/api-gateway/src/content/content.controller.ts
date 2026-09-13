@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
@@ -27,6 +26,7 @@ import type { AuditRequest } from '../common/workspace-audit.decorator';
 import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 @Controller('content')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 @UseInterceptors(WorkspaceAuditInterceptor)
@@ -47,14 +47,12 @@ export class ContentController {
     @Body() dto: contracts.CreateContentTypeDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.ContentTypeView>(
-      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_CREATE, {
+    const result = await sendWithTimeout<contracts.ContentTypeView>(this.core, contracts.CORE_PATTERNS.CONTENT_TYPE_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
         dto,
-      }),
-    );
+      });
     req.logMeta = { name: result.name, apiId: result.apiId };
     return result;
   }
@@ -67,14 +65,12 @@ export class ContentController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_LIST, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.CONTENT_TYPE_LIST, {
         workspaceId,
         projectId,
         page: page ? Number(page) : undefined,
         limit: limit ? Number(limit) : undefined,
-      }),
-    );
+      });
   }
 
   @Get('types/:id')
@@ -84,9 +80,7 @@ export class ContentController {
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_GET, { workspaceId, projectId, id }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.CONTENT_TYPE_GET, { workspaceId, projectId, id });
   }
 
   @Patch('types/:id')
@@ -99,14 +93,12 @@ export class ContentController {
     @Body() dto: contracts.UpdateContentTypeDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.ContentTypeView>(
-      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_UPDATE, {
+    const result = await sendWithTimeout<contracts.ContentTypeView>(this.core, contracts.CORE_PATTERNS.CONTENT_TYPE_UPDATE, {
         workspaceId,
         projectId,
         id,
         dto,
-      }),
-    );
+      });
     req.logMeta = { name: result.name };
     return result;
   }
@@ -119,9 +111,7 @@ export class ContentController {
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.CONTENT_TYPE_DELETE, { workspaceId, projectId, id }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.CONTENT_TYPE_DELETE, { workspaceId, projectId, id });
   }
 
   // ── Entries ───────────────────────────────────────────────────────────────
@@ -136,14 +126,12 @@ export class ContentController {
     @Body() dto: contracts.CreateEntryDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.ContentEntryView>(
-      this.core.send(contracts.CORE_PATTERNS.ENTRY_CREATE, {
+    const result = await sendWithTimeout<contracts.ContentEntryView>(this.core, contracts.CORE_PATTERNS.ENTRY_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
         dto,
-      }),
-    );
+      });
     req.logMeta = { slug: result.slug };
     return result;
   }
@@ -155,9 +143,7 @@ export class ContentController {
     @CurrentProject() projectId: string,
     @Query() query: contracts.ListEntriesQueryDto,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.ENTRY_LIST, { workspaceId, projectId, query }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.ENTRY_LIST, { workspaceId, projectId, query });
   }
 
   @Get('entries/:id')
@@ -167,9 +153,7 @@ export class ContentController {
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.ENTRY_GET, { workspaceId, projectId, id }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.ENTRY_GET, { workspaceId, projectId, id });
   }
 
   @Patch('entries/:id')
@@ -183,15 +167,13 @@ export class ContentController {
     @Body() dto: contracts.UpdateEntryDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.ContentEntryView>(
-      this.core.send(contracts.CORE_PATTERNS.ENTRY_UPDATE, {
+    const result = await sendWithTimeout<contracts.ContentEntryView>(this.core, contracts.CORE_PATTERNS.ENTRY_UPDATE, {
         workspaceId,
         projectId,
         userId: user.userId,
         id,
         dto,
-      }),
-    );
+      });
     req.logMeta = { slug: result.slug };
     return result;
   }
@@ -206,14 +188,12 @@ export class ContentController {
     @Param('id') id: string,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.ContentEntryView>(
-      this.core.send(contracts.CORE_PATTERNS.ENTRY_PUBLISH, {
+    const result = await sendWithTimeout<contracts.ContentEntryView>(this.core, contracts.CORE_PATTERNS.ENTRY_PUBLISH, {
         workspaceId,
         projectId,
         userId: user.userId,
         id,
-      }),
-    );
+      });
     req.logMeta = { slug: result.slug };
     return result;
   }
@@ -226,9 +206,7 @@ export class ContentController {
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.ENTRY_DELETE, { workspaceId, projectId, id }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.ENTRY_DELETE, { workspaceId, projectId, id });
   }
 
   @Get('entries/:id/revisions')
@@ -238,13 +216,11 @@ export class ContentController {
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.ENTRY_REVISIONS, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.ENTRY_REVISIONS, {
         workspaceId,
         projectId,
         entryId: id,
-      }),
-    );
+      });
   }
 
   @Post('entries/:id/revisions/:version/restore')
@@ -258,15 +234,13 @@ export class ContentController {
     @Param('version') version: string,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.ContentEntryView>(
-      this.core.send(contracts.CORE_PATTERNS.ENTRY_REVISION_RESTORE, {
+    const result = await sendWithTimeout<contracts.ContentEntryView>(this.core, contracts.CORE_PATTERNS.ENTRY_REVISION_RESTORE, {
         workspaceId,
         projectId,
         userId: user.userId,
         entryId: id,
         version: Number(version),
-      }),
-    );
+      });
     req.logMeta = { slug: result.slug, version: Number(version) };
     return result;
   }

@@ -13,7 +13,6 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
@@ -26,6 +25,7 @@ import type { AuditRequest } from '../common/workspace-audit.decorator';
 import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 @Controller('content/media')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, ProjectGuard, PermissionGuard)
 @UseInterceptors(WorkspaceAuditInterceptor)
@@ -42,14 +42,12 @@ export class MediaController {
     @CurrentProject() projectId: string,
     @Body() dto: contracts.PresignUploadDto,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.MEDIA_PRESIGN, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.MEDIA_PRESIGN, {
         workspaceId,
         projectId,
         userId: user.userId,
         dto,
-      }),
-    );
+      });
   }
 
   @Post()
@@ -62,14 +60,12 @@ export class MediaController {
     @Body() dto: contracts.CreateMediaDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.MediaView>(
-      this.core.send(contracts.CORE_PATTERNS.MEDIA_CREATE, {
+    const result = await sendWithTimeout<contracts.MediaView>(this.core, contracts.CORE_PATTERNS.MEDIA_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
         dto,
-      }),
-    );
+      });
     req.logMeta = {
       filename: result.originalFilename ?? dto.key,
       kind: result.kind,
@@ -88,16 +84,14 @@ export class MediaController {
     @Query('search') search?: string,
     @Query('sort') sort?: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.MEDIA_LIST, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.MEDIA_LIST, {
         workspaceId,
         projectId,
         page: page ? Number(page) : undefined,
         limit: limit ? Number(limit) : undefined,
         search: search || undefined,
         sort: sort || undefined,
-      }),
-    );
+      });
   }
 
   @Get(':id')
@@ -107,9 +101,7 @@ export class MediaController {
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.MEDIA_GET, { workspaceId, projectId, id }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.MEDIA_GET, { workspaceId, projectId, id });
   }
 
   @Delete(':id')
@@ -120,9 +112,7 @@ export class MediaController {
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.MEDIA_DELETE, { workspaceId, projectId, id }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.MEDIA_DELETE, { workspaceId, projectId, id });
   }
 
   /** Bulk delete — atomic DB soft-delete (scoped to the project) + R2 cleanup. */
@@ -135,13 +125,11 @@ export class MediaController {
     @Body() dto: contracts.DeleteMediaBulkDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<{ success: boolean; deleted: number }>(
-      this.core.send(contracts.CORE_PATTERNS.MEDIA_DELETE_BULK, {
+    const result = await sendWithTimeout<{ success: boolean; deleted: number }>(this.core, contracts.CORE_PATTERNS.MEDIA_DELETE_BULK, {
         workspaceId,
         projectId,
         ids: dto.ids,
-      }),
-    );
+      });
     req.logMeta = { count: result.deleted };
     return result;
   }

@@ -5,11 +5,11 @@ import {
   AdminScopedQueryDto,
   SERVICE_TOKENS,
 } from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRolesGuard } from './admin-roles.guard';
 import { AuditInterceptor } from './audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** Cross-tenant content-type oversight (read-only). */
 @UseGuards(AdminJwtGuard, AdminRolesGuard)
 @UseInterceptors(AuditInterceptor)
@@ -21,6 +21,6 @@ export class AdminContentTypesController {
 
   @Get()
   list(@Query() query: AdminScopedQueryDto) {
-    return firstValueFrom(this.core.send(ADMIN_PATTERNS.CONTENT_TYPES_LIST, query));
+    return sendWithTimeout(this.core, ADMIN_PATTERNS.CONTENT_TYPES_LIST, query);
   }
 }
