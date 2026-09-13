@@ -1,6 +1,5 @@
 import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 import {
   Paginated,
   Permission,
@@ -15,6 +14,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** Workspace activity feed — members and above (RBAC WORKSPACE_LOGS_VIEW). */
 @Controller('logs')
 @UseGuards(JwtAuthGuard, WorkspaceGuard, PermissionGuard)
@@ -29,11 +29,7 @@ export class LogsController {
     @CurrentWorkspace() workspaceId: string,
     @Query() query: WorkspaceLogQueryDto,
   ): Promise<Paginated<WorkspaceLogView>> {
-    return firstValueFrom(
-      this.auth.send<Paginated<WorkspaceLogView>>(
-        WORKSPACE_PATTERNS.LOG_LIST,
-        { workspaceId, ...query },
-      ),
-    );
+    return sendWithTimeout<Paginated<WorkspaceLogView>>(this.auth, WORKSPACE_PATTERNS.LOG_LIST,
+        { workspaceId, ...query });
   }
 }

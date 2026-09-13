@@ -13,13 +13,13 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuditRequest } from '../common/workspace-audit.decorator';
 import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 @Controller()
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(WorkspaceAuditInterceptor)
@@ -38,13 +38,11 @@ export class ProjectsController {
     @Body() dto: contracts.CreateProjectDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.ProjectView>(
-      this.auth.send(contracts.PROJECT_PATTERNS.CREATE_PROJECT, {
+    const result = await sendWithTimeout<contracts.ProjectView>(this.auth, contracts.PROJECT_PATTERNS.CREATE_PROJECT, {
         callerUserId: user.userId,
         workspaceId,
         dto,
-      }),
-    );
+      });
     req.logMeta = { name: result.name };
     return result;
   }
@@ -54,22 +52,18 @@ export class ProjectsController {
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.PROJECT_PATTERNS.LIST_PROJECTS, {
+    return sendWithTimeout(this.auth, contracts.PROJECT_PATTERNS.LIST_PROJECTS, {
         callerUserId: user.userId,
         workspaceId,
-      }),
-    );
+      });
   }
 
   @Get('projects/:projectId')
   get(@CurrentUser() user: contracts.AuthUser, @Param('projectId') projectId: string) {
-    return firstValueFrom(
-      this.auth.send(contracts.PROJECT_PATTERNS.GET_PROJECT, {
+    return sendWithTimeout(this.auth, contracts.PROJECT_PATTERNS.GET_PROJECT, {
         callerUserId: user.userId,
         projectId,
-      }),
-    );
+      });
   }
 
   @Patch('projects/:projectId')
@@ -80,13 +74,11 @@ export class ProjectsController {
     @Body() dto: contracts.UpdateProjectDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.ProjectView>(
-      this.auth.send(contracts.PROJECT_PATTERNS.UPDATE_PROJECT, {
+    const result = await sendWithTimeout<contracts.ProjectView>(this.auth, contracts.PROJECT_PATTERNS.UPDATE_PROJECT, {
         callerUserId: user.userId,
         projectId,
         dto,
-      }),
-    );
+      });
     req.logMeta = { name: result.name };
     return result;
   }
@@ -97,12 +89,10 @@ export class ProjectsController {
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.PROJECT_PATTERNS.DELETE_PROJECT, {
+    return sendWithTimeout(this.auth, contracts.PROJECT_PATTERNS.DELETE_PROJECT, {
         callerUserId: user.userId,
         projectId,
-      }),
-    );
+      });
   }
 
   // ── Project members ─────────────────────────────────────────────────────────
@@ -112,12 +102,10 @@ export class ProjectsController {
     @CurrentUser() user: contracts.AuthUser,
     @Param('projectId') projectId: string,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.PROJECT_PATTERNS.LIST_MEMBERS, {
+    return sendWithTimeout(this.auth, contracts.PROJECT_PATTERNS.LIST_MEMBERS, {
         callerUserId: user.userId,
         projectId,
-      }),
-    );
+      });
   }
 
   @Post('projects/:projectId/members')
@@ -126,13 +114,11 @@ export class ProjectsController {
     @Param('projectId') projectId: string,
     @Body() dto: contracts.AddProjectMemberDto,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.PROJECT_PATTERNS.ADD_MEMBER, {
+    return sendWithTimeout(this.auth, contracts.PROJECT_PATTERNS.ADD_MEMBER, {
         callerUserId: user.userId,
         projectId,
         dto,
-      }),
-    );
+      });
   }
 
   @Patch('projects/:projectId/members/:userId')
@@ -142,14 +128,12 @@ export class ProjectsController {
     @Param('userId') targetUserId: string,
     @Body() dto: contracts.UpdateProjectMemberDto,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.PROJECT_PATTERNS.UPDATE_MEMBER, {
+    return sendWithTimeout(this.auth, contracts.PROJECT_PATTERNS.UPDATE_MEMBER, {
         callerUserId: user.userId,
         projectId,
         targetUserId,
         dto,
-      }),
-    );
+      });
   }
 
   @Delete('projects/:projectId/members/:userId')
@@ -158,12 +142,10 @@ export class ProjectsController {
     @Param('projectId') projectId: string,
     @Param('userId') targetUserId: string,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.PROJECT_PATTERNS.REMOVE_MEMBER, {
+    return sendWithTimeout(this.auth, contracts.PROJECT_PATTERNS.REMOVE_MEMBER, {
         callerUserId: user.userId,
         projectId,
         targetUserId,
-      }),
-    );
+      });
   }
 }

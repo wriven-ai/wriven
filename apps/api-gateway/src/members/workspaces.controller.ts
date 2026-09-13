@@ -13,13 +13,13 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuditRequest } from '../common/workspace-audit.decorator';
 import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 @Controller('workspaces')
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(WorkspaceAuditInterceptor)
@@ -32,21 +32,17 @@ export class WorkspacesController {
 
   @Post()
   create(@CurrentUser() user: contracts.AuthUser, @Body() dto: contracts.CreateWorkspaceDto) {
-    return firstValueFrom(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.CREATE_WORKSPACE, {
+    return sendWithTimeout(this.auth, contracts.WORKSPACE_PATTERNS.CREATE_WORKSPACE, {
         userId: user.userId,
         dto,
-      }),
-    );
+      });
   }
 
   @Get()
   list(@CurrentUser() user: contracts.AuthUser) {
-    return firstValueFrom(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.LIST_WORKSPACES, {
+    return sendWithTimeout(this.auth, contracts.WORKSPACE_PATTERNS.LIST_WORKSPACES, {
         userId: user.userId,
-      }),
-    );
+      });
   }
 
   @Get(':workspaceId')
@@ -54,12 +50,10 @@ export class WorkspacesController {
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.GET_WORKSPACE, {
+    return sendWithTimeout(this.auth, contracts.WORKSPACE_PATTERNS.GET_WORKSPACE, {
         callerUserId: user.userId,
         workspaceId,
-      }),
-    );
+      });
   }
 
   @Patch(':workspaceId')
@@ -70,13 +64,11 @@ export class WorkspacesController {
     @Body() dto: contracts.UpdateWorkspaceDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.WorkspaceView>(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.UPDATE_WORKSPACE, {
+    const result = await sendWithTimeout<contracts.WorkspaceView>(this.auth, contracts.WORKSPACE_PATTERNS.UPDATE_WORKSPACE, {
         callerUserId: user.userId,
         workspaceId,
         dto,
-      }),
-    );
+      });
     req.logMeta = { name: result.name };
     return result;
   }
@@ -86,12 +78,10 @@ export class WorkspacesController {
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.DELETE_WORKSPACE, {
+    return sendWithTimeout(this.auth, contracts.WORKSPACE_PATTERNS.DELETE_WORKSPACE, {
         callerUserId: user.userId,
         workspaceId,
-      }),
-    );
+      });
   }
 
   // ── Workspace members ────────────────────────────────────────────────────────
@@ -101,12 +91,10 @@ export class WorkspacesController {
     @CurrentUser() user: contracts.AuthUser,
     @Param('workspaceId') workspaceId: string,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.LIST_MEMBERS, {
+    return sendWithTimeout(this.auth, contracts.WORKSPACE_PATTERNS.LIST_MEMBERS, {
         callerUserId: user.userId,
         workspaceId,
-      }),
-    );
+      });
   }
 
   @Post(':workspaceId/members')
@@ -117,13 +105,11 @@ export class WorkspacesController {
     @Body() dto: contracts.AddWorkspaceMemberDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.WorkspaceMemberView>(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.ADD_MEMBER, {
+    const result = await sendWithTimeout<contracts.WorkspaceMemberView>(this.auth, contracts.WORKSPACE_PATTERNS.ADD_MEMBER, {
         callerUserId: user.userId,
         workspaceId,
         dto,
-      }),
-    );
+      });
     req.logMeta = {
       email: result.user.email,
       name: result.user.name,
@@ -141,14 +127,12 @@ export class WorkspacesController {
     @Body() dto: contracts.UpdateWorkspaceMemberDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.WorkspaceMemberView>(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.UPDATE_MEMBER, {
+    const result = await sendWithTimeout<contracts.WorkspaceMemberView>(this.auth, contracts.WORKSPACE_PATTERNS.UPDATE_MEMBER, {
         callerUserId: user.userId,
         workspaceId,
         targetUserId,
         dto,
-      }),
-    );
+      });
     req.logMeta = {
       email: result.user.email,
       name: result.user.name,
@@ -164,12 +148,10 @@ export class WorkspacesController {
     @Param('workspaceId') workspaceId: string,
     @Param('userId') targetUserId: string,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.WORKSPACE_PATTERNS.REMOVE_MEMBER, {
+    return sendWithTimeout(this.auth, contracts.WORKSPACE_PATTERNS.REMOVE_MEMBER, {
         callerUserId: user.userId,
         workspaceId,
         targetUserId,
-      }),
-    );
+      });
   }
 }

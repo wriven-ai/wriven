@@ -11,13 +11,13 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
 import { CurrentWorkspaceRole } from '../auth/current-workspace-role.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 @Controller('support/tickets')
 @UseGuards(JwtAuthGuard, WorkspaceGuard)
 export class SupportController {
@@ -31,13 +31,11 @@ export class SupportController {
     @CurrentWorkspace() workspaceId: string,
     @Body() dto: contracts.PresignTicketAttachmentDto,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.SUPPORT_PRESIGN, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.SUPPORT_PRESIGN, {
         workspaceId,
         userId: user.userId,
         dto,
-      }),
-    );
+      });
   }
 
   @Post()
@@ -46,13 +44,11 @@ export class SupportController {
     @CurrentWorkspace() workspaceId: string,
     @Body() dto: contracts.CreateTicketDto,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.SUPPORT_CREATE, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.SUPPORT_CREATE, {
         workspaceId,
         userId: user.userId,
         dto,
-      }),
-    );
+      });
   }
 
   @Get()
@@ -62,14 +58,12 @@ export class SupportController {
     @CurrentWorkspaceRole() workspaceRole: string,
     @Query() dto: contracts.ListTicketsQueryDto,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.SUPPORT_LIST, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.SUPPORT_LIST, {
         workspaceId,
         userId: user.userId,
         workspaceRole,
         dto,
-      }),
-    );
+      });
   }
 
   @Get(':id')
@@ -79,14 +73,12 @@ export class SupportController {
     @CurrentWorkspaceRole() workspaceRole: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.SUPPORT_GET, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.SUPPORT_GET, {
         workspaceId,
         userId: user.userId,
         workspaceRole,
         id,
-      }),
-    );
+      });
   }
 
   @Post(':id/messages')
@@ -96,14 +88,12 @@ export class SupportController {
     @Param('id') id: string,
     @Body() dto: contracts.CreateTicketMessageDto,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.SUPPORT_REPLY, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.SUPPORT_REPLY, {
         workspaceId,
         userId: user.userId,
         id,
         dto,
-      }),
-    );
+      });
   }
 
   @Patch(':id')
@@ -113,12 +103,10 @@ export class SupportController {
     @Param('id') id: string,
     @Body() _dto: contracts.CloseTicketDto,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.SUPPORT_CLOSE, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.SUPPORT_CLOSE, {
         workspaceId,
         userId: user.userId,
         id,
-      }),
-    );
+      });
   }
 }

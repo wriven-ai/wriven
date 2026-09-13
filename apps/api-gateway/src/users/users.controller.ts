@@ -8,10 +8,10 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /**
  * Self-service account routes — user-scoped, no workspace/project. The global
  * CsrfGuard covers the mutating PATCH; no per-route CSRF code needed.
@@ -35,16 +35,12 @@ export class UsersController {
     @CurrentUser() user: contracts.AuthUser,
     @Body() dto: contracts.UpdateProfileDto,
   ): Promise<contracts.UserView> {
-    const result = await firstValueFrom(
-      this.auth.send(contracts.AUTH_PATTERNS.UPDATE_PROFILE, { userId: user.userId, dto }),
-    ) as { user: contracts.UserView; previousAvatarKey: string | null };
+    const result = await sendWithTimeout(this.auth, contracts.AUTH_PATTERNS.UPDATE_PROFILE, { userId: user.userId, dto }) as { user: contracts.UserView; previousAvatarKey: string | null };
 
     const prev = result.previousAvatarKey;
     if (prev && !/^https?:\/\//i.test(prev)) {
       // Orphan cleanup — fire and forget. A failure must not break the update.
-      firstValueFrom(
-        this.core.send(contracts.CORE_PATTERNS.AVATAR_DELETE, { key: prev }),
-      ).catch(() => undefined);
+      sendWithTimeout(this.core, contracts.CORE_PATTERNS.AVATAR_DELETE, { key: prev }).catch(() => undefined);
     }
     return result.user;
   }
@@ -55,8 +51,6 @@ export class UsersController {
     @CurrentUser() user: contracts.AuthUser,
     @Body() dto: contracts.PresignUploadDto,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.AVATAR_PRESIGN, { userId: user.userId, dto }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.AVATAR_PRESIGN, { userId: user.userId, dto });
   }
 }

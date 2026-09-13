@@ -15,8 +15,7 @@ import {
 } from '@wriven/contracts';
 import type { Permission } from '@wriven/contracts';
 import type { Request } from 'express';
-import { firstValueFrom } from 'rxjs';
-
+import { sendWithTimeout } from '../common/send-with-timeout';
 interface ScopedRequest extends Request {
   user?: AuthUser;
   workspaceId?: string;
@@ -47,12 +46,8 @@ export class WorkspaceGuard implements CanActivate {
     }
 
     // Throws FORBIDDEN (from auth-service) if the user isn't a member.
-    const membership = await firstValueFrom(
-      this.auth.send<WorkspaceMembership>(
-        WORKSPACE_PATTERNS.VALIDATE_WORKSPACE_MEMBER,
-        { userId: req.user.userId, workspaceId },
-      ),
-    );
+    const membership = await sendWithTimeout<WorkspaceMembership>(this.auth, WORKSPACE_PATTERNS.VALIDATE_WORKSPACE_MEMBER,
+        { userId: req.user.userId, workspaceId });
 
     req.workspaceId = membership.workspaceId;
     req.workspaceRole = membership.role;

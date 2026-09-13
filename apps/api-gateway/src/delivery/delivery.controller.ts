@@ -10,12 +10,12 @@ import {
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
 import type { Response } from 'express';
-import { firstValueFrom } from 'rxjs';
 import { ApiKeyGuard } from '../auth/api-key.guard';
 import { CurrentApiKey } from '../auth/current-api-key.decorator';
 import { UsageBufferService } from '../usage/usage-buffer.service';
 import { UsageEnforceService } from '../usage/usage-enforce.service';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** Read keys see published only; preview/manage keys also see drafts. */
 const isPreview = (key: contracts.ApiKeyResolution): boolean => key.scope !== 'read';
 
@@ -45,14 +45,12 @@ export class DeliveryController {
     this.assertProject(key, projectId);
     await this.usageEnforce.assertRequests(key.workspaceId);
     const preview = isPreview(key);
-    const result = await firstValueFrom<{ items: Array<{ id: string }> }>(
-      this.core.send(contracts.CORE_PATTERNS.DELIVERY_LIST, {
+    const result = await sendWithTimeout<{ items: Array<{ id: string }> }>(this.core, contracts.CORE_PATTERNS.DELIVERY_LIST, {
         projectId: key.projectId,
         apiId,
         query,
         preview,
-      }),
-    );
+      });
     // A list depends on its project, type, and every entry it returned — so it
     // invalidates when any member is (un)published or deleted.
     const tags = [
@@ -77,15 +75,13 @@ export class DeliveryController {
     this.assertProject(key, projectId);
     await this.usageEnforce.assertRequests(key.workspaceId);
     const preview = isPreview(key);
-    const result = await firstValueFrom<{ id: string }>(
-      this.core.send(contracts.CORE_PATTERNS.DELIVERY_GET, {
+    const result = await sendWithTimeout<{ id: string }>(this.core, contracts.CORE_PATTERNS.DELIVERY_GET, {
         projectId: key.projectId,
         apiId,
         slug,
         query,
         preview,
-      }),
-    );
+      });
     const tags = [`proj_${key.projectId}`, `type_${apiId}`, `entry_${result.id}`];
     this.setCache(res, preview, tags);
     this.usageBuffer.bump(key.workspaceId);
