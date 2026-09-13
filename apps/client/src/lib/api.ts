@@ -172,13 +172,29 @@ async function request<T>(
     if (pid) headers['X-Project-Id'] = pid;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers,
-    credentials: 'include',
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers,
+      credentials: 'include',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
+    });
+  } catch (err) {
+    // AbortSignal.timeout rejects fetch with a TimeoutError DOMException —
+    // without mapping, callers get an untyped DOMException instead of the
+    // ApiRequestError they branch on. Caller-initiated aborts (AbortError,
+    // e.g. unmount) pass through untouched: those are intentional, not errors.
+    if (err instanceof DOMException && err.name === 'TimeoutError') {
+      throw new ApiRequestError({
+        code: 'GATEWAY_TIMEOUT',
+        message: 'The request timed out. Please try again.',
+        statusCode: 504,
+      });
+    }
+    throw err;
+  }
 
   // Expired access cookie → refresh once, then retry the original request.
   if (res.status === 401 && auth && !retried) {
@@ -868,8 +884,15 @@ export const plansApi = {
 };
 
 export const usageApi = {
-  /** Current-period workspace usage (Delivery API requests + storage). */
-  getUsage: () => request<UsageView>('/usage', { workspace: true }),
+  /** Current-period workspace usage (Delivery API requests + storage).
+   * Hard deadline: a hung backend must degrade to the error state, not an
+   * eternal skeleton. Sits above the gateway's own /usage timeout (10s) so
+   * the server-side 504 normally wins with a real error payload. */
+  getUsage: () =>
+    request<UsageView>('/usage', {
+      workspace: true,
+      signal: AbortSignal.timeout(15_000),
+    }),
 };
 
 export const statsApi = {
