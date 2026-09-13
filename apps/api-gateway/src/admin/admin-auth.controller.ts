@@ -13,10 +13,10 @@ import { Throttle } from '@nestjs/throttler';
 import * as contracts from '@wriven/contracts';
 import { randomBytes } from 'crypto';
 import type { CookieOptions, Request, Response } from 'express';
-import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { CurrentAdmin } from './current-admin.decorator';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 const MINUTE = 60000;
 
 const ADMIN_ACCESS_COOKIE = 'admin_access_token';
@@ -38,9 +38,7 @@ export class AdminAuthController {
     @Body() dto: contracts.AdminLoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await firstValueFrom(
-      this.auth.send<contracts.AdminAuthResult>(contracts.ADMIN_PATTERNS.LOGIN, dto),
-    );
+    const result = await sendWithTimeout<contracts.AdminAuthResult>(this.auth, contracts.ADMIN_PATTERNS.LOGIN, dto);
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
     const csrfToken = this.setAccessCookies(res, result.accessToken);
     return { admin: result.admin, csrfToken };
@@ -55,11 +53,9 @@ export class AdminAuthController {
     if (!token) {
       throw this.error('INVALID_REFRESH_TOKEN', 'No refresh token provided.');
     }
-    const result = await firstValueFrom(
-      this.auth.send<contracts.AdminRefreshResult>(contracts.ADMIN_PATTERNS.REFRESH, {
+    const result = await sendWithTimeout<contracts.AdminRefreshResult>(this.auth, contracts.ADMIN_PATTERNS.REFRESH, {
         refreshToken: token,
-      }),
-    );
+      });
     this.setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
     const csrfToken = this.setAccessCookies(res, result.accessToken);
     return { csrfToken };
@@ -72,9 +68,7 @@ export class AdminAuthController {
   ) {
     const token = req.cookies?.[ADMIN_REFRESH_COOKIE];
     if (token) {
-      await firstValueFrom(
-        this.auth.send(contracts.ADMIN_PATTERNS.LOGOUT, { refreshToken: token }),
-      );
+      await sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.LOGOUT, { refreshToken: token });
     }
     res.clearCookie(ADMIN_REFRESH_COOKIE, { path: ADMIN_REFRESH_PATH });
     res.clearCookie(ADMIN_ACCESS_COOKIE, { path: ADMIN_API_PATH });
@@ -85,11 +79,9 @@ export class AdminAuthController {
   @UseGuards(AdminJwtGuard)
   @Get('me')
   async me(@CurrentAdmin() admin: contracts.AdminAuthUser, @Req() req: Request) {
-    const view = await firstValueFrom(
-      this.auth.send(contracts.ADMIN_PATTERNS.GET_BY_ID, {
+    const view = await sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.GET_BY_ID, {
         adminUserId: admin.adminUserId,
-      }),
-    );
+      });
     return {
       ...(view as object),
       csrfToken: req.cookies?.[ADMIN_CSRF_COOKIE] ?? null,

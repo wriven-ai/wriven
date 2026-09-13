@@ -15,7 +15,8 @@ import {
 } from '@wriven/contracts';
 import type { WorkspaceLogWritePayload } from '@wriven/contracts';
 import type { Request } from 'express';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, timeout } from 'rxjs';
+import { DEFAULT_TCP_TIMEOUT_MS } from './send-with-timeout';
 import {
   WS_AUDIT_KEY,
   type WorkspaceAuditConfig,
@@ -118,12 +119,17 @@ export class WorkspaceAuditInterceptor implements NestInterceptor {
           targetId,
           metadata: req.logMeta ?? {},
         };
-        this.auth.send(WORKSPACE_PATTERNS.LOG_WRITE, payload).subscribe({
-          error: (err) =>
-            this.logger.error(
-              `Failed to write activity "${meta.action}": ${String(err)}`,
-            ),
-        });
+        // Bounded so a wedged auth-service can't park these fire-and-forget
+        // subscriptions forever; the timeout lands in the error handler below.
+        this.auth
+          .send(WORKSPACE_PATTERNS.LOG_WRITE, payload)
+          .pipe(timeout(DEFAULT_TCP_TIMEOUT_MS))
+          .subscribe({
+            error: (err) =>
+              this.logger.error(
+                `Failed to write activity "${meta.action}": ${String(err)}`,
+              ),
+          });
       }),
     );
   }

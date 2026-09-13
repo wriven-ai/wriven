@@ -13,7 +13,6 @@ import type { ClientProxy } from '@nestjs/microservices';
 // ValidationPipe metadata while satisfying TS1272 under isolatedModules +
 // emitDecoratorMetadata.
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -26,6 +25,7 @@ import type { AuditRequest } from '../common/workspace-audit.decorator';
 import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /**
  * Customer-facing billing → auth-service over TCP. Reads open to any member;
  * PermissionGuard gates mutations, and auth-service re-checks
@@ -43,25 +43,19 @@ export class BillingController {
 
   @Get('plans')
   listPlans() {
-    return firstValueFrom(
-      this.auth.send(contracts.BILLING_PATTERNS.LIST_PLANS, {}),
-    );
+    return sendWithTimeout(this.auth, contracts.BILLING_PATTERNS.LIST_PLANS, {});
   }
 
   @Get('subscription')
   @RequirePermission(contracts.Permission.WORKSPACE_VIEW)
   getSubscription(@CurrentWorkspace() workspaceId: string) {
-    return firstValueFrom(
-      this.auth.send(contracts.BILLING_PATTERNS.GET_SUBSCRIPTION, { workspaceId }),
-    );
+    return sendWithTimeout(this.auth, contracts.BILLING_PATTERNS.GET_SUBSCRIPTION, { workspaceId });
   }
 
   @Get('invoices')
   @RequirePermission(contracts.Permission.WORKSPACE_VIEW)
   listInvoices(@CurrentWorkspace() workspaceId: string) {
-    return firstValueFrom(
-      this.auth.send(contracts.BILLING_PATTERNS.LIST_INVOICES, { workspaceId }),
-    );
+    return sendWithTimeout(this.auth, contracts.BILLING_PATTERNS.LIST_INVOICES, { workspaceId });
   }
 
   @Post('checkout')
@@ -71,13 +65,11 @@ export class BillingController {
     @CurrentWorkspace() workspaceId: string,
     @Body() dto: contracts.CreateCheckoutSessionDto,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.BILLING_PATTERNS.CREATE_CHECKOUT, {
+    return sendWithTimeout(this.auth, contracts.BILLING_PATTERNS.CREATE_CHECKOUT, {
         userId: user.userId,
         workspaceId,
         dto,
-      }),
-    );
+      });
   }
 
   @Post('portal')
@@ -87,13 +79,11 @@ export class BillingController {
     @CurrentWorkspace() workspaceId: string,
     @Body() dto: contracts.CreatePortalSessionDto,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.BILLING_PATTERNS.CREATE_PORTAL, {
+    return sendWithTimeout(this.auth, contracts.BILLING_PATTERNS.CREATE_PORTAL, {
         userId: user.userId,
         workspaceId,
         dto,
-      }),
-    );
+      });
   }
 
   /** Change an existing subscription's plan/cycle directly (proration), or
@@ -111,13 +101,11 @@ export class BillingController {
     @Req() req: AuditRequest,
   ) {
     await this.assertDowngradeAllowed(workspaceId, dto.planKey);
-    const result = await firstValueFrom<contracts.SubscriptionView>(
-      this.auth.send(contracts.BILLING_PATTERNS.SWAP_PLAN, {
+    const result = await sendWithTimeout<contracts.SubscriptionView>(this.auth, contracts.BILLING_PATTERNS.SWAP_PLAN, {
         userId: user.userId,
         workspaceId,
         dto,
-      }),
-    );
+      });
     req.logMeta = {
       plan: result.planName,
       ...(result.billingCycle ? { cycle: result.billingCycle } : {}),
@@ -135,18 +123,10 @@ export class BillingController {
     targetPlanKey: string,
   ): Promise<void> {
     const [plans, sub] = await Promise.all([
-      firstValueFrom(
-        this.auth.send<contracts.PlanView[]>(
-          contracts.BILLING_PATTERNS.LIST_PLANS,
-          {},
-        ),
-      ),
-      firstValueFrom(
-        this.auth.send<contracts.SubscriptionView>(
-          contracts.BILLING_PATTERNS.GET_SUBSCRIPTION,
-          { workspaceId },
-        ),
-      ),
+      sendWithTimeout<contracts.PlanView[]>(this.auth, contracts.BILLING_PATTERNS.LIST_PLANS,
+          {}),
+      sendWithTimeout<contracts.SubscriptionView>(this.auth, contracts.BILLING_PATTERNS.GET_SUBSCRIPTION,
+          { workspaceId }),
     ]);
     const byKey = new Map(plans.map((p) => [p.key, p]));
     const current = byKey.get(sub.planKey);

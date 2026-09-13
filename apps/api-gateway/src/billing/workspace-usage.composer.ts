@@ -6,8 +6,7 @@ import {
   WORKSPACE_PATTERNS,
   type WorkspaceStatsView,
 } from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
-
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** auth-owned tenancy counts merged into the core stats view. */
 export interface WorkspaceTenancyStats {
   projects: number;
@@ -28,16 +27,12 @@ export class WorkspaceUsageComposer {
 
   async compose(workspaceId: string): Promise<WorkspaceStatsView> {
     const [tenancy, core] = await Promise.all([
-      firstValueFrom(
-        this.auth.send<WorkspaceTenancyStats>(WORKSPACE_PATTERNS.STATS, {
+      sendWithTimeout<WorkspaceTenancyStats>(this.auth, WORKSPACE_PATTERNS.STATS, {
           workspaceId,
         }),
-      ),
-      firstValueFrom(
-        this.core.send<WorkspaceStatsView>(USAGE_PATTERNS.WORKSPACE_STATS, {
+      sendWithTimeout<WorkspaceStatsView>(this.core, USAGE_PATTERNS.WORKSPACE_STATS, {
           workspaceId,
         }),
-      ),
     ]);
     return { ...core, projects: tenancy.projects, members: tenancy.members };
   }

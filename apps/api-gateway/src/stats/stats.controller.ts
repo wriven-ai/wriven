@@ -6,7 +6,6 @@ import {
   USAGE_PATTERNS,
 } from '@wriven/contracts';
 import type { ProjectStatsView, WorkspaceStatsView } from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -16,6 +15,7 @@ import { RequirePermission } from '../auth/require-permission.decorator';
 import { WorkspaceGuard } from '../auth/workspace.guard';
 import { WorkspaceUsageComposer } from '../billing/workspace-usage.composer';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /**
  * Aggregate stats, header-scoped like `GET /usage`. The workspace view is
  * composed via {@link WorkspaceUsageComposer} (shared with the downgrade guard).
@@ -43,11 +43,9 @@ export class StatsController {
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
   ): Promise<ProjectStatsView> {
-    return firstValueFrom(
-      this.core.send<ProjectStatsView>(USAGE_PATTERNS.PROJECT_STATS, {
+    return sendWithTimeout<ProjectStatsView>(this.core, USAGE_PATTERNS.PROJECT_STATS, {
         workspaceId,
         projectId,
-      }),
-    );
+      });
   }
 }

@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { AdminJwtGuard } from './admin-jwt.guard';
 import { AdminRoles } from './admin-roles.decorator';
 import { AdminRolesGuard } from './admin-roles.guard';
@@ -19,6 +18,7 @@ import { Audit } from './audit.decorator';
 import { AuditInterceptor } from './audit.interceptor';
 import { CurrentAdmin } from './current-admin.decorator';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /** Cross-tenant workspace oversight + plan assignment. */
 @UseGuards(AdminJwtGuard, AdminRolesGuard)
 @UseInterceptors(AuditInterceptor)
@@ -30,19 +30,17 @@ export class AdminWorkspacesController {
 
   @Get()
   list(@Query() query: contracts.AdminListQueryDto) {
-    return firstValueFrom(this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_LIST, query));
+    return sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.WORKSPACES_LIST, query);
   }
 
   @Get(':id')
   get(@Param('id') id: string) {
-    return firstValueFrom(this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_GET, { id }));
+    return sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.WORKSPACES_GET, { id });
   }
 
   @Get(':id/logs')
   logs(@Param('id') id: string, @Query() query: contracts.WorkspaceLogQueryDto) {
-    return firstValueFrom(
-      this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_LOGS, { id, query }),
-    );
+    return sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.WORKSPACES_LOGS, { id, query });
   }
 
   @AdminRoles('admin')
@@ -53,12 +51,10 @@ export class AdminWorkspacesController {
     @Body() dto: contracts.AssignPlanDto,
     @CurrentAdmin() admin: contracts.AdminAuthUser,
   ) {
-    return firstValueFrom(
-      this.auth.send(contracts.ADMIN_PATTERNS.WORKSPACES_SET_PLAN, {
+    return sendWithTimeout(this.auth, contracts.ADMIN_PATTERNS.WORKSPACES_SET_PLAN, {
         workspaceId: id,
         dto,
         adminUserId: admin.adminUserId,
-      }),
-    );
+      });
   }
 }

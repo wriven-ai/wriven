@@ -3,8 +3,7 @@ import type { ClientProxy } from '@nestjs/microservices';
 import { SkipThrottle } from '@nestjs/throttler';
 import { BILLING_PATTERNS, SERVICE_TOKENS } from '@wriven/contracts';
 import type { Request } from 'express';
-import { firstValueFrom } from 'rxjs';
-
+import { sendWithTimeout } from '../common/send-with-timeout';
 type RawBodyRequest = Request & { rawBody?: Buffer };
 
 /**
@@ -25,9 +24,7 @@ export class StripeWebhookController {
     const payload = req.rawBody?.toString('utf8') ?? '';
     const signature = (req.headers['stripe-signature'] as string | undefined) ?? '';
     // Acknowledge fast; auth-service verifies + reconciles (idempotent).
-    await firstValueFrom(
-      this.auth.send(BILLING_PATTERNS.STRIPE_WEBHOOK, { payload, signature }),
-    );
+    await sendWithTimeout(this.auth, BILLING_PATTERNS.STRIPE_WEBHOOK, { payload, signature });
     return { received: true };
   }
 }

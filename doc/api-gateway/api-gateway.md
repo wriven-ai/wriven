@@ -7,6 +7,7 @@ The only internet-facing service (HTTP `:5000`). Owns **no database tables and n
 | Concern | Mechanism |
 |---------|-----------|
 | Routing | NestJS controllers → `ClientProxy.send(pattern, payload)` over TCP to auth/core |
+| Downstream deadlines | every TCP send goes through `sendWithTimeout` (`common/send-with-timeout.ts`, default 10s; a miss → `GATEWAY_TIMEOUT` 504) — ClientTCP sends never time out on their own, so an unbounded send hangs the HTTP request forever (2026-09-13 wedged-core incident). AI routes keep their env-tuned provider budgets; health pings + entitlements resolver bound separately |
 | AuthN | `JwtAuthGuard` — validates the **httpOnly `access_token` cookie** locally (`JWT_SECRET`), sets `req.user` (no Bearer header parsing) |
 | Workspace authZ | `WorkspaceGuard` — validates `X-Workspace-Id` membership via `auth.validateWorkspaceMember`, sets `req.workspaceId` + cascade-resolved `workspacePermissions` |
 | Project authZ | `ProjectGuard` — validates `X-Project-Id` membership via `auth.validateProjectMember`, sets `projectPermissions` |

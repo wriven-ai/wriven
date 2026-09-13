@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import type { ClientProxy } from '@nestjs/microservices';
 import * as contracts from '@wriven/contracts';
-import { firstValueFrom } from 'rxjs';
 import { CurrentProject } from '../auth/current-project.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { CurrentWorkspace } from '../auth/current-workspace.decorator';
@@ -25,6 +24,7 @@ import type { AuditRequest } from '../common/workspace-audit.decorator';
 import { WorkspaceAudit } from '../common/workspace-audit.decorator';
 import { WorkspaceAuditInterceptor } from '../common/workspace-audit.interceptor';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 /**
  * Dashboard management of Delivery API keys (session/cookie auth). Distinct from
  * the public Delivery API, which is authenticated by the keys minted here.
@@ -48,14 +48,12 @@ export class ApiKeysController {
     @Body() dto: contracts.CreateApiKeyDto,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.CreateApiKeyResult>(
-      this.core.send(contracts.CORE_PATTERNS.API_KEY_CREATE, {
+    const result = await sendWithTimeout<contracts.CreateApiKeyResult>(this.core, contracts.CORE_PATTERNS.API_KEY_CREATE, {
         workspaceId,
         projectId,
         userId: user.userId,
         dto,
-      }),
-    );
+      });
     req.logMeta = { name: result.key.name, scope: result.key.scope };
     return result;
   }
@@ -65,9 +63,7 @@ export class ApiKeysController {
     @CurrentWorkspace() workspaceId: string,
     @CurrentProject() projectId: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.API_KEY_LIST, { workspaceId, projectId }),
-    );
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.API_KEY_LIST, { workspaceId, projectId });
   }
 
   @Post(':id/regenerate')
@@ -78,13 +74,11 @@ export class ApiKeysController {
     @Param('id') id: string,
     @Req() req: AuditRequest,
   ) {
-    const result = await firstValueFrom<contracts.CreateApiKeyResult>(
-      this.core.send(contracts.CORE_PATTERNS.API_KEY_REGENERATE, {
+    const result = await sendWithTimeout<contracts.CreateApiKeyResult>(this.core, contracts.CORE_PATTERNS.API_KEY_REGENERATE, {
         workspaceId,
         projectId,
         id,
-      }),
-    );
+      });
     req.logMeta = { name: result.key.name };
     return result;
   }
@@ -96,12 +90,10 @@ export class ApiKeysController {
     @CurrentProject() projectId: string,
     @Param('id') id: string,
   ) {
-    return firstValueFrom(
-      this.core.send(contracts.CORE_PATTERNS.API_KEY_REVOKE, {
+    return sendWithTimeout(this.core, contracts.CORE_PATTERNS.API_KEY_REVOKE, {
         workspaceId,
         projectId,
         id,
-      }),
-    );
+      });
   }
 }

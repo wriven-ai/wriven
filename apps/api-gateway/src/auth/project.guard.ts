@@ -16,8 +16,7 @@ import {
 } from '@wriven/contracts';
 import type { Permission } from '@wriven/contracts';
 import type { Request } from 'express';
-import { firstValueFrom } from 'rxjs';
-
+import { sendWithTimeout } from '../common/send-with-timeout';
 interface ScopedRequest extends Request {
   user?: AuthUser;
   workspaceId?: string;
@@ -58,12 +57,8 @@ export class ProjectGuard implements CanActivate {
 
     // auth-service resolves the cascade (incl. workspace owner/admin access
     // with no project row) and throws FORBIDDEN if the user has no access.
-    const membership = await firstValueFrom(
-      this.auth.send<ProjectMembership>(
-        PROJECT_PATTERNS.VALIDATE_PROJECT_MEMBER,
-        { userId: req.user.userId, projectId },
-      ),
-    );
+    const membership = await sendWithTimeout<ProjectMembership>(this.auth, PROJECT_PATTERNS.VALIDATE_PROJECT_MEMBER,
+        { userId: req.user.userId, projectId });
 
     req.projectId = membership.projectId;
     req.projectWorkspaceId = membership.workspaceId;

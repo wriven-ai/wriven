@@ -15,9 +15,9 @@ import {
 } from '@wriven/contracts';
 import { createHash } from 'node:crypto';
 import type { Request } from 'express';
-import { firstValueFrom } from 'rxjs';
 import { API_KEY_SCOPES_KEY } from './api-key-scope.decorator';
 
+import { sendWithTimeout } from '../common/send-with-timeout';
 interface KeyedRequest extends Request {
   apiKey?: ApiKeyResolution;
   workspaceId?: string;
@@ -113,11 +113,9 @@ export class ApiKeyGuard implements CanActivate {
     const hit = this.cache.get(key);
     if (hit && hit.expiresAt > now) return hit.resolution;
 
-    const resolution = await firstValueFrom(
-      this.core.send<ApiKeyResolution | null>(CORE_PATTERNS.API_KEY_RESOLVE, {
+    const resolution = await sendWithTimeout<ApiKeyResolution | null>(this.core, CORE_PATTERNS.API_KEY_RESOLVE, {
         token,
-      }),
-    );
+      });
     this.sweepExpired(now);
     this.cache.set(key, { resolution, expiresAt: now + CACHE_TTL_MS });
     return resolution;
